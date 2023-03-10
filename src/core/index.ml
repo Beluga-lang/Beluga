@@ -1,7 +1,7 @@
 open Support
 open Beluga_syntax
 
-[@@@warning "-A-4-44"]
+[@@@warning "+A-4-44"]
 
 exception Unsupported_lf_typ_applicand
 
@@ -33,6 +33,75 @@ exception Duplicate_identifiers_in_schema_some_clause of Identifier.t List2.t
 
 exception
   Duplicate_identifiers_in_schema_block_clause of Identifier.t List2.t
+
+exception Bound_lf_type_constant of Qualified_identifier.t
+
+exception Bound_lf_term_constant of Qualified_identifier.t
+
+exception Bound_lf_term_variable of Qualified_identifier.t
+
+exception Bound_meta_variable of Qualified_identifier.t
+
+exception Bound_parameter_variable of Qualified_identifier.t
+
+exception Bound_substitution_variable of Qualified_identifier.t
+
+exception Bound_context_variable of Qualified_identifier.t
+
+exception Bound_schema_constant of Qualified_identifier.t
+
+exception Bound_computation_variable of Qualified_identifier.t
+
+exception Bound_computation_inductive_type_constant of Qualified_identifier.t
+
+exception
+  Bound_computation_stratified_type_constant of Qualified_identifier.t
+
+exception
+  Bound_computation_coinductive_type_constant of Qualified_identifier.t
+
+exception
+  Bound_computation_abbreviation_type_constant of Qualified_identifier.t
+
+exception Bound_computation_term_constructor of Qualified_identifier.t
+
+exception Bound_computation_term_destructor of Qualified_identifier.t
+
+exception Bound_module of Qualified_identifier.t
+
+exception Bound_program_constant of Qualified_identifier.t
+
+exception Expected_lf_typ_constant
+
+exception Expected_lf_term_constant
+
+exception Expected_schema_constant
+
+exception Expected_computation_inductive_type_constant
+
+exception Expected_computation_stratified_type_constant
+
+exception Expected_computation_coinductive_type_constant
+
+exception Expected_computation_abbreviation_type_constant
+
+exception Expected_computation_term_constructor
+
+exception Expected_computation_term_destructor
+
+exception Expected_program_constant
+
+exception Expected_lf_term_variable
+
+exception Expected_parameter_variable
+
+exception Expected_substitution_variable
+
+exception Expected_context_variable
+
+exception Expected_computation_variable
+
+exception Illegal_free_variable
 
 module type INDEXING_STATE = sig
   include State.STATE
@@ -72,12 +141,16 @@ module type INDEXING_STATE = sig
   val index_of_comp_constructor :
     Qualified_identifier.t -> Id.cid_comp_const t
 
-  val index_of_comp_program : Qualified_identifier.t -> Id.cid_prog t
-
   val index_of_comp_destructor : Qualified_identifier.t -> Id.cid_comp_dest t
+
+  val index_of_comp_program : Qualified_identifier.t -> Id.cid_prog t
 
   (** {1 Index of Variables} *)
 
+  (** [index_of_lf_variable identifier state] is [(state', offset)] where
+      [offset] is the de Bruijn index of [identifier] in [state].
+
+      If [identifier] is unbound, then an exception is raised. *)
   val index_of_lf_variable : Identifier.t -> Id.offset t
 
   (** [index_of_lf_variable_opt identifier state] is [(state', offset_opt)]
@@ -111,17 +184,23 @@ module type INDEXING_STATE = sig
 
       If [state] is a pattern state, then [identifier] is additionally
       considered as an inner bound variable. *)
-  val with_bound_lf_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_lf_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_bound_meta_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_bound_parameter_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_bound_substitution_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_bound_context_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_bound_comp_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_comp_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_scope : 'a t -> 'a t
 
@@ -145,21 +224,518 @@ module type INDEXING_STATE = sig
 
       If [identifier] is a free variable in [state] of a different kind than
       LF variables, then an exception is raised. *)
-  val add_free_lf_variable : Identifier.t -> Unit.t t
+  val add_free_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_free_meta_variable : Identifier.t -> Unit.t t
+  val add_free_meta_variable :
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_free_parameter_variable : Identifier.t -> Unit.t t
+  val add_free_parameter_variable :
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_free_substitution_variable : Identifier.t -> Unit.t t
+  val add_free_substitution_variable :
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_free_context_variable : Identifier.t -> Unit.t t
+  val add_free_context_variable :
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val ensure_closed : 'a t -> 'a t
+  (** [allow_free_variables m] runs [m] and discards the tracked free
+      variables therein. *)
+  val allow_free_variables : 'a t -> 'a t
+
+  (** [disallow_free_variables m] runs [m] and raises an exception if [m]
+      adds a free variable to the state. *)
+  val disallow_free_variables : 'a t -> 'a t
+end
+
+module Persistent_deBruijn_indexing_state : sig
+  type index = int
+
+  type t
+
+  val empty : t
+
+  val add_name : t -> Identifier.t -> t
+
+  val add_blank : t -> t
+
+  val get_index : t -> Identifier.t -> index Option.t
+end = struct
+  type index = int
+
+  type t =
+    { abstractions : Int.t
+          (** The number of abstractions added to the indexer. *)
+    ; levels_by_name : Int.t List1.t Identifier.Hamt.t
+          (** The de Bruijn levels assigned by name. The head element in one
+              of these lists is the latest de Bruijn level of the associated
+              name. *)
+    }
+
+  let empty = { abstractions = 0; levels_by_name = Identifier.Hamt.empty }
+
+  let add_name indexer name =
+    match Identifier.Hamt.find_opt name indexer.levels_by_name with
+    | Option.None ->
+        { abstractions = indexer.abstractions + 1
+        ; levels_by_name =
+            Identifier.Hamt.add name
+              (List1.singleton indexer.abstractions)
+              indexer.levels_by_name
+        }
+    | Option.Some levels ->
+        { abstractions = indexer.abstractions + 1
+        ; levels_by_name =
+            Identifier.Hamt.add name
+              (List1.cons indexer.abstractions levels)
+              indexer.levels_by_name
+        }
+
+  let add_blank indexer =
+    { indexer with abstractions = indexer.abstractions + 1 }
+
+  let get_index indexer name =
+    let open Option in
+    Identifier.Hamt.find_opt name indexer.levels_by_name $> fun levels ->
+    let level = List1.head levels in
+    indexer.abstractions - level
+end
+
+module Persistent_indexing_state = struct
+  type entry =
+    { binding_location : Location.t
+    ; desc : entry_desc
+    }
+
+  and entry_desc =
+    | Lf_term_variable of { lf_level : Int.t }
+    | Meta_variable of { meta_level : Int.t }
+    | Parameter_variable of { meta_level : Int.t }
+    | Substitution_variable of { meta_level : Int.t }
+    | Context_variable of { meta_level : Int.t }
+    | Computation_variable of { comp_level : Int.t }
+    | Lf_type_constant of { cid : Id.cid_typ }
+    | Lf_term_constant of { cid : Id.cid_term }
+    | Schema_constant of { cid : Id.cid_schema }
+    | Computation_inductive_type_constant of { cid : Id.cid_comp_typ }
+    | Computation_stratified_type_constant of { cid : Id.cid_comp_typ }
+    | Computation_coinductive_type_constant of { cid : Id.cid_comp_cotyp }
+    | Computation_abbreviation_type_constant of { cid : Id.cid_comp_typdef }
+    | Computation_term_constructor of { cid : Id.cid_comp_const }
+    | Computation_term_destructor of { cid : Id.cid_comp_dest }
+    | Program_constant of { cid : Id.cid_prog }
+    | Module of { cid : Id.module_id }
+
+  type bindings_state =
+    { bindings : entry Binding_tree.t
+    ; lf_context_size : Int.t
+    ; meta_context_size : Int.t
+    ; comp_context_size : Int.t
+    }
+
+  type substate =
+    | Scope_state of
+        { bindings : bindings_state
+        ; parent : substate Option.t
+        }
+    | Pattern_state of
+        { pattern_bindings : bindings_state
+        ; inner_pattern_bindings : entry List1.t Identifier.Hamt.t
+        ; pattern_variables_rev : Identifier.t List.t
+        ; expression_bindings : bindings_state
+        }
+
+  type state =
+    { substate : substate
+    ; free_variables_allowed : Bool.t
+    ; generated_fresh_variables_count : Int.t
+    }
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
+  let get_and_increment_generated_fresh_variables_count =
+    let* state = get in
+    let i = state.generated_fresh_variables_count in
+    let* () =
+      put
+        { state with
+          generated_fresh_variables_count =
+            state.generated_fresh_variables_count + 1
+        }
+    in
+    return i
+
+  let fresh_identifier =
+    let* i = get_and_increment_generated_fresh_variables_count in
+    (* ['"'] is a reserved character, so ["\"i1"], ["\"i2"], ..., etc. are
+       syntactically invalid identifiers, which are guarenteed to not clash
+       with free variables *)
+    return ("\"i" ^ string_of_int i)
+
+  let fresh_identifier_opt = function
+    | Option.Some identifier -> return identifier
+    | Option.None -> fresh_identifier
+
+  let[@inline] set_substate substate =
+    modify (fun state -> { state with substate })
+
+  let get_substate =
+    let* state = get in
+    return state.substate
+
+  let[@inline] modify_substate f =
+    let* substate = get_substate in
+    let substate' = f substate in
+    set_substate substate'
+
+  let[@inline] set_substate_bindings bindings = function
+    | Scope_state state -> Scope_state { state with bindings }
+    | Pattern_state state ->
+        Pattern_state { state with pattern_bindings = bindings }
+
+  let get_substate_bindings = function
+    | Scope_state state -> state.bindings
+    | Pattern_state state -> state.pattern_bindings
+
+  let[@inline] set_bindings_state bindings =
+    modify_substate (set_substate_bindings bindings)
+
+  let get_bindings_state = get_substate $> get_substate_bindings
+
+  let[@inline] modify_bindings_state f =
+    let* bindings_state = get_bindings_state in
+    let bindings_state' = f bindings_state in
+    set_bindings_state bindings_state'
+
+  let set_bindings bindings =
+    modify_bindings_state (fun state -> { state with bindings })
+
+  let get_bindings =
+    let* bindings_state = get_bindings_state in
+    return bindings_state.bindings
+
+  let[@inline] modify_bindings f =
+    let* bindings = get_bindings in
+    let bindings' = f bindings in
+    set_bindings bindings'
+
+  let get_lf_context_size =
+    let* bindings_state = get_bindings_state in
+    return bindings_state.lf_context_size
+
+  let get_meta_context_size =
+    let* bindings_state = get_bindings_state in
+    return bindings_state.meta_context_size
+
+  let get_comp_context_size =
+    let* bindings_state = get_bindings_state in
+    return bindings_state.comp_context_size
+
+  let[@inline] lookup qualified_identifier =
+    let* bindings = get_bindings in
+    let entry, _subtree =
+      Binding_tree.lookup qualified_identifier bindings
+    in
+    return entry
+
+  let[@inline] lookup_toplevel identifier =
+    let* bindings = get_bindings in
+    let entry, _subtree = Binding_tree.lookup_toplevel identifier bindings in
+    return entry
+
+  let actual_binding_exn identifier { binding_location; desc } =
+    Error.located_exception1 binding_location
+      (match desc with
+      | Lf_term_variable _ -> Bound_lf_term_variable identifier
+      | Meta_variable _ -> Bound_meta_variable identifier
+      | Parameter_variable _ -> Bound_parameter_variable identifier
+      | Substitution_variable _ -> Bound_substitution_variable identifier
+      | Context_variable _ -> Bound_context_variable identifier
+      | Computation_variable _ -> Bound_computation_variable identifier
+      | Lf_type_constant _ -> Bound_lf_type_constant identifier
+      | Lf_term_constant _ -> Bound_lf_term_constant identifier
+      | Schema_constant _ -> Bound_schema_constant identifier
+      | Computation_inductive_type_constant _ ->
+          Bound_computation_inductive_type_constant identifier
+      | Computation_stratified_type_constant _ ->
+          Bound_computation_stratified_type_constant identifier
+      | Computation_coinductive_type_constant _ ->
+          Bound_computation_inductive_type_constant identifier
+      | Computation_abbreviation_type_constant _ ->
+          Bound_computation_abbreviation_type_constant identifier
+      | Computation_term_constructor _ ->
+          Bound_computation_term_constructor identifier
+      | Computation_term_destructor _ ->
+          Bound_computation_term_destructor identifier
+      | Program_constant _ -> Bound_program_constant identifier
+      | Module _ -> Bound_module identifier)
+
+  let index_of_lf_typ_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Lf_type_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_lf_typ_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_lf_term_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Lf_term_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_lf_term_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_inductive_comp_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_inductive_type_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2
+             Expected_computation_inductive_type_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_stratified_comp_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_stratified_type_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2
+             Expected_computation_stratified_type_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_coinductive_comp_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_coinductive_type_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2
+             Expected_computation_coinductive_type_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_abbreviation_comp_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_abbreviation_type_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2
+             Expected_computation_abbreviation_type_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_schema_constant qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Schema_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_schema_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_comp_constructor qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_term_constructor { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_computation_term_constructor
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_comp_destructor qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Computation_term_destructor { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_computation_term_destructor
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_comp_program qualified_identifier =
+    lookup qualified_identifier $> function
+    | { desc = Program_constant { cid }; _ } -> cid
+    | entry ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_program_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let[@inline] index_of_variable_opt index_of_variable identifier =
+    try_catch
+      (lazy (index_of_variable identifier $> Option.some))
+      ~on_exn:(function
+        | Binding_tree.Unbound_identifier _ -> return Option.none
+        | cause -> Error.raise cause)
+
+  let index_of_lf_variable identifier =
+    lookup_toplevel identifier $> function
+    | { desc = Lf_term_variable { lf_level }; _ } ->
+        let* lf_context_size = get_lf_context_size in
+        return (lf_context_size - lf_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_lf_term_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let index_of_lf_variable_opt = index_of_variable_opt index_of_lf_variable
+
+  let index_of_parameter_variable identifier =
+    lookup_toplevel identifier $> function
+    | { desc = Parameter_variable { meta_level }; _ } ->
+        let* meta_context_size = get_meta_context_size in
+        return (meta_context_size - meta_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_parameter_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let index_of_parameter_variable_opt =
+    index_of_variable_opt index_of_parameter_variable
+
+  let index_of_substitution_variable identifier =
+    lookup_toplevel identifier $> function
+    | { desc = Substitution_variable { meta_level }; _ } ->
+        let* meta_context_size = get_meta_context_size in
+        return (meta_context_size - meta_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_substitution_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let index_of_substitution_variable_opt =
+    index_of_variable_opt index_of_substitution_variable
+
+  let index_of_context_variable identifier =
+    lookup_toplevel identifier $> function
+    | { desc = Context_variable { meta_level }; _ } ->
+        let* meta_context_size = get_meta_context_size in
+        return (meta_context_size - meta_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_context_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let index_of_context_variable_opt =
+    index_of_variable_opt index_of_context_variable
+
+  let index_of_comp_variable identifier =
+    lookup_toplevel identifier $> function
+    | { desc = Computation_variable { comp_level }; _ } ->
+        let* comp_context_size = get_comp_context_size in
+        return (comp_context_size - comp_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_computation_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let with_free_variables_state ~free_variables_allowed m =
+    let* state = get in
+    let* () = put { state with free_variables_allowed } in
+    let* x = m in
+    let* state' = get in
+    let* () =
+      put
+        { state' with free_variables_allowed = state.free_variables_allowed }
+    in
+    return x
+
+  let allow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:true m
+
+  let disallow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:false m
+
+  let are_free_variables_allowed =
+    let* state = get in
+    return state.free_variables_allowed
+
+  let add_free_variable ?location identifier adder =
+    are_free_variables_allowed >>= function
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_variable
+    | true -> adder ?location identifier
 end
 
 module type INDEXER = sig
   include State.STATE
+
+  (** [index_lf_typ_constant_kind kind state] is [(state', kind')] where
+      [kind'] is [kind] with bound variables and constants replaced with de
+      Bruijn indices and IDs respectively.
+
+      [kind] appears in LF type-level constant declarations, so it may
+      contain free variables. *)
+  val index_lf_typ_constant_kind : Synext.lf_kind -> Synapx.LF.kind t
+
+  (** [index_lf_term_constant_typ typ state] is [(state', typ')] where [typ']
+      is [typ] with bound variables and constants replaced with de Bruijn
+      indices and IDs respectively.
+
+      [typ] appears in LF term-level constant declarations, so it may contain
+      free variables. *)
+  val index_lf_term_constant_typ : Synext.lf_typ -> Synapx.LF.typ t
+
+  (** [index_comp_typ_constant_kind kind state] is [(state', kind')] where
+      [kind'] is [kind] with bound variables and constants replaced with de
+      Bruijn indices and IDs respectively.
+
+      [kind] appears in computation-level type constant declarations, so it
+      may contain free variables. *)
+  val index_comp_typ_constant_kind : Synext.comp_kind -> Synapx.Comp.kind t
+
+  (** [index_comp_term_constant_typ typ state] is [(state', typ')] where
+      [typ'] is [typ] with bound variables and constants replaced with de
+      Bruijn indices and IDs respectively.
+
+      [typ] appears in computation-level constructor or destructor constant
+      declarations, so it may contain free variables. *)
+  val index_comp_term_constant_typ : Synext.comp_typ -> Synapx.Comp.typ t
+
+  (** [index_comp_expression expression state] is [(state', expression')]
+      where [expression'] is [expression] with bound variables and constants
+      replaced with de Bruijn indices and IDs respectively.
+
+      [expression] appears in value or function declarations, so free
+      variables are disallowed, such that an exception is raised if
+      [expression] contains free variables. *)
+  val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
+
+  (** [index_comp_typ typ state] is [(state', typ')] where [typ'] is [typ]
+      with bound variables and constants replaced with de Bruijn indices and
+      IDs respectively.
+
+      [typ] appears in value or function declarations, so free variables are
+      disallowed, such that an exception is raised if [typ] contains free
+      variables. *)
+  val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
+
+  val index_schema : Synext.schema -> Synapx.LF.schema t
+
+  val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 end
 
 module Make (Indexing_state : INDEXING_STATE) :
@@ -1031,19 +1607,6 @@ module Make (Indexing_state : INDEXING_STATE) :
           (with_indexed_schema_block_clause_bindings_list1 (List1.from x xs)
              (fun tRec -> f (Synapx.LF.SigmaElem (name, typ', tRec))))
 
-  and index_clf_block_clause_bindings bindings =
-    List1.fold_right
-      (fun (identifier, typ) ->
-        let* typ' = index_clf_typ typ in
-        let name_opt = Option.some (Name.make_from_identifier identifier) in
-        return (Synapx.LF.SigmaLast (name_opt, typ')))
-      (fun (identifier, typ) bindings ->
-        let* typ' = index_clf_typ typ in
-        let name = Name.make_from_identifier identifier in
-        let* bindings' = (with_bound_lf_variable identifier) bindings in
-        return (Synapx.LF.SigmaElem (name, typ', bindings')))
-      bindings
-
   and index_schema_block_clause = function
     | `Record bindings ->
         with_indexed_schema_block_clause_bindings_list1 bindings return
@@ -1085,7 +1648,7 @@ module Make (Indexing_state : INDEXING_STATE) :
              (List2.from x1 x2 xs))
 
   and index_schema_element = function
-    | Synext.Meta.Schema.Element { location; some; block } -> (
+    | Synext.Meta.Schema.Element { some; block; _ } -> (
         match
           Identifier.find_duplicates (schema_some_clause_identifiers some)
         with
@@ -1676,14 +2239,14 @@ module Make (Indexing_state : INDEXING_STATE) :
   and index_harpoon_split_branch_label = function
     | Synext.Harpoon.Split_branch.Label.Lf_constant { location; identifier }
       ->
-        let* _ = index_of_lf_term_constant identifier in
+        let* _cid = index_of_lf_term_constant identifier in
         let name = Name.make_from_qualified_identifier identifier in
         (* TODO: The approximate syntax should have an [Lf_constant _]
            constructor *)
         return (Synapx.Comp.NamedCase (location, name))
     | Synext.Harpoon.Split_branch.Label.Comp_constant
         { location; identifier } ->
-        let* _ = index_of_comp_constructor identifier in
+        let* _cid = index_of_comp_constructor identifier in
         let name = Name.make_from_qualified_identifier identifier in
         (* TODO: The approximate syntax should have a [Comp_constant _]
            constructor *)
@@ -1703,7 +2266,7 @@ module Make (Indexing_state : INDEXING_STATE) :
 
   and index_harpoon_suffices_branch
       { Synext.Harpoon.Suffices_branch.location; goal; proof } =
-    let* goal' = index_comp_typ goal in
+    let* goal' = disallow_free_variables (index_comp_typ goal) in
     let* proof' = index_harpoon_proof proof in
     return (location, goal', proof')
 
@@ -1724,4 +2287,27 @@ module Make (Indexing_state : INDEXING_STATE) :
                        ; proof = proof'
                        ; hypothetical_loc = location
                        })))
+
+  let index_lf_typ_constant_kind kind =
+    allow_free_variables (index_lf_kind kind)
+
+  let index_lf_term_constant_typ typ =
+    allow_free_variables (index_lf_typ typ)
+
+  let index_comp_typ_constant_kind kind =
+    allow_free_variables (index_comp_kind kind)
+
+  let index_comp_term_constant_typ typ =
+    allow_free_variables (index_comp_typ typ)
+
+  let index_comp_expression expression =
+    disallow_free_variables (index_comp_expression expression)
+
+  let index_comp_typ typ = disallow_free_variables (index_comp_typ typ)
+
+  let index_schema schema = disallow_free_variables (index_schema schema)
+
+  let index_harpoon_proof proof =
+    disallow_free_variables
+      (index_harpoon_proof proof $> fun proof' -> Synapx.Comp.Proof proof')
 end

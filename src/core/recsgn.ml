@@ -271,8 +271,7 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
-  val index_closed_comp_expression :
-    Synext.comp_expression -> Synapx.Comp.exp t
+  val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
 
   val index_comp_typedef :
        Synext.comp_typ
@@ -993,7 +992,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at: %a" Location.print_short location);
-    let* apx_i = index_closed_comp_expression expression in
+    let* apx_i = index_comp_expression expression in
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
     let i', (tau, theta) =
       Monitor.timer
@@ -1064,7 +1063,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     in
     Monitor.timer
       (Monitor.function_type_check, fun () -> Check.Comp.checkTyp cD tau');
-    let* apx_i = index_closed_comp_expression expression in
+    let* apx_i = index_comp_expression expression in
     let i' =
       Monitor.timer
         ( Monitor.function_elaboration

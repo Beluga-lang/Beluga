@@ -1,5 +1,7 @@
 open Support
 
+type module_id = int
+
 type cid_typ = int
 
 type cid_term = int
@@ -45,4 +47,4 @@ let cid_comp_typdef_equal = cid_equal
 
 let cid_prog_equal = cid_equal
 
-let cid_mutual_group_equal = Int.(=)
+let cid_mutual_group_equal = Int.( = )

@@ -31,6 +31,8 @@ module Map : Map.S with type key = t
 
 module Hamt : Hamt.S with type key = t
 
+module Hashtbl : Hashtbl.S with type key = t
+
 (** {1 Lists} *)
 
 val find_duplicates : t List.t -> (t * t List2.t) List1.t Option.t

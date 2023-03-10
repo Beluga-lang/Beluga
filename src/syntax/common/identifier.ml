@@ -34,6 +34,11 @@ module type SHOW = Show.SHOW
 module Set = Set.Make (Ord)
 module Map = Map.Make (Ord)
 
+module Hashtbl = Hashtbl.Make (struct
+  include Ord
+  include Hash
+end)
+
 module Show : SHOW with type t = t = struct
   type nonrec t = t
 

@@ -536,8 +536,9 @@ module Make
 
   let hole =
     satisfy (function
-      | Option.Some (_location, Token.HOLE "") -> Result.ok `Unlabelled
-      | Option.Some (location, Token.HOLE label) ->
+      | Option.Some (_location, Token.HOLE Option.None) ->
+          Result.ok `Unlabelled
+      | Option.Some (location, Token.HOLE (Option.Some label)) ->
           Result.ok (`Labelled (Identifier.make ~location label))
       | Option.Some (_location, token) ->
           Result.error (Expected_hole { actual = Option.some token })

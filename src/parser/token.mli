@@ -85,7 +85,7 @@ type t =
       (** [DOLLAR_IDENT x] is [x] where [x] starts with [$]. *)
   | HASH_BLANK  (** [#_] *)
   | DOLLAR_BLANK  (** [$_] *)
-  | HOLE of string  (** [HOLE x] is [?x]. *)
+  | HOLE of string option  (** [HOLE x] is [?x]. *)
   | INTLIT of int  (** [INTLIT i] is the integer literal [i]. *)
   | BLOCK_COMMENT of string  (** A block comment of the form [%{{ ... }}%] *)
 

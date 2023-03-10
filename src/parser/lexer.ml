@@ -289,7 +289,7 @@ let rec tokenize lexbuf =
         Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
           (Sedlexing.lexeme_length lexbuf - prefix_length)
       in
-      const (Token.HOLE s)
+      const (Token.HOLE (Option.from_predicate String.is_non_empty s))
   | "_" -> const Token.UNDERSCORE
   | dots -> const Token.DOTS
   | turnstile_hash -> const Token.TURNSTILE_HASH

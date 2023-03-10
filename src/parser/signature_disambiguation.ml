@@ -301,10 +301,10 @@ struct
     | Synprs.Signature.Global_pragma.Warn_on_coverage_error { location } ->
         return
           (Synext.Signature.Global_pragma.Warn_on_coverage_error { location })
-    | Synprs.Signature.Global_pragma.Raise_error_on_coverage_error
-        { location } ->
+    | Synprs.Signature.Global_pragma.Initiate_coverage_checking { location }
+      ->
         return
-          (Synext.Signature.Global_pragma.Raise_error_on_coverage_error
+          (Synext.Signature.Global_pragma.Initiate_coverage_checking
              { location })
 
   and disambiguate_totality_declaration = function

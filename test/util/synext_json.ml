@@ -1343,9 +1343,9 @@ and json_of_signature_global_pragma global_pragma =
   | Signature.Global_pragma.Warn_on_coverage_error { location } ->
       json_of_variant ~name:"Signature.Global_pragma.Warn_on_coverage_error"
         ~data:[ ("location", json_of_location location) ]
-  | Signature.Global_pragma.Raise_error_on_coverage_error { location } ->
+  | Signature.Global_pragma.Initiate_coverage_checking { location } ->
       json_of_variant
-        ~name:"Signature.Global_pragma.Raise_error_on_coverage_error"
+        ~name:"Signature.Global_pragma.Initiate_coverage_checking"
         ~data:[ ("location", json_of_location location) ]
 
 and json_of_signature_totality_declaration totality_declaration =

@@ -2013,7 +2013,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
     | Signature.Global_pragma.Warn_on_coverage_error _ ->
         let pp_warncoverage_pragma = pp_string "--warncoverage" in
         pp_pragma "warncoverage" pp_warncoverage_pragma
-    | Signature.Global_pragma.Raise_error_on_coverage_error _ ->
+    | Signature.Global_pragma.Initiate_coverage_checking _ ->
         let pp_coverage_pragma = pp_string "--coverage" in
         pp_pragma "coverage" pp_coverage_pragma
 

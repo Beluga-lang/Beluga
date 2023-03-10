@@ -1,3 +1,5 @@
+type module_id = int
+
 (** A constant identifier for types *)
 type cid_typ = int
 

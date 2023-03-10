@@ -1524,12 +1524,11 @@ module Signature = struct
               globally disabling strengthening during LF reconstruction. *)
       | Warn_on_coverage_error of { location : Location.t }
           (** [Warn_on_coverage_error _] is the pragma [--warncoverage] for
-              enabling coverage checking and raising warnings on coverage
-              errors. *)
-      | Raise_error_on_coverage_error of { location : Location.t }
-          (** [Raise_error_on_coverage_error _] is the pragma [--coverage]
-              for enabling coverage checking and raising errors on coverage
-              errors. *)
+              only printing pattern coverage problems. *)
+      | Initiate_coverage_checking of { location : Location.t }
+          (** [Initiate_coverage_checking _] is the pragma [--coverage] for
+              initiating coverage checking. Unless [--warncoverage] is used,
+              then coverage problems raise exceptions. *)
   end
 
   (** Totality declarations and orderings for configuring the totality

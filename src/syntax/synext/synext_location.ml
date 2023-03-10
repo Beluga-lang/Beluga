@@ -297,7 +297,7 @@ let location_of_signature_global_pragma global_pragma =
   match global_pragma with
   | No_strengthening { location; _ }
   | Warn_on_coverage_error { location; _ }
-  | Raise_error_on_coverage_error { location; _ } ->
+  | Initiate_coverage_checking { location; _ } ->
       location
 
 let location_of_signature_totality_declaration totality_declaration =

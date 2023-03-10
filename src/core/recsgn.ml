@@ -186,21 +186,18 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
       failure to perform [disable_lf_strengthening ~location]. *)
   val with_disabled_lf_strengthening : location:Location.t -> 'a t -> 'a t
 
-  (** [enable_warn_on_coverage_error ~location] sets the error-reporting mode
+  (** [with_warn_on_coverage_error ~location] sets the error-reporting mode
       of pattern coverage-checking to `warn'.
 
       [location] is the location to use for error-reporting in case of
-      failure to perform [enable_warn_on_coverage_error ~location]. *)
-  val with_enabled_warn_on_coverage_error :
-    location:Location.t -> 'a t -> 'a t
+      failure to perform [with_warn_on_coverage_error ~location]. *)
+  val with_warn_on_coverage_error : location:Location.t -> 'a t -> 'a t
 
-  (** [enable_raise_on_coverage_error ~location] sets the error-reporting
-      mode of pattern coverage-checking to `raise'.
+  (** [with_coverage_checking ~location] enables coverage-checking.
 
       [location] is the location to use for error-reporting in case of
-      failure to perform [enable_raise_on_coverage_error ~location]. *)
-  val with_enabled_raise_on_coverage_error :
-    location:Location.t -> 'a t -> 'a t
+      failure to perform [with_coverage_checking ~location]. *)
+  val with_coverage_checking : location:Location.t -> 'a t -> 'a t
 
   (** [set_name_generation_bases ~location ~meta_variable_base ?computation_variable_base constant]
       sets the naming convention for name generation of meta-level and
@@ -443,10 +440,10 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     | Synext.Signature.Global_pragma.No_strengthening { location } ->
         with_disabled_lf_strengthening ~location f
     | Synext.Signature.Global_pragma.Warn_on_coverage_error { location } ->
-        with_enabled_warn_on_coverage_error ~location f
-    | Synext.Signature.Global_pragma.Raise_error_on_coverage_error
-        { location } ->
-        with_enabled_raise_on_coverage_error ~location f
+        with_warn_on_coverage_error ~location f
+    | Synext.Signature.Global_pragma.Initiate_coverage_checking { location }
+      ->
+        with_coverage_checking ~location f
 
   (** [reconstruct_signature_entries entries] reconstructs a list of
       signature entries. This in particular handles the reconstruction of

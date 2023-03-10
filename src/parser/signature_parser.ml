@@ -195,8 +195,7 @@ module Make
 
     let coverage_pragma =
       pragma "coverage" |> span $> fun (location, ()) ->
-      Synprs.Signature.Global_pragma.Raise_error_on_coverage_error
-        { location }
+      Synprs.Signature.Global_pragma.Initiate_coverage_checking { location }
 
     let warncoverage_pragma =
       pragma "warncoverage" |> span $> fun (location, ()) ->

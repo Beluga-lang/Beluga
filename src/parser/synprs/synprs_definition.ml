@@ -792,7 +792,7 @@ module Signature = struct
     type t =
       | No_strengthening of { location : Location.t }
       | Warn_on_coverage_error of { location : Location.t }
-      | Raise_error_on_coverage_error of { location : Location.t }
+      | Initiate_coverage_checking of { location : Location.t }
   end =
     Global_pragma
 

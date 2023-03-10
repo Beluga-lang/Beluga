@@ -91,7 +91,7 @@ type t =
   (* A dollar followed by an underscore. *)
   | DOLLAR_BLANK (* $_ *)
   (* A question mark followed by an identifier *)
-  | HOLE of string
+  | HOLE of string option
   (* An integer literal. *)
   | INTLIT of int
   (* A block comment of the form %{{ ... }}% *)
@@ -182,7 +182,8 @@ include (
       | STRING s -> p "STRING %S" s
       | BLOCK_COMMENT s -> p "%%{{ %s %%}}" s
       | IDENT s -> p "%s" s
-      | HOLE s -> p "?%s" s
+      | HOLE Option.None -> p "?"
+      | HOLE (Option.Some s) -> p "?%s" s
       | INTLIT n -> p "%d" n
       | DOT_IDENT s -> p ".%s" s
       | DOT_INTLIT n -> p ".%d" n

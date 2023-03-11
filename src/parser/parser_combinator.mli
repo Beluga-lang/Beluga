@@ -269,6 +269,10 @@ module type PARSER = sig
   (** [fail exn] is the parser that always fails with [exn]. *)
   val fail : exn -> 'a t
 
+  (** [fail_at_location location exn] is the parser that always fails with
+      [exn] annotated with [location]. *)
+  val fail_at_location : Location.t -> exn -> 'a t
+
   (** [fail_at_next_location exn] is the parser that always fails with [exn]
       annotated with the next location in the input stream. *)
   val fail_at_next_location : exn -> 'a t

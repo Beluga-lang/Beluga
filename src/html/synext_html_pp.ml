@@ -993,6 +993,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     let* parent_precedence = precedence_of_clf_term term in
     match term with
     | CLF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
+    | CLF.Term.Meta_variable { identifier; _ } -> pp_meta_variable identifier
     | CLF.Term.Parameter_variable { identifier; _ } ->
         pp_parameter_variable identifier
     | CLF.Term.Constant { identifier; _ } ->
@@ -1151,6 +1152,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     match term with
     | CLF.Term.Pattern.Variable { identifier; _ } ->
         pp_lf_variable identifier
+    | CLF.Term.Pattern.Meta_variable { identifier; _ } ->
+        pp_meta_variable identifier
     | CLF.Term.Pattern.Parameter_variable { identifier; _ } ->
         pp_parameter_variable identifier
     | CLF.Term.Pattern.Constant { identifier; _ } ->

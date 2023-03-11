@@ -46,6 +46,7 @@ let location_of_clf_term term =
   let open CLF.Term in
   match term with
   | Variable { location; _ }
+  | Meta_variable { location; _ }
   | Parameter_variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
@@ -81,6 +82,7 @@ let location_of_clf_term_pattern term_pattern =
   let open CLF.Term.Pattern in
   match term_pattern with
   | Variable { location; _ }
+  | Meta_variable { location; _ }
   | Parameter_variable { location; _ }
   | Constant { location; _ }
   | Wildcard { location; _ }

@@ -233,7 +233,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -292,7 +292,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "N2",
@@ -397,7 +397,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -492,7 +492,7 @@
                             ],
                             "arguments": [
                               [
-                                "CLF.Term.Variable",
+                                "CLF.Term.Meta_variable",
                                 {
                                   "identifier": {
                                     "name": "N2",

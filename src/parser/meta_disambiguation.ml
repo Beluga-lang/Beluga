@@ -147,7 +147,7 @@ module Make
         Error.raise_at1 location Illegal_context_meta_type
     | Synprs.Meta.Thing.RawSchema { location; schema } -> (
         lookup schema >>= function
-        | Result.Ok (Schema_constant, _) ->
+        | Result.Ok entry when Entry.is_schema_constant entry ->
             return (Synext.Meta.Typ.Context_schema { location; schema })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -299,7 +299,7 @@ module Make
     | [] -> f []
     | (identifier, typ) :: xs ->
         let* typ' = disambiguate_lf_typ typ in
-        with_lf_term_variable identifier
+        with_lf_variable identifier
           (with_disambiguated_lf_bindings_list xs (fun ys ->
                f ((identifier, typ') :: ys)))
 
@@ -311,7 +311,7 @@ module Make
    fun bindings f ->
     let (List1.T ((identifier, typ), xs)) = bindings in
     let* typ' = disambiguate_lf_typ typ in
-    with_lf_term_variable identifier
+    with_lf_variable identifier
       (with_disambiguated_lf_bindings_list xs (fun ys ->
            f (List1.from (identifier, typ') ys)))
 
@@ -341,7 +341,7 @@ module Make
     match schema_object with
     | Synprs.Meta.Schema_object.Raw_constant { location; identifier } -> (
         lookup identifier >>= function
-        | Result.Ok (Schema_constant, _) ->
+        | Result.Ok entry when Entry.is_schema_constant entry ->
             return (Synext.Meta.Schema.Constant { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location

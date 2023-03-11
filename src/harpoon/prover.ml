@@ -272,7 +272,11 @@ let process_command
          "There is no theorem by name %a."
          Name.pp name
 
-  | Synext.Harpoon.Repl.Command.Rename { rename_from; rename_to; level; _ } ->
+  | Synext.Harpoon.Repl.Command.Rename
+    { rename_from = rename_from, _rename_from_modifier
+    ; rename_to = rename_to, _rename_to_modifier
+    ; level
+    ; _ } ->
      let x_src = Name.make_from_identifier rename_from
      and x_dst = Name.make_from_identifier rename_to in
      if Bool.not (Theorem.rename_variable x_src x_dst level t g) then
@@ -363,7 +367,10 @@ let process_command
         @,See online documentation: https://beluga-lang.readthedocs.io/@]"
 
   (* Real tactics: *)
-  | Synext.Harpoon.Repl.Command.Unbox { expression; assignee; modifier; _ } ->
+  | Synext.Harpoon.Repl.Command.Unbox
+    { expression
+    ; assignee = assignee, _modifier
+    ; modifier; _ } ->
      let (hs, m, tau) =
        let cid = Theorem.get_cid t in
        Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) expression

@@ -48,6 +48,8 @@ exception Bound_substitution_variable of Qualified_identifier.t
 
 exception Bound_context_variable of Qualified_identifier.t
 
+exception Bound_contextual_variable of Qualified_identifier.t
+
 exception Bound_schema_constant of Qualified_identifier.t
 
 exception Bound_computation_variable of Qualified_identifier.t
@@ -92,6 +94,10 @@ exception Expected_computation_term_destructor
 exception Expected_program_constant
 
 exception Expected_lf_term_variable
+
+exception Expected_meta_variable
+
+exception Expected_lf_or_meta_variable
 
 exception Expected_parameter_variable
 
@@ -148,19 +154,36 @@ module type INDEXING_STATE = sig
   (** {1 Index of Variables} *)
 
   (** [index_of_lf_variable identifier state] is [(state', offset)] where
-      [offset] is the de Bruijn index of [identifier] in [state].
+      [offset] is the LF-bound de Bruijn index of [identifier] in [state].
 
       If [identifier] is unbound, then an exception is raised. *)
   val index_of_lf_variable : Identifier.t -> Id.offset t
 
   (** [index_of_lf_variable_opt identifier state] is [(state', offset_opt)]
-      where [offset_opt] is the de Bruijn index of [identifier] in [state].
+      where [offset_opt] is the LF-bound de Bruijn index of [identifier] in
+      [state].
 
       If [identifier] is unbound, then [offset_opt = Option.None].
 
       If [state] is a pattern state, then [offset_opt] is additionally
       [Option.None] if it is not an inner bound variable. *)
   val index_of_lf_variable_opt : Identifier.t -> Id.offset Option.t t
+
+  (** [index_of_meta_variable identifier state] is [(state', offset)] where
+      [offset] is the meta-level de Bruijn index of [identifier] in [state].
+
+      If [identifier] is unbound, then an exception is raised. *)
+  val index_of_meta_variable : Identifier.t -> Id.offset t
+
+  (** [index_of_meta_variable_opt identifier state] is [(state', offset_opt)]
+      where [offset_opt] is the meta-level de Bruijn index of [identifier] in
+      [state].
+
+      If [identifier] is unbound, then [offset_opt = Option.None].
+
+      If [state] is a pattern state, then [offset_opt] is additionally
+      [Option.None] if it is not an inner bound variable. *)
+  val index_of_meta_variable_opt : Identifier.t -> Id.offset Option.t t
 
   val index_of_parameter_variable : Identifier.t -> Id.offset t
 
@@ -197,6 +220,15 @@ module type INDEXING_STATE = sig
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_bound_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  (** [with_bound_contextual_variable identifier m state] runs [m] in a state
+      where [identifier] is either a bound meta, parameter, substitution or
+      context variable.
+
+      If [state] is a pattern state, then [identifier] is additionally
+      considered as an inner bound variable. *)
+  val with_bound_contextual_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_bound_comp_variable :
@@ -247,58 +279,27 @@ module type INDEXING_STATE = sig
   val disallow_free_variables : 'a t -> 'a t
 end
 
-module Persistent_deBruijn_indexing_state : sig
-  type index = int
-
+module type LEVEL = sig
   type t
 
-  val empty : t
+  val of_int : Int.t -> t
 
-  val add_name : t -> Identifier.t -> t
-
-  val add_blank : t -> t
-
-  val get_index : t -> Identifier.t -> index Option.t
-end = struct
-  type index = int
-
-  type t =
-    { abstractions : Int.t
-          (** The number of abstractions added to the indexer. *)
-    ; levels_by_name : Int.t List1.t Identifier.Hamt.t
-          (** The de Bruijn levels assigned by name. The head element in one
-              of these lists is the latest de Bruijn level of the associated
-              name. *)
-    }
-
-  let empty = { abstractions = 0; levels_by_name = Identifier.Hamt.empty }
-
-  let add_name indexer name =
-    match Identifier.Hamt.find_opt name indexer.levels_by_name with
-    | Option.None ->
-        { abstractions = indexer.abstractions + 1
-        ; levels_by_name =
-            Identifier.Hamt.add name
-              (List1.singleton indexer.abstractions)
-              indexer.levels_by_name
-        }
-    | Option.Some levels ->
-        { abstractions = indexer.abstractions + 1
-        ; levels_by_name =
-            Identifier.Hamt.add name
-              (List1.cons indexer.abstractions levels)
-              indexer.levels_by_name
-        }
-
-  let add_blank indexer =
-    { indexer with abstractions = indexer.abstractions + 1 }
-
-  let get_index indexer name =
-    let open Option in
-    Identifier.Hamt.find_opt name indexer.levels_by_name $> fun levels ->
-    let level = List1.head levels in
-    indexer.abstractions - level
+  val to_int : t -> Int.t
 end
+
+module Level = struct
+  type t = int
+
+  let of_int = Fun.id
+
+  let to_int = Fun.id
+end
+
+module Lf_level : LEVEL = Level
+
+module Meta_level : LEVEL = Level
+
+module Comp_level : LEVEL = Level
 
 module Persistent_indexing_state = struct
   type entry =
@@ -307,12 +308,16 @@ module Persistent_indexing_state = struct
     }
 
   and entry_desc =
-    | Lf_term_variable of { lf_level : Int.t }
-    | Meta_variable of { meta_level : Int.t }
-    | Parameter_variable of { meta_level : Int.t }
-    | Substitution_variable of { meta_level : Int.t }
-    | Context_variable of { meta_level : Int.t }
-    | Computation_variable of { comp_level : Int.t }
+    | Lf_term_variable of { lf_level : Lf_level.t }
+    | Meta_variable of { meta_level : Meta_level.t }
+    | Parameter_variable of { meta_level : Meta_level.t }
+    | Substitution_variable of { meta_level : Meta_level.t }
+    | Context_variable of { meta_level : Meta_level.t }
+    | Contextual_variable of { meta_level : Meta_level.t }
+        (** A contextual variable is either a meta, parameter, substitution,
+            or contextual variable. Contextual variables are introduced
+            ambiguously by [mlam]-expressions. *)
+    | Computation_variable of { comp_level : Comp_level.t }
     | Lf_type_constant of { cid : Id.cid_typ }
     | Lf_term_constant of { cid : Id.cid_term }
     | Schema_constant of { cid : Id.cid_schema }
@@ -328,8 +333,11 @@ module Persistent_indexing_state = struct
   type bindings_state =
     { bindings : entry Binding_tree.t
     ; lf_context_size : Int.t
+          (** The length of [cPsi], the context of LF-bound variables. *)
     ; meta_context_size : Int.t
+          (** The length of [cD], the context of meta-level variables. *)
     ; comp_context_size : Int.t
+          (** The length of [cG], the context of computation-level variables. *)
     }
 
   type substate =
@@ -454,6 +462,7 @@ module Persistent_indexing_state = struct
       | Parameter_variable _ -> Bound_parameter_variable identifier
       | Substitution_variable _ -> Bound_substitution_variable identifier
       | Context_variable _ -> Bound_context_variable identifier
+      | Contextual_variable _ -> Bound_contextual_variable identifier
       | Computation_variable _ -> Bound_computation_variable identifier
       | Lf_type_constant _ -> Bound_lf_type_constant identifier
       | Lf_term_constant _ -> Bound_lf_term_constant identifier
@@ -575,10 +584,10 @@ module Persistent_indexing_state = struct
         | cause -> Error.raise cause)
 
   let index_of_lf_variable identifier =
-    lookup_toplevel identifier $> function
+    lookup_toplevel identifier >>= function
     | { desc = Lf_term_variable { lf_level }; _ } ->
         let* lf_context_size = get_lf_context_size in
-        return (lf_context_size - lf_level)
+        return (lf_context_size - Lf_level.to_int lf_level)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -589,11 +598,34 @@ module Persistent_indexing_state = struct
 
   let index_of_lf_variable_opt = index_of_variable_opt index_of_lf_variable
 
-  let index_of_parameter_variable identifier =
-    lookup_toplevel identifier $> function
-    | { desc = Parameter_variable { meta_level }; _ } ->
+  let index_of_meta_variable identifier =
+    lookup_toplevel identifier >>= function
+    | { desc =
+          Meta_variable { meta_level } | Contextual_variable { meta_level }
+      ; _
+      } ->
         let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - meta_level)
+        return (meta_context_size - Meta_level.to_int meta_level)
+    | entry ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Error.composite_exception2 Expected_meta_variable
+             (actual_binding_exn
+                (Qualified_identifier.make_simple identifier)
+                entry))
+
+  let index_of_meta_variable_opt =
+    index_of_variable_opt index_of_meta_variable
+
+  let index_of_parameter_variable identifier =
+    lookup_toplevel identifier >>= function
+    | { desc =
+          ( Parameter_variable { meta_level }
+          | Contextual_variable { meta_level } )
+      ; _
+      } ->
+        let* meta_context_size = get_meta_context_size in
+        return (meta_context_size - Meta_level.to_int meta_level)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -606,10 +638,14 @@ module Persistent_indexing_state = struct
     index_of_variable_opt index_of_parameter_variable
 
   let index_of_substitution_variable identifier =
-    lookup_toplevel identifier $> function
-    | { desc = Substitution_variable { meta_level }; _ } ->
+    lookup_toplevel identifier >>= function
+    | { desc =
+          ( Substitution_variable { meta_level }
+          | Contextual_variable { meta_level } )
+      ; _
+      } ->
         let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - meta_level)
+        return (meta_context_size - Meta_level.to_int meta_level)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -622,10 +658,14 @@ module Persistent_indexing_state = struct
     index_of_variable_opt index_of_substitution_variable
 
   let index_of_context_variable identifier =
-    lookup_toplevel identifier $> function
-    | { desc = Context_variable { meta_level }; _ } ->
+    lookup_toplevel identifier >>= function
+    | { desc =
+          ( Context_variable { meta_level }
+          | Contextual_variable { meta_level } )
+      ; _
+      } ->
         let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - meta_level)
+        return (meta_context_size - Meta_level.to_int meta_level)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -638,10 +678,10 @@ module Persistent_indexing_state = struct
     index_of_variable_opt index_of_context_variable
 
   let index_of_comp_variable identifier =
-    lookup_toplevel identifier $> function
+    lookup_toplevel identifier >>= function
     | { desc = Computation_variable { comp_level }; _ } ->
         let* comp_context_size = get_comp_context_size in
-        return (comp_context_size - comp_level)
+        return (comp_context_size - Comp_level.to_int comp_level)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -970,10 +1010,16 @@ module Make (Indexing_state : INDEXING_STATE) :
       bindings
 
   and index_clf_term = function
-    | Synext.CLF.Term.Variable { location; identifier } -> (
-        index_of_lf_variable_opt identifier >>= function
+    | Synext.CLF.Term.Variable { location; identifier } ->
+        let* offset = index_of_lf_variable identifier in
+        let head = Synapx.LF.BVar offset in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.CLF.Term.Meta_variable { location; identifier } -> (
+        index_of_meta_variable_opt identifier >>= function
         | Option.Some offset ->
-            let head = Synapx.LF.BVar offset in
+            let closure = Option.none in
+            let head = Synapx.LF.MVar (Synapx.LF.Offset offset, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine))
         | Option.None ->
@@ -991,6 +1037,7 @@ module Make (Indexing_state : INDEXING_STATE) :
     | Synext.CLF.Term.Application { location; applicand; arguments } -> (
         match applicand with
         | Synext.CLF.Term.Variable _
+        | Synext.CLF.Term.Meta_variable _
         | Synext.CLF.Term.Parameter_variable _
         | Synext.CLF.Term.Constant _
         | Synext.CLF.Term.Substitution _
@@ -1152,8 +1199,13 @@ module Make (Indexing_state : INDEXING_STATE) :
       spine
 
   and index_clf_term_pattern = function
-    | Synext.CLF.Term.Pattern.Variable { location; identifier } -> (
-        index_of_lf_variable_opt identifier >>= function
+    | Synext.CLF.Term.Pattern.Variable { location; identifier } ->
+        let* offset = index_of_lf_variable identifier in
+        let head = Synapx.LF.BVar offset in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.CLF.Term.Pattern.Meta_variable { location; identifier } -> (
+        index_of_meta_variable_opt identifier >>= function
         | Option.Some offset ->
             let head = Synapx.LF.BVar offset in
             let spine = Synapx.LF.Nil in
@@ -1174,6 +1226,7 @@ module Make (Indexing_state : INDEXING_STATE) :
       -> (
         match applicand with
         | Synext.CLF.Term.Pattern.Variable _
+        | Synext.CLF.Term.Pattern.Meta_variable _
         | Synext.CLF.Term.Pattern.Parameter_variable _
         | Synext.CLF.Term.Pattern.Constant _
         | Synext.CLF.Term.Pattern.Substitution _
@@ -1866,12 +1919,7 @@ module Make (Indexing_state : INDEXING_STATE) :
               let name = Name.make_from_identifier parameter in
               let* body' =
                 (match modifier with
-                | `Plain ->
-                    (* FIXME: [mlam g => ?] may technically introduce a
-                       context variable rather than a meta-variable. This is
-                       not an issue since both kinds of variables are part of
-                       the meta-context. *)
-                    with_bound_meta_variable
+                | `Plain -> with_bound_contextual_variable
                 | `Hash -> with_bound_parameter_variable
                 | `Dollar -> with_bound_substitution_variable)
                   parameter (aux parameters)
@@ -2197,7 +2245,7 @@ module Make (Indexing_state : INDEXING_STATE) :
         { location; expression; assignee; modifier } ->
         let* expression' = index_comp_expression expression in
         let x = Name.make_from_identifier assignee in
-        with_bound_meta_variable assignee
+        with_bound_contextual_variable assignee
           (f (Synapx.Comp.Unbox (location, expression', x, modifier)))
 
   and index_harpoon_directive = function

@@ -632,8 +632,8 @@ module Harpoon = struct
         (* Administrative commands *)
         | Rename of
             { location : Location.t
-            ; rename_from : Identifier.t
-            ; rename_to : Identifier.t
+            ; rename_from : Identifier.t * [ `Plain | `Hash | `Dollar ]
+            ; rename_to : Identifier.t * [ `Plain | `Hash | `Dollar ]
             ; level : [ `meta | `comp ]
             }
         | Toggle_automation of
@@ -707,7 +707,7 @@ module Harpoon = struct
         | Unbox of
             { location : Location.t
             ; expression : Comp.Expression_object.t
-            ; assignee : Identifier.t
+            ; assignee : Identifier.t * [ `Plain | `Hash | `Dollar ]
             ; modifier : [ `Strengthened ] Option.t
             }
         | By of
@@ -725,11 +725,11 @@ module Harpoon = struct
         | Help of { location : Location.t }
         | Auto_invert_solve of
             { location : Location.t
-            ; max_depth : int option
+            ; max_depth : Int.t Option.t
             }
         | Inductive_auto_solve of
             { location : Location.t
-            ; max_depth : int option
+            ; max_depth : Int.t Option.t
             }
     end
   end

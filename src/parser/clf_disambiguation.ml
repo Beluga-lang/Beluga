@@ -317,9 +317,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Clf_application_disambiguation.make_expression expression)
 
-  let[@inline] with_lf_term_variable_opt = function
+  let[@inline] with_lf_variable_opt = function
     | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_term_variable identifier
+    | Option.Some identifier -> with_lf_variable identifier
 
   let rec disambiguate_clf_typ object_ =
     match object_ with
@@ -352,7 +352,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_type_constant entry ->
             return
               (Synext.CLF.Typ.Constant
                  { location; identifier = qualified_identifier })
@@ -373,7 +373,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <dot-identifier>+] are type-level constants, or illegal named
            projections. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_type_constant entry ->
             return (Synext.CLF.Typ.Constant { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -402,7 +402,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           match parameter_identifier with
           | Option.None -> disambiguate_clf_typ body
           | Option.Some parameter_identifier ->
-              with_meta_variable parameter_identifier
+              with_lf_variable parameter_identifier
                 (disambiguate_clf_typ body)
         in
         return
@@ -452,7 +452,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     | (identifier, typ) :: xs ->
         let* typ' = disambiguate_clf_typ typ in
         let* ys =
-          (with_meta_variable identifier)
+          (with_lf_variable identifier)
             (disambiguate_binding_list_as_clf_dependent_types xs)
         in
         return ((identifier, typ') :: ys)
@@ -461,7 +461,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     let (List1.T ((identifier, typ), xs)) = bindings in
     let* typ' = disambiguate_clf_typ typ in
     let* ys =
-      (with_lf_term_variable identifier)
+      (with_lf_variable identifier)
         (disambiguate_binding_list_as_clf_dependent_types xs)
     in
     return (List1.from (identifier, typ') ys)
@@ -482,7 +482,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Parameter_variable, _) ->
+        | Result.Ok entry when Entry.is_parameter_variable entry ->
             return
               (Synext.CLF.Term.Parameter_variable { location; identifier })
         | Result.Ok entry ->
@@ -506,13 +506,16 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_term_constant entry ->
             return
               (Synext.CLF.Term.Constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Lf_term_variable, _ | Meta_variable, _) ->
-            (* Bound variable *)
+        | Result.Ok entry when Entry.is_lf_variable entry ->
+            (* LF-bound variable *)
             return (Synext.CLF.Term.Variable { location; identifier })
+        | Result.Ok entry when Entry.is_meta_variable entry ->
+            (* Bound meta-variable *)
+            return (Synext.CLF.Term.Meta_variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
@@ -520,7 +523,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error (Unbound_identifier _) ->
             (* Free variable. *)
             let* () = add_free_meta_variable identifier in
-            return (Synext.CLF.Term.Variable { location; identifier })
+            return (Synext.CLF.Term.Meta_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
       -> (
@@ -556,15 +559,22 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             in
             return (reduce_projections term projections)
         | `Partially_bound
-            ( List1.T
-                ( ( variable_identifier
-                  , (Lf_term_variable, _ | Meta_variable, _) )
-                , [] )
-            , unbound_segments )
-        (* Projections of a bound variable *) ->
+            (List1.T ((variable_identifier, entry), []), unbound_segments)
+          when Entry.is_lf_variable entry
+               (* Projections of an LF-bound variable *) ->
             let location = Identifier.location variable_identifier in
             let term =
               Synext.CLF.Term.Variable
+                { location; identifier = variable_identifier }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound
+            (List1.T ((variable_identifier, entry), []), unbound_segments)
+          when Entry.is_meta_variable entry
+               (* Projections of a bound meta-variable *) ->
+            let location = Identifier.location variable_identifier in
+            let term =
+              Synext.CLF.Term.Meta_variable
                 { location; identifier = variable_identifier }
             in
             return (reduce_projections term (List1.to_list unbound_segments))
@@ -575,7 +585,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | _identifier, (Lf_term_constant, _) ->
+            | _identifier, entry when Entry.is_lf_term_constant entry ->
                 let location = Qualified_identifier.location constant in
                 let term =
                   Synext.CLF.Term.Constant
@@ -589,7 +599,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                      (actual_binding_exn constant entry)))
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | _identifier, (Lf_term_constant, _) ->
+            | _identifier, entry when Entry.is_lf_term_constant entry ->
                 return (Synext.CLF.Term.Constant { identifier; location })
             | _identifier, entry ->
                 Error.raise_at1 location
@@ -613,7 +623,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_clf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
+          with_lf_variable_opt parameter_identifier
             (disambiguate_clf_term body)
         in
         return
@@ -674,7 +684,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             :: xs ->
               let* () =
                 lookup_toplevel identifier >>= function
-                | Result.Ok (Substitution_variable, _) -> return ()
+                | Result.Ok entry when Entry.is_substitution_variable entry
+                  ->
+                    return ()
                 | Result.Error (Unbound_identifier _) ->
                     let* () = add_free_substitution_variable identifier in
                     return ()
@@ -699,7 +711,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             :: xs ->
               let* () =
                 lookup_toplevel identifier >>= function
-                | Result.Ok (Substitution_variable, _) -> return ()
+                | Result.Ok entry when Entry.is_substitution_variable entry
+                  ->
+                    return ()
                 | Result.Error (Unbound_identifier _) ->
                     let* () = add_free_substitution_variable identifier in
                     return ()
@@ -761,12 +775,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     match binding with
     | Option.Some identifier, typ (* Typed binding *) ->
         let* typ' = disambiguate_clf_typ typ in
-        with_lf_term_variable identifier (f (identifier, Option.some typ'))
+        with_lf_variable identifier (f (identifier, Option.some typ'))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
     (* Untyped contextual LF variable *) ->
-        with_lf_term_variable identifier (f (identifier, Option.none))
+        with_lf_variable identifier (f (identifier, Option.none))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Hash; _ } )
@@ -818,13 +832,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 { identifier; location = identifier_location }
             in
             lookup_toplevel identifier >>= function
-            | Result.Ok (Meta_variable, _)
-            (* FIXME: Ideally, meta-variables would not be resolved to
-               context variables. However, [mlam]-expressions ambiguously
-               abstract over meta-objects, specifically contextual terms and
-               contexts in this case, which means that we have to accept
-               bound meta-variables as context variables. *)
-            | Result.Ok (Context_variable, _) ->
+            | Result.Ok entry when Entry.is_context_variable entry ->
                 with_disambiguated_context_bindings_list bindings
                   (fun bindings' ->
                     f
@@ -832,10 +840,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                       ; head = head'
                       ; bindings = bindings'
                       })
-            | Result.Ok
-                (( ( Lf_term_variable | Substitution_variable
-                   | Parameter_variable | Computation_variable )
-                 , _ ) as entry) ->
+            | Result.Ok entry when Entry.is_variable entry ->
                 Error.raise_at1 identifier_location
                   (Error.composite_exception2 Expected_context_variable
                      (actual_binding_exn
@@ -898,14 +903,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } -> (
         lookup_toplevel identifier >>= function
-        | Result.Ok (Parameter_variable, _) ->
+        | Result.Ok entry when Entry.is_parameter_variable entry ->
             return
               (Synext.CLF.Term.Pattern.Parameter_variable
                  { location; identifier })
-        | Result.Ok
-            (( ( Lf_term_variable | Substitution_variable | Meta_variable
-               | Context_variable | Computation_variable )
-             , _ ) as entry) ->
+        | Result.Ok entry when Entry.is_variable entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_parameter_variable
                  (actual_binding_exn
@@ -930,16 +932,17 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_term_constant entry ->
             return
               (Synext.CLF.Term.Pattern.Constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Lf_term_variable, _ | Meta_variable, _) ->
+        | Result.Ok entry when Entry.is_lf_variable entry ->
             return
               (Synext.CLF.Term.Pattern.Variable { location; identifier })
-        | Result.Ok
-            (( (Substitution_variable | Context_variable | Parameter_variable)
-             , _ ) as entry) ->
+        | Result.Ok entry when Entry.is_meta_variable entry ->
+            return
+              (Synext.CLF.Term.Pattern.Meta_variable { location; identifier })
+        | Result.Ok entry when Entry.is_variable entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn
@@ -985,13 +988,26 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let* () = add_free_meta_variable free_variable in
             return (reduce_projections term projections)
         | `Partially_bound
-            ( List1.T
-                ( ( identifier
-                  , (( ( Parameter_variable | Substitution_variable
-                       | Context_variable | Computation_variable )
-                     , _ ) as entry) )
-                , [] )
-            , _ ) ->
+            (List1.T ((variable_identifier, entry), []), unbound_segments)
+          when Entry.is_lf_variable entry
+               (* Projections of a bound variable *) ->
+            let location = Identifier.location variable_identifier in
+            let term =
+              Synext.CLF.Term.Pattern.Variable
+                { location; identifier = variable_identifier }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound
+            (List1.T ((variable_identifier, entry), []), unbound_segments)
+          when Entry.is_meta_variable entry
+               (* Projections of a bound variable *) ->
+            let location = Identifier.location variable_identifier in
+            let term =
+              Synext.CLF.Term.Pattern.Variable
+                { location; identifier = variable_identifier }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound (List1.T ((identifier, entry), []), _) ->
             let identifier_location = Identifier.location identifier in
             let qualified_identifier =
               Qualified_identifier.make_simple identifier
@@ -1000,15 +1016,6 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
         | `Partially_bound
-            (List1.T ((variable_identifier, _), []), unbound_segments)
-        (* Projections of a bound variable *) ->
-            let location = Identifier.location variable_identifier in
-            let term =
-              Synext.CLF.Term.Pattern.Variable
-                { location; identifier = variable_identifier }
-            in
-            return (reduce_projections term (List1.to_list unbound_segments))
-        | `Partially_bound
             ((List1.T (_, _ :: _) as bound_segments), unbound_segments)
         (* Projections of a bound constant *) -> (
             let constant =
@@ -1016,7 +1023,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | _identifier, (Lf_term_constant, _) ->
+            | _identifier, entry when Entry.is_lf_term_constant entry ->
                 let location = Qualified_identifier.location constant in
                 let term =
                   Synext.CLF.Term.Pattern.Constant
@@ -1030,7 +1037,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                      (actual_binding_exn constant entry)))
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | _identifier, (Lf_term_constant, _) ->
+            | _identifier, entry when Entry.is_lf_term_constant entry ->
                 return
                   (Synext.CLF.Term.Pattern.Constant { identifier; location })
             | _identifier, entry ->
@@ -1064,7 +1071,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  })
         | Option.Some parameter_identifier' ->
             let* body' =
-              with_meta_variable parameter_identifier'
+              with_lf_variable parameter_identifier'
                 (disambiguate_clf_term_pattern body)
             in
             return
@@ -1158,7 +1165,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               }
             in
             lookup_toplevel identifier >>= function
-            | Result.Ok (Substitution_variable, _) -> return substitution'
+            | Result.Ok entry when Entry.is_substitution_variable entry ->
+                return substitution'
             | Result.Error (Unbound_identifier _) ->
                 let* () = add_free_substitution_variable identifier in
                 return substitution'
@@ -1191,7 +1199,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               }
             in
             lookup_toplevel identifier >>= function
-            | Result.Ok (Substitution_variable, _) -> return substitution'
+            | Result.Ok entry when Entry.is_substitution_variable entry ->
+                return substitution'
             | Result.Error (Unbound_identifier _) ->
                 let* () = add_free_substitution_variable identifier in
                 return substitution'
@@ -1237,7 +1246,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     match binding with
     | Option.Some identifier, typ ->
         let* typ' = disambiguate_clf_typ typ in
-        with_lf_term_variable identifier (f (identifier, typ'))
+        with_lf_variable identifier (f (identifier, typ'))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } ) ->
@@ -1315,13 +1324,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 { identifier; location = identifier_location }
             in
             lookup_toplevel identifier >>= function
-            | Result.Ok (Meta_variable, _)
-            (* FIXME: Ideally, meta-variables would not be resolved to
-               context variables. However, [mlam]-expressions ambiguously
-               abstract over meta-objects, specifically contextual terms and
-               contexts in this case, which means that we have to accept
-               bound meta-variables as context variables. *)
-            | Result.Ok (Context_variable, _) ->
+            | Result.Ok entry when Entry.is_context_variable entry ->
                 with_disambiguated_context_pattern_bindings_list bindings
                   (fun bindings' ->
                     f
@@ -1329,10 +1332,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                       ; head = head'
                       ; bindings = bindings'
                       })
-            | Result.Ok
-                (( ( Substitution_variable | Parameter_variable
-                   | Lf_term_variable | Computation_variable )
-                 , _ ) as entry) ->
+            | Result.Ok entry when Entry.is_variable entry ->
                 Error.raise_at1 identifier_location
                   (Error.composite_exception2 Expected_context_variable
                      (actual_binding_exn

@@ -4,6 +4,20 @@ open Common_disambiguation
 
 exception Expected_constructor_constant
 
+exception Rename_variable_kind_mismatch
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Expected_constructor_constant ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected an LF-level of a computation-level constructor constant."
+    | Rename_variable_kind_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Mismatched identifier prefixes."
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 module type HARPOON_DISAMBIGUATION = sig
   (** @closed *)
   include State.STATE
@@ -75,7 +89,7 @@ struct
     | Synprs.Harpoon.Command.Unbox
         { location; expression; assignee; modifier } ->
         let* expression' = disambiguate_comp_expression expression in
-        with_meta_variable assignee
+        with_contextual_variable assignee
           (f
              (Synext.Harpoon.Command.Unbox
                 { location; expression = expression'; assignee; modifier }))
@@ -128,11 +142,11 @@ struct
     | Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
       -> (
         lookup identifier >>= function
-        | Result.Ok (Lf_term_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_term_constant entry ->
             return
               (Synext.Harpoon.Split_branch.Label.Lf_constant
                  { location; identifier })
-        | Result.Ok (Computation_term_constructor, _) ->
+        | Result.Ok entry when Entry.is_computation_term_constructor entry ->
             return
               (Synext.Harpoon.Split_branch.Label.Comp_constant
                  { location; identifier })
@@ -187,10 +201,16 @@ struct
 
   and disambiguate_harpoon_repl_command = function
     | Synprs.Harpoon.Repl.Command.Rename
-        { location; rename_from; rename_to; level } ->
-        return
-          (Synext.Harpoon.Repl.Command.Rename
-             { location; rename_from; rename_to; level })
+        { location; rename_from; rename_to; level } -> (
+        match (level, rename_from, rename_to) with
+        | `comp, (_rename_from, `Plain), (_rename_to, `Plain)
+        | `meta, (_rename_from, `Plain), (_rename_to, `Plain)
+        | `meta, (_rename_from, `Hash), (_rename_to, `Hash)
+        | `meta, (_rename_from, `Dollar), (_rename_to, `Dollar) ->
+            return
+              (Synext.Harpoon.Repl.Command.Rename
+                 { location; rename_from; rename_to; level })
+        | _ -> Error.raise_at1 location Rename_variable_kind_mismatch)
     | Synprs.Harpoon.Repl.Command.Toggle_automation
         { location; kind; change } ->
         return
@@ -293,12 +313,3 @@ struct
         return (`exact typ')
     | `infer location -> return (`infer location)
 end
-
-(** {2 Exception Printing} *)
-
-let () =
-  Error.register_exception_printer (function
-    | Expected_constructor_constant ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Expected an LF-level of a computation-level constructor constant."
-    | exn -> Error.raise_unsupported_exception_printing exn)

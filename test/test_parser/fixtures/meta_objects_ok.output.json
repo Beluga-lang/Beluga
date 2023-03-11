@@ -2647,7 +2647,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Meta_variable",
               {
                 "identifier": {
                   "name": "x",

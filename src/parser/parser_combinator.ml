@@ -1,6 +1,7 @@
 open Support
 open Beluga_syntax
 
+(* TODO: This is awfully like a lexer state, without [mark] and [rollback] *)
 module type PARSER_STATE = sig
   include State.STATE
 
@@ -261,6 +262,8 @@ module type PARSER = sig
 
   val fail : exn -> 'a t
 
+  val fail_at_location : Location.t -> exn -> 'a t
+
   val fail_at_next_location : exn -> 'a t
 
   val fail_at_previous_location : exn -> 'a t
@@ -484,31 +487,32 @@ end) :
   let located_exception1 location cause =
     located_exception (List1.singleton location) cause
 
+  let fail_at_location location e = fail (located_exception1 location e)
+
   let fail_at_previous_location e =
     let open State in
     previous_location >>= function
-    | Option.Some previous_location ->
-        fail (located_exception1 previous_location e)
+    | Option.Some previous_location -> fail_at_location previous_location e
     | Option.None -> (
         next_location >>= function
         | Option.Some next_location ->
             let location =
               Location.start_position_as_location next_location
             in
-            fail (located_exception1 location e)
+            fail_at_location location e
         | Option.None -> fail e)
 
   let fail_at_next_location e =
     let open State in
     next_location >>= function
-    | Option.Some next_location -> fail (located_exception1 next_location e)
+    | Option.Some next_location -> fail_at_location next_location e
     | Option.None -> (
         previous_location >>= function
         | Option.Some previous_location ->
             let location =
               Location.stop_position_as_location previous_location
             in
-            fail (located_exception1 location e)
+            fail_at_location location e
         | Option.None -> fail e)
 
   let return_at s x = (s, Result.ok x)

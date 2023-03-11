@@ -2,6 +2,17 @@ open Support
 open Beluga_syntax
 open Common_parser
 
+exception Illegal_comp_level_identifier of Identifier.t
+
+let () =
+  Error.register_exception_printer (function
+    | Illegal_comp_level_identifier identifier ->
+        Format.dprintf
+          "The identifier %a may not be used as a computation-level \
+           variable."
+          Identifier.pp identifier
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 module type HARPOON_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
@@ -246,22 +257,37 @@ module Make
           { location; max_depth }
       and by =
         keyword "by"
-        &> seq3 comp_expression (keyword "as" &> identifier) (maybe boxity)
+        &> seq3 comp_expression
+             (keyword "as" &> meta_object_identifier)
+             (maybe boxity)
         |> span
-        $> function
-        | location, (expression, assignee, (Option.None | Option.Some `Boxed))
-          ->
-            Synprs.Harpoon.Repl.Command.By { location; assignee; expression }
+        >>= function
+        | ( location
+          , ( expression
+            , (assignee, `Plain)
+            , (Option.None | Option.Some `Boxed) ) ) ->
+            return
+              (Synprs.Harpoon.Repl.Command.By
+                 { location; assignee; expression })
+        | ( _location
+          , ( _expression
+            , (assignee, (`Hash | `Dollar))
+            , (Option.None | Option.Some `Boxed) ) ) ->
+            fail_at_location
+              (Identifier.location assignee)
+              (Illegal_comp_level_identifier assignee)
         | location, (expression, assignee, Option.Some `Unboxed) ->
-            Synprs.Harpoon.Repl.Command.Unbox
-              { location; assignee; expression; modifier = Option.none }
+            return
+              (Synprs.Harpoon.Repl.Command.Unbox
+                 { location; assignee; expression; modifier = Option.none })
         | location, (expression, assignee, Option.Some `Strengthened) ->
-            Synprs.Harpoon.Repl.Command.Unbox
-              { location
-              ; assignee
-              ; expression
-              ; modifier = Option.some `Strengthened
-              }
+            return
+              (Synprs.Harpoon.Repl.Command.Unbox
+                 { location
+                 ; assignee
+                 ; expression
+                 ; modifier = Option.some `Strengthened
+                 })
       and compute_type =
         keyword "type" &> comp_expression |> span
         $> fun (location, scrutinee) ->
@@ -281,14 +307,14 @@ module Make
           { location; implication; goal_premises }
       and unbox =
         keyword "unbox"
-        &> seq2 comp_expression (keyword "as" &> identifier)
+        &> seq2 comp_expression (keyword "as" &> meta_object_identifier)
         |> span
         $> fun (location, (expression, assignee)) ->
         Synprs.Harpoon.Repl.Command.Unbox
           { location; expression; assignee; modifier = Option.none }
       and strengthen =
         keyword "strengthen"
-        &> seq2 comp_expression (keyword "as" &> identifier)
+        &> seq2 comp_expression (keyword "as" &> meta_object_identifier)
         |> span
         $> fun (location, (expression, assignee)) ->
         Synprs.Harpoon.Repl.Command.Unbox
@@ -322,7 +348,9 @@ module Make
           and meta_level = keyword "meta" $> fun () -> `meta in
           choice [ comp_level; meta_level ]
         in
-        keyword "rename" &> seq3 level identifier identifier |> span
+        keyword "rename"
+        &> seq3 level meta_object_identifier meta_object_identifier
+        |> span
         $> fun (location, (level, rename_from, rename_to)) ->
         Synprs.Harpoon.Repl.Command.Rename
           { location; rename_from; rename_to; level }

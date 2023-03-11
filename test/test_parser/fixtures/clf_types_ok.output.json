@@ -3123,7 +3123,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -3191,7 +3191,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -3305,7 +3305,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -3327,7 +3327,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -3454,7 +3454,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -3476,7 +3476,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -3557,7 +3557,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -3625,7 +3625,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -3719,7 +3719,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -3787,7 +3787,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -3901,7 +3901,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -3923,7 +3923,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4017,7 +4017,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4085,7 +4085,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -4199,7 +4199,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -4221,7 +4221,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4315,7 +4315,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4383,7 +4383,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -4497,7 +4497,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -4519,7 +4519,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4624,7 +4624,7 @@
               "CLF.Term.Application",
               {
                 "applicand": [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4773,7 +4773,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -4795,7 +4795,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4876,7 +4876,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4944,7 +4944,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -5035,7 +5035,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Meta_variable",
               {
                 "identifier": {
                   "name": "E1",
@@ -5057,7 +5057,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Meta_variable",
               {
                 "identifier": {
                   "name": "F1",
@@ -5128,7 +5128,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "E2",
@@ -5150,7 +5150,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "F2",
@@ -5254,7 +5254,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "E1",
@@ -5276,7 +5276,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "E2",
@@ -5344,7 +5344,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "F1",
@@ -5366,7 +5366,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "F2",
@@ -5467,7 +5467,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Meta_variable",
               {
                 "identifier": {
                   "name": "E1",
@@ -5489,7 +5489,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Meta_variable",
               {
                 "identifier": {
                   "name": "F1",
@@ -5560,7 +5560,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "E2",
@@ -5582,7 +5582,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "F2",
@@ -5686,7 +5686,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "E1",
@@ -5708,7 +5708,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "E2",
@@ -5776,7 +5776,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "F1",
@@ -5798,7 +5798,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Variable",
+                        "CLF.Term.Meta_variable",
                         {
                           "identifier": {
                             "name": "F2",
@@ -6159,7 +6159,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -6217,7 +6217,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -6390,7 +6390,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -6517,7 +6517,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -6792,7 +6792,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -6850,7 +6850,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -7023,7 +7023,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -7150,7 +7150,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -7425,7 +7425,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -7483,7 +7483,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Meta_variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -7656,7 +7656,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -7783,7 +7783,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Variable",
+                            "CLF.Term.Meta_variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -7930,7 +7930,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -8009,7 +8009,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -8101,7 +8101,7 @@
               "CLF.Term.Application",
               {
                 "applicand": [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -8167,7 +8167,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -8272,7 +8272,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -8351,7 +8351,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -8487,7 +8487,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -8509,7 +8509,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Variable",
+                    "CLF.Term.Meta_variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -8812,7 +8812,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "CLF.Term.Meta_variable",
                   {
                     "identifier": {
                       "name": "y",

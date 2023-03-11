@@ -361,16 +361,7 @@ module Make
   let with_function_parameters = with_function_parameters_list1
 
   let with_meta_parameter = function
-    | Option.Some identifier, `Plain ->
-        with_meta_variable identifier
-        (*= FIXME(Marc-Antoine): [mlam g => ?] may technically introduce a
-            context variable rather than a meta-variable. This is not an issue
-            for now because contextual LF contexts with a variable in head
-            position are always disambiguated as having a context variable in
-            head position. Allowing multiple context variables in a context
-            (like [..g1, x : t, ..g2]) will introduce an ambiguity between
-            context variables and meta-variables that cannot be resolved in the
-            case of [mlam g => ?]. *)
+    | Option.Some identifier, `Plain -> with_contextual_variable identifier
     | Option.Some identifier, `Hash -> with_parameter_variable identifier
     | Option.Some identifier, `Dollar ->
         with_substitution_variable identifier
@@ -467,19 +458,23 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_inductive_type_constant entry ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_stratified_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_stratified_type_constant entry ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_abbreviation_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_abbreviation_type_constant entry ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_coinductive_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_coinductive_type_constant entry ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
                  { location; identifier = qualified_identifier })
@@ -501,19 +496,23 @@ module Make
            <dot-identifier>+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_inductive_type_constant entry ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
                  { location; identifier })
-        | Result.Ok (Computation_stratified_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_stratified_type_constant entry ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
                  { location; identifier })
-        | Result.Ok (Computation_abbreviation_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_abbreviation_type_constant entry ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
                  { location; identifier })
-        | Result.Ok (Computation_coinductive_type_constant, _) ->
+        | Result.Ok entry
+          when Entry.is_computation_coinductive_type_constant entry ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
                  { location; identifier })
@@ -596,18 +595,18 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_term_constructor, _) ->
+        | Result.Ok entry when Entry.is_computation_term_constructor entry ->
             (* [identifier] appears as a bound computation-level
                constructor *)
             return
               (Synext.Comp.Expression.Constructor
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Program_constant, _) ->
+        | Result.Ok entry when Entry.is_program_constant entry ->
             (* [identifier] appears as a bound computation-level program *)
             return
               (Synext.Comp.Expression.Program
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_variable, _) ->
+        | Result.Ok entry when Entry.is_computation_variable entry ->
             (* [identifier] appears as a bound computation-level variable *)
             return (Synext.Comp.Expression.Variable { location; identifier })
         | Result.Ok entry ->
@@ -657,9 +656,10 @@ module Make
                   (List1.from x xs))
         | `Partially_bound (bound_segments, unbound_segments) -> (
             match bound_segments with
-            | List1.T ((variable, (Computation_variable, _)), [])
-            (* A bound computation-level variable with trailing
-               observations *) ->
+            | List1.T ((variable, entry), [])
+              when Entry.is_computation_variable entry
+                   (* A bound computation-level variable with trailing
+                      observations *) ->
                 let location = Identifier.location variable in
                 let scrutinee =
                   Synext.Comp.Expression.Variable
@@ -672,8 +672,9 @@ module Make
                     (List1.map Pair.fst bound_segments)
                 in
                 match List1.last bound_segments with
-                | _identifier, (Computation_term_constructor, _)
-                (* [bound_segments] forms a valid constant *) ->
+                | _identifier, entry
+                  when Entry.is_computation_term_constructor entry
+                       (* [bound_segments] forms a valid constant *) ->
                     let location =
                       Qualified_identifier.location bound_segments_identifier
                     in
@@ -683,8 +684,9 @@ module Make
                     in
                     disambiguate_trailing_observations scrutinee
                       unbound_segments
-                | _identifier, (Program_constant, _)
-                (* [bound_segments] forms a valid constant *) ->
+                | _identifier, entry
+                  when Entry.is_program_constant entry
+                       (* [bound_segments] forms a valid constant *) ->
                     let location =
                       Qualified_identifier.location bound_segments_identifier
                     in
@@ -705,11 +707,12 @@ module Make
                 ))
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | _identifier, (Computation_term_constructor, _) ->
+            | _identifier, entry
+              when Entry.is_computation_term_constructor entry ->
                 return
                   (Synext.Comp.Expression.Constructor
                      { location; identifier })
-            | _identifier, (Program_constant, _) ->
+            | _identifier, entry when Entry.is_program_constant entry ->
                 return
                   (Synext.Comp.Expression.Program { location; identifier })
             | _identifier, entry ->
@@ -886,8 +889,9 @@ module Make
           Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
         in
         match List1.last bound_segments with
-        | _identifier, (Computation_term_destructor, _)
-        (* [bound_segments] forms a destructor *) ->
+        | _identifier, entry
+          when Entry.is_computation_term_destructor entry
+               (* [bound_segments] forms a destructor *) ->
             let destructor = bound_segments_identifier in
             let location =
               Location.join
@@ -909,8 +913,9 @@ module Make
           Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
         in
         match List1.last bound_segments with
-        | _identifier, (Computation_term_destructor, _)
-        (* [bound_segments] forms a destructor *) ->
+        | _identifier, entry
+          when Entry.is_computation_term_destructor entry
+               (* [bound_segments] forms a destructor *) ->
             let destructor = bound_segments_identifier in
             let location =
               Location.join
@@ -953,7 +958,7 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_term_constructor, _) ->
+        | Result.Ok entry when Entry.is_computation_term_constructor entry ->
             (* [identifier] appears as a bound computation-level
                constructor *)
             return
@@ -976,7 +981,7 @@ module Make
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
         { location; identifier; _ } -> (
         lookup identifier >>= function
-        | Result.Ok (Computation_term_constructor, _) ->
+        | Result.Ok entry when Entry.is_computation_term_constructor entry ->
             (* [identifier] appears as a bound computation-level
                constructor *)
             return (Synext.Comp.Pattern.Constructor { location; identifier })
@@ -1085,7 +1090,8 @@ module Make
               Qualified_identifier.make_simple (Pair.fst bound_segment)
             in
             match bound_segment with
-            | _identifier, (Computation_term_constructor, _) ->
+            | _identifier, entry
+              when Entry.is_computation_term_constructor entry ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
                   Synext.Comp.Pattern.Constructor
@@ -1116,10 +1122,7 @@ module Make
                   ; patterns = pattern' :: patterns
                   ; observations
                   }
-            | ( identifier
-              , (( ( Lf_term_variable | Meta_variable | Substitution_variable
-                   | Parameter_variable | Context_variable )
-                 , _ ) as entry) ) ->
+            | identifier, entry when Entry.is_variable entry ->
                 let qualified_identifier =
                   Qualified_identifier.make_simple identifier
                 in
@@ -1163,7 +1166,8 @@ module Make
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | _identifier, (Computation_term_constructor, _) ->
+            | _identifier, entry
+              when Entry.is_computation_term_constructor entry ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
                   Synext.Comp.Pattern.Constructor
@@ -1206,7 +1210,8 @@ module Make
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | _identifier, (Computation_term_constructor, _) -> (
+            | _identifier, entry
+              when Entry.is_computation_term_constructor entry -> (
                 (* This qualified identifier is a constructor pattern *)
                 let pattern' =
                   Synext.Comp.Pattern.Constructor
@@ -1316,8 +1321,9 @@ module Make
           Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
         in
         match List1.last bound_segments with
-        | _identifier, (Computation_term_destructor, _)
-        (* [bound_segments] forms a destructor *) ->
+        | _identifier, entry
+          when Entry.is_computation_term_destructor entry
+               (* [bound_segments] forms a destructor *) ->
             let destructor = bound_segments_identifier in
             let* destructors = disambiguate_destructors unbound_segments in
             return (List1.cons destructor destructors)
@@ -1331,8 +1337,9 @@ module Make
           Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
         in
         match List1.last bound_segments with
-        | _identifier, (Computation_term_destructor, _)
-        (* [bound_segments] forms a destructor *) ->
+        | _identifier, entry
+          when Entry.is_computation_term_destructor entry
+               (* [bound_segments] forms a destructor *) ->
             let destructor = bound_segments_identifier in
             return (List1.singleton destructor)
         | _identifier, _entry

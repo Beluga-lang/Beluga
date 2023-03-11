@@ -1,44 +1,61 @@
 open Support
 open Beluga_syntax
 
+module type ENTRY = sig
+  type t
+
+  val is_lf_variable : t -> Bool.t
+
+  val is_meta_variable : t -> Bool.t
+
+  val is_parameter_variable : t -> Bool.t
+
+  val is_substitution_variable : t -> Bool.t
+
+  val is_context_variable : t -> Bool.t
+
+  val is_computation_variable : t -> Bool.t
+
+  val is_lf_type_constant : t -> Bool.t
+
+  val is_lf_term_constant : t -> Bool.t
+
+  val is_schema_constant : t -> Bool.t
+
+  val is_computation_inductive_type_constant : t -> Bool.t
+
+  val is_computation_stratified_type_constant : t -> Bool.t
+
+  val is_computation_coinductive_type_constant : t -> Bool.t
+
+  val is_computation_abbreviation_type_constant : t -> Bool.t
+
+  val is_computation_term_constructor : t -> Bool.t
+
+  val is_computation_term_destructor : t -> Bool.t
+
+  val is_program_constant : t -> Bool.t
+
+  val is_module : t -> Bool.t
+
+  val is_variable : t -> Bool.t
+end
+
 module type DISAMBIGUATION_STATE = sig
   include State.STATE
 
-  type data = private
-    { location : Location.t
-    ; operator : Operator.t Option.t
-    ; arity : Int.t Option.t
-    }
-
-  type entry = private
-    | Lf_type_constant
-    | Lf_term_constant
-    | Lf_term_variable
-    | Meta_variable
-    | Parameter_variable
-    | Substitution_variable
-    | Context_variable
-    | Schema_constant
-    | Computation_variable
-    | Computation_inductive_type_constant
-    | Computation_stratified_type_constant
-    | Computation_coinductive_type_constant
-    | Computation_abbreviation_type_constant
-    | Computation_term_constructor
-    | Computation_term_destructor
-    | Module
-    | Program_constant
+  module Entry : ENTRY
 
   (** {1 Variables} *)
 
-  (** [add_lf_term_variable ?location identifier state] is [(state', ())]
-      where [state'] is derived from [state] by the addition of a bound LF
-      variable [identifier] with binding site [location]. If
-      [location = Option.None], then [identifier]'s location is used instead.
+  (** [add_lf_variable ?location identifier state] is [(state', ())] where
+      [state'] is derived from [state] by the addition of a bound LF variable
+      [identifier] with binding site [location]. If [location = Option.None],
+      then [identifier]'s location is used instead.
 
       This is mostly used for testing. For locally binding an LF variable,
-      see {!with_lf_term_variable}. *)
-  val add_lf_term_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+      see {!with_lf_variable}. *)
+  val add_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
@@ -53,12 +70,11 @@ module type DISAMBIGUATION_STATE = sig
   val add_computation_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
-  (** [add_free_lf_term_variable ?location identifier] is
-      [add_lf_term_variable ?location identifier], with the additional
-      behaviour of adding [identifier] as an inner pattern bound identifier
-      and as a free variable during pattern disambiguation. *)
-  val add_free_lf_term_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+  (** [add_free_lf_variable ?location identifier] is
+      [add_lf_variable ?location identifier], with the additional behaviour
+      of adding [identifier] as an inner pattern bound identifier and as a
+      free variable during pattern disambiguation. *)
+  val add_free_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_free_meta_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
@@ -75,8 +91,8 @@ module type DISAMBIGUATION_STATE = sig
   val add_free_computation_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
-  (** [with_lf_term_variable ?location identifier m state] is [(state', x)]
-      where [x] is the result of running [m] in the local state derived from
+  (** [with_lf_variable ?location identifier m state] is [(state', x)] where
+      [x] is the result of running [m] in the local state derived from
       [state] having [identifier] as a bound LF variable.
 
       When disambiguating a pattern, [identifier] is additionally added as an
@@ -87,10 +103,9 @@ module type DISAMBIGUATION_STATE = sig
       disambiguating the body [m]. This is achieved like this:
 
       {[
-        with_lf_term_variable x (disambiguate_lf_term m)
+        with_lf_variable x (disambiguate_lf m)
       ]} *)
-  val with_lf_term_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+  val with_lf_variable : ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_meta_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
@@ -98,10 +113,13 @@ module type DISAMBIGUATION_STATE = sig
   val with_parameter_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
+  val with_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
   val with_context_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_substitution_variable :
+  val with_contextual_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_comp_variable :
@@ -167,8 +185,7 @@ module type DISAMBIGUATION_STATE = sig
   val add_lf_term_constant :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
-  val add_schema_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_inductive_computation_type_constant :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
@@ -186,7 +203,7 @@ module type DISAMBIGUATION_STATE = sig
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
@@ -205,15 +222,15 @@ module type DISAMBIGUATION_STATE = sig
 
   exception Unbound_namespace of Qualified_identifier.t
 
-  val lookup_toplevel : Identifier.t -> (entry * data, exn) Result.t t
+  val lookup_toplevel : Identifier.t -> (Entry.t, exn) Result.t t
 
-  val lookup : Qualified_identifier.t -> (entry * data, exn) Result.t t
+  val lookup : Qualified_identifier.t -> (Entry.t, exn) Result.t t
 
   val partial_lookup :
        Qualified_identifier.t
     -> [ `Partially_bound of
-         (Identifier.t * (entry * data)) List1.t * Identifier.t List1.t
-       | `Totally_bound of (Identifier.t * (entry * data)) List1.t
+         (Identifier.t * Entry.t) List1.t * Identifier.t List1.t
+       | `Totally_bound of (Identifier.t * Entry.t) List1.t
        | `Totally_unbound of Identifier.t List1.t
        ]
        t
@@ -221,13 +238,13 @@ module type DISAMBIGUATION_STATE = sig
   val partial_lookup' :
        Identifier.t List1.t
     -> [ `Partially_bound of
-         (Identifier.t * (entry * data)) List1.t * Identifier.t List1.t
-       | `Totally_bound of (Identifier.t * (entry * data)) List1.t
+         (Identifier.t * Entry.t) List1.t * Identifier.t List1.t
+       | `Totally_bound of (Identifier.t * Entry.t) List1.t
        | `Totally_unbound of Identifier.t List1.t
        ]
        t
 
-  val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
+  val actual_binding_exn : Qualified_identifier.t -> Entry.t -> exn
 
   (** {1 Signature Operations} *)
 

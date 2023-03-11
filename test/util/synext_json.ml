@@ -230,6 +230,12 @@ and json_of_clf_term = function
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
+  | CLF.Term.Meta_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Meta_variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
   | CLF.Term.Parameter_variable { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Parameter_variable"
         ~data:
@@ -305,6 +311,12 @@ and json_of_clf_term = function
 and json_of_clf_term_pattern = function
   | CLF.Term.Pattern.Variable { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Pattern.Variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | CLF.Term.Pattern.Meta_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Pattern.Meta_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
@@ -1073,8 +1085,8 @@ and json_of_harpoon_repl_command command =
     ->
       json_of_variant ~name:"Harpoon.Repl.Command.Rename"
         ~data:
-          [ ("rename_from", json_of_identifier rename_from)
-          ; ("rename_to", json_of_identifier rename_to)
+          [ ("rename_from", json_of_identifier (Pair.fst rename_from))
+          ; ("rename_to", json_of_identifier (Pair.fst rename_to))
           ; ( "level"
             , match level with
               | `meta -> json_of_string "meta"
@@ -1209,7 +1221,7 @@ and json_of_harpoon_repl_command command =
       json_of_variant ~name:"Harpoon.Repl.Command.Unbox"
         ~data:
           [ ("expression", json_of_comp_expression expression)
-          ; ("assignee", json_of_identifier assignee)
+          ; ("assignee", json_of_identifier (Pair.fst assignee))
           ; ( "modifier"
             , json_of_option
                 (function

@@ -161,9 +161,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Lf_application_disambiguation.make_expression expression)
 
-  let[@inline] with_lf_term_variable_opt = function
+  let[@inline] with_lf_variable_opt = function
     | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_term_variable identifier
+    | Option.Some identifier -> with_lf_variable identifier
 
   (** [disambiguate_lf_kind object_ state] is [object_] rewritten as an LF
       kind with respect to the disambiguation context [state].
@@ -204,7 +204,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
+          with_lf_variable_opt parameter_identifier
             (disambiguate_lf_kind body)
         in
         return
@@ -239,7 +239,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_type_constant entry ->
             return
               (Synext.LF.Typ.Constant
                  { location; identifier = qualified_identifier })
@@ -260,7 +260,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <dot-identifier>+] are necessarily bound LF type-level
            constants. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_type_constant entry ->
             return (Synext.LF.Typ.Constant { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -282,7 +282,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
+          with_lf_variable_opt parameter_identifier
             (disambiguate_lf_typ body)
         in
         return
@@ -325,12 +325,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         in
         (* Lookup the identifier in the current state *)
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_term_constant entry ->
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant
                  { location; identifier = qualified_identifier })
-        | Result.Ok (Lf_term_variable, _) ->
+        | Result.Ok entry when Entry.is_lf_variable entry ->
             (* [identifier] appears as an LF bound variable *)
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Ok entry ->
@@ -342,7 +342,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
-            let* () = add_free_lf_term_variable identifier in
+            let* () = add_free_lf_variable identifier in
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier { location; identifier; _ }
@@ -356,7 +356,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            ambiguity. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function
-        | Result.Ok (Lf_term_constant, _) ->
+        | Result.Ok entry when Entry.is_lf_term_constant entry ->
             (* [identifier] appears as an LF term-level constant *)
             return (Synext.LF.Term.Constant { location; identifier })
         | Result.Ok entry ->
@@ -376,7 +376,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
+          with_lf_variable_opt parameter_identifier
             (disambiguate_lf_term body)
         in
         return

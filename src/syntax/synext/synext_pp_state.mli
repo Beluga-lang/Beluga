@@ -1,54 +1,35 @@
-(** HTML printing state for the concrete syntax.
+(** Pretty-printing state for the concrete syntax.
 
-    The generation of HTML pages corresponding to concrete Beluga signatures
-    requires keeping track of HTML IDs for constant declarations (to be
-    referred to by anchors), and keeping track of user-defined notations of
-    constants for printing applications. This means that module bindings have
-    to be kept track of, and pragmas have to be applied during printing.
+    Printing of the concrete syntax requires keeping track of user-defined
+    notations of constants for printing applications. This means that module
+    bindings have to be kept track of, and pragmas have to be applied during
+    printing.
 
     @author Marc-Antoine Ouimet *)
 
 open Support
-open Beluga_syntax
-open Synext
+open Common
 
-(** Abstract definition for the HTML printing state. *)
-module type HTML_PRINTING_STATE = sig
+(** Abstract definition for the pretty-printing state. *)
+module type PRINTING_STATE = sig
   (** @closed *)
   include State.STATE
 
   (** @closed *)
   include Format_state.S with type state := state
 
-  (** [fresh_id ?prefix identifier state] is [(state', id)] where [id] is the
-      unique ID generated from [identifier] and [state], and optionally using
-      [prefix]. This ID is intended to be used as an HTML ID for anchor
-      elements to refer to. If [prefix = Option.Some p], then [id] starts
-      with [p] (this is just for aesthetics).
+  (** [add_binding identifier state] is [(state', ())] where [state'] is
+      derived from [state] by adding the binding [identifier] in the current
+      module. This shadows the previous binding for [identifier] if it
+      exists. *)
+  val add_binding : Identifier.t -> Unit.t t
 
-      [state'] is [state] updated to keep track of [id] to guarantee that
-      subsequent ID generated are unique. *)
-  val fresh_id : ?prefix:String.t -> Identifier.t -> String.t t
-
-  (** [add_binding identifier ~id state] is [(state', ())] where [state'] is
-      derived from [state] by adding the binding [identifier] with [id] in
-      the current module. This shadows the previous binding for [identifier]
-      if it exists. *)
-  val add_binding : Identifier.t -> id:String.t -> Unit.t t
-
-  (** [add_module identifier ~id declarations state] is
-      [(state', declarations')] where [declarations'] is the result of
-      [declarations] when run in a state in a new module with [identifier]
-      and [~id]. Bindings added by [declarations] are added to the new module
-      only. The derived state [state'] has [identifier] bound to the newly
-      created module. *)
-  val add_module : Identifier.t -> id:String.t -> 'a t -> 'a t
-
-  (** [lookup_id constant state] is [(state', id)] where [id] is the HTML ID
-      for the bound [constant] in [state].
-
-      If [constant] is unbound in [state], then an exception is raised. *)
-  val lookup_id : Qualified_identifier.t -> String.t t
+  (** [add_module identifier declarations state] is [(state', declarations')]
+      where [declarations'] is the result of [declarations] when run in a
+      state in a new module with [identifier]. Bindings added by
+      [declarations] are added to the new module only. The derived state
+      [state'] has [identifier] bound to the newly created module. *)
+  val add_module : Identifier.t -> 'a t -> 'a t
 
   (** [open_module module_identifier state] is [(state', ())] where [state']
       is derived from [state] with the addition of the bindings in the module
@@ -126,13 +107,17 @@ module type HTML_PRINTING_STATE = sig
   val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
 end
 
-(** Concrete implementation of {!HTML_PRINTING_STATE} backed by a (mostly)
+(** Concrete implementation of {!PRINTING_STATE} backed by a (mostly)
     immutable data structure. The instance of {!Format.formatter} is mutable,
     and concurrent writes to it will lead to unexpected results. *)
-module Html_printing_state : sig
+module Printing_state : sig
   (** @closed *)
-  include HTML_PRINTING_STATE
+  include PRINTING_STATE
 
   (** [make_initial_state ppf] constructs an empty printing state. *)
   val make_initial_state : Format.formatter -> state
+
+  (** [set_formatter ppf state] is [(state', ())] where [state'] uses [ppf]
+      as instance of formatter. *)
+  val set_formatter : Format.formatter -> Unit.t t
 end

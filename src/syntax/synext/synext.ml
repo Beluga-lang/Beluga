@@ -20,4 +20,5 @@ include Synext_arguments
 
 (** {1 Pretty-Printing} *)
 
+include Synext_pp_state
 include Synext_pp

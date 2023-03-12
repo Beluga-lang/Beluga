@@ -1,6 +1,7 @@
 open Support
 open Synext_definition
 open Common
+open Synext_pp_state
 
 exception Unsupported_implicit_lf_pi_kind
 
@@ -12,228 +13,41 @@ exception Unsupported_non_recursive_declaration
 
 exception Unsupported_recursive_declaration
 
-module type PRINTING_STATE = sig
-  include State.STATE
+let () =
+  Error.register_exception_printer (function
+    | Unsupported_implicit_lf_pi_kind ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi kinds is unsupported."
+    | Unsupported_implicit_lf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi types is unsupported."
+    | Unsupported_implicit_clf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit contextual LF Pi types is \
+           unsupported."
+    | Unsupported_non_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration outside of a \
+           recursive group of declarations."
+    | Unsupported_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration in a recursive \
+           group of declarations."
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
-  include Format_state.S with type state := state
-
-  val add_binding : Identifier.t -> Unit.t t
-
-  val with_module_declarations : Identifier.t -> 'a t -> 'a t
-
-  val add_module_declaration : Identifier.t -> Unit.t t
-
-  val open_module : Qualified_identifier.t -> Unit.t t
-
-  val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
-
-  val set_default_associativity : Associativity.t -> Unit.t t
-
-  val get_default_associativity : Associativity.t t
-
-  val set_default_precedence : Int.t -> Unit.t t
-
-  val get_default_precedence : Int.t t
-
-  val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
-
-  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
-
-  val make_prefix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-
-  val make_infix :
-       ?precedence:Int.t
-    -> ?associativity:Associativity.t
-    -> Qualified_identifier.t
-    -> Unit.t t
-
-  val make_postfix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-end
-
-module Printing_state : sig
-  include PRINTING_STATE
-
-  val initial : Format.formatter -> state
-
-  val set_formatter : Format.formatter -> Unit.t t
-end = struct
-  type entry = { operator : Operator.t Option.t }
-
-  type state =
-    { bindings : entry Binding_tree.t
-    ; formatter : Format.formatter
-    ; default_precedence : Int.t
-    ; default_associativity : Associativity.t
-    ; declarations : entry Binding_tree.t
-    }
-
-  module S = State.Make (struct
-    type t = state
-  end)
-
-  include (S : State.STATE with type state := state)
-
-  let with_formatter f =
-    let* { formatter; _ } = get in
-    f formatter
-
-  include (
-    Format_state.Make (struct
-      include S
-
-      let with_formatter = with_formatter
-    end) :
-      Format_state.S with type state := state)
-
-  let initial formatter =
-    { bindings = Binding_tree.empty
-    ; formatter
-    ; default_precedence
-    ; default_associativity
-    ; declarations = Binding_tree.empty
-    }
-
-  let set_formatter formatter =
-    modify (fun state -> { state with formatter })
-
-  let get_bindings =
-    let* state = get in
-    return state.bindings
-
-  let set_bindings bindings = modify (fun state -> { state with bindings })
-
-  let[@inline] modify_bindings f =
-    let* bindings = get_bindings in
-    let bindings' = f bindings in
-    set_bindings bindings'
-
-  let add_module_declaration identifier =
-    let* bindings = get_bindings in
-    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
-    modify (fun state ->
-        let declarations' =
-          Binding_tree.add_toplevel identifier entry ~subtree
-            state.declarations
-        in
-        { state with declarations = declarations' })
-
-  let add_binding identifier =
-    modify_bindings
-      (Binding_tree.add_toplevel identifier { operator = Option.none })
-
-  let lookup identifier =
-    let* bindings = get_bindings in
-    return (Binding_tree.lookup identifier bindings)
-
-  let add_synonym qualified_identifier synonym =
-    let* entry, subtree = lookup qualified_identifier in
-    modify_bindings (Binding_tree.add_toplevel synonym entry ~subtree)
-
-  let add_abbreviation = add_synonym
-
-  let open_namespace qualified_identifier =
-    modify_bindings (Binding_tree.open_namespace qualified_identifier)
-
-  let open_module = open_namespace
-
-  let with_module_declarations module_identifier declarations =
-    let* state = get in
-    let* () = put { state with declarations = Binding_tree.empty } in
-    let* declarations' = declarations in
-    let* state' = get in
-    let* () = put state in
-    let* () =
-      modify_bindings
-        (Binding_tree.add_toplevel module_identifier
-           ~subtree:state'.declarations
-           { operator = Option.none })
-    in
-    return declarations'
-
-  let set_default_associativity default_associativity =
-    modify (fun state -> { state with default_associativity })
-
-  let get_default_associativity =
-    let* state = get in
-    return state.default_associativity
-
-  let[@warning "-32"] set_default_precedence default_precedence =
-    modify (fun state -> { state with default_precedence })
-
-  let get_default_associativity_opt = function
-    | Option.None -> get_default_associativity
-    | Option.Some associativity -> return associativity
-
-  let get_default_precedence =
-    let* state = get in
-    return state.default_precedence
-
-  let set_default_precedence default_precedence =
-    modify (fun state -> { state with default_precedence })
-
-  let get_default_precedence_opt = function
-    | Option.None -> get_default_precedence
-    | Option.Some precedence -> return precedence
-
-  let lookup_operator constant =
-    let* { operator; _ }, _subtree = lookup constant in
-    return operator
-
-  let lookup_operator_precedence constant =
-    lookup_operator constant $> Option.map Operator.precedence
-
-  let[@warning "-23"] make_prefix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_prefix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
-
-  let[@warning "-23"] make_infix ?precedence ?associativity constant =
-    let* precedence = get_default_precedence_opt precedence in
-    let* associativity = get_default_associativity_opt associativity in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator =
-                  Option.some
-                    (Operator.make_infix ~precedence ~associativity)
-              }
-            in
-            (entry', subtree))
-          bindings)
-
-  let[@warning "-23"] make_postfix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_postfix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
-end
-
-module type BELUGA_PRINTER = sig
+module type PRINTER = sig
   include State.STATE
 
   val pp_signature_file : signature_file -> Unit.t t
+
+  val pp_signature : signature -> Unit.t t
 end
 
-module Make_pretty_printer (Printing_state : PRINTING_STATE) :
-  BELUGA_PRINTER with type state = Printing_state.state = struct
+module Make_printer (Printing_state : PRINTING_STATE) = struct
   include Printing_state
+
+  let lookup_operator_precedence constant =
+    lookup_operator constant $> Option.map Operator.precedence
 
   let indent = 2
 
@@ -474,7 +288,11 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
 
   let pp_split_keyword = pp_keyword "split"
 
-  open Synext_precedence.Make_precedences (Printing_state)
+  open Synext_precedence.Make_precedences (struct
+    include Printing_state
+
+    let lookup_operator_precedence = lookup_operator_precedence
+  end)
 
   (** {1 Pretty-Printing LF Syntax} *)
 
@@ -1996,17 +1814,20 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         let pp_query_argument =
           pp_option ~none:pp_star (fun argument -> pp_int argument)
         in
-        pp_hovbox ~indent
-          (pp_string "--query" ++ pp_space
-          ++ pp_query_argument expected_solutions
-          ++ pp_space
-          ++ pp_query_argument maximum_tries
-          ++ pp_space
-          ++ pp_meta_context meta_context
-          ++ pp_option
-               (fun identifier -> pp_space ++ pp_identifier identifier)
-               identifier
-          ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot)
+        let pp_query_pragma =
+          pp_hovbox ~indent
+            (pp_string "--query" ++ pp_space
+            ++ pp_query_argument expected_solutions
+            ++ pp_space
+            ++ pp_query_argument maximum_tries
+            ++ pp_space
+            ++ pp_meta_context meta_context
+            ++ pp_option
+                 (fun identifier -> pp_space ++ pp_identifier identifier)
+                 identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot)
+        in
+        pp_pragma "query" pp_query_pragma
 
   and pp_signature_global_pragma global_pragma =
     match global_pragma with
@@ -2087,8 +1908,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space
             ++ pp_lf_kind kind ++ pp_dot)
         in
-        let* () = add_binding identifier in
-        add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Const { identifier; typ; _ } ->
         let* () =
           pp_hovbox ~indent
@@ -2096,8 +1916,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
             ++ pp_dot)
         in
-        let* () = add_binding identifier in
-        add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Schema { identifier; schema; _ } ->
         let* () =
           pp_hovbox ~indent
@@ -2106,8 +1925,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_equal ++ pp_space
             ++ pp_schema schema ++ pp_semicolon)
         in
-        let* () = add_binding identifier in
-        add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
         let* () = traverse_list1_void pre_add_declaration declarations in
         match group_recursive_declarations declarations with
@@ -2132,8 +1950,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
             ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal
             ++ pp_space ++ pp_comp_typ typ ++ pp_semicolon)
         in
-        let* () = add_binding identifier in
-        add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Val { identifier; typ; expression; _ } ->
         let pp_typ_annotation =
           pp_option (fun typ -> pp_colon ++ pp_space ++ pp_comp_typ typ) typ
@@ -2148,10 +1965,9 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
             ++ pp_comp_expression expression
             ++ pp_semicolon)
         in
-        let* () = add_binding identifier in
-        add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Module { identifier; entries; _ } ->
-        with_module_declarations identifier
+        add_module identifier
           (pp_module_keyword ++ pp_non_breaking_space
           ++ pp_module_constant identifier
           ++ pp_non_breaking_space ++ pp_equal ++ pp_non_breaking_space
@@ -2161,30 +1977,26 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
 
   and pre_add_declaration declaration =
     match declaration with
-    | Signature.Declaration.Typ { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
-    | Signature.Declaration.Const { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+    | Signature.Declaration.Typ { identifier; _ } -> add_binding identifier
+    | Signature.Declaration.Const { identifier; _ } -> add_binding identifier
     | Signature.Declaration.CompTyp { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.CompCotyp { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.CompConst { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.CompDest { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Schema { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Theorem { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
-    | Signature.Declaration.Proof { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
+    | Signature.Declaration.Proof { identifier; _ } -> add_binding identifier
     | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
         add_binding identifier
-    | Signature.Declaration.Val { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+    | Signature.Declaration.Val { identifier; _ } -> add_binding identifier
     | Signature.Declaration.Module { identifier; _ } ->
-        add_binding identifier <& add_module_declaration identifier
+        add_binding identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
         traverse_list1_void pre_add_declaration declarations
 
@@ -2499,26 +2311,9 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         `Comment (List1.from x comment_entries)
         :: group_signature_entries rest
     | [] -> []
+
+  and pp_signature signature =
+    pp_list1 ~sep:pp_double_cut pp_signature_file signature
 end
 
-let () =
-  Error.register_exception_printer (function
-    | Unsupported_implicit_lf_pi_kind ->
-        Format.dprintf
-          "Pretty-printing of implicit LF Pi kinds is unsupported."
-    | Unsupported_implicit_lf_pi_typ ->
-        Format.dprintf
-          "Pretty-printing of implicit LF Pi types is unsupported."
-    | Unsupported_implicit_clf_pi_typ ->
-        Format.dprintf
-          "Pretty-printing of implicit contextual LF Pi types is \
-           unsupported."
-    | Unsupported_non_recursive_declaration ->
-        Format.dprintf
-          "Unsupported pretty-printing for this declaration outside of a \
-           recursive group of declarations."
-    | Unsupported_recursive_declaration ->
-        Format.dprintf
-          "Unsupported pretty-printing for this declaration in a recursive \
-           group of declarations."
-    | exn -> Error.raise_unsupported_exception_printing exn)
+module Printer = Make_printer (Printing_state)

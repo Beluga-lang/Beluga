@@ -1,19 +1,15 @@
 open Support
-open Beluga_syntax
-open Synext
+open Synext_definition
+open Common
 
-module type HTML_PRINTING_STATE = sig
+module type PRINTING_STATE = sig
   include State.STATE
 
   include Format_state.S with type state := state
 
-  val fresh_id : ?prefix:String.t -> Identifier.t -> String.t t
+  val add_binding : Identifier.t -> Unit.t t
 
-  val add_binding : Identifier.t -> id:String.t -> Unit.t t
-
-  val add_module : Identifier.t -> id:String.t -> 'a t -> 'a t
-
-  val lookup_id : Qualified_identifier.t -> String.t t
+  val add_module : Identifier.t -> 'a t -> 'a t
 
   val open_module : Qualified_identifier.t -> Unit.t t
 
@@ -40,32 +36,15 @@ module type HTML_PRINTING_STATE = sig
   val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
 end
 
-module Html_printing_state : sig
-  include HTML_PRINTING_STATE
-
-  val make_initial_state : Format.formatter -> state
-end = struct
-  type entry =
-    { id : String.t
-    ; operator : Operator.t Option.t
-    }
+module Printing_state = struct
+  type entry = { operator : Operator.t Option.t }
 
   type state =
     { bindings : entry Binding_tree.t
-          (** The binding tree of bound constants. *)
-    ; ids : String.Set.t  (** The set of HTML IDs generated so far. *)
-    ; max_suffix_by_id : Int.t String.Hamt.t
-          (** A mapping from HTML IDs to their respective maximum integer
-              suffixes. This is an auxiliary data structure to optimize the
-              generation of new HTML IDs. *)
-    ; formatter : Format.formatter  (** The formatter for pretty-printing. *)
-    ; default_associativity : Associativity.t
-          (** The default associativity of user-defined operators. *)
+    ; formatter : Format.formatter
     ; default_precedence : Int.t
-          (** The default precedence of user-defined operators. *)
+    ; default_associativity : Associativity.t
     ; declarations : entry Binding_tree.t
-          (** The active module's declarations. The signature counts as an
-              outermost module. *)
     }
 
   module S = State.Make (struct
@@ -75,8 +54,8 @@ end = struct
   include (S : State.STATE with type state := state)
 
   let with_formatter f =
-    let* state = get in
-    f state.formatter
+    let* { formatter; _ } = get in
+    f formatter
 
   include (
     Format_state.Make (struct
@@ -88,13 +67,14 @@ end = struct
 
   let make_initial_state formatter =
     { bindings = Binding_tree.empty
-    ; ids = String.Set.empty
-    ; max_suffix_by_id = String.Hamt.empty
     ; formatter
-    ; default_precedence = Synext.default_precedence
-    ; default_associativity = Synext.default_associativity
+    ; default_precedence
+    ; default_associativity
     ; declarations = Binding_tree.empty
     }
+
+  let set_formatter formatter =
+    modify (fun state -> { state with formatter })
 
   let get_bindings =
     let* state = get in
@@ -107,29 +87,6 @@ end = struct
     let bindings' = f bindings in
     set_bindings bindings'
 
-  let get_ids =
-    let* state = get in
-    return state.ids
-
-  let set_ids ids = modify (fun state -> { state with ids })
-
-  let[@inline] modify_ids f =
-    let* ids = get_ids in
-    let ids' = f ids in
-    set_ids ids'
-
-  let get_max_suffix_by_id =
-    let* state = get in
-    return state.max_suffix_by_id
-
-  let set_max_suffix_by_base max_suffix_by_id =
-    modify (fun state -> { state with max_suffix_by_id })
-
-  let[@inline] modify_max_suffix_by_id f =
-    let* max_suffix_by_id = get_max_suffix_by_id in
-    let max_suffix_by_id' = f max_suffix_by_id in
-    set_max_suffix_by_base max_suffix_by_id'
-
   let add_declaration identifier =
     let* bindings = get_bindings in
     let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
@@ -140,71 +97,14 @@ end = struct
         in
         { state with declarations = declarations' })
 
-  (** Regular expression for non-digit characters. *)
-  let non_digit_regexp = Str.regexp "[^0-9]"
-
-  (** [split_id s] is [(s', Option.Some n)] if [s = s' ^ string_of_int n],
-      and [(s, Option.None)] if [s] does not end with digits, or if the
-      integer suffix does not fit in an {!type:int}. *)
-  let split_id s =
-    try
-      let pos =
-        Str.search_backward non_digit_regexp s (String.length s) + 1
-      in
-      let s' = Str.string_before s pos in
-      let n = Int.of_string_opt (Str.string_after s pos) in
-      (s', n)
-    with
-    | Not_found -> (* [Str.search_backward] failed *) (s, Option.none)
-
-  (** [fresh_id ?prefix identifier state] is [(state', id)] where [id] is a
-      percent-encoded unique ID with respect to [state] starting with
-      [prefix] and [identifier]. The ID needs to be percent-encoded because
-      [identifier] may contain UTF-8 characters which may not be used in HTML
-      anchors.
-
-      [id] is guaranteed to be unique by optionally appending a numeric
-      suffix. *)
-  let fresh_id ?(prefix = "") identifier =
-    let initial_id = Uri.pct_encode (prefix ^ Identifier.name identifier) in
-    let base, suffix_opt = split_id initial_id in
-    let* ids = get_ids in
-    let* max_suffix_by_id = get_max_suffix_by_id in
-    let* id' =
-      if String.Set.mem initial_id ids then
-        (* [initial_id] would conflict with other IDs, so renumber it *)
-        let* suffix' =
-          match String.Hamt.find_opt base max_suffix_by_id with
-          | Option.None -> return 1
-          | Option.Some max_suffix -> return (max_suffix + 1)
-        in
-        let* () = modify_max_suffix_by_id (String.Hamt.add base suffix') in
-        return (base ^ Int.show suffix')
-      else
-        (* [initial_id] won't conflict with other IDs *)
-        let* () =
-          match suffix_opt with
-          | Option.None -> return ()
-          | Option.Some suffix ->
-              modify_max_suffix_by_id (String.Hamt.add base suffix)
-        in
-        return initial_id
-    in
-    let* () = modify_ids (String.Set.add id') in
-    return id'
-
-  let add_binding identifier ~id =
+  let add_binding identifier =
     modify_bindings
-      (Binding_tree.add_toplevel identifier { id; operator = Option.none })
+      (Binding_tree.add_toplevel identifier { operator = Option.none })
     <& add_declaration identifier
 
   let lookup identifier =
     let* bindings = get_bindings in
     return (Binding_tree.lookup identifier bindings)
-
-  let lookup_id identifier =
-    let* { id; _ }, _ = lookup identifier in
-    return id
 
   let add_synonym qualified_identifier synonym =
     let* entry, subtree = lookup qualified_identifier in
@@ -217,25 +117,16 @@ end = struct
 
   let open_module = open_namespace
 
-  let add_module identifier ~id declarations =
+  let add_module identifier declarations =
     let* state = get in
     let* () = put { state with declarations = Binding_tree.empty } in
     let* declarations' = declarations in
     let* state' = get in
-    (* Restore the state to what it was before printing the module's
-       declarations, but keep the final state's ID-generation data
-       structures *)
-    let* () =
-      put
-        { state with
-          ids = state'.ids
-        ; max_suffix_by_id = state'.max_suffix_by_id
-        }
-    in
+    let* () = put state in
     let* () =
       modify_bindings
         (Binding_tree.add_toplevel identifier ~subtree:state'.declarations
-           { id; operator = Option.none })
+           { operator = Option.none })
       <& add_declaration identifier
     in
     return declarations'
@@ -266,7 +157,7 @@ end = struct
     let* { operator; _ }, _subtree = lookup constant in
     return operator
 
-  let make_prefix ?precedence constant =
+  let[@warning "-23"] make_prefix ?precedence constant =
     let* precedence = get_default_precedence_opt precedence in
     modify_bindings (fun bindings ->
         Binding_tree.replace constant
@@ -279,7 +170,7 @@ end = struct
             (entry', subtree))
           bindings)
 
-  let make_infix ?precedence ?associativity constant =
+  let[@warning "-23"] make_infix ?precedence ?associativity constant =
     let* precedence = get_default_precedence_opt precedence in
     let* associativity = get_default_associativity_opt associativity in
     modify_bindings (fun bindings ->
@@ -295,7 +186,7 @@ end = struct
             (entry', subtree))
           bindings)
 
-  let make_postfix ?precedence constant =
+  let[@warning "-23"] make_postfix ?precedence constant =
     let* precedence = get_default_precedence_opt precedence in
     modify_bindings (fun bindings ->
         Binding_tree.replace constant

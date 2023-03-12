@@ -40,24 +40,20 @@ let save_signature_files_json =
         signature_file)
 
 let save_signature_file_pp =
-  let module Printing_state = Synext.Printing_state in
-  let module Printer = Synext.Make_pretty_printer (Printing_state) in
-  let open Printing_state in
-  let open Printer in
+  let open Synext.Printing_state in
+  let open Synext.Printer in
   fun x state ->
     Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
       (fun ppf ->
         run (set_formatter ppf &> pp_signature_file x ++ pp_newline) state)
 
 let save_signature_files_pp =
-  let module Printing_state = Synext.Printing_state in
-  let module Printer = Synext.Make_pretty_printer (Printing_state) in
-  let open Printing_state in
-  let open Printer in
+  let open Synext.Printing_state in
+  let open Synext.Printer in
   fun (List1.T (x, xs)) ->
     let state, () =
       Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
-        (fun ppf -> run (save_signature_file_pp x) (initial ppf))
+        (fun ppf -> run (save_signature_file_pp x) (make_initial_state ppf))
     in
     eval (traverse_list_void save_signature_file_pp xs) state
 
@@ -66,12 +62,12 @@ let pp_and_parse_signature_files =
   let module Parser_state = Beluga_parser.Simple.Parser_state in
   let module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
   in
-  let module Printer = Synext.Make_pretty_printer (Printing_state) in
+  let module Printer = Synext.Printer in
   let module Parser = Beluga_parser.Simple in
   fun (List1.T (x, xs)) ->
     let buffer = Buffer.create 16 in
     let printing_state =
-      Printing_state.initial (Format.formatter_of_buffer buffer)
+      Printing_state.make_initial_state (Format.formatter_of_buffer buffer)
     in
     let printing_state', () =
       Printing_state.(

@@ -39,14 +39,15 @@ let () =
            group of declarations."
     | exn -> Error.raise_unsupported_exception_printing exn)
 
-module type BELUGA_HTML = sig
+module type HTML_PRINTER = sig
   include State.STATE
+
+  val pp_signature_file : Synext.signature_file -> Unit.t t
 
   val pp_signature : Synext.signature -> Unit.t t
 end
 
-module Make (Html_state : HTML_PRINTING_STATE) :
-  BELUGA_HTML with type state = Html_state.state = struct
+module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
   include Html_state
 
   let lookup_operator_precedence constant =
@@ -2451,3 +2452,5 @@ module Make (Html_state : HTML_PRINTING_STATE) :
       ~sep:(pp_double_cut ++ pp_as 0 "<hr>" ++ pp_double_cut)
       pp_signature_file signature
 end
+
+module Html_printer = Make_html_printer (Html_printing_state)

@@ -16,20 +16,13 @@ let pp_json_signature ppf signature =
   Yojson.Safe.pretty_print ~std:true ppf
     (Base_json.without_locations (Synext_json.json_of_signature signature))
 
-let pp_html_signature ppf signature =
-  let module Printing_state = Beluga_html.Persistent_html_state in
-  let module Printer = Beluga_html.Make (Printing_state) in
-  let open Printing_state in
-  let open Printer in
-  eval (pp_signature signature ++ pp_newline) (initial ppf)
-
 let save_signature_file_json ~filename signature_file =
   Support.Files.with_pp_to_file filename (fun ppf ->
       Format.fprintf ppf "%a@." pp_json_signature_file signature_file)
 
 let save_signature_html ~filename signature =
   Support.Files.with_pp_to_file filename (fun ppf ->
-      pp_html_signature ppf signature)
+      Format.fprintf ppf "%a@." Beluga_html.pp_signature signature)
 
 let json_filename location =
   Filename.remove_extension (Location.filename location) ^ ".json"
@@ -211,7 +204,8 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
         save_signature_html
           ~filename:(Filename.remove_extension compiler_test_file ^ ".html")
           signature;
-      ignore (Format.asprintf "%a@." pp_html_signature signature : string)
+      ignore
+        (Format.asprintf "%a@." Beluga_html.pp_signature signature : string)
 
 let tests =
   let open OUnit2 in

@@ -1,10 +1,7 @@
 open Support
 open Beluga_syntax
 open Synext
-
-exception Unbound_identifier of Identifier.t
-
-exception Unbound_qualified_identifier of Qualified_identifier.t
+open Synext_html_pp_state
 
 exception Unsupported_implicit_lf_pi_kind
 
@@ -18,323 +15,29 @@ exception Unsupported_non_recursive_declaration
 
 exception Unsupported_recursive_declaration
 
-module type HTML_PRINTING_STATE = sig
-  include State.STATE
-
-  include Format_state.S with type state := state
-
-  val fresh_id : ?prefix:String.t -> Identifier.t -> String.t t
-
-  val add_binding : Identifier.t -> id:String.t -> Unit.t t
-
-  val add_fresh_id : ?prefix:String.t -> Identifier.t -> Unit.t t
-
-  val lookup_toplevel_id : Identifier.t -> String.t t
-
-  val lookup_id : Qualified_identifier.t -> String.t t
-
-  val with_module_declarations :
-       declarations:'a t
-    -> module_identifier:Identifier.t
-    -> id:String.t
-    -> 'a t
-
-  val add_module_declaration : Identifier.t -> Unit.t t
-
-  val open_module : Qualified_identifier.t -> Unit.t t
-
-  val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
-
-  val set_default_associativity : Associativity.t -> Unit.t t
-
-  val get_default_associativity : Associativity.t t
-
-  val set_default_precedence : Int.t -> Unit.t t
-
-  val get_default_precedence : Int.t t
-
-  val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
-
-  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
-
-  val make_prefix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-
-  val make_infix :
-       ?precedence:Int.t
-    -> ?associativity:Associativity.t
-    -> Qualified_identifier.t
-    -> Unit.t t
-
-  val make_postfix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-end
-
-module Persistent_html_state : sig
-  include HTML_PRINTING_STATE
-
-  val initial : Format.formatter -> state
-end = struct
-  type entry =
-    { id : String.t
-    ; operator : Operator.t Option.t
-    }
-
-  type state =
-    { bindings : entry Binding_tree.t
-    ; ids : String.Set.t
-    ; max_suffix_by_id : Int.t String.Hamt.t
-    ; formatter : Format.formatter
-    ; default_associativity : Associativity.t
-    ; default_precedence : Int.t
-    ; declarations : entry Binding_tree.t
-    }
-
-  module S = State.Make (struct
-    type t = state
-  end)
-
-  include (S : State.STATE with type state := state)
-
-  let with_formatter f =
-    let* state = get in
-    f state.formatter
-
-  include (
-    Format_state.Make (struct
-      include S
-
-      let with_formatter = with_formatter
-    end) :
-      Format_state.S with type state := state)
-
-  let initial formatter =
-    { bindings = Binding_tree.empty
-    ; ids = String.Set.empty
-    ; max_suffix_by_id = String.Hamt.empty
-    ; formatter
-    ; default_precedence = Synext.default_precedence
-    ; default_associativity = Synext.default_associativity
-    ; declarations = Binding_tree.empty
-    }
-
-  let get_bindings =
-    let* state = get in
-    return state.bindings
-
-  let set_bindings bindings = modify (fun state -> { state with bindings })
-
-  let[@inline] modify_bindings f =
-    let* bindings = get_bindings in
-    let bindings' = f bindings in
-    set_bindings bindings'
-
-  let get_ids =
-    let* state = get in
-    return state.ids
-
-  let set_ids ids = modify (fun state -> { state with ids })
-
-  let[@inline] modify_ids f =
-    let* ids = get_ids in
-    let ids' = f ids in
-    set_ids ids'
-
-  let get_max_suffix_by_id =
-    let* state = get in
-    return state.max_suffix_by_id
-
-  let set_max_suffix_by_base max_suffix_by_id =
-    modify (fun state -> { state with max_suffix_by_id })
-
-  let[@inline] modify_max_suffix_by_id f =
-    let* max_suffix_by_id = get_max_suffix_by_id in
-    let max_suffix_by_id' = f max_suffix_by_id in
-    set_max_suffix_by_base max_suffix_by_id'
-
-  let add_module_declaration identifier =
-    let* bindings = get_bindings in
-    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
-    modify (fun state ->
-        let declarations' =
-          Binding_tree.add_toplevel identifier entry ~subtree
-            state.declarations
-        in
-        { state with declarations = declarations' })
-
-  (** Regular expression for non-digit characters. *)
-  let non_digit_regexp = Str.regexp "[^0-9]"
-
-  (** [split_id s] is [(s', Option.Some n)] if [s = s' ^ string_of_int n],
-      and [(s, Option.None)] if [s] does not end with digits, or if the
-      integer suffix does not fit in an {!type:int}. *)
-  let split_id s =
-    try
-      let pos =
-        Str.search_backward non_digit_regexp s (String.length s) + 1
-      in
-      let s' = Str.string_before s pos in
-      let n = Int.of_string_opt (Str.string_after s pos) in
-      (s', n)
-    with
-    | Not_found -> (* [Str.search_backward] failed *) (s, Option.none)
-
-  let fresh_id ?(prefix = "") identifier =
-    let initial_id = Uri.pct_encode (prefix ^ Identifier.name identifier) in
-    let base, suffix_opt = split_id initial_id in
-    let* ids = get_ids in
-    let* max_suffix_by_id = get_max_suffix_by_id in
-    let* id' =
-      if String.Set.mem initial_id ids then
-        (* [initial_id] would conflict with other IDs, so renumber it *)
-        let* suffix' =
-          match String.Hamt.find_opt base max_suffix_by_id with
-          | Option.None -> return 1
-          | Option.Some max_suffix -> return (max_suffix + 1)
-        in
-        let* () = modify_max_suffix_by_id (String.Hamt.add base suffix') in
-        return (base ^ Int.show suffix')
-      else
-        (* [initial_id] won't conflict with other IDs *)
-        let* () =
-          match suffix_opt with
-          | Option.None -> return ()
-          | Option.Some suffix ->
-              modify_max_suffix_by_id (String.Hamt.add base suffix)
-        in
-        return initial_id
-    in
-    let* () = modify_ids (String.Set.add id') in
-    return id'
-
-  let add_binding identifier ~id =
-    modify_bindings
-      (Binding_tree.add_toplevel identifier { id; operator = Option.none })
-
-  let add_fresh_id ?prefix identifier =
-    let* id = fresh_id ?prefix identifier in
-    let* () = add_binding identifier ~id in
-    add_module_declaration identifier
-
-  let lookup_toplevel identifier =
-    let* bindings = get_bindings in
-    return (Binding_tree.lookup_toplevel identifier bindings)
-
-  let lookup identifier =
-    let* bindings = get_bindings in
-    return (Binding_tree.lookup identifier bindings)
-
-  let lookup_toplevel_id identifier =
-    let* { id; _ }, _ = lookup_toplevel identifier in
-    return id
-
-  let lookup_id identifier =
-    let* { id; _ }, _ = lookup identifier in
-    return id
-
-  let add_synonym qualified_identifier synonym =
-    let* entry, subtree = lookup qualified_identifier in
-    modify_bindings (Binding_tree.add_toplevel synonym entry ~subtree)
-
-  let add_abbreviation = add_synonym
-
-  let open_namespace qualified_identifier =
-    modify_bindings (Binding_tree.open_namespace qualified_identifier)
-
-  let open_module = open_namespace
-
-  let with_module_declarations ~declarations ~module_identifier ~id =
-    let* state = get in
-    let* () = put { state with declarations = Binding_tree.empty } in
-    let* declarations' = declarations in
-    let* state' = get in
-    let* () =
-      put
-        { state with
-          ids = state'.ids
-        ; max_suffix_by_id = state'.max_suffix_by_id
-        }
-    in
-    let* () =
-      modify_bindings
-        (Binding_tree.add_toplevel module_identifier
-           ~subtree:state'.declarations
-           { id; operator = Option.none })
-    in
-    return declarations'
-
-  let set_default_associativity default_associativity =
-    modify (fun state -> { state with default_associativity })
-
-  let get_default_associativity =
-    let* state = get in
-    return state.default_associativity
-
-  let[@warning "-32"] set_default_precedence default_precedence =
-    modify (fun state -> { state with default_precedence })
-
-  let get_default_associativity_opt = function
-    | Option.None -> get_default_associativity
-    | Option.Some associativity -> return associativity
-
-  let get_default_precedence =
-    let* state = get in
-    return state.default_precedence
-
-  let set_default_precedence default_precedence =
-    modify (fun state -> { state with default_precedence })
-
-  let get_default_precedence_opt = function
-    | Option.None -> get_default_precedence
-    | Option.Some precedence -> return precedence
-
-  let lookup_operator constant =
-    let* { operator; _ }, _subtree = lookup constant in
-    return operator
-
-  let lookup_operator_precedence constant =
-    lookup_operator constant $> Option.map Operator.precedence
-
-  let make_prefix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_prefix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
-
-  let make_infix ?precedence ?associativity constant =
-    let* precedence = get_default_precedence_opt precedence in
-    let* associativity = get_default_associativity_opt associativity in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator =
-                  Option.some
-                    (Operator.make_infix ~precedence ~associativity)
-              }
-            in
-            (entry', subtree))
-          bindings)
-
-  let make_postfix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_postfix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
-end
+let () =
+  Error.register_exception_printer (function
+    | Unsupported_implicit_lf_pi_kind ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi kinds is unsupported."
+    | Unsupported_implicit_lf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi types is unsupported."
+    | Unsupported_implicit_clf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit contextual LF Pi types is \
+           unsupported."
+    | Markdown_rendering_error ->
+        Format.dprintf "Failed to render Markdown documentation comment."
+    | Unsupported_non_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration outside of a \
+           recursive group of declarations."
+    | Unsupported_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration in a recursive \
+           group of declarations."
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type BELUGA_HTML = sig
   include State.STATE
@@ -345,6 +48,9 @@ end
 module Make (Html_state : HTML_PRINTING_STATE) :
   BELUGA_HTML with type state = Html_state.state = struct
   include Html_state
+
+  let lookup_operator_precedence constant =
+    lookup_operator constant $> Option.map Operator.precedence
 
   let indent = 2
 
@@ -672,7 +378,11 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_split_keyword = pp_keyword "split"
 
-  open Synext.Make_precedences (Html_state)
+  open Synext.Make_precedences (struct
+    include Html_state
+
+    let lookup_operator_precedence = lookup_operator_precedence
+  end)
 
   (** {1 Pretty-Printing LF Syntax} *)
 
@@ -2287,8 +1997,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space
             ++ pp_lf_kind kind ++ pp_dot)
         in
-        let* () = add_binding identifier ~id in
-        add_module_declaration identifier
+        add_binding identifier ~id
     | Signature.Declaration.Const { identifier; typ; _ } ->
         let* id = fresh_id ~prefix:"lf-term-" identifier in
         let* () =
@@ -2297,8 +2006,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
             ++ pp_dot)
         in
-        let* () = add_binding identifier ~id in
-        add_module_declaration identifier
+        add_binding identifier ~id
     | Signature.Declaration.Schema { identifier; schema; _ } ->
         let* id = fresh_id ~prefix:"schema-" identifier in
         let* () =
@@ -2308,8 +2016,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_non_breaking_space ++ pp_equal ++ pp_space
             ++ pp_schema schema ++ pp_semicolon)
         in
-        let* () = add_binding identifier ~id in
-        add_module_declaration identifier
+        add_binding identifier ~id
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
         let* () = traverse_list1_void pre_add_declaration declarations in
         match group_recursive_declarations declarations with
@@ -2335,8 +2042,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal
             ++ pp_space ++ pp_comp_typ typ ++ pp_semicolon)
         in
-        let* () = add_binding identifier ~id in
-        add_module_declaration identifier
+        add_binding identifier ~id
     | Signature.Declaration.Val { identifier; typ; expression; _ } ->
         let pp_typ_annotation =
           pp_option (fun typ -> pp_colon ++ pp_space ++ pp_comp_typ typ) typ
@@ -2352,46 +2058,55 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_comp_expression expression
             ++ pp_semicolon)
         in
-        let* () = add_binding identifier ~id in
-        add_module_declaration identifier
+        add_binding identifier ~id
     | Signature.Declaration.Module { identifier; entries; _ } ->
         let* id = fresh_id ~prefix:"module-" identifier in
-        with_module_declarations
-          ~declarations:
-            (pp_module_keyword ++ pp_non_breaking_space
-            ++ pp_module_constant ~id identifier
-            ++ pp_non_breaking_space ++ pp_equal ++ pp_non_breaking_space
-            ++ pp_struct_keyword ++ pp_break 1 2
-            ++ pp_vbox ~indent:0 (pp_module_entries entries)
-            ++ pp_cut ++ pp_end_keyword)
-          ~module_identifier:identifier ~id
+        add_module identifier ~id
+          (pp_module_keyword ++ pp_non_breaking_space
+          ++ pp_module_constant ~id identifier
+          ++ pp_non_breaking_space ++ pp_equal ++ pp_non_breaking_space
+          ++ pp_struct_keyword ++ pp_break 1 2
+          ++ pp_vbox ~indent:0 (pp_module_entries entries)
+          ++ pp_cut ++ pp_end_keyword)
 
   and pre_add_declaration declaration =
     match declaration with
     | Signature.Declaration.Typ { identifier; _ } ->
-        add_fresh_id ~prefix:"lf-type-" identifier
+        let* id = fresh_id ~prefix:"lf-type-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Const { identifier; _ } ->
-        add_fresh_id ~prefix:"lf-term-" identifier
+        let* id = fresh_id ~prefix:"lf-term-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.CompTyp { identifier; _ } ->
-        add_fresh_id ~prefix:"comp-typ-" identifier
+        let* id = fresh_id ~prefix:"comp-typ-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.CompCotyp { identifier; _ } ->
-        add_fresh_id ~prefix:"comp-cotyp-" identifier
+        let* id = fresh_id ~prefix:"comp-cotyp-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.CompConst { identifier; _ } ->
-        add_fresh_id ~prefix:"comp-const-" identifier
+        let* id = fresh_id ~prefix:"comp-const-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.CompDest { identifier; _ } ->
-        add_fresh_id ~prefix:"comp-dest-" identifier
+        let* id = fresh_id ~prefix:"comp-dest-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Schema { identifier; _ } ->
-        add_fresh_id ~prefix:"schema-" identifier
+        let* id = fresh_id ~prefix:"schema-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Theorem { identifier; _ } ->
-        add_fresh_id ~prefix:"theorem-" identifier
+        let* id = fresh_id ~prefix:"theorem-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Proof { identifier; _ } ->
-        add_fresh_id ~prefix:"proof-" identifier
+        let* id = fresh_id ~prefix:"proof-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
-        add_fresh_id ~prefix:"abbrev-" identifier
+        let* id = fresh_id ~prefix:"abbrev-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Val { identifier; _ } ->
-        add_fresh_id ~prefix:"val-" identifier
+        let* id = fresh_id ~prefix:"val-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Module { identifier; _ } ->
-        add_fresh_id ~prefix:"module-" identifier
+        let* id = fresh_id ~prefix:"module-" identifier in
+        add_binding identifier ~id
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
         traverse_list1_void pre_add_declaration declarations
 
@@ -2402,7 +2117,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     match declaration with
     | `Lf_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
-          let* id = lookup_toplevel_id identifier in
+          let* id =
+            lookup_id (Qualified_identifier.make_simple identifier)
+          in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
             ++ pp_lf_term_constant ~id identifier
@@ -2414,7 +2131,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_lf_keyword ++ pp_non_breaking_space
           ++ pp_lf_type_constant ~id identifier
@@ -2423,7 +2140,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ++ pp_constants
     | `Inductive_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
-          let* id = lookup_toplevel_id identifier in
+          let* id =
+            lookup_id (Qualified_identifier.make_simple identifier)
+          in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
             ++ pp_computation_constructor ~id identifier
@@ -2435,7 +2154,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_inductive_keyword ++ pp_non_breaking_space
           ++ pp_computation_inductive_constant ~id identifier
@@ -2444,7 +2163,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ++ pp_constants
     | `Stratified_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
-          let* id = lookup_toplevel_id identifier in
+          let* id =
+            lookup_id (Qualified_identifier.make_simple identifier)
+          in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
             ++ pp_computation_constructor ~id identifier
@@ -2456,7 +2177,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_stratified_keyword ++ pp_non_breaking_space
           ++ pp_computation_stratified_constant ~id identifier
@@ -2465,7 +2186,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ++ pp_constants
     | `Coinductive_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, observation_typ, return_typ) =
-          let* id = lookup_toplevel_id identifier in
+          let* id =
+            lookup_id (Qualified_identifier.make_simple identifier)
+          in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
             ++ pp_computation_destructor ~id identifier
@@ -2479,7 +2202,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_coinductive_keyword ++ pp_non_breaking_space
           ++ pp_computation_coinductive_constant ~id identifier
@@ -2495,7 +2218,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               ++ pp_non_breaking_space ++ pp_slash)
             order
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_rec_keyword ++ pp_non_breaking_space
           ++ pp_computation_program ~id identifier
@@ -2512,7 +2235,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               ++ pp_non_breaking_space ++ pp_slash)
             order
         in
-        let* id = lookup_toplevel_id identifier in
+        let* id = lookup_id (Qualified_identifier.make_simple identifier) in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_proof_keyword ++ pp_non_breaking_space
           ++ pp_computation_program ~id identifier
@@ -2728,33 +2451,3 @@ module Make (Html_state : HTML_PRINTING_STATE) :
       ~sep:(pp_double_cut ++ pp_as 0 "<hr>" ++ pp_double_cut)
       pp_signature_file signature
 end
-
-let () =
-  Error.register_exception_printer (function
-    | Unbound_identifier identifier ->
-        Format.dprintf "The identifier %a is unbound." Identifier.pp
-          identifier
-    | Unbound_qualified_identifier qualified_identifier ->
-        Format.dprintf "The qualified identifier %a is unbound."
-          Qualified_identifier.pp qualified_identifier
-    | Unsupported_implicit_lf_pi_kind ->
-        Format.dprintf
-          "Pretty-printing of implicit LF Pi kinds is unsupported."
-    | Unsupported_implicit_lf_pi_typ ->
-        Format.dprintf
-          "Pretty-printing of implicit LF Pi types is unsupported."
-    | Unsupported_implicit_clf_pi_typ ->
-        Format.dprintf
-          "Pretty-printing of implicit contextual LF Pi types is \
-           unsupported."
-    | Markdown_rendering_error ->
-        Format.dprintf "Failed to render Markdown documentation comment."
-    | Unsupported_non_recursive_declaration ->
-        Format.dprintf
-          "Unsupported pretty-printing for this declaration outside of a \
-           recursive group of declarations."
-    | Unsupported_recursive_declaration ->
-        Format.dprintf
-          "Unsupported pretty-printing for this declaration in a recursive \
-           group of declarations."
-    | exn -> Error.raise_unsupported_exception_printing exn)

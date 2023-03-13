@@ -266,7 +266,7 @@ module type DISAMBIGUATION_STATE = sig
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   val with_free_variables_as_pattern_variables :
-    pattern:'a t -> expression:'b t -> ('a * 'b) t
+    pattern:'a t -> expression:('a -> 'b t) -> 'b t
 
   val with_scope : 'a t -> 'a t
 
@@ -1431,9 +1431,9 @@ module Persistent_disambiguation_state = struct
     | Option.None ->
         let* () = put state in
         let* () = set_bindings expression_bindings in
-        let* expression' = expression in
+        let* expression' = expression pattern' in
         let* () = put state in
-        return (pattern', expression')
+        return expression'
 
   let lookup_operator =
     lookup >=> function

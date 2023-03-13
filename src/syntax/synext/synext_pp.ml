@@ -1648,7 +1648,7 @@ module Make_printer (Printing_state : PRINTING_STATE) = struct
         ++ pp_space ++ pp_int schema_element
     | Harpoon.Split_branch.Label.Parameter_variable
         { schema_element; projection; _ } ->
-        pp_int schema_element
+        pp_hash ++ pp_int schema_element
         ++ pp_option
              (fun projection -> pp_dot ++ pp_int projection)
              projection
@@ -1869,7 +1869,8 @@ module Make_printer (Printing_state : PRINTING_STATE) = struct
         pp_option ~none:pp_total_keyword
           (fun order ->
             pp_hovbox ~indent
-              (pp_total_keyword ++ pp_signature_totality_order pp_int order))
+              (pp_total_keyword ++ pp_space
+              ++ pp_signature_totality_order pp_int order))
           order
 
   and pp_signature_totality_order :

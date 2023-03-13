@@ -45,7 +45,7 @@ let ident_continue =
   [%sedlex.regexp?
     Sub (any, (ascii_control_character | white_space | reserved_character))]
 
-let ident_start = [%sedlex.regexp? Sub (ident_continue, digit)]
+let ident_start = [%sedlex.regexp? Sub (ident_continue, (digit | '#' | '$'))]
 
 let ident = [%sedlex.regexp? ident_start, Star ident_continue]
 

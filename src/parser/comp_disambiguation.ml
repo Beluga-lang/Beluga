@@ -747,23 +747,22 @@ module Make
     | Synprs.Comp.Expression_object.Raw_let
         { location; meta_context; pattern; scrutinee; body } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
-        let* (meta_context', pattern'), body' =
-          with_pattern_variables
-            ~pattern:
-              (with_disambiguated_meta_context_pattern meta_context
-                 (fun meta_context' ->
-                   let* pattern' = disambiguate_comp_pattern pattern in
-                   return (meta_context', pattern')))
-            ~expression:(disambiguate_comp_expression body)
-        in
-        return
-          (Synext.Comp.Expression.Let
-             { location
-             ; meta_context = meta_context'
-             ; pattern = pattern'
-             ; scrutinee = scrutinee'
-             ; body = body'
-             })
+        with_pattern_variables
+          ~pattern:
+            (with_disambiguated_meta_context_pattern meta_context
+               (fun meta_context' ->
+                 let* pattern' = disambiguate_comp_pattern pattern in
+                 return (meta_context', pattern')))
+          ~expression:(fun (meta_context', pattern') ->
+            let* body' = disambiguate_comp_expression body in
+            return
+              (Synext.Comp.Expression.Let
+                 { location
+                 ; meta_context = meta_context'
+                 ; pattern = pattern'
+                 ; scrutinee = scrutinee'
+                 ; body = body'
+                 }))
     | Synprs.Comp.Expression_object.Raw_impossible { location; scrutinee } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
         return
@@ -826,53 +825,50 @@ module Make
   and disambiguate_fun_branches branches =
     traverse_list1
       (fun (meta_context, copatterns, body) ->
-        let* (meta_context', copattern'), body' =
-          with_pattern_variables
-            ~pattern:
-              (with_disambiguated_meta_context_pattern meta_context
-                 (fun meta_context' ->
-                   let* copattern' =
-                     disambiguate_comp_copattern copatterns
-                   in
-                   return (meta_context', copattern')))
-            ~expression:(disambiguate_comp_expression body)
-        in
-        let location =
-          Location.join
-            (Synext.location_of_comp_copattern copattern')
-            (Synext.location_of_comp_expression body')
-        in
-        return
-          { Synext.Comp.Cofunction_branch.location
-          ; meta_context = meta_context'
-          ; copattern = copattern'
-          ; body = body'
-          })
+        with_pattern_variables
+          ~pattern:
+            (with_disambiguated_meta_context_pattern meta_context
+               (fun meta_context' ->
+                 let* copattern' = disambiguate_comp_copattern copatterns in
+                 return (meta_context', copattern')))
+          ~expression:(fun (meta_context', copattern') ->
+            let* body' = disambiguate_comp_expression body in
+
+            let location =
+              Location.join
+                (Synext.location_of_comp_copattern copattern')
+                (Synext.location_of_comp_expression body')
+            in
+            return
+              { Synext.Comp.Cofunction_branch.location
+              ; meta_context = meta_context'
+              ; copattern = copattern'
+              ; body = body'
+              }))
       branches
 
   and disambiguate_case_branches branches =
     traverse_list1
       (fun (meta_context, pattern, body) ->
-        let* (meta_context', pattern'), body' =
-          with_pattern_variables
-            ~pattern:
-              (with_disambiguated_meta_context_pattern meta_context
-                 (fun meta_context' ->
-                   let* pattern' = disambiguate_comp_pattern pattern in
-                   return (meta_context', pattern')))
-            ~expression:(disambiguate_comp_expression body)
-        in
-        let location =
-          Location.join
-            (Synext.location_of_comp_pattern pattern')
-            (Synext.location_of_comp_expression body')
-        in
-        return
-          { Synext.Comp.Case_branch.location
-          ; meta_context = meta_context'
-          ; pattern = pattern'
-          ; body = body'
-          })
+        with_pattern_variables
+          ~pattern:
+            (with_disambiguated_meta_context_pattern meta_context
+               (fun meta_context' ->
+                 let* pattern' = disambiguate_comp_pattern pattern in
+                 return (meta_context', pattern')))
+          ~expression:(fun (meta_context', pattern') ->
+            let* body' = disambiguate_comp_expression body in
+            let location =
+              Location.join
+                (Synext.location_of_comp_pattern pattern')
+                (Synext.location_of_comp_expression body')
+            in
+            return
+              { Synext.Comp.Case_branch.location
+              ; meta_context = meta_context'
+              ; pattern = pattern'
+              ; body = body'
+              }))
       branches
 
   and disambiguate_trailing_observations scrutinee trailing_identifiers =

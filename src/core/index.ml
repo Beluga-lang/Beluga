@@ -27,7 +27,7 @@ exception Unsupported_comp_typ_applicand
 
 exception Unsupported_comp_pattern_applicand
 
-exception Unsupported_copatern_meta_context
+exception Unsupported_copattern_meta_context
 
 exception Duplicate_identifiers_in_schema_some_clause of Identifier.t List2.t
 
@@ -224,7 +224,7 @@ module type INDEXING_STATE = sig
 
   (** [with_bound_contextual_variable identifier m state] runs [m] in a state
       where [identifier] is either a bound meta, parameter, substitution or
-      context variable.
+      context variable. This is necessary for [mlam]-expressions
 
       If [state] is a pattern state, then [identifier] is additionally
       considered as an inner bound variable. *)
@@ -234,17 +234,28 @@ module type INDEXING_STATE = sig
   val with_bound_comp_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
+  (** [with_shifted_lf_context m state] is like
+      [with_bound_lf_variable _ m state] without adding any identifier in the
+      namespace. That is, LF context de Bruijn indices looked up in [m] are
+      [+ 1] of what they were in [state]. This is used for omitted parameters
+      to lambda terms, like [\_. x]. *)
+  val with_shifted_lf_context : 'a t -> 'a t
+
+  val with_shifted_meta_context : 'a t -> 'a t
+
+  val with_shifted_comp_context : 'a t -> 'a t
+
   val with_scope : 'a t -> 'a t
 
   val with_parent_scope : 'a t -> 'a t
 
   (** {1 Pattern Variables} *)
 
-  (** [with_pattern_variables_checkpoint ~pattern ~expression] runs [pattern]
-      while keeping track of free and pattern variables, then runs
+  (** [with_free_variables_as_pattern_variables ~pattern ~expression] runs
+      [pattern] while keeping track of free and pattern variables, then runs
       [expression] with the free and pattern variables as bound variables. *)
-  val with_pattern_variables_checkpoint :
-    pattern:'a t -> expression:'b t -> ('a * 'b) t
+  val with_free_variables_as_pattern_variables :
+    pattern:'a t -> expression:('a -> 'b t) -> 'b t
 
   val add_computation_pattern_variable : Identifier.t -> Unit.t t
 
@@ -434,13 +445,37 @@ module Persistent_indexing_state = struct
     let* bindings_state = get_bindings_state in
     return bindings_state.lf_context_size
 
+  let[@inline] set_lf_context_size lf_context_size =
+    modify_bindings_state (fun state -> { state with lf_context_size })
+
+  let[@inline] modify_lf_context_size f =
+    let* lf_context_size = get_lf_context_size in
+    let lf_context_size' = f lf_context_size in
+    set_lf_context_size lf_context_size'
+
   let get_meta_context_size =
     let* bindings_state = get_bindings_state in
     return bindings_state.meta_context_size
 
+  let[@inline] set_meta_context_size meta_context_size =
+    modify_bindings_state (fun state -> { state with meta_context_size })
+
+  let[@inline] modify_meta_context_size f =
+    let* meta_context_size = get_meta_context_size in
+    let meta_context_size' = f meta_context_size in
+    set_meta_context_size meta_context_size'
+
   let get_comp_context_size =
     let* bindings_state = get_bindings_state in
     return bindings_state.comp_context_size
+
+  let[@inline] set_comp_context_size comp_context_size =
+    modify_bindings_state (fun state -> { state with comp_context_size })
+
+  let[@inline] modify_comp_context_size f =
+    let* comp_context_size = get_comp_context_size in
+    let comp_context_size' = f comp_context_size in
+    set_comp_context_size comp_context_size'
 
   let[@inline] lookup qualified_identifier =
     let* bindings = get_bindings in
@@ -718,6 +753,12 @@ module Persistent_indexing_state = struct
           (Identifier.location identifier)
           Illegal_free_variable
     | true -> adder ?location identifier
+
+  let shift_lf_context = modify_lf_context_size (( + ) 1)
+
+  let shift_meta_context = modify_meta_context_size (( + ) 1)
+
+  let shift_comp_context = modify_comp_context_size (( + ) 1)
 end
 
 module type INDEXER = sig
@@ -782,6 +823,37 @@ module Make (Indexing_state : INDEXING_STATE) :
   INDEXER with type state = Indexing_state.state = struct
   include Indexing_state
 
+  let with_bound_omittable_lf_variable identifier_opt =
+    match identifier_opt with
+    | Option.None -> with_shifted_lf_context
+    | Option.Some identifier -> with_bound_lf_variable identifier
+
+  let[@warning "-32"] with_bound_omittable_meta_variable identifier_opt =
+    match identifier_opt with
+    | Option.None -> with_shifted_meta_context
+    | Option.Some identifier -> with_bound_meta_variable identifier
+
+  let with_bound_omittable_comp_variable identifier_opt =
+    match identifier_opt with
+    | Option.None -> with_shifted_comp_context
+    | Option.Some identifier -> with_bound_comp_variable identifier
+
+  let with_bound_meta_variable' identifier typ =
+    match typ with
+    | Synext.Meta.Typ.Context_schema _ ->
+        with_bound_context_variable identifier
+    | Synext.Meta.Typ.Contextual_typ _ -> with_bound_meta_variable identifier
+    | Synext.Meta.Typ.Parameter_typ _ ->
+        with_bound_parameter_variable identifier
+    | Synext.Meta.Typ.Plain_substitution_typ _
+    | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+        with_bound_substitution_variable identifier
+
+  let with_bound_omittable_meta_variable identifier_opt typ =
+    match identifier_opt with
+    | Option.None -> with_shifted_meta_context
+    | Option.Some identifier -> with_bound_meta_variable' identifier typ
+
   let rec append_lf_spines spine1 spine2 =
     match spine1 with
     | Synapx.LF.Nil -> spine2
@@ -799,9 +871,9 @@ module Make (Indexing_state : INDEXING_STATE) :
   let rec index_lf_kind = function
     | Synext.LF.Kind.Typ _ -> return Synapx.LF.Typ
     | Synext.LF.Kind.Arrow { domain; range; _ } ->
-        let* x = fresh_identifier in
         let* domain' = index_lf_typ domain in
-        let* range' = (with_bound_lf_variable x) (index_lf_kind range) in
+        let* range' = with_shifted_lf_context (index_lf_kind range) in
+        let* x = fresh_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiKind
@@ -813,9 +885,12 @@ module Make (Indexing_state : INDEXING_STATE) :
         | Option.None ->
             Error.raise_at1 location Unsupported_lf_untyped_pi_kind_parameter
         | Option.Some parameter_type ->
-            let* x = fresh_identifier_opt parameter_identifier in
             let* domain' = index_lf_typ parameter_type in
-            let* range' = (with_bound_lf_variable x) (index_lf_kind body) in
+            let* range' =
+              (with_bound_omittable_lf_variable parameter_identifier)
+                (index_lf_kind body)
+            in
+            let* x = fresh_identifier_opt parameter_identifier in
             let x' = Name.make_from_identifier x in
             return
               (Synapx.LF.PiKind
@@ -846,9 +921,9 @@ module Make (Indexing_state : INDEXING_STATE) :
               (Synext.location_of_lf_typ applicand)
               Unsupported_lf_typ_applicand)
     | Synext.LF.Typ.Arrow { domain; range; _ } ->
-        let* x = fresh_identifier in
         let* domain' = index_lf_typ domain in
-        let* range' = (with_bound_lf_variable x) (index_lf_typ range) in
+        let* range' = with_shifted_lf_context (index_lf_typ range) in
+        let* x = fresh_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiTyp
@@ -860,9 +935,12 @@ module Make (Indexing_state : INDEXING_STATE) :
         | Option.None ->
             Error.raise_at1 location Unsupported_lf_untyped_pi_typ_parameter
         | Option.Some parameter_type ->
-            let* x = fresh_identifier_opt parameter_identifier in
             let* domain' = index_lf_typ parameter_type in
-            let* range' = (with_bound_lf_variable x) (index_lf_typ body) in
+            let* range' =
+              (with_bound_omittable_lf_variable parameter_identifier)
+                (index_lf_typ body)
+            in
+            let* x = fresh_identifier_opt parameter_identifier in
             let x' = Name.make_from_identifier x in
             return
               (Synapx.LF.PiTyp
@@ -914,8 +992,11 @@ module Make (Indexing_state : INDEXING_STATE) :
         { location; parameter_identifier; parameter_type; body } -> (
         match parameter_type with
         | Option.None ->
+            let* body' =
+              (with_bound_omittable_lf_variable parameter_identifier)
+                (index_lf_term body)
+            in
             let* x = fresh_identifier_opt parameter_identifier in
-            let* body' = (with_bound_lf_variable x) (index_lf_term body) in
             let x' = Name.make_from_identifier x in
             return (Synapx.LF.Lam (location, x', body'))
         | Option.Some _typ ->
@@ -924,8 +1005,7 @@ module Make (Indexing_state : INDEXING_STATE) :
     | Synext.LF.Term.Wildcard { location } ->
         let* x = fresh_identifier in
         let x' = Name.make_from_identifier x in
-        let substitution = Option.none in
-        let head = Synapx.LF.FMVar (x', substitution) in
+        let head = Synapx.LF.FVar x' in
         let spine = Synapx.LF.Nil in
         return (Synapx.LF.Root (location, head, spine))
     | Synext.LF.Term.Type_annotated { location; term; typ } ->
@@ -971,17 +1051,20 @@ module Make (Indexing_state : INDEXING_STATE) :
               (Synext.location_of_clf_typ applicand)
               Unsupported_lf_typ_applicand)
     | Synext.CLF.Typ.Arrow { domain; range; _ } ->
-        let* x = fresh_identifier in
         let* domain' = index_clf_typ domain in
-        let* range' = (with_bound_lf_variable x) (index_clf_typ range) in
+        let* range' = with_shifted_lf_context (index_clf_typ range) in
+        let* x = fresh_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiTyp
              ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
     | Synext.CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
-        let* x = fresh_identifier_opt parameter_identifier in
         let* domain' = index_clf_typ parameter_type in
-        let* range' = (with_bound_lf_variable x) (index_clf_typ body) in
+        let* range' =
+          (with_bound_omittable_lf_variable parameter_identifier)
+            (index_clf_typ body)
+        in
+        let* x = fresh_identifier_opt parameter_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiTyp
@@ -1068,8 +1151,11 @@ module Make (Indexing_state : INDEXING_STATE) :
         { location; parameter_identifier; parameter_type; body } -> (
         match parameter_type with
         | Option.None ->
+            let* body' =
+              (with_bound_omittable_lf_variable parameter_identifier)
+                (index_clf_term body)
+            in
             let* x = fresh_identifier_opt parameter_identifier in
-            let* body' = (with_bound_lf_variable x) (index_clf_term body) in
             let x' = Name.make_from_identifier x in
             return (Synapx.LF.Lam (location, x', body'))
         | Option.Some _typ ->
@@ -1256,10 +1342,11 @@ module Make (Indexing_state : INDEXING_STATE) :
         { location; parameter_identifier; parameter_type; body } -> (
         match parameter_type with
         | Option.None ->
-            let* x = fresh_identifier_opt parameter_identifier in
             let* body' =
-              (with_bound_lf_variable x) (index_clf_term_pattern body)
+              (with_bound_omittable_lf_variable parameter_identifier)
+                (index_clf_term_pattern body)
             in
+            let* x = fresh_identifier_opt parameter_identifier in
             let x' = Name.make_from_identifier x in
             return (Synapx.LF.Lam (location, x', body'))
         | Option.Some _typ ->
@@ -1762,7 +1849,20 @@ module Make (Indexing_state : INDEXING_STATE) :
    fun (identifier, typ) f ->
     let* typ' = index_meta_type typ in
     let name = Name.make_from_identifier identifier in
-    f (Synapx.LF.Decl (name, typ', Plicity.explicit))
+    let with_bound_declaration =
+      match typ with
+      | Synext.Meta.Typ.Context_schema _ ->
+          with_bound_context_variable identifier
+      | Synext.Meta.Typ.Contextual_typ _ ->
+          with_bound_meta_variable identifier
+      | Synext.Meta.Typ.Parameter_typ _ ->
+          with_bound_parameter_variable identifier
+      | Synext.Meta.Typ.Plain_substitution_typ _
+      | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+          with_bound_substitution_variable identifier
+    in
+    with_bound_declaration
+      (f (Synapx.LF.Decl (name, typ', Plicity.explicit)))
 
   and with_indexed_meta_context_bindings :
         'a.
@@ -1786,26 +1886,66 @@ module Make (Indexing_state : INDEXING_STATE) :
                Synapx.LF.Dec (accumulator, binding'))
              Synapx.LF.Empty bindings'))
 
-  and with_bound_meta_level_variable identifier typ =
-    match typ with
-    | Synext.Meta.Typ.Context_schema _ ->
-        with_bound_context_variable identifier
-    | Synext.Meta.Typ.Contextual_typ _ -> with_bound_meta_variable identifier
-    | Synext.Meta.Typ.Parameter_typ _ ->
-        with_bound_parameter_variable identifier
-    | Synext.Meta.Typ.Plain_substitution_typ _
-    | Synext.Meta.Typ.Renaming_substitution_typ _ ->
-        with_bound_substitution_variable identifier
+  and with_indexed_meta_context_pattern_binding :
+        'a.
+           Identifier.t * Synext.meta_typ
+        -> (Synapx.LF.ctyp_decl -> 'a t)
+        -> 'a t =
+   fun (identifier, typ) f ->
+    let* typ' = index_meta_type typ in
+    let* with_bound_declaration =
+      match typ with
+      | Synext.Meta.Typ.Context_schema _ ->
+          let* () = add_free_context_variable identifier in
+          return (with_bound_context_variable identifier)
+      | Synext.Meta.Typ.Contextual_typ _ ->
+          let* () = add_free_meta_variable identifier in
+          return (with_bound_meta_variable identifier)
+      | Synext.Meta.Typ.Parameter_typ _ ->
+          let* () = add_free_parameter_variable identifier in
+          return (with_bound_parameter_variable identifier)
+      | Synext.Meta.Typ.Plain_substitution_typ _
+      | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+          let* () = add_free_substitution_variable identifier in
+          return (with_bound_substitution_variable identifier)
+    in
+    let name = Name.make_from_identifier identifier in
+    with_bound_declaration
+      (f (Synapx.LF.Decl (name, typ', Plicity.explicit)))
+
+  and with_indexed_meta_context_pattern_bindings :
+        'a.
+           (Identifier.t * Synext.meta_typ) list
+        -> (Synapx.LF.ctyp_decl List.t -> 'a t)
+        -> 'a t =
+   fun bindings f ->
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_indexed_meta_context_pattern_binding x (fun y ->
+            with_indexed_meta_context_pattern_bindings xs (fun ys ->
+                f (y :: ys)))
+
+  and with_indexed_meta_context_pattern :
+        'a. Synext.meta_context -> (Synapx.LF.mctx -> 'a t) -> 'a t =
+   fun { Synext.Meta.Context.bindings; _ } f ->
+    with_indexed_meta_context_pattern_bindings bindings (fun bindings' ->
+        f
+          (List.fold_left
+             (fun accumulator binding' ->
+               Synapx.LF.Dec (accumulator, binding'))
+             Synapx.LF.Empty bindings'))
 
   let rec index_comp_kind = function
     | Synext.Comp.Kind.Ctype { location } ->
         return (Synapx.Comp.Ctype location)
     | Synext.Comp.Kind.Arrow { location; domain; range } ->
-        let* x = fresh_identifier in
         let* domain' = index_meta_type domain in
         let* range' =
-          (with_bound_meta_level_variable x domain) (index_comp_kind range)
+          (with_bound_omittable_meta_variable Option.none domain)
+            (index_comp_kind range)
         in
+        let* x = fresh_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.PiKind
@@ -1814,12 +1954,13 @@ module Make (Indexing_state : INDEXING_STATE) :
              , range' ))
     | Synext.Comp.Kind.Pi
         { location; parameter_identifier; plicity; parameter_type; body } ->
-        let* x = fresh_identifier_opt parameter_identifier in
         let* parameter_type' = index_meta_type parameter_type in
         let* body' =
-          (with_bound_meta_level_variable x parameter_type)
+          (with_bound_omittable_meta_variable parameter_identifier
+             parameter_type)
             (index_comp_kind body)
         in
+        let* x = fresh_identifier_opt parameter_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.PiKind
@@ -1841,12 +1982,13 @@ module Make (Indexing_state : INDEXING_STATE) :
         return (Synapx.Comp.TypDef (location, index, Synapx.Comp.MetaNil))
     | Synext.Comp.Typ.Pi
         { location; parameter_identifier; plicity; parameter_type; body } ->
-        let* x = fresh_identifier_opt parameter_identifier in
         let* parameter_type' = index_meta_type parameter_type in
         let* body' =
-          (with_bound_meta_level_variable x parameter_type)
+          (with_bound_omittable_meta_variable parameter_identifier
+             parameter_type)
             (index_comp_typ body)
         in
+        let* x = fresh_identifier_opt parameter_identifier in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.TypPiBox
@@ -1898,15 +2040,16 @@ module Make (Indexing_state : INDEXING_STATE) :
           match parameters with
           | [] -> index_comp_expression body
           | (parameter_location, parameter_opt) :: parameters ->
-              let* parameter = fresh_identifier_opt parameter_opt in
-              let name = Name.make_from_identifier parameter in
               let* body' =
-                with_bound_comp_variable parameter (aux parameters)
+                with_bound_omittable_comp_variable parameter_opt
+                  (aux parameters)
               in
               let location =
                 Location.join parameter_location
                   (Synapx.Comp.loc_of_exp body')
               in
+              let* parameter = fresh_identifier_opt parameter_opt in
+              let name = Name.make_from_identifier parameter in
               return (Synapx.Comp.Fn (location, name, body'))
         in
         aux (List1.to_list parameters)
@@ -1915,19 +2058,22 @@ module Make (Indexing_state : INDEXING_STATE) :
           match parameters with
           | [] -> index_comp_expression body
           | (parameter_location, (parameter_opt, modifier)) :: parameters ->
-              let* parameter = fresh_identifier_opt parameter_opt in
-              let name = Name.make_from_identifier parameter in
               let* body' =
-                (match modifier with
-                | `Plain -> with_bound_contextual_variable
-                | `Hash -> with_bound_parameter_variable
-                | `Dollar -> with_bound_substitution_variable)
-                  parameter (aux parameters)
+                match parameter_opt with
+                | Option.None -> with_shifted_meta_context (aux parameters)
+                | Option.Some parameter ->
+                    (match modifier with
+                    | `Plain -> with_bound_contextual_variable
+                    | `Hash -> with_bound_parameter_variable
+                    | `Dollar -> with_bound_substitution_variable)
+                      parameter (aux parameters)
               in
               let location =
                 Location.join parameter_location
                   (Synapx.Comp.loc_of_exp body')
               in
+              let* parameter = fresh_identifier_opt parameter_opt in
+              let name = Name.make_from_identifier parameter in
               return (Synapx.Comp.MLam (location, name, body'))
         in
         aux (List1.to_list parameters)
@@ -1950,23 +2096,23 @@ module Make (Indexing_state : INDEXING_STATE) :
     | Synext.Comp.Expression.Let
         { location; meta_context; pattern; scrutinee; body } -> (
         let* scrutinee' = index_comp_expression scrutinee in
-        let* (meta_context', pattern'), body' =
-          with_pattern_variables_checkpoint
+        let* meta_context', pattern', body' =
+          with_free_variables_as_pattern_variables
             ~pattern:
-              (with_indexed_meta_context meta_context (fun meta_context' ->
+              (with_indexed_meta_context_pattern meta_context
+                 (fun meta_context' ->
                    let* pattern' = index_comp_pattern pattern in
                    return (meta_context', pattern')))
-            ~expression:(index_comp_expression body)
+            ~expression:(fun (meta_context', pattern') ->
+              let* pattern'' = reindex_pattern pattern' in
+              let* body' = index_comp_expression body in
+              return (meta_context', pattern'', body'))
         in
         (* The approximate syntax does not support general patterns in
            [let]-expressions, so only [let]-expressions with a variable
            pattern are translated to [let]-expressions in the approximate
            syntax. *)
         match (meta_context', pattern') with
-        | Synapx.LF.Empty, Synapx.Comp.PatFVar (_location, name) ->
-            (* TODO: General [let] pattern expressions would render this case
-               obsolete *)
-            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
         | Synapx.LF.Empty, Synapx.Comp.PatVar (_location, name, _offset) ->
             (* TODO: General [let] pattern expressions would render this case
                obsolete *)
@@ -1978,7 +2124,6 @@ module Make (Indexing_state : INDEXING_STATE) :
             match
               List2.traverse
                 (function
-                  | Synapx.Comp.PatFVar (_location, name) -> Option.some name
                   | Synapx.Comp.PatVar (_location, name, _offset) ->
                       Option.some name
                   | _ -> Option.none)
@@ -2071,6 +2216,35 @@ module Make (Indexing_state : INDEXING_STATE) :
         return (Synapx.Comp.MetaApp (argument', spine')))
       arguments
 
+  and reindex_pattern = function
+    | Synapx.Comp.PatFVar (location, name) ->
+        let identifier =
+          Identifier.make ~location:(Name.location name) (Name.show name)
+        in
+        let* offset = index_of_comp_variable identifier in
+        return (Synapx.Comp.PatVar (location, name, offset))
+    | Synapx.Comp.PatTuple (location, patterns) ->
+        let* pats' = traverse_list2 reindex_pattern patterns in
+        return (Synapx.Comp.PatTuple (location, pats'))
+    | Synapx.Comp.PatConst (location, constant, pat_spine) ->
+        let* pat_spine' = reindex_pat_spine pat_spine in
+        return (Synapx.Comp.PatConst (location, constant, pat_spine'))
+    | Synapx.Comp.PatAnn (location, pattern, typ) ->
+        let* pattern' = reindex_pattern pattern in
+        return (Synapx.Comp.PatAnn (location, pattern', typ))
+    | (Synapx.Comp.PatVar _ | Synapx.Comp.PatMetaObj _) as pattern ->
+        return pattern
+
+  and reindex_pat_spine = function
+    | Synapx.Comp.PatNil loc -> return (Synapx.Comp.PatNil loc)
+    | Synapx.Comp.PatApp (loc, pat, pat_spine) ->
+        let* pat' = reindex_pattern pat in
+        let* pat_spine' = reindex_pat_spine pat_spine in
+        return (Synapx.Comp.PatApp (loc, pat', pat_spine'))
+    | Synapx.Comp.PatObs (loc, obs, pat_spine) ->
+        let* pat_spine' = reindex_pat_spine pat_spine in
+        return (Synapx.Comp.PatObs (loc, obs, pat_spine'))
+
   and index_comp_pattern = function
     | Synext.Comp.Pattern.Variable { location; identifier } ->
         let* () = add_computation_pattern_variable identifier in
@@ -2127,13 +2301,17 @@ module Make (Indexing_state : INDEXING_STATE) :
 
   and index_case_branch
       { Synext.Comp.Case_branch.location; meta_context; pattern; body } =
-    let* (meta_context', pattern'), body' =
-      with_pattern_variables_checkpoint
+    let* meta_context', pattern', body' =
+      with_free_variables_as_pattern_variables
         ~pattern:
-          (with_indexed_meta_context meta_context (fun meta_context' ->
+          (with_indexed_meta_context_pattern meta_context
+             (fun meta_context' ->
                let* pattern' = index_comp_pattern pattern in
                return (meta_context', pattern')))
-        ~expression:(index_comp_expression body)
+        ~expression:(fun (meta_context', pattern') ->
+          let* pattern'' = reindex_pattern pattern' in
+          let* body' = index_comp_expression body in
+          return (meta_context', pattern'', body'))
     in
     return (Synapx.Comp.Branch (location, meta_context', pattern', body'))
 
@@ -2180,12 +2358,15 @@ module Make (Indexing_state : INDEXING_STATE) :
     match meta_context.Synext.Meta.Context.bindings with
     | [] ->
         let* pattern_spine', body' =
-          with_pattern_variables_checkpoint
+          with_free_variables_as_pattern_variables
             ~pattern:(index_comp_copattern copattern)
-            ~expression:(index_comp_expression body)
+            ~expression:(fun copattern' ->
+              let* copattern'' = reindex_pat_spine copattern' in
+              let* body' = index_comp_expression body in
+              return (copattern'', body'))
         in
         return (location, pattern_spine', body')
-    | _ -> Error.raise_at1 location Unsupported_copatern_meta_context
+    | _ -> Error.raise_at1 location Unsupported_copattern_meta_context
 
   and with_indexed_comp_context_binding :
         'a.

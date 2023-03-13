@@ -126,9 +126,8 @@ module type DISAMBIGUATION_STATE = sig
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   (** [with_free_variables_as_pattern_variables ~pattern ~expression state]
-      is [(state', (pattern', expression'))]. This is used to disambiguate
-      [expression] with bound variables arising from free variables in
-      [pattern].
+      is [(state', x')]. This is used to disambiguate [expression] with bound
+      variables arising from free variables in [pattern].
 
       + [pattern] is run with respect to [state] without its bound variables,
         and while keeping track of free variables.
@@ -157,7 +156,7 @@ module type DISAMBIGUATION_STATE = sig
         This is because the pattern is reconstructed as
         [{g : ctx} {M : \[g |- nat\]} (\[g |- s M\], \[g |- s M\])]. *)
   val with_free_variables_as_pattern_variables :
-    pattern:'a t -> expression:'b t -> ('a * 'b) t
+    pattern:'a t -> expression:('a -> 'b t) -> 'b t
 
   (** [with_scope m] runs [m] in a nested bindings scope that is discarded
       afterwards. *)

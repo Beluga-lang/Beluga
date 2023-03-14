@@ -273,9 +273,9 @@ module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :
     | `Operator _ -> parenthesize pp_argument left_argument
     | `Operator_application left_argument_operator ->
         if
-          Operator.is_right_associative left_argument_operator
-          && Operator.precedence left_argument_operator
-             = Operator.precedence applicand_operator
+          Operator.precedence left_argument_operator
+          = Operator.precedence applicand_operator
+          && Bool.not (Operator.is_left_associative left_argument_operator)
         then (parenthesize pp_argument) left_argument
           (* The applications of left and right-associative operators of the
              same precedence must be parenthesized, otherwise the expression
@@ -296,9 +296,9 @@ module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :
     | `Operator _ -> parenthesize pp_argument right_argument
     | `Operator_application right_argument_operator ->
         if
-          Operator.is_right_associative right_argument_operator
-          && Operator.precedence right_argument_operator
-             = Operator.precedence applicand_operator
+          Operator.precedence right_argument_operator
+          = Operator.precedence applicand_operator
+          && Bool.not (Operator.is_left_associative right_argument_operator)
         then (parenthesize pp_argument) right_argument
           (* The applications of left and right-associative operators of the
              same precedence must be parenthesized, otherwise the expression
@@ -318,9 +318,9 @@ module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :
     | `Operator _ -> parenthesize pp_argument left_argument
     | `Operator_application left_argument_operator ->
         if
-          Operator.is_left_associative left_argument_operator
-          && Operator.precedence left_argument_operator
-             = Operator.precedence applicand_operator
+          Operator.precedence left_argument_operator
+          = Operator.precedence applicand_operator
+          && Bool.not (Operator.is_right_associative left_argument_operator)
         then (parenthesize pp_argument) left_argument
           (* The applications of left and right-associative operators of the
              same precedence must be parenthesized, otherwise the expression
@@ -341,9 +341,9 @@ module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :
     | `Operator _ -> parenthesize pp_argument right_argument
     | `Operator_application right_argument_operator ->
         if
-          Operator.is_left_associative right_argument_operator
-          && Operator.precedence right_argument_operator
-             = Operator.precedence applicand_operator
+          Operator.precedence right_argument_operator
+          = Operator.precedence applicand_operator
+          && Bool.not (Operator.is_right_associative right_argument_operator)
         then (parenthesize pp_argument) right_argument
           (* The applications of left and right-associative operators of the
              same precedence must be parenthesized, otherwise the expression

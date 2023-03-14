@@ -287,5 +287,5 @@ end
 module Persistent_disambiguation_state : sig
   include DISAMBIGUATION_STATE
 
-  val initial : state
+  val initial_state : state
 end

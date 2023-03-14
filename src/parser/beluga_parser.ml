@@ -243,7 +243,7 @@ module Simple = struct
       List1.map read_signature files
     in
     let _disambiguation_state', signature' =
-      disambiguate_signature signature Disambiguation_state.initial
+      disambiguate_signature signature Disambiguation_state.initial_state
     in
     signature'
 end

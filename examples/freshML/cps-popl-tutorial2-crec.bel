@@ -35,7 +35,7 @@ fn v => case v of
   [g |- lam \x. E] =>        % because we need the type A in the recursive call
 
   let [g, b:block (x:value A[] , _t:cvalue A[]), c:cvalue B[] -> contra |- E'[.., b.2, c]] =
-      cpse [g, b:block (x:value A[] , _t:cvalue A[]) |- E[.., b.1] ] in
+      cpse [g, b:block (x:value A[] , _t:cvalue A[]) |- E[.., b.1]] in
     [g |- clam \v.\c. E']
 
 

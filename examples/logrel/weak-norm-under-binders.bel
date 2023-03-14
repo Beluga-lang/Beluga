@@ -62,7 +62,7 @@ inductive Halts : (gamma:ctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 % variable-to-variable substitution.
 
 inductive IsVarSub : {gamma:ctx} (phi:ctx) {$S: $[phi |- gamma]}ctype =
-| Nil : IsVarSub [] $[phi |- ^ ]
+| Nil : IsVarSub [] $[phi |- ^]
 | Cons :  IsVarSub [gamma] $[phi |- $S] -> Var [phi |- M]
          -> IsVarSub [gamma, x:tm A[]] $[phi |- $S, M];
 
@@ -97,7 +97,7 @@ fn r1 => fn r2 => case r1 of
 
 % Variable substitutions can be weakened, and they remain variable substitutions
 %
-rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h, x:tm A[] |- $S[..] ] =
+rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h, x:tm A[] |- $S[..]] =
 / total r (wknVarSub _ _ _ _ r) /
 fn r => case r of
 | Nil => Nil
@@ -117,7 +117,7 @@ mlam g => case [g] of
 | [g, x:tm T[]] => extVarSub (idIsVarSub [g]);
 
 % Given a context, we can generate a weakened variable substitution
-rec shiftIsVarSub :  {g:ctx} IsVarSub [g] $[g, x:tm A[] |- .. ] =
+rec shiftIsVarSub :  {g:ctx} IsVarSub [g] $[g, x:tm A[] |- ..] =
 / total (shiftIsVarSub) /
 mlam g => wknVarSub (idIsVarSub [g]);
 
@@ -194,7 +194,7 @@ mlam g, A, M => fn r => case [|- A] of
 % Defining reducibility of simultaneous substitutions.
 
 inductive RedSub : {g:ctx}(h:ctx){$S:$[h |- g]} ctype =
-| Nil : RedSub [] $[h |- ^ ]
+| Nil : RedSub [] $[h |- ^]
 | Dot : RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M] -> RedSub [g, x:tm A[]] $[h |- $S, M];
 
 % Lemmas about reducible simultaneous substitutions.
@@ -220,7 +220,7 @@ fn rs => fn iv => case rs of
 
 % If sigma is a reducible substitution then applying sigma to a variable yields a term
 % that is reducible
-rec redVar : {g:ctx}{#p:#[g |- tm T[]]} RedSub [g] $[h |- $S] ->  Reduce [ |- T] [h |- #p[$S] ] =
+rec redVar : {g:ctx}{#p:#[g |- tm T[]]} RedSub [g] $[h |- $S] ->  Reduce [ |- T] [h |- #p[$S]] =
 / total g (redVar g) /
 mlam g, #p => fn rs => case [g] of
 | [] => impossible [ |- #p]
@@ -242,7 +242,7 @@ mlam g => case [g] of
 % If g |- M : A   and  h |- sigma : g   and sigma is reducible
 % then M[sigma] is reducible at type A in the context h.
 
-rec eval : {M:[g |- tm A[]]} RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M[$S] ] =
+rec eval : {M:[g |- tm A[]]} RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M[$S]] =
 / total m (eval g a h sigma m) /
 mlam M => fn rs => let (rs : RedSub [g] $[h |- $S] ) = rs in
  case [g |- M] of

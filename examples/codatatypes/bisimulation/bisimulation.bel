@@ -26,7 +26,7 @@ and inductive ExistsTransSimDn : (g:ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] ->
 
 and inductive ExistsTransSimUp : (g:ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransSimUp : [g |- oneb Q (up X[]) (\x.N)] ->
-      ({W : [ |- n]} (Sim [g |- M[.., W[]] ] [g |- N[.., W[]] ]))
+      ({W : [ |- n]} (Sim [g |- M[.., W[]]] [g |- N[.., W[]]]))
                   -> ExistsTransSimUp [g, x:n |- M] [g |- Q] [ |- X]
 ;
 

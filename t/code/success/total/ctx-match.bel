@@ -9,7 +9,7 @@ inductive Nat: ctype =
 
 schema ctx = term;
 
-rec pos :{g:ctx}{#p:[g |- term]} Nat =
+rec pos :{g:ctx}{#p:#[g |- term]} Nat =
 / total m (pos m) /
 mlam g,#p => case [g] of
 | [ ] => impossible [|- #p]

@@ -60,7 +60,7 @@ rec extend : (g:tctx)(h:ctx)
              Map [g] [h] -> Sem [h] [ |- S] ->  Map [g, x:tm S[]] [h]  =
 fn s => fn e => mlam T => fn x => case x of
 | TmVar/c [g, x:tm S[] |- x] => e
-| TmVar/c [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar/c [g |- #q])
+| TmVar/c [g, x:tm S[] |- #q[..]] => s [ |- T] (TmVar/c [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -70,7 +70,7 @@ fn s => fn t =>
 let (s : Map [g] [h]) = s in
 case t of
 | [g |- #p]          : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p])
-| [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
+| [g |- lam (\x. E)] : [g |- tm (arr A[] B[])] =>
   Slam  (mlam h' => mlam $W => fn e =>
          eval (extend (mlam T => fn x => subst [h] [h'] $[h'|- $W] (s [ |- T] x))  e)
               [g, x:tm A[] |- E])
@@ -103,7 +103,7 @@ fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- arr T S] =>
   (case e of
    | Slam f  =>
-     let s = (f [g, x:neut T[] ] $[g, x:neut T[] |- ..] (reflect [g , x:neut T[] |- x])) in
+     let s = (f [g, x:neut T[]] $[g, x:neut T[] |- ..] (reflect [g , x:neut T[] |- x])) in
      let [g, x:neut T[] |- E] = reify s
      in [g |- nlam (\x. E)])
 ;

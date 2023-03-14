@@ -202,12 +202,12 @@ rec schroder_heister_elimination :
 mlam H => mlam S ⇒ mlam P ⇒
 fn all ⇒ fn getP ⇒
     let [|- A] = all in
-    getP mlam T =>
+    getP (mlam T =>
         [|-
          EQ
              (apply H formula (lambda H formula (\t. S[t])) T)
              S[T]
              (ALL-E H (lambda H formula (\t. S[t])) T A)
              (BETA H formula (\t. S[t]) T)
-        ]
+        ])
 ;

@@ -31,7 +31,7 @@ rec cmatch_correct3 : (g:tctx) [g |- term T] -> [g |- term T] =
 fn n  => case n of
  | [g |- z] => [g |- z]
  | [h, x:term S |- x] => [h, x:term S |- x]
- |  {#p:[g |- term T]}
+ |  {#p:#[g |- term T]}
    [g, x:term S |- #p[..]] => [g, x:term S |- #p[..]]
 ;
 
@@ -40,7 +40,7 @@ rec cmatch_incorrect2 : (g:tctx) [g |- term T] -> [g |- term T] =
 fn n  => case n of  --not
 % | [g] z => [g] z
  | [h, x:term S |- x] => [h, x:term S |- x]
- |  {#p:[g |- term T]}
+ |  {#p:#[g |- term T]}
    [g, x:term S |- #p[..]] => [g, x:term S |- #p[..]]
 ;
 
@@ -62,7 +62,7 @@ rec cmatch_incorrect1 : (g:tctx) [g |- term T] -> [g |- term T] =
 fn n  => case n of  --not
  | [g |- z] => [g |- z]
 % | [h, x:term S] x => [h, x:term S] x
- |  {#p:[g |- term T]}
+ |  {#p:#[g |- term T]}
    [g, x:term S |- #p[..]] => [g, x:term S |- #p[..]]
 
 

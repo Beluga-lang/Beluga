@@ -40,8 +40,8 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- U[..] eq U[..]] =
         [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq (L) (L)
 
    | [g |- A1[..] app A2[..]] : [g |- exp] =>
-       let [g |- EQ1[..]] = ref [g] [g |- A1[..] ] in
-       let [g |- EQ2[..]] = ref [g] [g |- A2[..] ] in
+       let [g |- EQ1[..]] = ref [g] [g |- A1[..]] in
+       let [g |- EQ2[..]] = ref [g] [g |- A2[..]] in
           [g |- EQ1[..] eq_app EQ2[..]]
 ;
 
@@ -57,7 +57,7 @@ rec trans: {g:eqCtx}
     fn e1 => fn e2 =>
       case e1 of
 
-|{#p : [g |- block yy:exp, _t:yy eq yy]}
+|{#p : #[g |- block yy:exp, _t:yy eq yy]}
        [g |- #p.2[..]] => e2
 
 | [g |- eq_lam \x.\u. D1] =>

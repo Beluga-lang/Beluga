@@ -25,13 +25,13 @@ cons : Nats.nat -> list N -> list (Nats.s N).
 let l1 = [ |- cons Nats.z (cons (Nats.s Nats.z) nil)];
 
 module Arith = struct
-	--open WrongModule.
+  --open WrongModule.
 
-	rec add : [ |- nat] -> [ |- nat] -> [ |- nat] =
-	fn x, y => case x of
-	| [ |- z] => y
-	| [ |- s N] =>
-		let [ |- N' ] = add [ |- N] y in
-		[ |- s N'];
+  rec add : [ |- nat] -> [ |- nat] -> [ |- nat] =
+  fn x, y => case x of
+  | [ |- z] => y
+  | [ |- s N] =>
+    let [ |- N' ] = add [ |- N] y in
+    [ |- s N'];
 
 end;

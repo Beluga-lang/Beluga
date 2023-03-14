@@ -4,5 +4,5 @@ lam : (tm -> tm) -> tm.
 rec foo : [|- tm] -> [|- tm] =
 fn e => case e of
 | [|- lam M] => e % Not supported now. Maybe later?
-		% This test is to make sure we give a sane error message in the meantime.
+                  % This test is to make sure we give a sane error message in the meantime.
 ;

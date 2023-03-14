@@ -27,7 +27,7 @@ mlam g => mlam T => fn e =>
   | [g |- ff]           : [g |- exp bool]  => [g |- nothing]
 
  | {T':[ |- tp]} {#p:#[g |- exp T'[]]}
-    [g |- #p]     : [g |- (exp T'[])] => [g |- something T'[] #p]
+    [g |- #p]     : [g |- exp T'[]] => [g |- something T'[] #p]
 
   | {U:[g |- exp nat]}
     [g |- suc U] : [g |- exp nat]   => free_var [g] [ |- nat]  [g |- U]
@@ -38,7 +38,7 @@ mlam g => mlam T => fn e =>
        (case free_var [g] [ |- bool] [g |- U] of
           [g |- nothing]                  : [g |- opt] => free_var [g] [ |- bool] [g |- V]
 
-       | {T':[ |- tp]} {U:[g |- (exp T'[])]}
+       | {T':[ |- tp]} {U:[g |- exp T'[]]}
           [g |- something T'[] U] : [g |- opt] => [g |- something T'[] U]
        )
 );

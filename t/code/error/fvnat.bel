@@ -30,23 +30,23 @@ mlam g  =>
   | [g |- tt]            => [g |- nothing]
   | [g |- ff]            => [g |- nothing]
 
-  | [g |- (#p[..])]
-    => [g |- something  (#p[..])]
+  | [g |- #p[..]]
+    => [g |- something  #p[..]]
 
   | [g |- suc U[..]]  => free_var [g] [g |- U[..]]
 
   | [g |- andi U[..] V[..]]  =>
        (case free_var [g] [g |- U[..]] of
           [g |- nothing]   => free_var [g] [g |- V[..]]
-        | [g |- something  (#p[..])]  => [g |- something  (#p[..])]
-	)
+        | [g |- something  #p[..]]  => [g |- something  #p[..]]
+       )
 
   | [g |- app U[..] V[..]]  =>
        (case free_var [g] [g |- U[..]] of
           [g |- nothing]   => free_var [g] [g |- V[..]]
 
-        | [g |- something  (#p[..])]  => [g |- something  (#p[..])]
-	)
+        | [g |- something  #p[..]]  => [g |- something  #p[..]]
+       )
 
 % CAUSES ERROR HERE: because the recursive call will return opt[g, x:exp _]
 % but the overall function requires opt[g]

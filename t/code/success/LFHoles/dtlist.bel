@@ -14,7 +14,7 @@ cons : bool -> list N -> list (succ N).
 
 
 let l1 = [ |- cons true nil] ;
-let l2 = [ |- cons true (cons false nil) ] ;
+let l2 = [ |- cons true (cons false nil)] ;
 
 
 rec map : ([ |- bool] -> [ |- bool]) -> [ |- list N] -> [ |- list N] =
@@ -33,10 +33,10 @@ fn f => fn l => case l of
                    [ |- cons ? T' ]
 ;
 
-rec head : [ |- list (succ N) ] -> [ |- bool] =
+rec head : [ |- list (succ N)] -> [ |- bool] =
 fn l => let [ |- cons H _] = l in [ |- H]
 ;
-rec tail : [ |- list (succ N) ] -> [ |- list N] =
+rec tail : [ |- list (succ N)] -> [ |- list N] =
 fn l => let [ |- cons _ T] = l in [ |- T]
 ;
 rec not : [ |- bool] -> [ |- bool] =

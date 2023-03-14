@@ -104,7 +104,7 @@ fn br => fn pt => case br of
 | [g |- r_beta (\x.\bf. R[.., x, bf])] =>
    let [g |- p_beta (\x. \qf. Q[.., x, qf])] = pt in
    let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
-                           _d: ({q:p} path _ q -> path x q))  |- Q'[..] ] =
+                           _d: ({q:p} path _ q -> path x q))  |- Q'[..]] =
        bred_ltr [g, b: block (x:tm,  _b: ({u:nf} bred _ u -> bred x u),
                            _d: ({q:p} path _ q -> path x q))  |- R[.., b.1, b.2]]
                 [g, b  |- Q[.., b.1, b.3]]
@@ -154,7 +154,7 @@ fn br => fn pt => case br of
                            _d: ({q:p} path _ q -> path x q))  |- Q'[.., b.1, b.3]] =
        bred_rtl [g, b: block (x:tm,  _b: ({u:nf} bred N[..] u -> bred x u),
                            _d: ({q:p} path N[..] q -> path x q))  |- R[.., b.1, b.2]]
-                [g, b  |- Qt[..] ]
+                [g, b  |- Qt[..]]
    in
        [g |- p_beta (\x. \qf. Q'[.., x, qf])]
 
@@ -182,7 +182,7 @@ mlam g => mlam U => case [g |- U] of
 let {Ql: [g, x:nf, p:p, pt: npath x p  |- npath U[.., x] P[.., p]]}
     ExPath [g, b:block (x:tm, y:nf, r: bred x y, p:p, pt: path x p, np: npath y p)
      |- Ql[.., b.y, b.p, b.np]] =
-    path_exists [g, b:block (x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p) ]
+    path_exists [g, b:block (x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p)]
                [g, b |- U[.., b.2]]
 in
     ExPath [g |- np_abs \x.\p.\pt. Ql[.., x, p, pt]]
@@ -253,11 +253,11 @@ mlam g => mlam U => mlam V => fn pf => case [g |- U] of
                  tm_same [g, b:block (x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _npt: npath y p)]
                     [g, b |- U[.., b.2]] [g, b |- V[.., b.2]]
                     (mlam Q => fn qt =>
-                      let [g, b: block (x:tm, y:nf, _r:  bred x y,  p:p, _pt: path x p, _npt: npath y p)  |- Q'[.., b.4] ] =
+                      let [g, b: block (x:tm, y:nf, _r:  bred x y,  p:p, _pt: path x p, _npt: npath y p)  |- Q'[.., b.4]] =
                              [g, b: block (x:tm, y:nf, _r:  bred x y, p:p,  _pt: path x p, _npt: npath y p)  |- Q[.., b]] in
                       % strengthen Q
                       let [g, b: block (x:tm, y:nf, _r:  bred x y, p:p, _pt: path x p, _npt: npath y p)  |- Pt[.., b.2, b.4, b.6]] = qt in
-                      let [g |- np_abs  \y.\p.\pt. Qt[.., y, p, pt] ] = pf [g |- bnd \b. Q'] [g |- np_abs \x.\p.\pt. Pt[.., x, p, pt]] in
+                      let [g |- np_abs  \y.\p.\pt. Qt[.., y, p, pt]] = pf [g |- bnd \b. Q'] [g |- np_abs \x.\p.\pt. Pt[.., x, p, pt]] in
                       [g, b: block (x:tm, y:nf, _r:  bred x y,  p:p,  _pt: path x p, _npt: npath y p)  |- Qt[.., b.2, b.4, b.6]]
                     )
   in

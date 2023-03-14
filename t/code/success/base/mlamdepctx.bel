@@ -3,7 +3,7 @@ z : nat.
 s : nat -> nat.
 
 tp: nat -> type.
-n: tp nat.
+n: tp N.
 a: tp A -> tp (s A).
 
 schema ctx = tp N;
@@ -19,8 +19,8 @@ inductive Ctx: {g:ctx} ctype =
 | Cons  : Ctx [g] -> Ctx [g, x:tp A]
 ;
 
-rec g : {g:ctx} Ctx [g] =
+rec h : {g:ctx} Ctx [g] =
 mlam g => case [g] of
 | [ ] => Empty
-| [g, x:tp _] =>  Cons (g [g])
+| [g, x:tp _] =>  Cons (h [g])
 ;

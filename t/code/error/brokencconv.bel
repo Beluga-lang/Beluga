@@ -44,8 +44,7 @@ LF nat: type =
 }%
 LF member_tp: nat -> tp -> tp -> type =
 | m_last: member_tp z P (cross P R')
-| m_cons: member_tp N P R'
-	-> member_tp (suc N) P (cross R R')
+| m_cons: member_tp N P R' -> member_tp (suc N) P (cross R R')
 ;
 
 
@@ -57,8 +56,9 @@ LF member_tp: nat -> tp -> tp -> type =
 % makeproj n = tfst([..]. (tfst y))
 rec makeproj: {N: [ |- nat]} [ |- member_tp N R Q] -> [xenv:(target Q) |- target R[]] =
 mlam N  => fn p => case [ |- N] of
-| [ |- z] => let [ |- m_last] = p in
-      	     [xenv:(target Q) |- (tfst xenv)]
+| [ |- z] =>
+  let [ |- m_last] = p in
+  [xenv:(target Q) |- (tfst xenv)]
 | [ |- suc M] =>
   let [ |- (m_cons L)] : [ |- member_tp (suc N) R (cross T' S)] = p in
   let [xenv:target S  |- F] = makeproj [ |- M] [ |- L] in

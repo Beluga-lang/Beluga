@@ -40,7 +40,7 @@ rec extendSub : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 fn s => let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 (mlam T => fn y => case y of
               | NeutVar/c [g, x:neut Tx[] |- x] => NeutVar/c [h, x:neut Tx[] |- x]
-              | NeutVar/c [g, x:neut Tx[] |- #p[..] ] =>
+              | NeutVar/c [g, x:neut Tx[] |- #p[..]] =>
                  let NeutVar/c [h |- #q] = s [ |- T] (NeutVar/c [g |- #p]) in
                    NeutVar/c [h, x:neut Tx[] |- #q[..]])
 ;
@@ -68,7 +68,7 @@ case n of
   let [h |- R' ] = nsubst [h] [g] _ s [g |- R] in [h |- embed R']
 
  | {N:[g, x:neut S[]  |- norm S'[]]}
-   [g |- nlam (\x. N) ]  =>
+   [g |- nlam (\x. N)]  =>
    let [h, x:neut S[] |- N'] =
     nosubst (extendSub s) [g , x:neut S[] |- N]
   in
@@ -98,7 +98,7 @@ rec extend : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |-
 / total (extend) /
 fn s => fn e => mlam T => fn x => case x of
 | TmVar/c [g, x:tm S[] |- x] => e
-| TmVar/c [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar/c [g |- #q])
+| TmVar/c [g, x:tm S[] |- #q[..]] => s [ |- T] (TmVar/c [g |- #q])
 ;
 
 rec id : {T:[ |- tp]} NeutVar [g] [ |- T] -> NeutVar [g] [ |- T] =
@@ -112,7 +112,7 @@ fn t => fn s =>
 let (s :{T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) = s in
 case t of
 | [g |- #p]           : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p])
-| [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
+| [g |- lam (\x. E)] : [g |- tm (arr A[] B[])] =>
   Slam [h] [|- A] [|- B]
        (mlam h' => fn s' => fn e =>
          eval [g, x:tm A[] |- E]
@@ -143,7 +143,7 @@ mlam g, A => fn e => case [ |- A] of
 | [ |- arr T S] =>
   (case e of
    | (Slam [g] [|- T] [|- S] f)  =>
-     let s = (f [g, x:neut T[] ] weaken (reflect [g, x:neut T[]] [|- T] [g , x:neut T[] |- x])) in
+     let s = (f [g, x:neut T[]] weaken (reflect [g, x:neut T[]] [|- T] [g , x:neut T[] |- x])) in
      let [g, x:neut T[] |- E] = reify [g, x:neut T[]] [|- S] s
      in [g |- nlam (\x. E)])
 ;

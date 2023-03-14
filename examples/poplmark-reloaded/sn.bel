@@ -12,7 +12,7 @@ stratified Red : {A : [|- ty]} (g : cxt) {M : [g |- tm A[]]} ctype =
 
 % Semantic substitutions
 inductive RedS : {g : cxt} (g' : cxt) {$S : $[g' |- g]} ctype =
-  | RNil  : RedS [] $[g' |- ^ ]
+  | RNil  : RedS [] $[g' |- ^]
   | RCons : Red [|- A] [g' |- M]
             -> RedS [g] $[g' |- $S]
             -> RedS [g, x : tm A[]] $[g' |- $S, M]

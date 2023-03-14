@@ -86,15 +86,15 @@ fn r => case r of
 
 schema ctx = tm T;
 
-inductive RedSub : {gamma:ctx}{$S:[ |- gamma]} ctype =
-| Nil : RedSub  [ ] [ |- ^ ]
-| Dot : RedSub  [gamma] [ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A[]] [ |- $S[^], M]
+inductive RedSub : {gamma:ctx} {$S:$[ |- gamma]} ctype =
+| Nil : RedSub  [ ] $[ |- ^]
+| Dot : RedSub  [gamma] $[ |- $S[^]] → Reduce [|- A] [ |- M]
+     → RedSub [gamma, x:tm A[]] $[ |- $S[^], M]
 ;
 
 
 
-rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]] =
+rec lookup : {gamma:ctx}{#p:#[gamma |- tm A[]]}RedSub [gamma] $[ |- $S[^]] -> Reduce [|- A] [|- #p[$S]] =
 / total gamma (lookup gamma) /
 mlam gamma => mlam #p => fn rs => case [gamma] of
 | [] => impossible [ |- #p]
@@ -109,7 +109,7 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 # Main theorem
 }}%
 
-rec main : {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]] =
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] $[ |- $S[^]] -> Reduce [|- A] [|- M[$S]] =
 / total m (main gamma a s m) /
 mlam gamma, M => fn rs => case [gamma |- M] of
 | [gamma |- #p] =>  lookup [gamma] [gamma |- #p] rs
@@ -130,11 +130,11 @@ mlam M => reduce_halts (main [] [ |- M] Nil);
 
 proof lookup : {gamma : ctx}
                  {#p : #(gamma |- tm A[])}
-                   RedSub [gamma] [ |- $S[]] -> Reduce [ |- A] [ |- #p[$S[]]] =
+                   RedSub [gamma] $[ |- $S[]] -> Reduce [ |- A] [ |- #p[$S[]]] =
 / total 1 /
 intros
 { gamma : ctx, A : ( |- tp), $S : $( |- gamma), #p : #(gamma |- tm A[])
-| x : RedSub [gamma] [ |- $S[]]
+| x : RedSub [gamma] $[ |- $S[]]
 ; split [gamma] as
   case extended by 1:
   { y : ctx,
@@ -142,17 +142,17 @@ intros
     A : ( |- tp),
     $S : $( |- y, x : tm T[]),
     #p : #(y, x : tm T[] |- tm A[])
-  | x : RedSub [y, x : tm T[]] [ |- $S[]]
+  | x : RedSub [y, x : tm T[]] $[ |- $S[]]
   ; split [y, x : tm T[] |- #p] as
     case head variable:
     { g : ctx, A : ( |- tp), $S : $( |- g, x : tm A[])
-    | x : RedSub [g, x : tm A[]] [ |- $S[]]
+    | x : RedSub [g, x : tm A[]] $[ |- $S[]]
     ; split x as
       case Dot:
       { g : ctx, A : ( |- tp), M : ( |- tm A), $S1 : $( |- g)
-      | x : RedSub [g, x : tm A[]] [ |- $S1[], M],
+      | x : RedSub [g, x : tm A[]] $[ |- $S1[], M],
         x2 : Reduce [ |- A] [ |- M],
-        x1 : RedSub [g] [ |- $S1[]]
+        x1 : RedSub [g] $[ |- $S1[]]
       ; solve x2
       }
     }
@@ -162,7 +162,7 @@ intros
       A : ( |- tp),
       $S : $( |- g, x : tm T[]),
       #p1 : #(g |- tm A[])
-    | x : RedSub [g, x : tm T[]] [ |- $S[]]
+    | x : RedSub [g, x : tm T[]] $[ |- $S[]]
     ; split x as
       case Dot:
       { g : ctx,
@@ -171,9 +171,9 @@ intros
         M : ( |- tm T),
         $S1 : $( |- g),
         #p1 : #(g |- tm A[])
-      | x : RedSub [g, x : tm T[]] [ |- $S1[], M],
+      | x : RedSub [g, x : tm T[]] $[ |- $S1[], M],
         x2 : Reduce [ |- T] [ |- M],
-        x1 : RedSub [g] [ |- $S1[]]
+        x1 : RedSub [g] $[ |- $S1[]]
       ; by lookup [g] [g |- #p1] x1 as ih;
         solve ih
       }
@@ -181,7 +181,7 @@ intros
   }
   case empty context:
   { A : ( |- tp), $S : $( |- ), #p : #( |- tm A)
-  | x : RedSub [] [ |- $S[]]
+  | x : RedSub [] $[ |- $S[]]
   ; impossible [ |- #p]
   }
 }
@@ -189,11 +189,11 @@ intros
 
 proof lookup : {gamma : ctx}
                  {#p : #(gamma |- tm A[])}
-                   RedSub [gamma] [ |- $S[]] -> Reduce [ |- A] [ |- #p[$S[]]] =
+                   RedSub [gamma] $[ |- $S[]] -> Reduce [ |- A] [ |- #p[$S[]]] =
 / total 1 /
 intros
 { gamma : ctx, A : ( |- tp), $S : $( |- gamma), #p : #(gamma |- tm A[])
-| x : RedSub [gamma] [ |- $S[]]
+| x : RedSub [gamma] $[ |- $S[]]
 ; split [gamma] as
   case extended by 1:
   { y : ctx,
@@ -201,17 +201,17 @@ intros
     A : ( |- tp),
     $S : $( |- y, x : tm T[]),
     #p : #(y, x : tm T[] |- tm A[])
-  | x : RedSub [y, x : tm T[]] [ |- $S[]]
+  | x : RedSub [y, x : tm T[]] $[ |- $S[]]
   ; split [y, x : tm T[] |- #p] as
     case head variable:
     { g : ctx, A : ( |- tp), $S : $( |- g, x : tm A[])
-    | x : RedSub [g, x : tm A[]] [ |- $S[]]
+    | x : RedSub [g, x : tm A[]] $[ |- $S[]]
     ; split x as
       case Dot:
       { g : ctx, A : ( |- tp), M : ( |- tm A), $S1 : $( |- g)
-      | x : RedSub [g, x : tm A[]] [ |- $S1[], M],
+      | x : RedSub [g, x : tm A[]] $[ |- $S1[], M],
         x2 : Reduce [ |- A] [ |- M],
-        x1 : RedSub [g] [ |- $S1[]]
+        x1 : RedSub [g] $[ |- $S1[]]
       ; solve x2
       }
     }
@@ -221,7 +221,7 @@ intros
       A : ( |- tp),
       $S : $( |- g, x : tm T[]),
       #p1 : #(g |- tm A[])
-    | x : RedSub [g, x : tm T[]] [ |- $S[]]
+    | x : RedSub [g, x : tm T[]] $[ |- $S[]]
     ; split x as
       case Dot:
       { g : ctx,
@@ -230,9 +230,9 @@ intros
         M : ( |- tm T),
         $S1 : $( |- g),
         #p1 : #(g |- tm A[])
-      | x : RedSub [g, x : tm T[]] [ |- $S1[], M],
+      | x : RedSub [g, x : tm T[]] $[ |- $S1[], M],
         x2 : Reduce [ |- T] [ |- M],
-        x1 : RedSub [g] [ |- $S1[]]
+        x1 : RedSub [g] $[ |- $S1[]]
       ; by lookup [g] [g |- #p1] x1 as ih;
         solve ih
       }
@@ -240,7 +240,7 @@ intros
   }
   case empty context:
   { A : ( |- tp), $S : $( |- ), #p : #( |- tm A)
-  | x : RedSub [] [ |- $S[]]
+  | x : RedSub [] $[ |- $S[]]
   ; impossible [ |- #p]
   }
 }
@@ -248,15 +248,15 @@ intros
 
 proof main : {gamma : ctx}
                {M : (gamma |- tm A[])}
-                 RedSub [gamma] [ |- $S[]] -> Reduce [ |- A] [ |- M[$S[]]] =
+                 RedSub [gamma] $[ |- $S[]] -> Reduce [ |- A] [ |- M[$S[]]] =
 / total 2 /
 intros
 { gamma : ctx, A : ( |- tp), $S : $( |- gamma), M : (gamma |- tm A[])
-| x : RedSub [gamma] [ |- $S[]]
+| x : RedSub [gamma] $[ |- $S[]]
 ; split [gamma |- M] as
   case c:
   { gamma : ctx, $S : $( |- gamma)
-  | rs : RedSub [gamma] [ |- $S[]]
+  | rs : RedSub [gamma] $[ |- $S[]]
   ; solve I [ |- halts/m (refl ) val/c]
   }
   case lam:
@@ -265,7 +265,7 @@ intros
     T1 : ( |- tp),
     $S : $( |- gamma),
     M1 : (gamma, y2 : tm T[] |- tm T1[])
-  | rs : RedSub [gamma] [ |- $S[]]
+  | rs : RedSub [gamma] $[ |- $S[]]
   ; solve
       Arr [ |- halts/m (refl ) (val/lam )]
         (mlam N => fn rN =>
@@ -279,7 +279,7 @@ intros
     T : ( |- tp),
     M1 : (gamma |- tm (arr T[] A[])),
     M2 : (gamma |- tm T[])
-  | rs : RedSub [gamma] [ |- $S[]]
+  | rs : RedSub [gamma] $[ |- $S[]]
   ; by main [gamma] [gamma |- M1] rs as ih1;
     split ih1 as
     case Arr:
@@ -289,19 +289,19 @@ intros
       T : ( |- tp),
       M1 : (gamma |- tm (arr T[] A[])),
       M2 : (gamma |- tm T[])
-    | rs : RedSub [gamma] [ |- $S[]],
+    | rs : RedSub [gamma] $[ |- $S[]],
       ih1 : Reduce [ |- arr T A] [ |- M1[$S[]]],
       x1 :
         {N : ( |- tm T)}
-          Reduce [ |- T] [ |- N] -> Reduce [ |- A] [ |- app (M1[$S[]]) N],
-      x : [ |- halts (M1[$S[]])]
+          Reduce [ |- T] [ |- N] -> Reduce [ |- A] [ |- app M1[$S[]] N],
+      x : [ |- halts M1[$S[]]]
     ; by main [gamma] [gamma |- M2] rs as ih2;
       solve x1 [ |- _] ih2
     }
   }
   case #:
   { gamma : ctx, A : ( |- tp), $S : $( |- gamma), #p : #(gamma |- tm A[])
-  | rs : RedSub [gamma] [ |- $S[]]
+  | rs : RedSub [gamma] $[ |- $S[]]
   ; by lookup [gamma] [gamma |- #p] rs as x;
     solve x
   }

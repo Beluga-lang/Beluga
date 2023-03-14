@@ -55,7 +55,7 @@ rec ded: (g:hilCtx) [g, u:hil A[..] |- hil B[..]]
         -> [g |- hil (imp A[..] B[..])] =
 / total h (ded g _ _ h) /
 fn h =>  case h of
-| [g, u: hil _  |- #p[..]] =>  [g |- mp k (#p[..])]  % SPECIAL!
+| [g, u: hil _  |- #p[..]] =>  [g |- mp k #p[..]]  % SPECIAL!
 
 % Can only be done by giving type annotation to k or s in
 % the output; this is also done in the Twelf implementation
@@ -63,7 +63,7 @@ fn h =>  case h of
 % ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
 % we define a little lemma trivial_imp which generates proofs of the right form.
  | [g, u: hil A[..] |- u]    =>
-   let [g |- D[..]] = trivial_imp [g] [g |- A[..] ] in [g |- (mp (mp s k) D[..])]
+   let [g |- D[..]] = trivial_imp [g] [g |- A[..]] in [g |- (mp (mp s k) D[..])]
 
  | [g, u: hil _  |- k]  => [g |- mp k k]
  | [g, h: hil _  |- s]  => [g |- mp k s]
@@ -96,7 +96,7 @@ schema ndhilCtx = some [a:o] block _t:nd a, u:hil a  + i + o ;
 rec ndhil : (g:ndhilCtx) [g |- nd A[..]] -> [g |- hil A[..]] =
  / total d (ndhil g a d) /
 fn d =>  case d of
-| [g |- (#p.1[..])] => [g |- (#p.2[..])]
+| [g |- #p.1[..]] => [g |- #p.2[..]]
 
 | {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd B1[..] |- nd B2[..]]}
   [g |- impi \u. D] =>

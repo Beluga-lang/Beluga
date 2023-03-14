@@ -49,7 +49,7 @@ LF nat  : type =
 
 LF plus: nat -> nat -> nat -> type =
 | pz: plus z Y Y
-| ps: plus X Y Z -> plus (s X) Y (s Z)
+| ps: plus X Y Z' -> plus (s X) Y (s Z')
 ;
 
 LF list: nat -> type =

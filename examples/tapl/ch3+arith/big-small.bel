@@ -234,7 +234,7 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_succ :
- [ |- mstep M M'] -> [ |- mstep (succ M) (succ M') ] =
+ [ |- mstep M M'] -> [ |- mstep (succ M) (succ M')] =
 / total ms (mstep_succ m m' ms)/
 fn ms => case ms of
 | [ |- m_ref] => [ |- m_ref]
@@ -270,7 +270,7 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_iszero :
- [ |- mstep M M'] -> [ |- mstep (iszero M) (iszero M') ] =
+ [ |- mstep M M'] -> [ |- mstep (iszero M) (iszero M')] =
 / total ms (mstep_iszero m m' ms)/
 fn ms => case ms of
 | [ |- m_ref] => [ |- m_ref]

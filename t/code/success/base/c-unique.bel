@@ -66,7 +66,7 @@ e_ref: equal T T.
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of E[..] T[]] -> [g |- type_of E[..] T'[]]
              ->  [ |- equal T T'] =
 
-mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
+mlam g => mlam E => fn d => fn f => case [g |- E[..]] of
 %{
 | [g] app (E1[..] ) (E2[..] ) =>
   let [g] t_app D1[..] D2[..] = d in

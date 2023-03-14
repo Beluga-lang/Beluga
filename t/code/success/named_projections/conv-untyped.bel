@@ -24,7 +24,7 @@ fn e => case e of
   let [g |- T1[..]] = conv [g |- E1[..]] in
   let [g |- T2[..]] = conv [g |- E2[..]] in
     [g |- app' (T1[..] ) T2[..]]
-| [g |- ret (V[..] )] => convv [g |- V[..] ]
+| [g |- ret (V[..] )] => convv [g |- V[..]]
 
 and convv: (g:ctx)[g |- value T] -> [g |- term] =
 fn v => case v of

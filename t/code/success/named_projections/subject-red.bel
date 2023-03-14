@@ -60,7 +60,7 @@ mlam g => fn d => fn s => case s of
     [g |- tof_app F2[..] F1[..]]
 
 | [g |- #p.v[..]] =>
-  let [g |- #q.u[..]] = d in % s : step (#p.1[..])  N[..]
+  let [g |- #q.u[..]] = d in % s : step #p.1[..]  N[..]
                         % q : block x:exp, u:type_of x t, v:step x x . notLam x
                         % since step #q.1 #q.1 = step #p.1 N[..]
                         % N = #q.1  and #q = #p
@@ -94,7 +94,7 @@ mlam g => fn d => fn s => case d of
    )
 
 | [g |- #p.u[..]] =>
-  let [g |- #q.v[..]] = s in % s : step (#p.1[..])  N[..]
+  let [g |- #q.v[..]] = s in % s : step #p.1[..]  N[..]
                         % q : block x:exp, u:type_of x t, v:step x x . notLam x
                         % since step #q.1 #q.1 = step #p.1 N[..]
                         % N = #q.1  and #q = #p

@@ -99,9 +99,9 @@ rec schroder_heister_elimination :
 / total (schroder_heister_elimination) /
 mlam S ⇒ mlam P ⇒
 fn all ⇒ fn getP ⇒
-    getP mlam T ⇒
+    getP (mlam T ⇒
         let [⊢ A] = all in
-        [⊢ ALL-E (\t. S[t]) T A]
+        [⊢ ALL-E (\t. S[t]) T A])
 ;
 
 rec plus_zero_t__eq__t :

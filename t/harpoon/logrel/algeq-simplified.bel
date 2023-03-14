@@ -36,14 +36,14 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeq M N i]
           -> Log [g |- M sim N] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
-             ({h:tctx} {$R:[h |- g]} {N1:[h |- tm]}{N2:[h |- tm]}
+             ({h:tctx} {$R:$[h |- g]} {N1:[h |- tm]}{N2:[h |- tm]}
                 Log [h |- N1 sim N2] [ |- T]
               -> Log [h |- (app M1[$R] N1) sim (app M2[$R] N2)] [|- S])
             -> Log [g |- M1 sim M2] [ |- arr T S]
 ;
 
 % Monotonicity of logical equivalence
-proof logEq_Monotone : {h:tctx}{$W:[h |- g]} Log [g |- M1 sim M2] [ |- A] ->
+proof logEq_Monotone : {h:tctx}{$W:$[h |- g]} Log [g |- M1 sim M2] [ |- A] ->
                        Log [h |- M1[$W] sim M2[$W]] [ |- A] =
 / total 3 /
 ?
@@ -52,7 +52,7 @@ proof logEq_Monotone : {h:tctx}{$W:[h |- g]} Log [g |- M1 sim M2] [ |- A] ->
 % | LogArr [g |- M1] [g |- M2] f =>
 %   LogArr [h |- M1[$W]] [h |- M2[$W]]
 %    (mlam h0,$W2, N1, N2 => fn rn =>
-%     f [h0] [h0 |- $W[$W2]] [h0 |- N1] [h0 |- N2] rn
+%     f [h0] $[h0 |- $W[$W2]] [h0 |- N1] [h0 |- N2] rn
 %    )
 ;
 
@@ -129,7 +129,7 @@ proof closed : {T:[|- tp]}
 %   let [g |- S1] = s1 in
 %   let [g |- S2] = s2 in
 %   LogArr [g |- _] [g |- _] (mlam h,$W, P1, P2 => fn rp =>
-%    let q0 = f [h] [h |- $W] [h |- P1] [h |- P2] rp in
+%    let q0 = f [h] $[h |- $W] [h |- P1] [h |- P2] rp in
 %    closed [|- T2] (mstep_app [h |- S1[$W]] ) (mstep_app [h |- S2[$W]]) q0
 %   )
 ;
@@ -174,7 +174,7 @@ proof logEqSym :
 %   let LogArr [g |- M1] [g |- M2] f = e in
 %   LogArr [g |- M2] [g |- M1] (mlam h,$W, N1, N2 => fn rn =>
 % 					let e' = logEqSym [|- T1] rn in
-% 					logEqSym [|- T2] (f [h] [h |- $W] [h |- N2] [h |- N1] e')
+% 					logEqSym [|- T2] (f [h] $[h |- $W] [h |- N2] [h |- N1] e')
 % 				       )
 ;
 
@@ -323,8 +323,8 @@ proof logEqTrans : {T:[|- tp]}
 %   let LogArr [g |- M] [g |- N] f1 = e1 in
 %   let LogArr [g |- N] [g |- P] f2 = e2 in
 %   LogArr [g |- M] [g |- P] (mlam h,$W, V1, V2 => fn v =>
-%    logEqTrans [|- T2] (f1 [h] [h |- $W] [h |- V1] [h |- V2] v)
-%                       (f2 [h] [h |- $W] [h |- V2] [h |- V2]
+%    logEqTrans [|- T2] (f1 [h] $[h |- $W] [h |- V1] [h |- V2] v)
+%                       (f2 [h] $[h |- $W] [h |- V2] [h |- V2]
 %                       (logEqTrans [|- T1] (logEqSym _ v) v)))
 ;
 
@@ -366,17 +366,17 @@ inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair] -> [ |- tp] -> ctype
 % Two substitutions are logically related if their terms are pairwise
 % logically related.
 inductive LogSub :
-    {g0:ctx} (h:tctx) {$S1: [h |- g0]} {$S2: [h |- g0]} {G:[|-dctx]}
+    {g0:ctx} (h:tctx) {$S1: $[h |- g0]} {$S2: $[h |- g0]} {G:[|-dctx]}
     ctype =
-| Nil : LogSub [] [h |- ^] [h |- ^] [|-nil]
-| Dot : LogSub [g0] [h |- $S1] [h |- $S2] [|- G]
+| Nil : LogSub [] $[h |- ^] $[h |- ^] [|-nil]
+| Dot : LogSub [g0] $[h |- $S1] $[h |- $S2] [|- G]
        -> Log [h |- M1 sim M2] [ |- T]
-       -> LogSub [g0, x:tm] [h |- $S1, M1] [h |- $S2, M2] [|- G with T]
+       -> LogSub [g0, x:tm] $[h |- $S1, M1] $[h |- $S2, M2] [|- G with T]
 ;
 
 % Looking up a variable in logically equivalence substitutions gives a logical equivalence
 proof lookup :
-    Lookup [|-G] [g |- X] [ |- T] -> LogSub [g] [h |- $S1] [h |- $S2] [|- G] ->
+    Lookup [|-G] [g |- X] [ |- T] -> LogSub [g] $[h |- $S1] $[h |- $S2] [|- G] ->
     Log [h |- X[$S1] sim X[$S2]] [ |- T] =
 / total 1 /
 ?
@@ -387,20 +387,20 @@ proof lookup :
 
 % Monotonicity of logical equivalence on substitutions
 proof wknLogSub :
-    {h0:tctx} {h:tctx} {$W:[h0 |- h]}
-    LogSub [g] [h |- $S1] [h |- $S2] [|- G] ->
-    LogSub [g] [h0 |- $S1[$W]] [h0 |- $S2[$W]] [|- G]=
+    {h0:tctx} {h:tctx} {$W:$[h0 |- h]}
+    LogSub [g] $[h |- $S1] $[h |- $S2] [|- G] ->
+    LogSub [g] $[h0 |- $S1[$W]] $[h0 |- $S2[$W]] [|- G]=
  / total 4 /
 ?
 % mlam h0, h,$W => fn es => case es of
 % | Nil => Nil
-% | Dot rs' rN  => Dot (wknLogSub [h0] [h] [h0 |- $W] rs') (logEq_Monotone [h0] [h0 |- $W] rN)
+% | Dot rs' rN  => Dot (wknLogSub [h0] [h] $[h0 |- $W] rs') (logEq_Monotone [h0] [h0 |- $W] rN)
 ;
 
 % % Symmetry of logical equivalence on substitutions
 proof logEqSubSym :
-    LogSub [g] [h |- $S1] [h |- $S2] [|-G] ->
-    LogSub [g] [h |- $S2] [h |- $S1] [|-G] =
+    LogSub [g] $[h |- $S1] $[h |- $S2] [|-G] ->
+    LogSub [g] $[h |- $S2] $[h |- $S1] [|-G] =
 / total 1 /
 ?
 % fn e => case e of
@@ -410,9 +410,9 @@ proof logEqSubSym :
 
 % % Transitivity of logical equivalence on substitutions
 proof logEqSubTrans :
-    LogSub [g] [h |- $S1] [h |- $S2] [|-G] ->
-    LogSub [g] [h |- $S2] [h |- $S3] [|-G] ->
-    LogSub [g] [h |- $S1] [h |- $S3] [|-G] =
+    LogSub [g] $[h |- $S1] $[h |- $S2] [|-G] ->
+    LogSub [g] $[h |- $S2] $[h |- $S3] [|-G] ->
+    LogSub [g] $[h |- $S1] $[h |- $S3] [|-G] =
 / total 1 /
 ?
 % fn e1 => fn e2 => case e1 of
@@ -423,12 +423,12 @@ proof logEqSubTrans :
 % Fundamental theorem
 proof thm :
     Decl [|-G] [g |- M1 sim M2] [|- T] ->
-    LogSub [g] [h |- $S1] [h |- $S2] [|-G] ->
+    LogSub [g] $[h |- $S1] $[h |- $S2] [|-G] ->
     Log [h |- M1[$S1] sim M2[$S2]] [|- T] =
 / total 1 /
 ?
 % fn d , s =>
-% let s : LogSub [g] [h |- $S1] [h |- $S2] [|-G] = s in
+% let s : LogSub [g] $[h |- $S1] $[h |- $S2] [|-G] = s in
 % case d of
 % | DecVar v => lookup v s
 % | DecApp d1 d2 => let LogArr [h |- M1] [h |- M2] f = thm d1 s in
@@ -436,12 +436,12 @@ proof thm :
 % | (DecLam d1) : Decl [|-G] [g |- (lam (\x. M1)) sim (lam (\x. M2))] [ |- arr T S] =>
 %    LogArr [h |- lam (\x. M1[$S1[..], x])] [h |- lam (\x. M2[$S2[..], x])]
 %      (mlam h0, $W, N1, N2 => fn rn =>
-%      let q2 = thm d1 (Dot (wknLogSub [h0] [h] [h0 |- $W] s) rn) in
+%      let q2 = thm d1 (Dot (wknLogSub [h0] [h] $[h0 |- $W] s) rn) in
 %      closed _ [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
 %    )
 % | DecExt d1 =>
 %   LogArr [h |- _] [h |- _] (mlam h0,$W, N1, N2 => fn rn =>
-%    thm d1 (Dot (wknLogSub [h0] [h] [h0 |- $W] s) rn)
+%    thm d1 (Dot (wknLogSub [h0] [h] $[h0 |- $W] s) rn)
 %   )
 % | DecBeta d1 d2 =>
 %    closed _ [h |- trans1 beta refl] [h |- refl] (thm d1 (Dot s (thm d2 s)))
@@ -449,28 +449,28 @@ proof thm :
 % | DecTrans d1 d2 => logEqTrans _ (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
 ;
 
-inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){$Id:[g' |- g]} ctype =
-| INil : IdSub [|-nil] [] [|- ^]
-| ISnoc : IdSub [|-G] [g] [g' |- $Id]
-       -> IdSub [|- G with T] [g, x:tm] [g', b:block x:tm, y:algeqNeu x x T[] |- $Id[..], b.1]
+inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){$Id:$[g' |- g]} ctype =
+| INil : IdSub [|-nil] [] $[|- ^]
+| ISnoc : IdSub [|-G] [g] $[g' |- $Id]
+       -> IdSub [|- G with T] [g, x:tm] $[g', b:block x:tm, y:algeqNeu x x T[] |- $Id[..], b.1]
 ;
 
 % % The identity substitution is logically related to itself
 proof idLogSub :
-    IdSub [|-G] [g] [g' |- $Id] ->
-    LogSub [g] [g' |- $Id] [g' |- $Id] [|-G] =
+    IdSub [|-G] [g] $[g' |- $Id] ->
+    LogSub [g] $[g' |- $Id] $[g' |- $Id] [|-G] =
 / total 1 /
 ?
 %fn r => case r of
 %| INil => Nil
-%| ISnoc (r' : IdSub [|- G] [g] [g' |- $Id]) =>
+%| ISnoc (r' : IdSub [|- G] [g] $[g' |- $Id]) =>
 %  let q = idLogSub r' in
-%  Dot (wknLogSub [g', b:block x:tm, a:algeqNeu x x _] [g'] [g', b |-..] (idLogSub r'))
+%  Dot (wknLogSub [g', b:block x:tm, a:algeqNeu x x _] [g'] [g', b |- ..] (idLogSub r'))
 %      (reflect _ [g', b:block x:tm, y:algeqNeu x x _ |- b.2])
 ;
 
 proof completeness :
-    IdSub [|-G] [g] [g' |- $Id] ->
+    IdSub [|-G] [g] $[g' |- $Id] ->
     Decl [|-G] [g |- M1 sim M2] [ |- T] ->
     [g' |- algeq M1[$Id] M2[$Id] T[]] =
 / total /

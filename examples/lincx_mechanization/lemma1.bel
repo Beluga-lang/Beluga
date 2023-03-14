@@ -276,8 +276,8 @@ rec bin_join_assoc : [|- bin_join M1 M2 K] -> [|- bin_join M11 M12 M1] -> [|- bi
 % Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12, Psi0 = Psi12 join Psi2 => Psi = Psi11 join Psi0
 %
 
-rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2) ]
-    -> [g |- joining (cjoin Psi1 Psi11 Psi12) ]
+rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2)]
+    -> [g |- joining (cjoin Psi1 Psi11 Psi12)]
     -> [g |- joining (cjoin Psi0 Psi12 Psi2)]
     -> [g |- joining (cjoin Psi Psi11 Psi0)]  =
     fn j1 => fn j2 => fn j3 => case j1 of

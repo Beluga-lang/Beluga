@@ -25,7 +25,7 @@ case [g |- M] of
     [g |- eq_app D1 D2]
 
  | [g |- lam (\x. N)] =>
-   let [g, b:block x:exp, t:eq x x |- D1[.., b.1, b.2]] = eq_refl [g, b:block x:exp, t:eq x x] [g, b  |- N[.., b.1] ] in
+   let [g, b:block x:exp, t:eq x x |- D1[.., b.1, b.2]] = eq_refl [g, b:block x:exp, t:eq x x] [g, b  |- N[.., b.1]] in
     [g |- eq_lam (\x.\u. D1)]
 
  | [g |- #p.1] => [g |- #p.2]
@@ -60,7 +60,7 @@ mlam g => mlam M => fn d => case [g, x:exp |- M] of
    let [g |- D3] = d in
    let [g, b:block z:exp, t:eq z z |- D1[.., b.1, b.2]] =
    % This recursive call is problematic, and is not determined to be structurally smaller.
-   subst_respects_eq [g, b:block z:exp, t:eq z z] [g, b, x  |- M1[.., b.1, x] ] [g, b |- D3[..]]
+   subst_respects_eq [g, b:block z:exp, t:eq z z] [g, b, x  |- M1[.., b.1, x]] [g, b |- D3[..]]
    in
    [g |- eq_lam (\x.\u. D1)]
 

@@ -49,7 +49,7 @@ rec extend : (g:tctx)(h:ctx)
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
 | TmVar/c [g, x:tm S[] |- x] => e
-| TmVar/c [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar/c [g |- #q])
+| TmVar/c [g, x:tm S[] |- #q[..]] => s [ |- T] (TmVar/c [g |- #q])
 ;
 
 
@@ -61,7 +61,7 @@ rec eval : (g:tctx)(h:ctx)
 fn t => fn s =>
 case t of
 | [g |- #p]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p])
-| [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
+| [g |- lam (\x. E)] : [g |- tm (arr A[] B[])] =>
   Slam [_] [ |- A] [ |- B]  (mlam h' => mlam $S => fn e =>
          eval [g, x:tm A[] |- E]
               (extend (mlam T => fn x => weaken $[h' |- $S] (s [ |- T] x))  e))
@@ -90,7 +90,7 @@ mlam g, A => fn e => case [ |- A] of
 | [ |- arr T S] =>
   (case e of
    | (Slam [g] [ |- T] [ |- S] f)  =>
-     let s = (f [g, x:neut T[] ] $[g, x:neut T[] |- ..] (reflect [g , x:neut T[]] [ |- T] [g , x:neut T[] |- x])) in
+     let s = (f [g, x:neut T[]] $[g, x:neut T[] |- ..] (reflect [g , x:neut T[]] [ |- T] [g , x:neut T[] |- x])) in
      let [g, x:neut T[] |- E] = reify [g , x:neut T[]] [ |- S] s
      in [g |- nlam (\x. E)])
 

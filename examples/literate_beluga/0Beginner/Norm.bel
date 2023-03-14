@@ -33,7 +33,7 @@ In the variable case, we simply return the variable.
 In the abstraction case, we recursively normalize `[g, x:exp _ |- M]` extending the context with the additional declaration `x:exp _`.
 Since we do not have a concrete name for the type of `x`, we simply write an underscore and let Beluga's reconstruction algorithm infer the argument.
 In the application case, we first normalize recursively `[g |- M]`.
-If this results in an abstraction `[g |- lam \x. M']`, then we continue to normalize `[g |- M'[.., N] ]` substituting for `x` the term `N`.
+If this results in an abstraction `[g |- lam \x. M']`, then we continue to normalize `[g |- M'[.., N]]` substituting for `x` the term `N`.
 Otherwise, we normalize recursively `[g |- N]` and rebuild the application.
 
 Recall that all meta-variables are associated with the identity substitution  by default which may be omitted.

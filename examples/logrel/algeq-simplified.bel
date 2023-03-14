@@ -432,7 +432,7 @@ rec idLogSub : IdSub [|-G] [g] $[g' |- $Id]
 | INil => Nil
 | ISnoc (r' : IdSub [|- G] [g] $[g' |- $Id]) =>
   let q = idLogSub r' in
-  Dot (wknLogSub [g', b:block x:tm, a:algeqNeu x x _] [g'] $[g', b |-..] (idLogSub r'))
+  Dot (wknLogSub [g', b:block x:tm, a:algeqNeu x x _] [g'] $[g', b |- ..] (idLogSub r'))
       (reflect _ [g', b:block x:tm, y:algeqNeu x x _ |- b.2])
 ;
 

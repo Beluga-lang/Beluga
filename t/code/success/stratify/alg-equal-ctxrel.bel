@@ -80,7 +80,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 % | [g, x:term |- x] =>
 %   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |- b.2]
 
-% | [g, x:term |- #p[..] ] =>
+% | [g, x:term |- #p[..]] =>
 %   let TRvar r' = r in
 %   let [h |- E[..]] = ref' r' in
 %     [h, b:block(x:term, _u:aeq x x) |- E[..]]
@@ -284,7 +284,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 
 % inductive Var : (h: tdCtx) [h |- term] -> ctype =
 % | BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |- b.1]
-% | PV : Var [h |- #p.1[..]] -> Var [h, b: block x:term, _u:deq x x |- #p.1[..] ];
+% | PV : Var [h |- #p.1[..]] -> Var [h, b: block x:term, _u:deq x x |- #p.1[..]];
 
 % % Various Lemmas needed in the transitivity case of the ceq proof
 % % They establish properties about the weakening relation TRel' and TRel

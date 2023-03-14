@@ -70,8 +70,8 @@ schema tctx = target T;
 % to variable substitution.
 inductive SubCtx: {g':sctx} {g:sctx} ctype =
 | WInit: SubCtx [] []
-| WDrop: SubCtx [g'] [g] -> SubCtx [g'] [g, x:source T[] ]
-| WKeep: SubCtx [g'] [g] -> SubCtx [g', x:source T[] ] [g, x:source T[] ]
+| WDrop: SubCtx [g'] [g] -> SubCtx [g'] [g, x:source T[]]
+| WKeep: SubCtx [g'] [g] -> SubCtx [g', x:source T[]] [g, x:source T[]]
 ;
 
 % ----------------------------------------------------------
@@ -107,7 +107,7 @@ mlam g => fn e => case [g] of
 | [] => let [|- M] = e  in STm' [|- M] WInit
 | [g, x:source _] =>
   case e of
-  | [g, x:source _ |- M[..] ] =>
+  | [g, x:source _ |- M[..]] =>
     let STm' [h |- M'] rel = str [g] [g |- M] in
       STm' [h |- M'] (WDrop rel)
   | [g, x:source _ |- M] =>
@@ -119,7 +119,7 @@ inductive StrTerm: {g:sctx} [ |- tp] -> ctype =
 | STm: [g', x:source S[] |- source T[]] -> SubCtx [g'] [g] -> StrTerm [g, x:source S[]] [ |- T]
 ;
 
-rec strengthen: [g, x:source S[] |- source T[] ] -> StrTerm [g, x:source S[]] [|- T] =
+rec strengthen: [g, x:source S[] |- source T[]] -> StrTerm [g, x:source S[]] [|- T] =
  / total  (strengthen) /
 fn m =>
   let [g, x:source _ |- M] = m in
@@ -159,7 +159,7 @@ fn sigma => mlam #q => case sigma of
  let (sigma : Map [h] [g', x:source S]) = sigma in
  (case [g', x:source _ |- #q] of
  | [g', x:source _ |- x] =>  [h |- M]
- | [g', x:source _ |- #p[..] ] => lookup sigma' [g' |- #p]
+ | [g', x:source _ |- #p[..]] => lookup sigma' [g' |- #p]
  )
 | M_id [h] => impossible [ |- #q]
 ;
@@ -172,7 +172,7 @@ inductive VarTup: (g:sctx) {T:[ |- tp]} [g |- source T[]] -> ctype =
 ;
 
 % lookuVars replaces each variable contained in the VarTup by their respective target term from Map.
-rec lookupVars: SubCtx [g'] [g] -> VarTup [|- G] [g' |- M] -> Map [h] [g] -> [h |- target G[] ] =
+rec lookupVars: SubCtx [g'] [g] -> VarTup [|- G] [g' |- M] -> Map [h] [g] -> [h |- target G[]] =
 / total s (lookupVars _ _ _ _ _ s ) /
 fn r => fn vt => fn sigma =>  let (sigma : Map [h] [g]) = sigma in case r of
 | WInit =>
@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
  / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
+| M_dot sigma' [x:target S |- M[x]] => M_dot (extendEnv sigma') [x:target _  |- M[crst x]]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] =
@@ -244,7 +244,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let STm [g', x:source _ |- M'] wk = strengthen [g, x:source _ |- M] in
   let EnvClo env rho = reify [g'] in
   let [h |- E] = lookupVars wk env sigma in
-  let [xenv:target _ , x:target _ |- P[xenv, x] ] = cc' [g', x:source _ |- M'] (extend rho) in
+  let [xenv:target _ , x:target _ |- P[xenv, x]] = cc' [g', x:source _ |- M'] (extend rho) in
     [h |- cpack  (clam \clo. clet (cfst clo) (\x. clet (crst clo) (\xenv. P[xenv, x])))   E]
 
 | [g |- cons M N] =>

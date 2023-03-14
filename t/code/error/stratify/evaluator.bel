@@ -21,9 +21,9 @@ fn t => case t of
 | [ |- app M N] =>
   (case eval [ |- M] of
      | [ |- value (lam (\x. M'))] => (case eval [ |- N] of
-				     | [ |- value V]   => eval [ |- M'[V]]
-				     | [ |- no_result] => [ |- no_result]
-				  )
+             | [ |- value V]   => eval [ |- M'[V]]
+             | [ |- no_result] => [ |- no_result]
+          )
      | [ |- no_result] => [ |- no_result] )
 | [ |- lam \x. M] => [ |- value (lam \x. M)]
 ;

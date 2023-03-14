@@ -71,10 +71,10 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
 %  h |- #s : g
 
 inductive RedSub : {g:ctx}{$S:$[ |- g]} ctype =
-| Nil : RedSub  [ ] $[ |- ^ ]
-| Dot :     RedSub  [g] %[ |- $S[^] ]  % $S : g[]
+| Nil : RedSub  [ ] $[ |- ^]
+| Dot :     RedSub  [g] %[ |- $S[^]]  % $S : g[]
           -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
-          -> RedSub [g, x:tm A[]] $[ |- $S[^], M]   %  M : [ |- tm (A ^ [^CtxShift g $S[ |- .] ]
+          -> RedSub [g, x:tm A[]] $[ |- $S[^], M]   %  M : [ |- tm (A ^ [^CtxShift g $S[ |- .]]
 ;
 
 

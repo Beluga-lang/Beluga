@@ -32,7 +32,7 @@ rec vhoas2db : (g:ctx) [g |- value S[]]  -> [ |- exp' S] =
 fn v =>  case v of
  | [h, x:value T |- x] => [ |- one]
 
- | {#p:[h |- value S']} % This is necessary in the absence of subordination, since we need S' to be closed.
+ | {#p:#[h |- value S']} % This is necessary in the absence of subordination, since we need S' to be closed.
    [h, x:value T |- #p[..]]  =>
      let [ |- Db] = vhoas2db [h |- #p[..]] in
        [ |- shift Db]

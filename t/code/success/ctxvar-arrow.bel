@@ -2,6 +2,6 @@ LF unit : type = u : unit;
 
 schema ctx = unit;
 
-rec foo : [ctx] → [⊢ unit] =
+rec foo : {g : ctx} [⊢ unit] =
 / total /
 fn g ⇒ ? ;

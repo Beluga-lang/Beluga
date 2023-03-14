@@ -25,7 +25,7 @@ fn f => case f of
   let [g, u:pf _  |- D1] = i_sound [g |- I1] in
     [g, u |- D1[..,(andel u)]]
 | [g |- i_andr I2] =>
-%  let [g, u:pf (& B1 B2) ] D2 u = i_sound ([g] I2) in
+%  let [g, u:pf (& B1 B2)] D2 u = i_sound ([g] I2) in
   let [g, u:pf _  |- D2] = i_sound [g |- I2] in
     [g, u |- D2[..,(ander u)]]
 

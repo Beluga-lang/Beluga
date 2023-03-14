@@ -6,18 +6,18 @@ lt   : cmp.
 eq   : cmp.
 gt   : cmp.
 
-rec cmp : [ |- nat] -> [ |- nat] -> [ |- cmp] =
+rec compare : [ |- nat] -> [ |- nat] -> [ |- cmp] =
 fn x => fn y => case x of
 | [ |- z] => case y of
     | [ |- z] => [ |- eq]
     | [ |- _] => [ |- lt]
 | [ |- s N] => case y of
     | [ |- z] => [ |- gt]
-    | [ |- s M] => cmp [ |- N] [ |- M]
+    | [ |- s M] => compare [ |- N] [ |- M]
 ;
 
 rec max : [ |- nat] -> [ |- nat] -> [ |- nat] =
-fn x => fn y => let c = cmp x y in
+fn x => fn y => let c = compare x y in
     case c of
     | [ |- lt] => y
     | [ |- gt] => x

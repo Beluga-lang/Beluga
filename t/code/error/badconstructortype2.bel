@@ -1,6 +1,7 @@
 nat : type.
+z : nat.
 
 inductive Colour : ctype =
-| Blue : Colour [ |- nat]
-| Red : Colour [ |- nat]
+| Blue : Colour [ |- z]
+| Red : Colour [ |- z]
 ;

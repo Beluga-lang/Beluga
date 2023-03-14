@@ -442,7 +442,7 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_succ :
- [ |- multi_step M M'] -> [ |- multi_step (succ M) (succ M') ] =
+ [ |- multi_step M M'] -> [ |- multi_step (succ M) (succ M')] =
 / total ms (mstep_succ m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
@@ -483,7 +483,7 @@ Lemma: IF multi-step T T'
 }%
 
 rec mstep_iszero :
- [ |- multi_step M M'] -> [ |- multi_step (iszero M) (iszero M') ] =
+ [ |- multi_step M M'] -> [ |- multi_step (iszero M) (iszero M')] =
 / total ms (mstep_iszero m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
@@ -505,7 +505,7 @@ Lemma: IF multi-step M M'   and multi-step N N'
 
 rec mstep_leq_1 : {N : [ |- term]}
  [ |- multi_step M M']
--> [ |- multi_step (leq M N) (leq M' N) ] =
+-> [ |- multi_step (leq M N) (leq M' N)] =
 / total ms (mstep_leq_1 m m' n ms)/
 mlam N => fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
@@ -519,7 +519,7 @@ mlam N => fn ms => case ms of
 
 rec mstep_leq_2 :
  [ |- nat_value M]  -> [ |- multi_step N N']
--> [ |- multi_step (leq M N) (leq M N') ] =
+-> [ |- multi_step (leq M N) (leq M N')] =
 / total ms (mstep_leq_2 m n n' mv ms)/
 fn mv => fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]

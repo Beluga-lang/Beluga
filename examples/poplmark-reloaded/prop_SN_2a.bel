@@ -91,7 +91,7 @@ rec ext_SN : {M: [g |- tm (arr A[] B[])]} {#p: #[g |- tm A[]]} SN [g |- app M #p
     | SNeu (SApp sm sv) => SNeu sm
     | SRed r sm' => (case r of
              | SBeta [g, x:tm A[] |- M'] sn =>
-               let sn' = anti_renameSN [g, x:tm A[] ] [g] $[g |- .., #p[..]] [g, x:tm A[] |- M'] sm' in
+               let sn' = anti_renameSN [g, x:tm A[]] [g] $[g |- .., #p[..]] [g, x:tm A[] |- M'] sm' in
                SAbs sn'
              | SAppl r' => let sn = ext_SN [_ |- _] [_ |- #p]  sm' in SRed r' sn)
 ;

@@ -111,8 +111,8 @@ schema ctx = tm T;
 
 
 inductive RedSub : {gamma:ctx}{$S:$[ |- gamma]} ctype =
-| Nil : RedSub  [ ] $[ |- ^ ]
-| Dot : RedSub  [gamma] $[ |- $S[^] ] → Reduce [|- A] [ |- M]
+| Nil : RedSub  [ ] $[ |- ^]
+| Dot : RedSub  [gamma] $[ |- $S[^]] → Reduce [|- A] [ |- M]
      → RedSub [gamma, x:tm A[]] $[ |- $S[^], M]
 ;
 

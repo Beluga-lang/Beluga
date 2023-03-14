@@ -42,6 +42,6 @@ mlam E => mlam V => fn e =>
         [ |- (eval (letv E1 (\x . E2)) V2)]
 
       =>
-           vs [ |- E2[V1] ]  [ |- V2]  [ |- D2]
+           vs [ |- E2[V1]]  [ |- V2]  [ |- D2]
 
 ;

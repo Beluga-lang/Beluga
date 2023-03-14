@@ -19,7 +19,5 @@ mlam g =>
 
   | [g, x : exp T  |- x]           => [ |- zero]
 
-%  | [g, x : exp _] U[..]  => [ ] zero
-
   | [g, x : exp T  |- s W]  => [ |- zero]
 ;

@@ -509,7 +509,7 @@ case d of
 inductive IdSub : (g':tctx){g:ctx}{$Id:$[g' |- g]} ctype =
 | INil : IdSub [] $[|- ^]
 | ISnoc : {T:[|-tp]}IdSub [g] $[g' |- $Id]
-        -> IdSub [g, b:block (x:tm, u:oft x T[])] $[g', b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2> ]
+        -> IdSub [g, b:block (x:tm, u:oft x T[])] $[g', b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2>]
 ;
 
 
@@ -520,7 +520,7 @@ fn r => case r of
 | ISnoc [|- T] r' =>
  let (s : LogSub [g] $[h |- $S] $[h |- $S]) = idLogSub r' in
   let wkn = monotoneSub
-       [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) ] [h]
+       [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[])] [h]
        $[h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) |- ..] s in
   let rx = reflect [|- T] [h, b:block (x:tm , u:oft x T[], a: algeqr x x T[]) |- b.3] in
    Dot wkn rx  [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) |- b.2]

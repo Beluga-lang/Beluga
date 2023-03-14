@@ -22,7 +22,7 @@ list : N.nat -> type.
 
 nil : list N.z.
 
-cons : N.nat -> list N -> list (N.s N).
+cons : N.nat -> list M -> list (N.s M).
 
 
 let l1 = [ |- cons N.z (cons (N.s N.z) nil)];

@@ -132,7 +132,7 @@ fn d => fn s => case s of
 | [|- e_pred_zero] =>
   let [|- t_pred _] = d in [|- t_zero]
 | [|- e_pred_succ _] =>
-  let [|- t_pred (t_succ D) ] = d in [|- D]
+  let [|- t_pred (t_succ D)] = d in [|- D]
 | [|- e_iszero_zero] =>
   let [|- t_iszero _] = d in [|- t_true]
 | [|- e_iszero_succ _] =>
@@ -205,7 +205,7 @@ Lemma: IF multi-step T T' THEN multi-step (succ T) (succ T').
 }%
 
 rec mstep_succ :
- [ |- multi_step M M'] -> [ |- multi_step (succ M) (succ M') ] =
+ [ |- multi_step M M'] -> [ |- multi_step (succ M) (succ M')] =
 / total ms (mstep_succ m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]

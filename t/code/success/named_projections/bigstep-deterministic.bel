@@ -74,7 +74,7 @@ case d of
   (case f of
     | [g |- eval_app1 F1[..] F2[..]] =>
       let [g |- eq_lam (\x.\u. E1)] = deterministic [g |- D1[..]] [g |- F1[..]] in
-      let [g |- E2[..]] = eq_refl [g] [g |- N[..] ] in
+      let [g |- E2[..]] = eq_refl [g] [g |- N[..]] in
       let [g |- E3[..]] = eq_sym [g |- E1[.., N, E2]] in
       let [g |- F3[..]] = eval_respects_eq [g |- E3[..]] [g |- F2[..]] in
       deterministic [g |- D2[..]] [g |- F3[..]]

@@ -14,13 +14,13 @@ rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
   fn x => fn y =>
     case x of [ |- z] : [ |- nat]  => y
             | {U: [ |- nat]}[ |- s U] : [ |- nat] =>
-	      (case (plus [ |- U] y) of
- 	        {V: [ |- nat]} [ |- V] : [ |- nat] => [ |- s V]);
+              (case (plus [ |- U] y) of
+                 {V: [ |- nat]} [ |- V] : [ |- nat] => [ |- s V]);
 
 
 rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] =
   fn x => fn y =>
     case x of [ |- z] : [ |- nat]  => y
             | {U: [ |- nat]}[ |- s U] : [ |- nat] =>
-	      (case (plus' [ |- U] y) of
- 	        {V: [ |- nat]} [ |- V] : [ |- nat] => [ |- s V]);
+              (case (plus' [ |- U] y) of
+                 {V: [ |- nat]} [ |- V] : [ |- nat] => [ |- s V]);

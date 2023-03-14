@@ -68,7 +68,7 @@ typedef Env : {g:tctx} {h:ctx} ctype = {T:[ |- tp]} {#p:#[g |- tm T[]]} Sem [h] 
 rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g, x:tm S[]] [h] =
 fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g, x:tm _ |- #p] of
 | [g, x:tm S |- x] => e
-| [g, x:tm S |- #q[..] ] => s [ |- T] [g |- #q]
+| [g, x:tm S |- #q[..]] => s [ |- T] [g |- #q]
 ;
 
 rec env_wkn : {h':ctx}{h:ctx}{$W:$[h' |- h]} Env [g] [h] -> Env [g] [h'] =
@@ -84,7 +84,7 @@ rec eval : [g |- tm S[]] -> Env [g] [h] -> Sem [h] [ |- S]  =
 fn t => fn s => let s : Env [g] [h] = s in
 case t of
 | [g |- #p] => s _ [g |- #p]
-| [g |- lam (\x. E) ] =>
+| [g |- lam (\x. E)] =>
   Arr [h] (mlam h' => mlam $W => fn e =>
      eval [g, x:tm _ |- E] (env_ext (env_wkn [h'] [h] $[h' |- $W] s) e))
 | [g |- app E1 E2] =>

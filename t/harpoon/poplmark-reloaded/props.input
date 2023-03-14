@@ -207,13 +207,13 @@ solve soundSNRed _ _ x1
 suffices by SnBeta toshow _
 solve soundSN _ x1
 renameSN
-{g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} SN [g |- M] -> SN [g' |- M[$R]]
+{g : cxt} {g' : cxt} {$R : $[g' |-# g]} {M : [g |- tm A[]]} SN [g |- M] -> SN [g' |- M[$R]]
 5
 renameSNe
-(g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNe [g |- M] -> SNe [g' |- M[$R]]
+(g : cxt) (g' : cxt) {$R : $[g' |-# g]} {M : [g |- tm A[]]} SNe [g |- M] -> SNe [g' |- M[$R]]
 3
 renameSNRed
-(g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNRed [g |- M] [g |- N] -> SNRed [g' |- M[$R]] [g' |- N[$R]]
+(g : cxt) (g' : cxt) {$R : $[g' |-# g]} {M : [g |- tm A[]]} SNRed [g |- M] [g |- N] -> SNRed [g' |- M[$R]] [g' |- N[$R]]
 3
 
 split x
@@ -235,13 +235,13 @@ solve renameSNRed [_ |- $R] _ x1
 suffices by SBeta toshow _
 solve renameSN [_] [_] [_ |- $R] _ x1
 anti-renameSNe
-(g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNe [g' |- M[$R]] -> SNe [g |- M]
+(g : cxt) (g' : cxt) {$R : $[g' |-# g]} {M : [g |- tm A[]]} SNe [g' |- M[$R]] -> SNe [g |- M]
 3
 anti-renameSNRed
-{g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} {N' : [g' |- tm A[]]} SNRed [g' |- M[$R]] [g' |- N'] -> SNRed' [g' |- $R] [g |- M] [g' |- N']
+{g : cxt} {g' : cxt} {$R : $[g' |-# g]} {M : [g |- tm A[]]} {N' : [g' |- tm A[]]} SNRed [g' |- M[$R]] [g' |- N'] -> SNRed' [g' |- $R] [g |- M] [g' |- N']
 6
 anti-renameSN
-{g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} SN [g' |- M[$R]] -> SN [g |- M]
+{g : cxt} {g' : cxt} {$R : $[g' |-# g]} {M : [g |- tm A[]]} SN [g' |- M[$R]] -> SN [g |- M]
 5
 
 split x
@@ -273,7 +273,7 @@ solve anti-renameSN [_, x : tm _] [_] [_ |- .., #p[..]] [_, x : tm _ |- _] x2
 split x1
 solve SNeu x2
 renameRed
-(g : cxt) (g' : cxt) {A : [|- ty]} {M : [g |- tm A[]]} {$R : [g' |-# g]} Red [|- A] [g |- M] -> Red [|- A] [g' |- M[$R]]
+(g : cxt) (g' : cxt) {A : [|- ty]} {M : [g |- tm A[]]} {$R : $[g' |-# g]} Red [|- A] [g |- M] -> Red [|- A] [g' |- M[$R]]
 
 
 split [|- A]
@@ -285,7 +285,7 @@ suffices by RBase toshow _
 suffices by renameSN toshow _
 solve x1
 renameRedS
-(g : cxt) (g' : cxt) {$R : [g' |-# g]} {$S : [g |- g'']} RedS [g''] [g |- $S] -> RedS [g''] [g' |- $S[$R]]
+(g : cxt) (g' : cxt) {$R : $[g' |-# g]} {$S : [g |- g'']} RedS [g''] [g |- $S] -> RedS [g''] [g' |- $S[$R]]
 3
 
 split x

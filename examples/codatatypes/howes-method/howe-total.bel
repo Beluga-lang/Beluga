@@ -91,7 +91,7 @@ inductive OSim : (g:ctx) {T:[|- tp]} [g |- term T[]] -> [g |- term T[]] -> ctype
 
 rec sim_osim : Sim [|- T] [|- M] [|- N] -> OSim [|- T] [|- M] [|- N] =
 / total s (sim_osim t m n s) /
- fun s => OSimC [] (mlam $S => let $[ |- ^ ] = $[ |- $S] in s)
+ fun s => OSimC [] (mlam $S => let $[ |- ^] = $[ |- $S] in s)
 ;
 
 rec osim_refl : (g:ctx) OSim [|- T] [g |- M] [g |- M] =
@@ -220,7 +220,7 @@ rec howe_subst_wkn : (g:ctx) (h:ctx) {S:[|-tp]} Howe_subst [g] $[h |- $S1] $[h |
 / total hr (howe_subst_wkn g h s s1 s2 hr) /
   mlam S => fn h => case h of
   | HNil => HNil
-  | HCons hs' h' => HCons (howe_subst_wkn [|- S] hs') (howe_ren [_] [_, x:term S[] ] $[_, x:term S[] |- .. ] h')
+  | HCons hs' h' => HCons (howe_subst_wkn [|- S] hs') (howe_ren [_] [_, x:term S[]] $[_, x:term S[] |- ..] h')
 ;
 
 % this one I don't know how to make work
@@ -524,11 +524,11 @@ rec howe_osim : (g:ctx) Howe [|- T] [g |- E1] [g |- E2] -> OSim [|- T] [g |- E1]
 
 %%%%%%%%%
 
-let succ : [ |- term (arr (arr (arr B D) (arr A B)) (arr (arr B D) (arr A D))) ]
+let succ : [ |- term (arr (arr (arr B D) (arr A B)) (arr (arr B D) (arr A D)))]
     = [|- lam \n. lam \x. lam \y. app x (app (app n x) y)];
 % succ
 
-let one : [ |- term (arr (arr S S) (arr S S)) ] = [|- lam \f.lam \x.app f x];
+let one : [ |- term (arr (arr S S) (arr S S))] = [|- lam \f.lam \x.app f x];
 % one
 
 let so : [|- term (arr (arr S S) (arr S S))] = [|- app (lam \n. lam \x. lam \y. app x (app (app n x) y)) (lam \f.lam \x.app f x)];

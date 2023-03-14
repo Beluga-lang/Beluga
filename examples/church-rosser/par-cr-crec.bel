@@ -23,7 +23,7 @@ fn d => fn e => case d of
   let [g |- S] = e in
   let [g, b:block y:term, t:pred y y |- R1'] =
     subst [g, b:block (y:term, t:pred y y), x:term, u:pred x x |- R1[.., b.1, b.2, x, u]]
-          [g, b |- S[..] ]
+          [g, b |- S[..]]
   in
    [g |- lm \y.\v. R1'[..,<y ; v>]]
 

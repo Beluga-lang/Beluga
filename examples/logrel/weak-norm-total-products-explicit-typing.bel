@@ -87,8 +87,8 @@ inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 ;
 
 inductive RedSub : {g:ctx}{G:[|-tctx]}{$S:$[ |- g]} ctype =
-| Nil : RedSub  [ ] [|- nil] $[ |- ^ ]
-| Dot : RedSub  [g] [|- G] $[ |- $S[^] ] → Reduce [|- A] [ |- M]
+| Nil : RedSub  [ ] [|- nil] $[ |- ^]
+| Dot : RedSub  [g] [|- G] $[ |- $S[^]] → Reduce [|- A] [ |- M]
      → RedSub [g, x:tm] [|- snoc G A] $[ |- $S[^] , M]
 ;
 

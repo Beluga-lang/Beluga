@@ -53,7 +53,7 @@ rec eq2 : (g:ctx) [g |- step M N] -> [g |- pred M N] =
 fn r => case r of
  | [g |- beta1] : [g |- (step (app (lam \x. M1) M2) M1[.., M2])]  =>
   let [g, b:block x:term, t:pred x x |- I1] =
-    identity [g, b:block x:term, t:pred x x] [g, b |- M1[.., b.1] ] in
+    identity [g, b:block x:term, t:pred x x] [g, b |- M1[.., b.1]] in
   let [g |- I2] = identity [g] [g |- M2] in
     [g |- beta (\x.\u. I1[..,<x ; u>]) I2]
 

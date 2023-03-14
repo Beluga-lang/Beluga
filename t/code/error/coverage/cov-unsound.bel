@@ -8,7 +8,7 @@ schema tctx = target;
 
 rec f: (h:tctx) [h, y:target |- target] → [h, y:target |- target] =
  fn e => case e of
-   | [h, y:target |- U[..] ] => e ;
+   | [h, y:target |- U[..]] => e ;
 
 %{rec f0: (h:tctx) [h |- target] → [h |- target] =
     fn e ⇒ case e of

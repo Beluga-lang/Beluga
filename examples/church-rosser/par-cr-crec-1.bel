@@ -22,7 +22,7 @@ fn d => fn e => case d of
   let [g |- S[..]] = e in
   let [g, b:block y:term, _t:pred y y |- R1'[..] b] =
     subst [g, b:block y:term, _t:pred y y, x:term, u:pred x x |- R1[..] b.1 b.2 x u]
-          [g, b |- S[..] ]
+          [g, b |- S[..]]
   in
    [g |- lm \y.\v. R1'[..] <y, v>]
 
@@ -100,7 +100,7 @@ mlam g => fn d => fn e => case d of
 
 | [g |- #p.2[..]] =>
    let
-       [g |- #q.2[..]] = e in [g |- dia_result _ (#q.2[..]) (#q.2[..])]
+       [g |- #q.2[..]] = e in [g |- dia_result _ #q.2[..] #q.2[..]]
 
 ;
 

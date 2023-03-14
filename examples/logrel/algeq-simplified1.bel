@@ -73,7 +73,7 @@ mlam A => fn e => case [ |- A] of
 | [ |- arr A B] =>
   let LogArr [g |- M1] [g |- M2] f = e in
   let [g, b:block x:tm, y:algeqr x x A[] |- R]
-      = reify [ |- B] (f [g, b:block x:tm, y:algeqr x x A[]] $[g, b |-..] [g, b |- b.1] [g, b |- b.1]
+      = reify [ |- B] (f [g, b:block x:tm, y:algeqr x x A[]] $[g, b |- ..] [g, b |- b.1] [g, b |- b.1]
         (reflect [ |- A] [g, b:block x:tm, y:algeqr x x A[] |- b.2]))
   in [g |- algarr (\x. \y. R[..,<x;y>])]
 ;
@@ -425,7 +425,7 @@ rec idLogEqSub : IdSub [|-G] [g] $[g' |- $Id]
 | INil => Nil
 | ISnoc (r' : IdSub [|- G] [g] $[g' |- $Id]) =>
   let q = idLogEqSub r' in
-  Dot (wknLogEqSub [g', b:block x:tm, a:algeqr x x _] [g'] $[g', b |-..] (idLogEqSub r'))
+  Dot (wknLogEqSub [g', b:block x:tm, a:algeqr x x _] [g'] $[g', b |- ..] (idLogEqSub r'))
       (reflect _ [g', b:block x:tm, y:algeqr x x _ |- b.2])
 ;
 

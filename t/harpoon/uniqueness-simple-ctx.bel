@@ -11,7 +11,7 @@ app : exp -> exp -> exp.
 % Evaluation judgment
 eval: exp -> exp -> type.
 ev_app : eval E1 (lam E) -> eval E2 V2 -> eval (E V2) V
-	-> eval (app E1 E2) V.
+        -> eval (app E1 E2) V.
 ev_lam: eval (lam E) (lam E).
 
 % Equality predicate

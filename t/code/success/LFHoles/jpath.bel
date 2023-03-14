@@ -57,10 +57,10 @@ fn p => case p of
   in
     [g |- j_rdx (\x. \j. E)]
 | [g |- #p.3[..]] => [g |- #p.4[..]]
-| {#q : [g |- block x:tm, _t: ({q:path} is_path q N[..] -> is_path q x), _u:jump N[..] x]}
-  [g |- (#q.2[..]) P[..] D[..]] =>
+| {#q : #[g |- block x:tm, _t: ({q:path} is_path q N[..] -> is_path q x), _u:jump N[..] x]}
+  [g |- #q.2[..] P[..] D[..]] =>
   let [g |- J[..]] = fwd [g |- D] in
-   [g |- j_jump (#q.3[..]) J[..]]
+   [g |- j_jump #q.3[..] J[..]]
 ;
 
 rec bwd : (g:jctx) [g |- jpath P[..] M[..]] -> [g |- is_path P[..] M[..]] =
@@ -77,9 +77,9 @@ fn p => case p of
        = bwd [g, b:block x:tm, _t: ({q:path} is_path q N[..] -> is_path q x), _u:jump N[..] x |- E[.., b.1, b.3]] in
    [g |- p_rdx (\x. \f. F1)]
 | [g |- #p.4[..]] => [g |- #p.3[..]]
-| {#q : [g |- block x:tm, _t: ({q:path} is_path q N[..] -> is_path q x), _u:jump N[..] x]}
+| {#q : #[g |- block x:tm, _t: ({q:path} is_path q N[..] -> is_path q x), _u:jump N[..] x]}
   {J : [g |- jpath P1[..] N[..]]}
-  [g |- j_jump (#q.3[..]) J[..]] =>
+  [g |- j_jump #q.3[..] J[..]] =>
    let [g |- H[..]] = bwd [g |- J[..]] in
-   [g |- (#q.2[..]) _ ?]
+   [g |- #q.2[..] _ ?]
 ;

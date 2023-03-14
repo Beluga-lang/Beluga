@@ -22,7 +22,7 @@ eval_step: exp -> cont -> val -> type.
 result : eval E V → mstep (st K (return V))  (answer W) → eval_step E K W.
 
 rec csd :
-          [ |- mstep (st K (ev E)) (answer W) ]
+          [ |- mstep (st K (ev E)) (answer W)]
        -> [ |- eval_step E K W] =
 
 fn c => case c of

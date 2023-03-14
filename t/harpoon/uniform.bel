@@ -21,24 +21,24 @@ LF gamma   : type =
 inductive Lookup : (g:ctx) {G : [g ⊢ gamma]} {P : [g ⊢ o]} ctype =
   | head     : Lookup [g ⊢ Dec G P] [g ⊢ P]
   | tail     : Lookup [g ⊢ G] [g ⊢ P]
-	       → Lookup [g ⊢ Dec G P'] [g ⊢ P]
+               → Lookup [g ⊢ Dec G P'] [g ⊢ P]
 ;
 
 % solve goal formulas
 inductive Solve  : (g:ctx) [g ⊢ gamma] → [g ⊢ o] → ctype =
   | impR       : Solve [g ⊢ Dec G P1] [g ⊢ P2]
-	         → Solve [g ⊢ G] [g ⊢ imp P1 P2]
+                 → Solve [g ⊢ G] [g ⊢ imp P1 P2]
   | forallR    : Solve [g, x:i ⊢ G[..]] [g, x:i ⊢ P]
-	         → Solve [g ⊢ G] [g ⊢ forall (\x. P)]
+                 → Solve [g ⊢ G] [g ⊢ forall (\x. P)]
   | transition : Focus [g ⊢ G] [g ⊢ P'] [g ⊢ q]
-	         → Lookup [g ⊢ G] [g ⊢ P']
-	         → Solve [g ⊢ G] [g ⊢ q]
+                 → Lookup [g ⊢ G] [g ⊢ P']
+                 → Solve [g ⊢ G] [g ⊢ q]
 and inductive Focus : (g:ctx) [g ⊢ gamma] → [g ⊢ o] → [g ⊢ o] -> ctype =
       | impL    : Focus [g ⊢ G] [g ⊢ P2] [g ⊢ q]
-	          → Solve [g ⊢ G] [g ⊢ P1]
-	          → Focus [g ⊢ G] [g ⊢ imp P1 P2] [g ⊢ q]
+                  → Solve [g ⊢ G] [g ⊢ P1]
+                  → Focus [g ⊢ G] [g ⊢ imp P1 P2] [g ⊢ q]
       | forallL : Focus [g ⊢ G] [g ⊢ P[.., t]] [g ⊢ q]
-		  → Focus [g ⊢ G] [g ⊢ forall (\x. P)] [g ⊢ q]
+                  → Focus [g ⊢ G] [g ⊢ forall (\x. P)] [g ⊢ q]
       | init    : Focus [g ⊢ G] [g ⊢ q] [g ⊢ q]
 ;
 

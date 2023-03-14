@@ -8,7 +8,7 @@ LF eq : tp → tp → type =
   | eq_arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
 ;
 
-proof tp-refl : {A : ⊢ tp} [ ⊢ eq A A] =
+proof tp-refl : {A : [⊢ tp]} [ ⊢ eq A A] =
 / total 1 /
 intros
 { A : ( |- tp)

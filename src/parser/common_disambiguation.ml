@@ -1275,7 +1275,8 @@ module Persistent_disambiguation_state = struct
         Error.raise_at1
           (Qualified_identifier.location identifier)
           (Expected_module identifier)
-    | Result.Error cause -> Error.raise cause
+    | Result.Error cause ->
+        Error.raise_at1 (Qualified_identifier.location identifier) cause
 
   let with_bindings_checkpoint m =
     let* bindings = get_bindings in

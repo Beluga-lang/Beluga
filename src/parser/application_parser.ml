@@ -402,8 +402,7 @@ struct
     Error.register_exception_printer (function
       | Parser_error cause ->
           let cause_printer = Error.find_printer cause in
-          Format.dprintf "@[Failed to parse an application.@,%t@]"
-            cause_printer
+          Format.dprintf "@[Failed to parse application.@,%t@]" cause_printer
       | No_more_choices exceptions ->
           let exception_printers = List.map Error.find_printer exceptions in
           Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"

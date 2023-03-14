@@ -65,7 +65,6 @@ module Make
 
       <meta-thing> ::=
         | <qualified-identifier>
-        | `(' <clf-context-object> `)'
         | `(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `$(' <clf-context-object> <turnstile> <clf-context-object> `)'
@@ -95,7 +94,7 @@ module Make
 
       <meta-thing> ::=
         | <qualified-identifier>
-        | `(' <clf-context-object> [<turnstile> <clf-context-object>] `)'
+        | `(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `$(' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `)'
         | `[' <clf-context-object> [<turnstile> <clf-context-object>] `]'
@@ -157,8 +156,7 @@ module Make
         $> (fun (location, schema) ->
              Synprs.Meta.Thing.RawSchema { location; schema })
         |> labelled "Schema meta-type"
-      and plain_inner_thing =
-        seq2 clf_context (maybe (turnstile &> clf_context))
+      and plain_inner_thing = seq2 clf_context (turnstile &> clf_context)
       and hash_inner_thing = seq2 clf_context (turnstile &> clf_context)
       and dollar_inner_thing =
         let turnstile = turnstile $> fun () -> `Plain
@@ -169,23 +167,20 @@ module Make
       let plain_meta_type =
         choice
           [ parens plain_inner_thing
-            |> labelled "Plain meta-type or object in parentheses"
+            |> labelled "Plain meta-type in parentheses"
           ; bracks plain_inner_thing
-            |> labelled "Plain meta-type or object in brackets"
+            |> labelled "Plain meta-type in brackets"
           ]
         |> span
-        $> function
-        | location, (context, Option.None) ->
-            Synprs.Meta.Thing.RawContext { location; context }
-        | location, (context, Option.Some object_) ->
-            Synprs.Meta.Thing.RawTurnstile
-              { location; context; object_; variant = `Plain }
+        $> fun (location, (context, object_)) ->
+        Synprs.Meta.Thing.RawTurnstile
+          { location; context; object_; variant = `Plain }
       and hash_meta_type =
         choice
           [ hash_parens hash_inner_thing
-            |> labelled "Parameter type or term in parentheses"
+            |> labelled "Parameter type in parentheses"
           ; hash_bracks hash_inner_thing
-            |> labelled "Parameter type or term in brackets"
+            |> labelled "Parameter type in brackets"
           ]
         |> span
         $> fun (location, (context, object_)) ->
@@ -194,9 +189,9 @@ module Make
       and dollar_meta_type =
         choice
           [ dollar_parens dollar_inner_thing
-            |> labelled "Substitution type or object in parentheses"
+            |> labelled "Substitution type in parentheses"
           ; dollar_bracks dollar_inner_thing
-            |> labelled "Substitution type or object in brackets"
+            |> labelled "Substitution type in brackets"
           ]
         |> span
         $> function

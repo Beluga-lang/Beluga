@@ -2454,4 +2454,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
       pp_signature_file signature
 end
 
-module Html_printer = Make_html_printer (Html_printing_state)
+module Html_printer = struct
+  include Html_printing_state
+  include Make_html_printer (Html_printing_state)
+end

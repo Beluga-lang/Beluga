@@ -24,4 +24,10 @@ module Make_printer (Printing_state : PRINTING_STATE) :
   PRINTER with type state = Printing_state.state
 
 (** Concrete implementation of pretty-printing for Beluga signatures. *)
-module Printer : module type of Make_printer (Printing_state)
+module Printer : sig
+  (** @closed *)
+  include module type of Make_printer (Printing_state)
+
+  (** @closed *)
+  include module type of Printing_state
+end

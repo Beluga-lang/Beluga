@@ -24,4 +24,10 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) :
   HTML_PRINTER with type state = Html_printing_state.state
 
 (** Concrete implementation of HTML pretty-printing for Beluga signatures. *)
-module Html_printer : module type of Make_html_printer (Html_printing_state)
+module Html_printer : sig
+  (** @closed *)
+  include module type of Make_html_printer (Html_printing_state)
+
+  (** @closed *)
+  include module type of Html_printing_state
+end

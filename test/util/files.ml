@@ -69,13 +69,59 @@ let read_test_case_inputs ~filename =
   in
   parse_test_cases tokens
 
+type entry =
+  | File of string
+  | Directory of string * entry list
+
+let rec read_file_structure ~directory =
+  let direct_entries =
+    List.map
+      (Filename.concat directory)
+      (Array.to_list (Sys.readdir directory))
+  in
+  let nested_entries =
+    List.map
+      (fun entry ->
+        if Sys.is_directory entry then
+          match read_file_structure ~directory:entry with
+          | File file -> File (Filename.concat entry file)
+          | Directory (directory, files) ->
+              Directory (Filename.concat entry directory, files)
+        else File entry)
+      direct_entries
+  in
+  Directory (directory, nested_entries)
+
+let is_beluga_file path = Filename.check_suffix path ".bel"
+
+let is_configuration_file path = Filename.check_suffix path ".cfg"
+
+let rec find_compiler_tests_in_structure = function
+  | File path -> if is_beluga_file path then [ path ] else []
+  | Directory (_directory_path, entries) ->
+      let configuration_files =
+        List.filter_map
+          (function
+            | File path ->
+                if is_configuration_file path then Option.some path
+                else Option.none
+            | Directory _ -> Option.none)
+          entries
+      in
+      if List.null configuration_files then
+        List.concat_map find_compiler_tests_in_structure entries
+      else configuration_files
+
+let find_compiler_tests ~directory =
+  let structure = read_file_structure ~directory in
+  let test_files = find_compiler_tests_in_structure structure in
+  List.sort String.compare test_files
+
 (** {2 Exception Printing} *)
 
 let () =
   Error.register_exception_printer (function
     | Extraneous_test_case_terminator ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Extraneous test case terminator."
-    | Unterminated_test_case ->
-        Format.dprintf "%a" Format.pp_print_text "Unterminated test case."
+        Format.dprintf "Extraneous@ test@ case@ terminator."
+    | Unterminated_test_case -> Format.dprintf "Unterminated@ test@ case."
     | exn -> Error.raise_unsupported_exception_printing exn)

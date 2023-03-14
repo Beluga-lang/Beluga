@@ -24,42 +24,44 @@ let save_signature_html ~filename signature =
   Support.Files.with_pp_to_file filename (fun ppf ->
       Format.fprintf ppf "%a@." Beluga_html.pp_signature signature)
 
-let json_filename location =
-  Filename.remove_extension (Location.filename location) ^ ".json"
+let replace_filename_extension filename ~extension =
+  Filename.remove_extension filename ^ extension
 
-let pp_filename location =
-  Filename.remove_extension (Location.filename location) ^ ".pp"
+let replace_location_filename_extension location ~extension =
+  replace_filename_extension (Location.filename location) ~extension
 
-let html_filename location =
-  Filename.remove_extension (Location.filename location) ^ ".html"
+let filename_json location =
+  replace_location_filename_extension location ~extension:".json"
+
+let filename_pp location =
+  replace_location_filename_extension location ~extension:".pp"
+
+let filename_html location =
+  replace_location_filename_extension location ~extension:".html"
 
 let save_signature_files_json =
   List1.iter (fun signature_file ->
       save_signature_file_json
-        ~filename:(json_filename signature_file.Synext.Signature.location)
+        ~filename:(filename_json signature_file.Synext.Signature.location)
         signature_file)
 
 let save_signature_file_pp =
-  let open Synext.Printing_state in
   let open Synext.Printer in
   fun x state ->
-    Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
+    Support.Files.with_pp_to_file (filename_pp x.Synext.Signature.location)
       (fun ppf ->
         run (set_formatter ppf &> pp_signature_file x ++ pp_newline) state)
 
 let save_signature_files_pp =
-  let open Synext.Printing_state in
   let open Synext.Printer in
   fun (List1.T (x, xs)) ->
     let state, () =
-      Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
+      Support.Files.with_pp_to_file (filename_pp x.Synext.Signature.location)
         (fun ppf -> run (save_signature_file_pp x) (make_initial_state ppf))
     in
     eval (traverse_list_void save_signature_file_pp xs) state
 
 let pp_and_parse_signature_files =
-  let module Printing_state = Synext.Printing_state in
-  let module Parser_state = Beluga_parser.Simple.Parser_state in
   let module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
   in
   let module Printer = Synext.Printer in
@@ -67,11 +69,10 @@ let pp_and_parse_signature_files =
   fun (List1.T (x, xs)) ->
     let buffer = Buffer.create 16 in
     let printing_state =
-      Printing_state.make_initial_state (Format.formatter_of_buffer buffer)
+      Printer.make_initial_state (Format.formatter_of_buffer buffer)
     in
     let printing_state', () =
-      Printing_state.(
-        Printer.(run (pp_signature_file x ++ pp_newline) printing_state))
+      Printer.(run (pp_signature_file x ++ pp_newline) printing_state)
     in
     let parser_state, y =
       Parser.run Parser.parse_only_signature_file
@@ -84,9 +85,7 @@ let pp_and_parse_signature_files =
         (fun (printing_state, parser_state, ys_rev) x ->
           Buffer.clear buffer;
           let printing_state', () =
-            Printing_state.(
-              Printer.(
-                run (pp_signature_file x ++ pp_newline) printing_state))
+            Printer.(run (pp_signature_file x ++ pp_newline) printing_state)
           in
           let parser_state', () =
             Parser.put_parser_state
@@ -103,60 +102,8 @@ let pp_and_parse_signature_files =
     in
     List1.from y (List.rev ys_rev)
 
-type entry =
-  | File of string
-  | Directory of string * entry list
-
-let rec read_file_structure ~directory =
-  let direct_entries =
-    List.map
-      (Filename.concat directory)
-      (Array.to_list (Sys.readdir directory))
-  in
-  let nested_entries =
-    List.map
-      (fun entry ->
-        if Sys.is_directory entry then
-          match read_file_structure ~directory:entry with
-          | File file -> File (Filename.concat entry file)
-          | Directory (directory, files) ->
-              Directory (Filename.concat entry directory, files)
-        else File entry)
-      direct_entries
-  in
-  Directory (directory, nested_entries)
-
-let is_beluga_file path = Filename.check_suffix path ".bel"
-
-let is_configuration_file path = Filename.check_suffix path ".cfg"
-
-let rec find_compiler_tests_in_structure = function
-  | File path -> if is_beluga_file path then [ path ] else []
-  | Directory (_directory_path, entries) ->
-      let configuration_files =
-        List.filter_map
-          (function
-            | File path ->
-                if is_configuration_file path then Option.some path
-                else Option.none
-            | Directory _ -> Option.none)
-          entries
-      in
-      if List.null configuration_files then
-        List.concat_map find_compiler_tests_in_structure entries
-      else configuration_files
-
-let find_compiler_tests ~directory =
-  let structure = read_file_structure ~directory in
-  let test_files = find_compiler_tests_in_structure structure in
-  List.sort String.compare test_files
-
 let assert_equal_as_json f ~expected ~actual =
   assert_json_equal ~expected:(f expected) ~actual:(f actual)
-
-let examples_directory = "../../examples"
-
-let compiler_tests = find_compiler_tests ~directory:examples_directory
 
 let make_compiler_test ?(save_json_to_file = false)
     ?(save_pp_to_file = false) compiler_test_file =
@@ -203,7 +150,12 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
       ignore
         (Format.asprintf "%a@." Beluga_html.pp_signature signature : string)
 
-let tests =
+let examples_directory = "../../examples"
+
+let tests () =
+  let compiler_tests =
+    Files.find_compiler_tests ~directory:examples_directory
+  in
   let open OUnit2 in
   [ "Pretty-printing" >::: List.map make_compiler_test compiler_tests
   ; "HTML pretty-printing" >::: List.map make_html_test compiler_tests

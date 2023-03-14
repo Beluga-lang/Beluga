@@ -2317,4 +2317,7 @@ module Make_printer (Printing_state : PRINTING_STATE) = struct
     pp_list1 ~sep:pp_double_cut pp_signature_file signature
 end
 
-module Printer = Make_printer (Printing_state)
+module Printer = struct
+  include Printing_state
+  include Make_printer (Printing_state)
+end

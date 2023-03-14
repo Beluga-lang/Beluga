@@ -76,7 +76,7 @@ let pp_and_parse_signature_files =
     let parser_state, y =
       Parser.run Parser.parse_only_signature_file
         (Parser.make_initial_state_from_string
-           ~disambiguation_state:Disambiguation_state.initial
+           ~disambiguation_state:Disambiguation_state.initial_state
            ~initial_location:Location.ghost ~input:(Buffer.contents buffer))
     in
     let _printing_state'', _parser_state', ys_rev =

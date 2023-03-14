@@ -691,7 +691,7 @@ module Persistent_disambiguation_state = struct
     end) :
       State.STATE with type state := state)
 
-  let initial =
+  let initial_state =
     { substate =
         Scope_state { bindings = Binding_tree.empty; parent = Option.none }
     ; default_precedence = Synext.default_precedence

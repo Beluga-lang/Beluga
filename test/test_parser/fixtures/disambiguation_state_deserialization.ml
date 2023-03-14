@@ -135,4 +135,4 @@ and add_json_entry json =
 let read_disambiguation_state filename =
   let open Disambiguation_state in
   let json = Yojson.Safe.from_file filename in
-  exec (add_json_entries json) initial
+  exec (add_json_entries json) initial_state

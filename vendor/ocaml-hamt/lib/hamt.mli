@@ -265,26 +265,6 @@ module type S = sig
       val from : (key * 'a) list -> 'a t
     end
   end
-
-  (** {2 Alternative operations} *)
-
-  (** Operations without exceptions. *)
-  module ExceptionLess : sig
-    (** These functions do not raise [Not_found] if they do not find a
-        relevant binding. In this case, they use the [option] type to return
-        [None] as this binding, and if their results contains a Hamt, it is
-        left unmodified. *)
-
-    val extract : key -> 'a t -> 'a option * 'a t
-
-    val alter : key -> ('a -> 'a option) -> 'a t -> 'a t
-
-    val modify : key -> ('a -> 'a) -> 'a t -> 'a t
-
-    val find : key -> 'a t -> 'a option
-
-    val choose : 'a t -> (key * 'a) option
-  end
 end
 
 (** Functor building an implementation of the Hamt structure, given a

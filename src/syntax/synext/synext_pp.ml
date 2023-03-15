@@ -1996,10 +1996,9 @@ module Make_printer (Printing_state : PRINTING_STATE) = struct
     | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
         add_binding identifier
     | Signature.Declaration.Val { identifier; _ } -> add_binding identifier
-    | Signature.Declaration.Module { identifier; _ } ->
-        add_binding identifier
-    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        traverse_list1_void pre_add_declaration declarations
+    | Signature.Declaration.Module { location; _ }
+    | Signature.Declaration.Recursive_declarations { location; _ } ->
+        Error.raise_at1 location Unsupported_recursive_declaration
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =

@@ -64,6 +64,11 @@ let[@inline] raise_at1 location cause =
 let[@inline] raise_at2 location1 location2 cause =
   raise (located_exception2 location1 location2 cause)
 
+let[@inline] raise_at1_opt location_opt cause =
+  match location_opt with
+  | Option.None -> raise cause
+  | Option.Some location -> raise_at1 location cause
+
 (** The exception variant for the composition of multiple related exceptions.
     This exception variant must not be made public. *)
 exception Composite_exception of { causes : exn List2.t }

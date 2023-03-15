@@ -15,7 +15,7 @@ module OpPragmas = struct
     { name : Name.t
     ; fix : Fixity.t
     ; precedence : int
-    ; assoc : Associativity.t option
+    ; assoc : Associativity.t
     }
 
   let default = ref Associativity.non_associative
@@ -26,8 +26,6 @@ module OpPragmas = struct
 
   let clear () = pragmas := []
 
-  let default_precedence = -1
-
   let getPragma name =
     !pragmas
     |> List.find_opt (fun { name = pragma_name; _ } -> Name.(pragma_name = name))
@@ -36,8 +34,7 @@ module OpPragmas = struct
     !pragmas
     |> List.exists (fun { name = pragma_name; _ } -> Name.(pragma_name = name))
 
-  let addPragma name fix precedence_opt assoc =
-    let precedence = Option.value ~default:default_precedence precedence_opt in
+  let addPragma name fix precedence assoc =
     if pragmaExists name
     then
       pragmas :=

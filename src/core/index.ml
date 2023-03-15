@@ -50,7 +50,7 @@ module type INDEXER = sig
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 end
 
-module Make (Indexing_state : Index_state.INDEXING_STATE) :
+module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
   INDEXER with type state = Indexing_state.state = struct
   include Indexing_state
 
@@ -1344,6 +1344,10 @@ module Make (Indexing_state : Index_state.INDEXING_STATE) :
            pattern are translated to [let]-expressions in the approximate
            syntax. *)
         match (meta_context', pattern') with
+        | Synapx.LF.Empty, Synapx.Comp.PatFVar (_location, name) ->
+            (* TODO: General [let] pattern expressions would render this case
+               obsolete *)
+            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
         | Synapx.LF.Empty, Synapx.Comp.PatVar (_location, name, _offset) ->
             (* TODO: General [let] pattern expressions would render this case
                obsolete *)
@@ -1355,6 +1359,7 @@ module Make (Indexing_state : Index_state.INDEXING_STATE) :
             match
               List2.traverse
                 (function
+                  | Synapx.Comp.PatFVar (_location, name) -> Option.some name
                   | Synapx.Comp.PatVar (_location, name, _offset) ->
                       Option.some name
                   | _ -> Option.none)
@@ -1455,26 +1460,26 @@ module Make (Indexing_state : Index_state.INDEXING_STATE) :
         let* offset = index_of_comp_variable identifier in
         return (Synapx.Comp.PatVar (location, name, offset))
     | Synapx.Comp.PatTuple (location, patterns) ->
-        let* pats' = traverse_list2 reindex_pattern patterns in
-        return (Synapx.Comp.PatTuple (location, pats'))
+        let* patterns' = traverse_list2 reindex_pattern patterns in
+        return (Synapx.Comp.PatTuple (location, patterns'))
     | Synapx.Comp.PatConst (location, constant, pat_spine) ->
-        let* pat_spine' = reindex_pat_spine pat_spine in
-        return (Synapx.Comp.PatConst (location, constant, pat_spine'))
+        let* pattern_spine' = reindex_pattern_spine pat_spine in
+        return (Synapx.Comp.PatConst (location, constant, pattern_spine'))
     | Synapx.Comp.PatAnn (location, pattern, typ) ->
         let* pattern' = reindex_pattern pattern in
         return (Synapx.Comp.PatAnn (location, pattern', typ))
     | (Synapx.Comp.PatVar _ | Synapx.Comp.PatMetaObj _) as pattern ->
         return pattern
 
-  and reindex_pat_spine = function
-    | Synapx.Comp.PatNil loc -> return (Synapx.Comp.PatNil loc)
-    | Synapx.Comp.PatApp (loc, pat, pat_spine) ->
-        let* pat' = reindex_pattern pat in
-        let* pat_spine' = reindex_pat_spine pat_spine in
-        return (Synapx.Comp.PatApp (loc, pat', pat_spine'))
-    | Synapx.Comp.PatObs (loc, obs, pat_spine) ->
-        let* pat_spine' = reindex_pat_spine pat_spine in
-        return (Synapx.Comp.PatObs (loc, obs, pat_spine'))
+  and reindex_pattern_spine = function
+    | Synapx.Comp.PatNil location -> return (Synapx.Comp.PatNil location)
+    | Synapx.Comp.PatApp (location, pattern, pat_spine) ->
+        let* pattern' = reindex_pattern pattern in
+        let* pattern_spine' = reindex_pattern_spine pat_spine in
+        return (Synapx.Comp.PatApp (location, pattern', pattern_spine'))
+    | Synapx.Comp.PatObs (location, destructor_id, pat_spine) ->
+        let* pattern_spine' = reindex_pattern_spine pat_spine in
+        return (Synapx.Comp.PatObs (location, destructor_id, pattern_spine'))
 
   and index_comp_pattern = function
     | Synext.Comp.Pattern.Variable { location; identifier } ->
@@ -1592,7 +1597,7 @@ module Make (Indexing_state : Index_state.INDEXING_STATE) :
           with_free_variables_as_pattern_variables
             ~pattern:(index_comp_copattern copattern)
             ~expression:(fun copattern' ->
-              let* copattern'' = reindex_pat_spine copattern' in
+              let* copattern'' = reindex_pattern_spine copattern' in
               let* body' = index_comp_expression body in
               return (copattern'', body'))
         in
@@ -1770,4 +1775,9 @@ module Make (Indexing_state : Index_state.INDEXING_STATE) :
   let index_harpoon_proof proof =
     disallow_free_variables
       (index_harpoon_proof proof $> fun proof' -> Synapx.Comp.Proof proof')
+end
+
+module Indexer = struct
+  include Index_state.Persistent_indexing_state
+  include Make_indexer (Index_state.Persistent_indexing_state)
 end

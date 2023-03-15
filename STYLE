@@ -5,10 +5,10 @@ Naming conventions
 ------------------
 - LF objects are prefixed with a t: tA, tK, tM, ...
 
-  LF Terms	      tM, tN
-  LF Types	      tA, tB
+  LF Terms        tM, tN
+  LF Types        tA, tB
   LF Spines           tS
-  LF Heads	      tH
+  LF Heads        tH
 
 - LF objects under a substitution are prefixed with a s: sA, sK, sM, ...
 
@@ -17,18 +17,15 @@ Naming conventions
 - Contextual objects are prefixed with a c: cM, cT, cD
   Contextual Object  cM
   Contextual Type    cT
-  Meta-Context	     cD
-  Meta-subst.	     theta or t
+  Meta-Context       cD
+  Meta-subst.        theta or t
 
 - Beluga expressions and types
   Beluga expressions e,i
-  Beluga types	     tau
+  Beluga types       tau
   Beluga context     cD
 
 - Beluga types under a meta-substitution are prefixed with a t: ttau
-
-
-- function names follow the CamelCase convention
 
 Lexical conventions
 -------------------
@@ -66,12 +63,9 @@ Comments
 --------
 - each function must list its invariants
 
-- catching of Ocaml errors must be explained by a comment
+- catching of OCaml errors must be explained by a comment
 
 - leave revision comments to the revision control system
-
-- whenever comment indentation is needed in multiline comment, prefix each line
-  with *
 
 - for ease of navigation, comments denoting things that are to be done and
   identifying problematic code use TODO and FIXME tags respectively

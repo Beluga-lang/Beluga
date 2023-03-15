@@ -379,6 +379,30 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
 
   let pp_split_keyword = pp_keyword "split"
 
+  let fresh_lf_typ_id = fresh_id ~prefix:"lf-type-"
+
+  let fresh_lf_term_id = fresh_id ~prefix:"lf-term-"
+
+  let fresh_schema_id = fresh_id ~prefix:"schema-"
+
+  let fresh_computation_typ_id = fresh_id ~prefix:"comp-typ-"
+
+  let fresh_computation_cotyp_id = fresh_id ~prefix:"comp-cotyp-"
+
+  let fresh_computation_abbreviation_id = fresh_id ~prefix:"abbrev-"
+
+  let fresh_computation_constructor_id = fresh_id ~prefix:"comp-const-"
+
+  let fresh_computation_destructor_id = fresh_id ~prefix:"comp-dest-"
+
+  let fresh_computation_value_id = fresh_id ~prefix:"val-"
+
+  let fresh_theorem_id = fresh_id ~prefix:"theorem-"
+
+  let fresh_proof_id = fresh_id ~prefix:"proof-"
+
+  let fresh_module_id = fresh_id ~prefix:"module-"
+
   open Synext.Make_precedences (struct
     include Html_state
 
@@ -1992,7 +2016,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
           (Synext.location_of_signature_declaration declaration)
           Unsupported_non_recursive_declaration
     | Signature.Declaration.Typ { identifier; kind; _ } ->
-        let* id = fresh_id ~prefix:"lf-type-" identifier in
+        let* id = fresh_lf_typ_id identifier in
         let* () =
           pp_hovbox ~indent
             (pp_lf_type_constant ~id identifier
@@ -2001,7 +2025,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
         in
         add_binding identifier ~id
     | Signature.Declaration.Const { identifier; typ; _ } ->
-        let* id = fresh_id ~prefix:"lf-term-" identifier in
+        let* id = fresh_lf_term_id identifier in
         let* () =
           pp_hovbox ~indent
             (pp_lf_term_constant ~id identifier
@@ -2010,7 +2034,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
         in
         add_binding identifier ~id
     | Signature.Declaration.Schema { identifier; schema; _ } ->
-        let* id = fresh_id ~prefix:"schema-" identifier in
+        let* id = fresh_schema_id identifier in
         let* () =
           pp_hovbox ~indent
             (pp_schema_keyword ++ pp_non_breaking_space
@@ -2035,7 +2059,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
                    rest)
             ++ pp_semicolon)
     | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
-        let* id = fresh_id ~prefix:"abbrev-" identifier in
+        let* id = fresh_computation_abbreviation_id identifier in
         let* () =
           pp_hovbox ~indent
             (pp_typedef_keyword ++ pp_non_breaking_space
@@ -2049,7 +2073,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
         let pp_typ_annotation =
           pp_option (fun typ -> pp_colon ++ pp_space ++ pp_comp_typ typ) typ
         in
-        let* id = fresh_id ~prefix:"val-" identifier in
+        let* id = fresh_computation_value_id identifier in
         let pp_declaration =
           pp_computation_program ~id identifier ++ pp_typ_annotation
         in
@@ -2062,7 +2086,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
         in
         add_binding identifier ~id
     | Signature.Declaration.Module { identifier; entries; _ } ->
-        let* id = fresh_id ~prefix:"module-" identifier in
+        let* id = fresh_module_id identifier in
         add_module identifier ~id
           (pp_module_keyword ++ pp_non_breaking_space
           ++ pp_module_constant ~id identifier
@@ -2074,43 +2098,41 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
   and pre_add_declaration declaration =
     match declaration with
     | Signature.Declaration.Typ { identifier; _ } ->
-        let* id = fresh_id ~prefix:"lf-type-" identifier in
+        let* id = fresh_lf_typ_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.Const { identifier; _ } ->
-        let* id = fresh_id ~prefix:"lf-term-" identifier in
+        let* id = fresh_lf_term_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.CompTyp { identifier; _ } ->
-        let* id = fresh_id ~prefix:"comp-typ-" identifier in
+        let* id = fresh_computation_typ_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.CompCotyp { identifier; _ } ->
-        let* id = fresh_id ~prefix:"comp-cotyp-" identifier in
+        let* id = fresh_computation_cotyp_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.CompConst { identifier; _ } ->
-        let* id = fresh_id ~prefix:"comp-const-" identifier in
+        let* id = fresh_computation_constructor_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.CompDest { identifier; _ } ->
-        let* id = fresh_id ~prefix:"comp-dest-" identifier in
+        let* id = fresh_computation_destructor_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.Schema { identifier; _ } ->
-        let* id = fresh_id ~prefix:"schema-" identifier in
+        let* id = fresh_schema_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.Theorem { identifier; _ } ->
-        let* id = fresh_id ~prefix:"theorem-" identifier in
+        let* id = fresh_theorem_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.Proof { identifier; _ } ->
-        let* id = fresh_id ~prefix:"proof-" identifier in
+        let* id = fresh_proof_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
-        let* id = fresh_id ~prefix:"abbrev-" identifier in
+        let* id = fresh_computation_abbreviation_id identifier in
         add_binding identifier ~id
     | Signature.Declaration.Val { identifier; _ } ->
-        let* id = fresh_id ~prefix:"val-" identifier in
+        let* id = fresh_computation_value_id identifier in
         add_binding identifier ~id
-    | Signature.Declaration.Module { identifier; _ } ->
-        let* id = fresh_id ~prefix:"module-" identifier in
-        add_binding identifier ~id
-    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        traverse_list1_void pre_add_declaration declarations
+    | Signature.Declaration.Module { location; _ }
+    | Signature.Declaration.Recursive_declarations { location; _ } ->
+        Error.raise_at1 location Unsupported_recursive_declaration
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =

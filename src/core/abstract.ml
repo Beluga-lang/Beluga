@@ -1119,12 +1119,12 @@ and abstractMVarCtx cQ l =
   | I.Dec (cQ, FDecl (_, Impure)) ->
      abstractMVarCtx cQ l
 
-  | I.Dec (_, FDecl (FV _, _)) ->
+  | I.Dec (_, FDecl (FV name, _)) ->
      (* This case is hit in e.g.  ... f[g, x:block y:tp. exp unk], where unk is an unknown identifier;
       * is it ever hit on correct code?  -jd 2009-02-12
       * No. This case should not occur in correct code - bp
       *)
-     raise (Error (Location.ghost, UnknownIdentifier))
+     raise (Error (Name.location name, UnknownIdentifier))
 
 
 (* Cases for: FMV *)

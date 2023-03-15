@@ -80,5 +80,13 @@ module type INDEXER = sig
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 end
 
-module Make (Indexing_state : Index_state.INDEXING_STATE) :
+module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
   INDEXER with type state = Indexing_state.state
+
+module Indexer : sig
+  (** @closed *)
+  include module type of Make_indexer (Index_state.Persistent_indexing_state)
+
+  (** @closed *)
+  include module type of Index_state.Persistent_indexing_state
+end

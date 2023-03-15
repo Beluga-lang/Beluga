@@ -900,9 +900,34 @@ module Persistent_indexing_state = struct
 
   let add_module ?location identifier cid m = Obj.magic () (* TODO: *)
 
-  let with_scope m = Obj.magic () (* TODO: *)
+  let with_scope m =
+    let* state = get in
+    let* bindings = get_bindings_state in
+    let* () =
+      put
+        { state with
+          substate =
+            Scope_state { bindings; parent = Option.some state.substate }
+        }
+    in
+    let* x = m in
+    let* () = put state in
+    return x
 
-  let with_parent_scope m = Obj.magic () (* TODO: *)
+  let with_parent_scope m =
+    let* state = get in
+    match state.substate with
+    | Scope_state { parent; _ } -> (
+        match parent with
+        | Option.Some parent ->
+            let* () = put { state with substate = parent } in
+            let* x = with_scope m in
+            let* () = put state in
+            return x
+        | Option.None ->
+            Error.raise_violation "[with_parent_scope] invalid state")
+    | Pattern_state _ ->
+        Error.raise_violation "[with_parent_scope] invalid state"
 
   let with_free_variables_as_pattern_variables ~pattern ~expression =
     Obj.magic () (* TODO: *)

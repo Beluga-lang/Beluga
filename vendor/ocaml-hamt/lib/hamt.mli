@@ -2,7 +2,16 @@
 
     The module implements Hash Array Mapped Trie.
 
+    Some functions were removed because they had bugs.
+
+    @see <https://github.com/thizanne/ocaml-hamt>
+    @see <https://github.com/thizanne/ocaml-hamt/issues/41>
     @author Thibault Suzanne *)
+
+(** This module could be re-implemented to use C:
+
+    @see <https://github.com/python/cpython/blob/main/Python/hamt.c>
+    @see <https://v2.ocaml.org/manual/intfc.html> *)
 
 (** Input signature of the size configuration of the structure. *)
 module type CONFIG = sig
@@ -195,76 +204,6 @@ module type S = sig
       bindings of [t] satisfying the predicate [f], and [t2] of the bindings
       which do not. *)
   val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
-
-  (** {3 Merging} *)
-
-  (** [intersecti f t1 t2] returns a table with bindings only from keys [k]
-      found in [t1] and [t2], and to values [v = f k v1 v2] if [k] is bound
-      to [v1] in [t1] and to [v2] in [t2]. *)
-  val intersecti : (key -> 'a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-
-  (** [intersecti f t1 t2] returns a table with bindings only from keys [k]
-      found in [t1] and [t2], and to values [v = f v1 v2] if [k] is bound to
-      [v1] in [t1] and to [v2] in [t2]. *)
-  val intersect : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-
-  (** [merge f t1 t2] returns a table whose keys is a subset of the keys of
-      [t1] and [t2]. The presence in the result of each such binding, and its
-      corresponding value, are determined by the function [f]. *)
-  val merge :
-    (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
-
-  (** [union f t1 t2] returns a table whose keys are all keys presents in
-      [t1] or in [t2]. If a key [k] is present in only one table, the
-      corresponding value is chosen in the result. If it is bound to [v1] in
-      [t1] and [v2] in [t2], the value in the result is [f k v1 v2]. *)
-  val union : (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
-
-  (** {2 Importing values from another structure} *)
-
-  (** The [Import] module is used to transform a full big set of data into a
-      Hamt. It uses internal mechanisms relying on the implementation of the
-      Hamt structure to provide faster imports than adding the bindings of
-      the imported structure element by element. However, if you want to
-      import a data structure into a Hamt which is already a lot bigger, you
-      should consider adding the elements with the usual fonctions of
-      {!Make}. At which size difference the faster method is switched is not
-      yet determined and must be analysed in your own case. *)
-
-  module Import : sig
-    (** Input signature of the module {!Make}, representing datas to be
-        imported in Hamt. *)
-    module type FOLDABLE = sig
-      (** The type of your datas' keys. *)
-      type key
-
-      (** The type of your data structure with ['a]-typed values. *)
-      type 'a t
-
-      (** A fold function on your data structure. Its role is to apply a
-          function to every binding of your structure, building the Hamt by
-          accumulation on the third parameter of this function. *)
-      val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-    end
-
-    module Make (M : FOLDABLE with type key = key) : sig
-      (** [add_from s t] adds every binding of [s] to the Hamt [t]. *)
-      val add_from : 'a M.t -> 'a t -> 'a t
-
-      (** [from s] buils a Hamt containing every binding of [s].*)
-      val from : 'a M.t -> 'a t
-    end
-
-    module AssocList : sig
-      (** [add_from li t] adds every binding of the association list [li] to
-          the Hamt t. *)
-      val add_from : (key * 'a) list -> 'a t -> 'a t
-
-      (** [from li] builds a Hamt containing every binding of the association
-          list [li]. *)
-      val from : (key * 'a) list -> 'a t
-    end
-  end
 end
 
 (** Functor building an implementation of the Hamt structure, given a

@@ -5,10 +5,6 @@ module BitUtils : sig
   (* Given a bitmap and a subhash, returns the index into the list *)
   val from_bitmap : int -> int -> int
 
-  (** Given a bitmap and an integer, returns the boolean corresponding to the
-      n-th bit (0 is the weakest) of the bitmap *)
-  val nth_bit_set : int -> int -> bool
-
   (** Given a list of indices, returns the bitmap with one-bits at these
       indices *)
   val indices_to_bitmap : int list -> int
@@ -45,8 +41,6 @@ end = struct
 
   let[@inline] indices_to_bitmap l =
     List.fold_left (fun x i -> x lor (1 lsl i)) 0 l
-
-  let[@inline] nth_bit_set bitmap n = (bitmap asr n) land 1 = 1
 end
 
 open BitUtils
@@ -152,37 +146,6 @@ module type S = sig
   val exists : (key -> 'a -> bool) -> 'a t -> bool
 
   val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
-
-  val intersecti : (key -> 'a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-
-  val intersect : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-
-  val merge :
-    (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
-
-  val union : (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
-
-  module Import : sig
-    module type FOLDABLE = sig
-      type key
-
-      type 'a t
-
-      val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-    end
-
-    module Make (M : FOLDABLE with type key = key) : sig
-      val add_from : 'a M.t -> 'a t -> 'a t
-
-      val from : 'a M.t -> 'a t
-    end
-
-    module AssocList : sig
-      val add_from : (key * 'a) list -> 'a t -> 'a t
-
-      val from : (key * 'a) list -> 'a t
-    end
-  end
 end
 
 module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
@@ -315,33 +278,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
       let base = Array.make nb_children Empty in
       loop children to_remove base 0 0 0
 
-  let rec reify_node = function
-    | Empty -> Empty
-    | Leaf (h, k, v) -> Leaf (h, k, v)
-    | HashCollision (_, []) -> Empty
-    | HashCollision (h, [ (k, v) ]) -> Leaf (h, k, v)
-    | HashCollision (h, li) -> HashCollision (h, li)
-    | BitmapIndexedNode (bitmap, base) ->
-        if Int.equal (Array.length base) 0 then Empty
-        else if Int.equal (Array.length base) 1 && is_tip_node base.(0) then
-          base.(0)
-        else if Array.length base > bmnode_max then failwith "reify_node"
-        else BitmapIndexedNode (bitmap, base)
-    | ArrayNode (nb_children, children) ->
-        if nb_children < arrnode_min then
-          reify_node (pack_array_node (fun _ -> false) nb_children children)
-        else ArrayNode (nb_children, children)
-
-  let bitmap_to_array bitmap base =
-    let children = Array.make chunk Empty
-    and n = ref 0 in
-    for i = 0 to mask do
-      if nth_bit_set bitmap i then (
-        children.(i) <- base.(!n);
-        incr n)
-    done;
-    children
-
   type change =
     | Nil
     | Added
@@ -432,17 +368,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
               ArrayNode (pred nb_children, children))
             else ArrayNode (pred nb_children, set_tab children sub_hash Empty)
         )
-
-  let rec copy hamt =
-    match hamt with
-    | Empty
-    | Leaf (_, _, _)
-    | HashCollision (_, _) ->
-        hamt
-    | BitmapIndexedNode (bitmap, base) ->
-        BitmapIndexedNode (bitmap, Array.map copy base)
-    | ArrayNode (nb_children, children) ->
-        ArrayNode (nb_children, Array.map copy children)
 
   let update key update hamt = alter_node 0 (hash key) key update hamt
 
@@ -565,10 +490,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | BitmapIndexedNode (_, base) -> Array.iter (iter f) base
     | ArrayNode (_, children) -> Array.iter (iter f) children
 
-  let rec assoc k = function
-    | [] -> raise Not_found
-    | (k', v) :: xs -> if Key.equal k k' then v else assoc k xs
-
   let rec assoc_notrace k = function
     | [] -> raise_notrace Not_found
     | (k', v) :: xs -> if Key.equal k k' then v else assoc_notrace k xs
@@ -690,179 +611,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
   let pop hamt =
     let k, v = choose hamt in
     ((k, v), remove k hamt)
-
-  let rec intersect_array :
-            'a 'b.
-               int
-            -> (key -> 'a -> 'b -> 'c)
-            -> 'a t array
-            -> 'b t array
-            -> 'c t =
-   fun shift f children1 children2 ->
-    let children = Array.make chunk Empty
-    and nb_children = ref 0 in
-    for i = 0 to mask do
-      let child = intersect_node shift f children1.(i) children2.(i) in
-      if child <> Empty then (
-        incr nb_children;
-        children.(i) <- child)
-    done;
-    reify_node (ArrayNode (!nb_children, children))
-
-  and intersect_node :
-        'a 'b. int -> (key -> 'a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t =
-   fun shift f t1 t2 ->
-    match (t1, t2) with
-    | Empty, _ -> Empty
-    | Leaf (h, k, v), _ -> (
-        match Notrace.find k t2 with
-        | exception Not_found -> Empty
-        | v' -> Leaf (h, k, f k v v'))
-    | HashCollision (h1, li1), HashCollision (h2, li2) ->
-        if h1 <> h2 then Empty
-        else
-          reify_node
-            (HashCollision
-               ( h1
-               , List.fold_left
-                   (fun acc (k, v) ->
-                     match assoc_notrace k li2 with
-                     | exception Not_found -> acc
-                     | v' -> (k, f k v v') :: acc)
-                   [] li1 ))
-    | HashCollision (h, _li), BitmapIndexedNode (bitmap, base) ->
-        let bit = 1 lsl hash_fragment shift h in
-        if Int.equal (bitmap land bit) 0 then Empty
-        else
-          let n = ctpop (bitmap land pred bit) in
-          let node = intersect_node (shift + shift_step) f t1 base.(n) in
-          reify_node (BitmapIndexedNode (bit, [| node |]))
-    | HashCollision (h, _li), ArrayNode (_nb_children, children) ->
-        let fragment = hash_fragment shift h in
-        let child =
-          intersect_node (shift + shift_step) f t1 children.(fragment)
-        in
-        reify_node (BitmapIndexedNode (1 lsl fragment, [| child |]))
-    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2)
-      ->
-        let bitmap = bitmap1 land bitmap2 in
-        if Int.equal bitmap 0 then Empty
-        else
-          intersect_array (shift + shift_step) f
-            (bitmap_to_array bitmap1 base1)
-            (bitmap_to_array bitmap2 base2)
-    | BitmapIndexedNode (bitmap, base), ArrayNode (_, children) ->
-        intersect_array (shift + shift_step) f
-          (bitmap_to_array bitmap base)
-          children
-    | ArrayNode (_, children1), ArrayNode (_, children2) ->
-        intersect_array (shift + shift_step) f children1 children2
-    | _, _ -> intersect_node shift (fun k x y -> f k y x) t2 t1
-
-  let intersecti f t1 t2 = intersect_node 0 f t1 t2
-
-  let intersect f t1 t2 = intersecti (fun _ v -> f v) t1 t2
-
-  let rec merge_array :
-            'a 'b.
-               int
-            -> (key -> 'a option -> 'b option -> 'c option)
-            -> 'a t array
-            -> 'b t array
-            -> 'c t =
-   fun shift f children1 children2 ->
-    let nb_children = ref 0
-    and children = Array.make chunk Empty in
-    for i = 0 to mask do
-      let node = merge_node shift f children1.(i) children2.(i) in
-      if node <> Empty then incr nb_children;
-      children.(i) <- node
-    done;
-    reify_node (ArrayNode (!nb_children, children))
-
-  and merge_node :
-        'a 'b.
-           int
-        -> (key -> 'a option -> 'b option -> 'c option)
-        -> 'a t
-        -> 'b t
-        -> 'c t =
-   fun shift f t1 t2 ->
-    match (t1, t2) with
-    | Empty, _ -> alter_all (fun k v -> f k None (Some v)) t2
-    | Leaf (h, k, v), _ ->
-        let flag = ref false in
-        let t2 =
-          alter_all
-            (fun k' v' ->
-              if Key.equal k' k then (
-                flag := true;
-                f k (Some v) (Some v'))
-              else f k' None (Some v'))
-            t2
-        in
-        if !flag then t2
-        else alter_node shift h k (fun _ -> f k (Some v) None) t2
-    | HashCollision (_, li), _ ->
-        let absents = ref li in
-        let t2 =
-          alter_all
-            (fun k' v' ->
-              match assoc k' li with
-              | exception Not_found -> f k' None (Some v')
-              | v ->
-                  absents := List.remove_assoc k' !absents;
-                  f k' (Some v) (Some v'))
-            t2
-        in
-        List.fold_left
-          (fun acc (k, v) ->
-            alter_node shift (hash k) k (fun _ -> f k (Some v) None) acc)
-          t2 !absents
-    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2)
-      ->
-        merge_array shift f
-          (bitmap_to_array bitmap1 base1)
-          (bitmap_to_array bitmap2 base2)
-    | BitmapIndexedNode (bitmap, base), ArrayNode (_, children) ->
-        merge_array shift f (bitmap_to_array bitmap base) children
-    | ArrayNode (_, children1), ArrayNode (_, children2) ->
-        merge_array shift f children1 children2
-    | _, _ -> merge_node shift (fun k x y -> f k y x) t2 t1
-
-  let merge f t1 t2 = merge_node 0 f t1 t2
-
-  let union f t1 t2 =
-    merge
-      (fun k x y ->
-        match (x, y) with
-        | None, _ -> y
-        | _, None -> x
-        | Some v1, Some v2 -> f k v1 v2)
-      t1 t2
-
-  module Import = struct
-    module type FOLDABLE = sig
-      type key
-
-      type 'v t
-
-      val fold : (key -> 'v -> 'a -> 'a) -> 'v t -> 'a -> 'a
-    end
-
-    module Make (M : FOLDABLE with type key = key) = struct
-      let add_from x hamt = M.fold add_mute x (copy hamt)
-
-      let from x = add_from x Empty
-    end
-
-    module AssocList = struct
-      let add_from assoc hamt =
-        List.fold_left (fun acc (k, v) -> add_mute k v acc) (copy hamt) assoc
-
-      let from assoc = add_from assoc Empty
-    end
-  end
 end
 
 module Make' = Make (StdConfig)

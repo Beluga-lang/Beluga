@@ -40,6 +40,12 @@ val raise_at1 : Location.t -> exn -> 'a
     [located_exception2 location1 location2 cause]. *)
 val raise_at2 : Location.t -> Location.t -> exn -> 'a
 
+(** [raise_at1_opt location_opt cause] raises
+    [located_exception1 location cause] if
+    [location_opt = Option.Some location], or raises [cause] if
+    [location_opt = Option.None]. *)
+val raise_at1_opt : Location.t Option.t -> exn -> 'a
+
 (** [located_exception_printer pp locations] is a printer for the exception
     printed by [pp] with location snippets for [locations] in order. *)
 val located_exception_printer :

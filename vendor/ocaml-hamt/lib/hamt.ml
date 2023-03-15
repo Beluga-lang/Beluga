@@ -183,18 +183,6 @@ module type S = sig
       val from : (key * 'a) list -> 'a t
     end
   end
-
-  module ExceptionLess : sig
-    val extract : key -> 'a t -> 'a option * 'a t
-
-    val alter : key -> ('a -> 'a option) -> 'a t -> 'a t
-
-    val modify : key -> ('a -> 'a) -> 'a t -> 'a t
-
-    val find : key -> 'a t -> 'a option
-
-    val choose : 'a t -> (key * 'a) option
-  end
 end
 
 module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
@@ -874,27 +862,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
       let from assoc = add_from assoc Empty
     end
-  end
-
-  module ExceptionLess = struct
-    let extract k hamt =
-      match extract k hamt with
-      | v, r -> (Some v, r)
-      | exception Not_found -> (None, hamt)
-
-    let alter k f hamt =
-      try alter k f hamt with
-      | Not_found -> hamt
-
-    let modify k f hamt =
-      try modify k f hamt with
-      | Not_found -> hamt
-
-    let find k hamt = find_opt k hamt
-
-    let choose hamt =
-      try Some (choose hamt) with
-      | Not_found -> None
   end
 end
 

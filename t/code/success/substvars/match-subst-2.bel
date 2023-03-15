@@ -27,7 +27,7 @@ refl : eq E E.
 
 inductive Ex_var: (g:ctx)(h:ctx){$S:$[h |- g]}{#p: #[g |- exp T[]]} ctype =
 | Ex_V: {h:ctx}{g:ctx}{$S:$[h |- g]}{#p: #[g |- exp T[]]} {E:[h |- exp T[]]}
-         IsVar [ |- T] [h |- E] -> [h |- eq E #p[$S]  ]
+         IsVar [ |- T] [h |- E] -> [h |- eq E #p[$S]]
           -> Ex_var $[h |- $S] [g |- #p]
 ;
 

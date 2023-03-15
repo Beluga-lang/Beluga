@@ -19,4 +19,4 @@ rec copy : [ |- list N] -> [ |- list N] =
 fn l => case l of
 | [ |- nil] => [ |- nil]
 | [ |- X[] ap T] =>
-	let [ |- T' ] = copy [ |- T] in [ |- X[] ap T' ];
+  let [ |- T' ] = copy [ |- T] in [ |- X[] ap T'];

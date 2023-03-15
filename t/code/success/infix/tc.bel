@@ -40,14 +40,14 @@ oft-option : type.
 sometype : E oft T -> oft-option.
 none : oft-option.
 
-tp_z     : z oft even.
-tp_s-base     : E oft nat ->
-	   (suc E) oft nat.
+tp_z      : z oft even.
+tp_s-base : E oft nat ->
+            (suc E) oft nat.
 
 tp_s-even : E oft even ->
-	   (suc E) oft odd.
+            (suc E) oft odd.
 tp_s-odd : E oft odd ->
-	   (suc E) oft even.
+           (suc E) oft even.
 
 sub_odd-nat :  odd subtype nat.
 sub_even-nat : even subtype nat.
@@ -61,10 +61,10 @@ tp_lam :   ({x:exp} x oft T1 -> (E x) oft T2)
 
 tp_app : E2 oft T2 ->
          E1 oft (T1 arrow T2)
-	 -> (E1 app E2) oft T1.
+         -> (E1 app E2) oft T1.
 
 tp_letv : ({x:exp} x oft T1 -> (E2 x) oft T2) ->
-	  E1 oft T1
+          E1 oft T1
         -> (E1 letv (\ x . E2 x)) oft T2.
 
 schema expCtx = exp ;

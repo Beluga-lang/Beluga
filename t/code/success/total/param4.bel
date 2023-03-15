@@ -18,10 +18,10 @@ rec pos_v : {g:ctx}{#p:#[g |- term]} [|- nat] =
 mlam g, #p => case [g] of
 | [] => impossible [ |- #p]
 | [g, y:term] => (case [g, y:term |- #p[.., y]] of
-		  | [g, y:term |- y] => [|- z]
-		  | [g, y:term |- #p[..]] =>
-		    let [|- N] = pos_v [g] [g |- #p[..]] in
-		    [|- s N])
+                  | [g, y:term |- y] => [|- z]
+                  | [g, y:term |- #p[..]] =>
+                    let [|- N] = pos_v [g] [g |- #p[..]] in
+                    [|- s N])
 ;
 
 

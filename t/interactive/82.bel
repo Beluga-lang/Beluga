@@ -40,12 +40,12 @@ LF mstep: tm A → tm A → type =
 schema ctx = tm T;
 
 stratified Val: {A: [⊢ tp]} (g: ctx) {M: [g ⊢ tm A[]]} ctype =
-	   | VTrue: Val [⊢ bool] [g ⊢ true]
-	   | VFalse: Val [⊢ bool] [g ⊢ false]
-	   | VLam: ({V: [g ⊢ tm S[]]} Safe [⊢ S] [g ⊢ V] → Safe [⊢ T] [g, x: tm S[] ⊢ M']) → Val [⊢ arr S T] [g ⊢ lam (\x.M')]
+   | VTrue: Val [⊢ bool] [g ⊢ true]
+   | VFalse: Val [⊢ bool] [g ⊢ false]
+   | VLam: ({V: [g ⊢ tm S[]]} Safe [⊢ S] [g ⊢ V] → Safe [⊢ T] [g, x: tm S[] ⊢ M']) → Val [⊢ arr S T] [g ⊢ lam (\x.M')]
 and
 stratified Safe: {A: [⊢ tp]} (g: ctx) {M: [g ⊢ tm A[]]} ctype =
-	   | SafeT: ({S: [g ⊢ tm A[]]} [g ⊢ mstep M S] → [g ⊢ value S] → Val [⊢ A] [g ⊢ S]) → Safe [⊢ A] [g ⊢ M]
+   | SafeT: ({S: [g ⊢ tm A[]]} [g ⊢ mstep M S] → [g ⊢ value S] → Val [⊢ A] [g ⊢ S]) → Safe [⊢ A] [g ⊢ M]
 ;
 
 inductive SafeSub: {g: ctx} (g': ctx) {$S: [g' ⊢ g]} ctype =
@@ -54,7 +54,7 @@ inductive SafeSub: {g: ctx} (g': ctx) {$S: [g' ⊢ g]} ctype =
 ;
 
 rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {$S: [g' ⊢ g]} SafeSub [g] [g' ⊢ $S]
-			 → Safe [⊢ A] [g' ⊢ M[$S]] =
+                         → Safe [⊢ A] [g' ⊢ M[$S]] =
 / total a (main_lemma g g' a m s rs) /
     ?;
 %:load input.bel

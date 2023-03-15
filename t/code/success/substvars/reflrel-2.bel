@@ -114,7 +114,7 @@ case [phi |- #p[..]] of
 
 rec reflR : {phi:xG}{M: [phi  |- tm]}
           Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
-	   Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
+           Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
            [psi  |- aeq M'[..] M'[..]] =
  mlam phi => mlam M => fn cr => fn m => case [phi  |- M[..]] of
 | [phi |- #p[..]] =>
@@ -133,10 +133,10 @@ rec reflR : {phi:xG}{M: [phi  |- tm]}
   [psi |- ae_l \x.\u. D]
  ;
 
-rec transV : 	Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
-	EqV [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- #p.1[..]] ->
-	EqV [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- #p.1[..]] ->
-	EqV [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- #p.1[..]] ->
+rec transV : Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
+  EqV [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- #p.1[..]] ->
+  EqV [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- #p.1[..]] ->
+  EqV [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- #p.1[..]] ->
         [psi |- aeq #p.1[..] #p.1[..]] =
 fn cr => fn m => fn n => fn l => case m of
 | EqV_v =>
@@ -154,12 +154,12 @@ fn cr => fn m => fn n => fn l => case m of
 ;
 
 rec transR:
-	Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- N'[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- L'[..]] ->
-	[psi |- aeq M'[..] N'[..]] -> [psi |- aeq N'[..] L'[..]]
-	-> [psi |- aeq M'[..] L'[..]]  =
+  Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- N'[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- L'[..]] ->
+  [psi |- aeq M'[..] N'[..]] -> [psi |- aeq N'[..] L'[..]]
+  -> [psi |- aeq M'[..] L'[..]]  =
  fn cr => fn m => fn n => fn l => fn d1 => fn d2 => case  d1 of
 | [psi |- #p.2[..]] =>
   let [psi |- #q.2[..]] = d2 in

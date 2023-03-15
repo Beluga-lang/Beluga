@@ -9,11 +9,11 @@ app: exp -> exp -> exp.
 type_of: exp -> tp -> type. --name type_of D u.
 
 tof_lam: type_of (lam T E) (arr T T')
-	 <- ({x:exp}type_of x T -> type_of (E x) T').
+         <- ({x:exp}type_of x T -> type_of (E x) T').
 
 tof_app: type_of (app E1 E2) T
-	 <- type_of E1 (arr T2 T)
-	 <- type_of E2 T2.
+         <- type_of E1 (arr T2 T)
+         <- type_of E2 T2.
 
 notLam: exp -> type.
 n_app: notLam (app M N).
@@ -21,17 +21,17 @@ n_app: notLam (app M N).
 step: exp -> exp -> type.
 
 s_lam: step (lam T M) (lam T N)
-	<- ({x:exp}step x x -> notLam x -> step (M x) (N x)).
+        <- ({x:exp}step x x -> notLam x -> step (M x) (N x)).
 
 s_app1: step (app M N) R
-	 <- step M (lam T M')
-	 <- step (M' N) R.
+         <- step M (lam T M')
+         <- step (M' N) R.
 
 
 s_app2: step (app M N) (app M' N')
-	 <- step M M'
-	 <- notLam M'
-	 <- step N N'.
+         <- step M M'
+         <- notLam M'
+         <- step N N'.
 
 schema tctx = tp + some [t:tp] block x:exp, u:type_of x t, v:step x x , _t:notLam x;
 
@@ -45,7 +45,7 @@ mlam g => fn d => fn s => case s of
   let % {F::(type_of (M) T[..])[g, x:exp, u:type_of x T[..]]}
       [g, b: block x:exp, u:type_of x T[..], v:step x x, _t:notLam x |- F[..] b.x b.u] =
       tps' [g, b:block x:exp, u:type_of x _ , v:step x x, _t:notLam x]
-	  [g, b |- (D[..] b.x b.u)] [g, b |- S[..] b.x b.v b._t] in
+          [g, b |- (D[..] b.x b.u)] [g, b |- S[..] b.x b.v b._t] in
   [g |- tof_lam \x.\u. F u]
 
 | [g |- s_app1 S2[..] S1[..]] =>
@@ -79,7 +79,7 @@ mlam g => fn d => fn s => case d of
   let % {F::(type_of (M) T[..])[g, x:exp, u:type_of x T[..]]}
       [g, b: block x:exp, u:type_of x T[..], v:step x x, _t:notLam x |- F[..] b.x b.u] =
       tps [g, b:block x:exp, u:type_of x _ , v:step x x, _t:notLam x]
-	  [g, b |- (D[..] b.x b.u)] [g, b |- S[..] b.x b.v b._t] in
+          [g, b |- (D[..] b.x b.u)] [g, b |- S[..] b.x b.v b._t] in
   [g |- tof_lam \x.\u. F u]
 
  | [g |- tof_app D2[..] D1[..]] =>

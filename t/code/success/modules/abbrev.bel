@@ -28,16 +28,16 @@ cons : N.nat -> list M -> list (N.s M).
 let l1 = [ |- cons N.z (cons (N.s N.z) nil)];
 
 module Arith = struct
-	--open N.
+  --open N.
 
-	rec add : [ |- nat] -> [ |- nat] -> [ |- nat] =
-	fn x, y => case x of
-	| [ |- z] => y
-	| [ |- s N] =>
-		let [ |- N' ] = add [ |- N] y in
-		[ |- s N'];
+  rec add : [ |- nat] -> [ |- nat] -> [ |- nat] =
+  fn x, y => case x of
+  | [ |- z] => y
+  | [ |- s N] =>
+    let [ |- N' ] = add [ |- N] y in
+    [ |- s N'];
 
-	let five = add two three;
+  let five = add two three;
 end;
 
 

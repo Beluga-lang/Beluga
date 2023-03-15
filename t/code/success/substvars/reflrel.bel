@@ -99,7 +99,7 @@ case [phi |- #p[..]] of
 
 rec reflR : {phi:xG}{M: [phi  |- tm]}
           Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
-	   Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
+           Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
            [psi |- aeq M'[..] M'[..]] =
  mlam phi => mlam M => fn cr => fn m => case [phi  |- M[..]] of
 | [phi |- #p[..]] => ctx_member [phi |- #p[..]] cr m
@@ -120,12 +120,12 @@ rec reflR : {phi:xG}{M: [phi  |- tm]}
 
 
 rec transR:
-	Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- N'[..]] ->
-	Eq [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- L'[..]] ->
-	[psi |- aeq M'[..] N'[..]] -> [psi |- aeq N'[..] L'[..]]
-	-> [psi |- aeq M'[..] L'[..]]  =
+  Ctx_xaR [phi] [psi] $[psi |- $S[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- M[..]] [psi |- M'[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- N[..]] [psi |- N'[..]] ->
+  Eq [phi] [psi] $[psi |- $S[..]] [phi |- L[..]] [psi |- L'[..]] ->
+  [psi |- aeq M'[..] N'[..]] -> [psi |- aeq N'[..] L'[..]]
+  -> [psi |- aeq M'[..] L'[..]]  =
 fn cr => fn m => fn n => fn l => fn d1 => fn d2 => case  d1 of
 | [psi, b:block (x:tm, u:aeq x x) |- b.2] =>
   let [psi, b:block (x:tm, u:aeq x x) |- b.2] = d2 in

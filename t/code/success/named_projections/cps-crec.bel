@@ -49,7 +49,7 @@ case e of
 | [g |- app E1[..] (E2[..] )] =>
     let [g, b:block x1:exp, x1':cval , _t:(cval -> cexp) |- E2'[..] b.x1'] =
         cmp [g, b:block x1:exp, x1':cval , _t:(cval -> cexp) |- E1[..]]
-	    [g, b, x2 |- app+ b.x1' x2 (\v. K[..] v)] in
+            [g, b, x2 |- app+ b.x1' x2 (\v. K[..] v)] in
      cmp [g |- E1[..]] [g, x1' |- E2'1' ]
 
 ;

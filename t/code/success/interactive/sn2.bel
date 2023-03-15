@@ -77,12 +77,12 @@ Hole Number 1
 File "/home/abel/play/beluga/sn.bel", line 208, characters 38-39
 ________________________________________________________________________________
     - Meta-Context:
-	{g : cxt}
-	{A : [ |- ty]}
-	{B : [ |- ty]}
-	{M : [g, x : tm A |- tm B]}
-	{g' : cxt}
-	{S : $[g' |-# B]}
-	{N : [g' |- tm A]}
+      {g : cxt}
+      {A : [ |- ty]}
+      {B : [ |- ty]}
+      {M : [g, x : tm A |- tm B]}
+      {g' : cxt}
+      {S : $[g' |-# B]}
+      {N : [g' |- tm A]}
 _______________________________________
 }%

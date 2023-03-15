@@ -32,24 +32,24 @@ then  eq M N.
 }%
 rec eqPath : {g:ctx}{M:[g |- tm]}{N:[g |- tm]}
              ({P:[g |- path]} [g |- P[..] is_path M[..]] -> [g |- P[..] is_path N[..]])
-	     -> [g |- M[..] eq N[..]] =
+          -> [g |- M[..] eq N[..]] =
 mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
 | [g |- M1[..] app M2[..]]  =>
     let [g |- p_left p_done] : [g |- (left done) is_path (N1[..] app N2[..])]
        = f [g |- (left done)] [g |- p_left p_done] in
 
-    let [g |- e_ref] = eqPath [g] [g |- M2[..]] [g |- N2[..]  ]
+    let [g |- e_ref] = eqPath [g] [g |- M2[..]] [g |- N2[..]]
       (mlam Q => fn iq => let [g |- D[..]] = iq in
            let [g |- p_right D'[..]] : [g |- (right (Q'[..] )) is_path (N1[..] app N2[..])]
               = f [g |- (right Q[..])] [g |- p_right (D[..] )] in
-		[g |- D'[..]]   )
+        [g |- D'[..]]   )
     in
-    let [g |- e_ref]  = eqPath [g] [g |- M1[..]] [g |- N1[..]  ]
-		       (mlam Q => fn iq =>
+    let [g |- e_ref]  = eqPath [g] [g |- M1[..]] [g |- N1[..]]
+               (mlam Q => fn iq =>
                         let [g |- D[..]] = iq in
-			let [g |- p_left D'[..]] : [g |- (left (Q'[..] )) is_path (N1[..] app N2[..])]
+            let [g |- p_left D'[..]] : [g |- (left (Q'[..] )) is_path (N1[..] app N2[..])]
               = f [g |- (left Q[..])] [g |- p_left (D[..] )] in
-		[g |- D'[..]]   )
+        [g |- D'[..]]   )
     in
 
     [g |- e_ref]

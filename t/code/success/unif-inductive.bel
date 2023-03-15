@@ -22,16 +22,16 @@ inductive Value : [ |- exp T] -> ctype =
 
 inductive Eval : [ |- exp T] -> [ |- exp T] -> ctype =
   | Ev-app      : Eval [ |- E1] [ |- lam (\x.E)] -> Eval [ |- E[E2]]  [ |- V]
-		  -> Eval [ |- app E1 E2] [ |- V]
+                  -> Eval [ |- app E1 E2] [ |- V]
   | Ev-val      : Value [ |- V] -> Eval [ |- V] [ |- V]
   | Ev-fix      : {E: [x:exp T |- exp T[]]}
-   		 Eval [ |- E[fix \x.E]] [ |- V]
-		  ->  Eval [ |- fix \x.E] [ |- V]
+                    Eval [ |- E[fix \x.E]] [ |- V]
+                  ->  Eval [ |- fix \x.E] [ |- V]
   | Ev-case-nil : Eval [ |- E] [ |- nil] -> Eval [ |- E1] [ |- V]
-		  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
+                  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
  | Ev-case-cons : {E2: [x:exp S, y: exp (list S[]) |- exp T[]]}
-		      Eval [ |- E]  [ |- cons EH ET] ->  Eval [ |- E2[EH, ET]] [ |- V]
-		  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
+                      Eval [ |- E]  [ |- cons EH ET] ->  Eval [ |- E2[EH, ET]] [ |- V]
+                  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
 ;
 
 % rec beta_d0: {V0 :[|- exp _]}

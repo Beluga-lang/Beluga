@@ -111,7 +111,7 @@ fn d => fn ev => case ev of
 | [ |- step_@3 V] =>
   let  [ |- is_@ (is_lam (\x. (\d. D1'))) D2] = d in  [ |- D1'[_, D2]]
 
-| [ |- (step_#1 EV)] =>
+| [ |- step_#1 EV] =>
  (let [ |- is_# D]  = d in
   let [ |- D']         = pres [ |- D] [ |- EV] in
     [ |- is_# D']
@@ -149,7 +149,7 @@ fn d => case d of
        )
     | [ |- val value_z]      => impossible [ |- D1]
     | [ |- val (value_s _ )] => impossible [ |- D1]
-    | [ |- val value_lAM] => impossible [ |- D1] )
+    | [ |- val value_lAM] => impossible [ |- D1])
  | [ |- is_lam (\x.\d. D1)] => [ |- val value_lam]
 
 | [ |- is_lAM (\a. D)]       => [ |- val value_lAM]
@@ -160,5 +160,5 @@ fn d => case d of
    | [ |- val value_lAM]  => [ |- step (step_#2)]
    | [ |- val value_z]      => impossible [ |- D]
    | [ |- val (value_s _ )] => impossible [ |- D]
-   | [ |- val value_lam]    => impossible [ |- D] )
+   | [ |- val value_lam]    => impossible [ |- D])
 ;

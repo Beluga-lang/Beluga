@@ -144,7 +144,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
 | [ |- andalso' (m_step S1 MS1) m_ref] =>
   (case vn2 of
    | [ |- v_true]  => impossible [ |- S1]
-   | [ |- v_false] => impossible [ |- S1] )
+   | [ |- v_false] => impossible [ |- S1])
 % Alternatively:
 %  impossible values_dont_step vn2 ([ ] S1)
 | [ |- andalso' (m_step S1 MS1) (m_step S2 MS2)] =>
@@ -157,7 +157,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
 | [ |- andalso' m_ref       (m_step S2 MS2)] =>
   (case vn1 of
    | [ |- v_true]  => impossible [ |- S2]
-   | [ |- v_false] => impossible [ |- S2] )
+   | [ |- v_false] => impossible [ |- S2])
 
 %{  let [ ] V1 = vn1 in
     lemma_val_1 ([ ] V1) ([ ] m_step S2 MS2)

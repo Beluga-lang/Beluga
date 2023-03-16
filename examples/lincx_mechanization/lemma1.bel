@@ -87,7 +87,7 @@ LF ex_node : joining (cjoin Psi Psi1 Psi2) -> joining (cjoin Psi1 Psi11 Psi12) -
 
 % Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi' s.t. Psi' = Psi12 join Psi2
 
-rec lemma1_2a : (g:sch) { J1 : [g |- (joining (cjoin Psi Psi1 Psi2))] } { J2 : [g |- (joining (cjoin Psi1 Psi11 Psi12))] } [g |- ex_node J1 J2] =
+rec lemma1_2a : (g:sch) { J1 : [g |- joining (cjoin Psi Psi1 Psi2)] } { J2 : [g |- joining (cjoin Psi1 Psi11 Psi12)] } [g |- ex_node J1 J2] =
     mlam J1 => mlam J2 =>
     case [_ |- J1] of
     | [g |- joining_base D1[]] => (case [g |- J2] of

@@ -36,20 +36,20 @@ rec eqPath : {g:ctx}{M:[g |- tm]}{N:[g |- tm]}
 mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
 | [g |- M1[..] app M2[..]]  =>
     let [g |- p_left p_done] : [g |- (left done) is_path (N1[..] app N2[..])]
-       = f [g |- (left done)] [g |- p_left p_done] in
+       = f [g |- left done] [g |- p_left p_done] in
 
     let [g |- e_ref] = eqPath [g] [g |- M2[..]] [g |- N2[..]]
       (mlam Q => fn iq => let [g |- D[..]] = iq in
-           let [g |- p_right D'[..]] : [g |- (right (Q'[..] )) is_path (N1[..] app N2[..])]
-              = f [g |- (right Q[..])] [g |- p_right (D[..] )] in
-        [g |- D'[..]]   )
+           let [g |- p_right D'[..]] : [g |- (right (Q'[..])) is_path (N1[..] app N2[..])]
+              = f [g |- right Q[..]] [g |- p_right (D[..])] in
+        [g |- D'[..]])
     in
     let [g |- e_ref]  = eqPath [g] [g |- M1[..]] [g |- N1[..]]
                (mlam Q => fn iq =>
                         let [g |- D[..]] = iq in
-            let [g |- p_left D'[..]] : [g |- (left (Q'[..] )) is_path (N1[..] app N2[..])]
-              = f [g |- (left Q[..])] [g |- p_left (D[..] )] in
-        [g |- D'[..]]   )
+            let [g |- p_left D'[..]] : [g |- (left (Q'[..])) is_path (N1[..] app N2[..])]
+              = f [g |- left Q[..]] [g |- p_left (D[..])] in
+        [g |- D'[..]])
     in
 
     [g |- e_ref]
@@ -69,7 +69,7 @@ mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
          let [g, b:block x:tm, q:path, _t:q is_path x |- Qs[.., b.2]] = [g, b:block x:tm, q:path, _t:q is_path x |- Q[.., b]] in  % strengthening
          let [g, b:block x:tm, q:path, _t:q is_path x |- D[.., b]] = ip in
          let [g |- p_lam (\x.\q.\iq. D')] : [g |- (bind (\q. Q')) is_path (lam (\x. N'))] =
-           f [g |- bind (\q. Qs)]  [g |- p_lam (\x.\q.\iq. D[..,<x ; q ; iq>])  ] in
+           f [g |- bind (\q. Qs)]  [g |- p_lam (\x.\q.\iq. D[..,<x ; q ; iq>])] in
              [g, b |- D'[.., b.1, b.2, b.3]]
        )
 

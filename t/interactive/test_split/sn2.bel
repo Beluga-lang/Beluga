@@ -52,7 +52,7 @@ inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
 %% rec fundAbs : Red
 
 rec whExp : Red [|- A] [g |- M [.., N]]
-         -> Red [|- A] [g |- (app (abs \ x. M) N)] =
+         -> Red [|- A] [g |- app (abs \ x. M) N] =
   ?
   ;
 

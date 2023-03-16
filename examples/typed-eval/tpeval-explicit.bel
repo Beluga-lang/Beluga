@@ -65,19 +65,19 @@ mlam T => fn e =>
                (eval [ |- nat]   [ |- V])
 
    | {T:[ |- tp]} {U:[ |- exp bool]} {V:[ |- exp T]} {W:[ |- exp T]}
-         [ |- iff T U V W] : [ |- (exp T)] =>
+         [ |- iff T U V W] : [ |- exp T] =>
          (case eval [ |- bool] [ |- U] of
              [ |- tt] : [ |- exp bool] => eval [ |- T] [ |- V]
            | [ |- ff] : [ |- exp bool] => eval [ |- T] [ |- W]
      )
 
    | {T1:[ |- tp]} {T2:[ |- tp]} {U:[ |- exp T1]} {W:[x:exp T1 |- exp T2[]]}
-         [ |- letv T1 T2 U (\x . W)] : [ |- (exp T2)] =>
+         [ |- letv T1 T2 U (\x . W)] : [ |- exp T2] =>
 
          (case eval [ |- T1] [ |- U] of
 
              {T1':[ |- tp]} {V:[ |- exp T1']}
-             [ |- V] : [ |- (exp T1')]
+             [ |- V] : [ |- exp T1']
              => eval [ |- T2] [ |- W[V]]
        )
 ;

@@ -20,7 +20,7 @@ rec eval : [ |- term T] -> [ |- term T] =
 % / total e (eval e)/
 fn e => case e of
 | [ |- app E1 E2] =>
-  let [ |- (lam \x. E')] = eval [ |- E1] in
+  let [ |- lam \x. E'] = eval [ |- E1] in
   % Note: typing guarantees this is the only possible case
   let [ |- V2]             = eval [ |- E2] in
    eval [ |- E'[V2]]

@@ -14,11 +14,11 @@ mlam g => mlam M => case [g |- M] of
   let [g, b:block x:term, t:pred x x |- R1] =
       identity [g, b:block x:term, t:pred x x] [g, b  |- M1[.., b.1]]
   in
-   [g |- (lm \x.\u. R1[..,<x ; u>] )]
+   [g |- lm \x.\u. R1[..,<x ; u>]]
 | [g |- app M1 M2] =>
   let [g |- R1] = identity [g] [g |- M1] in
   let [g |- R2] = identity [g] [g |- M2] in
-    [g |- (ap R1 R2)]
+    [g |- ap R1 R2]
 
 | [g |- #p.1] => [g |- #p.2]
 

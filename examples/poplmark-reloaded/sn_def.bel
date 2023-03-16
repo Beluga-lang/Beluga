@@ -44,5 +44,5 @@ inductive SnRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =
   | SnBeta : {M: [g, x: tm A[] |- tm B[]]} Sn [g |- N]
         -> SnRed [g |- app (abs \x. M) N] [g |- M[.., N]]
   | SnAppl : SnRed [g |- M] [g |- M']
-        -> SnRed [g |- (app M N)] [g |- app M' N]
+        -> SnRed [g |- app M N] [g |- app M' N]
 ;

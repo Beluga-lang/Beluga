@@ -48,7 +48,7 @@ case s of
   [ |- s_app1 S1] =>
     let [ |- D1[] is_app D2] = d in
     let [ |- D1']          = pres [ |- D1] [ |- S1] in
-      [ |- (D1'[]) is_app D2]
+      [ |- D1'[] is_app D2]
 
  | [ |- s_app2 V S2] =>
     let [ |- D1[] is_app D2] = d in
@@ -57,5 +57,5 @@ case s of
 
  | [ |- s_app3 V] =>
    let [ |- (is_lam (\x. (\d. (D1)))) is_app D2] = d in
-     [ |- (D1[_, D2])]
+     [ |- D1[_, D2]]
 ;

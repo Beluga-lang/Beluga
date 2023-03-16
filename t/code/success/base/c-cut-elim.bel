@@ -24,7 +24,7 @@ schema ctx = some [a: o] hyp a + i + o;
 
 rec ca : {g:ctx}{A:[g |- o]} [g |- conc A[..]] -> [g, u: hyp A[..] |- conc C[..]]
 %       -> (conc C[..])[g] =
-       -> [g |- (conc true)] =
+       -> [g |- conc true] =
 % / total e (ca _ _ _ e)/
 mlam g => mlam A' => fn d => fn e => case e of
 %  | [g, h:hyp B[..]] axiom H1[..] =>  [g] axiom H1[..]
@@ -35,7 +35,7 @@ mlam g => mlam A' => fn d => fn e => case e of
 %    let [g] D[..]  = d in
 %    let [g, h1: hyp B1[..]] E2'[..] h1 =
 %      ca [g, h1: hyp _] <g, h1. A[..] >
-%         ([g, h1] D[..] )
+%         ([g, h1] D[..])
 %         ([g, h1, h] E2[..] h1 h)
 %    in
 %     [g] impr (\h1. E2'[..] h1)
@@ -72,7 +72,7 @@ mlam g => mlam A' => fn d => fn e => case e of
 %  | [g, h:hyp A[..]] foralll T[..] (\h1.E1[..] h h1) H[..] =>
 %    let [g] D[..] = d in
 %    let [g, h1: hyp _] E1'[..] h1 =
-%      ca [g, h1: hyp _] <g, h1. A[..]> ([g, h1] D[..] ) ([g, h1, h] E1[..] h h1)
+%      ca [g, h1: hyp _] <g, h1. A[..]> ([g, h1] D[..]) ([g, h1, h] E1[..] h h1)
 %    in
 %      [g] foralll T[..] (\h1. E1'[..] h1) H[..]
 
@@ -83,8 +83,8 @@ mlam g => mlam A' => fn d => fn e => case e of
 %    let [g, h2: hyp A2[..]] E2'[..] h2 =
 %      ca [g, h2: hyp A2[..]]
 %        <g, h2. A'[..] >  ([g, h2]  impr \h1. D2[..] h1) ([g, h2, h] E2[..] h h2) in
-%    let [g] D2'[..] = ca [g] <g . A1[..] > ([g] E1'[..] ) ([g, h1] D2[..] h1) in
-%      ca [g] <g . A2[..] > ([g] D2'[..] ) ([g, h2] E2'[..] h2)
+%    let [g] D2'[..] = ca [g] <g . A1[..] > ([g] E1'[..]) ([g, h1] D2[..] h1) in
+%      ca [g] <g . A2[..] > ([g] D2'[..]) ([g, h2] E2'[..] h2)
 %
      [g |- truer]
 
@@ -104,13 +104,13 @@ mlam g => mlam A' => fn d => fn e => case e of
 %  | [g, h:hyp A[..]] E[..] h =>
 %    case d of
 %     | [g] axiom H[..] =>   [g] E[..] H[..]
-%     | [g] impl (D1[..] ) (\h2. D2[..] h2) H[..] =>
+%     | [g] impl (D1[..]) (\h2. D2[..] h2) H[..] =>
 %       let [g, h2: hyp B2[..]] D2'[..] h2 = ca [g, h2: hyp _] <g, h2 . A[..] > ([g, h2] D2[..] h2) ([g, h2, h] E[..] h) in
 %        [g] impl D1[..] (\h2. D2'[..] h2) H[..]
 %
-%     | [g] notl D1[..] H[..] => [g] notl (D1[..] ) H[..]
+%     | [g] notl D1[..] H[..] => [g] notl (D1[..]) H[..]
 %
 %     | [g] foralll T[..] (\h1. D1[..] h1) H[..] =>
 %       let [g, h1: hyp _] D1'[..] h1 = ca [g, h1:hyp _] <g, h1. A[..]> ([g, h1] D1[..] h1) ([g, h1, h] E[..] h) in
-%         [g] foralll (T[..] ) (\h1. D1'[..] h1) H[..]
+%         [g] foralll (T[..]) (\h1. D1'[..] h1) H[..]
 ;

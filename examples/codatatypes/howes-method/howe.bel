@@ -501,7 +501,7 @@ let two : [ |- term (arr (arr S S) (arr S S))] = [|- lam \f. lam \x. app f (app 
 % two
 
 rec ev1 : Eval [|- app M1 M2] [|- V]
-          -> Eval [|- (app (app (lam \x. (lam \y. app x y)) M1) M2)] [|- V] =
+          -> Eval [|- app (app (lam \x. (lam \y. app x y)) M1) M2] [|- V] =
     fun d => Ev_app (Ev_app (Ev_val Val_lam) (Ev_val Val_lam)) d
 ;
 

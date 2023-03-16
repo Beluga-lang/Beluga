@@ -408,8 +408,8 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 
 % %{ Explanation of the previous case:
 %   % Assumptions:
-%   % {DE1 :: [h |- (deq T1'[..] R1'[..])]}
-%   % {DE2 :: [h |- (deq R1'[..] S1'[..])]}
+%   % {DE1 :: [h |- deq T1'[..] R1'[..]]}
+%   % {DE2 :: [h |- deq R1'[..] S1'[..]]}
 %   % tr : TRel' [l |- T[..]] [h |- T1'[..]]
 %   % sr : TRel' [l |- S[..]] [h |- S1'[..]]
 %   % tr': TRel [l] [g] ([l |- T[..]]) ([g |- T2'[..]])
@@ -418,12 +418,12 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %   % If {R1' : [h |- term]} then there exists {R : [l |- term]} and rr : TRel' [l |- R[..]] [h |- R1'[..]]
 %   % If {R : [l |- term]} then there exists {R2': [g |- term]}  and rr' : TRel [l |- R[..]] [g |- R2'[..]]
 % }%
-% %{ i.h. given DE2 :[h |- (deq R1'[..] S1'[..])]
+% %{ i.h. given DE2 :[h |- deq R1'[..] S1'[..]]
 %               rr  : TRel' [l |- R[..]][h |- R1'..]
 %               sr  : TRel' [l |- S[..]] [h |- S1'[..]]
 %               rr' : TRel [l |- R[..]][g |- R2'..]
 %               sr' : TRel [l] [g] ([l |- S[..]]) ([g |- S2'[..]])
-%         we obtain [g |- aeq R2'[..] (S2'..))]
+%         we obtain [g |- aeq R2'[..] (S2'..)]
 
 %    let [g |- AE2[..]] = ceq rr sr rr' sr' cr [h |- DE2[..]] in
 

@@ -8,7 +8,7 @@ auto-invert-solve
 
 by (identity [g, b : block x : term, t : pred x x] [g, b|- X[.., b.1]]) as ih
 unbox ih as R1
-solve [g |- (lm \x.\u. R1[..,<x ; u>] )]
+solve [g |- lm \x.\u. R1[..,<x ; u>]]
 
 solve [g |- #p.2]
 :quit

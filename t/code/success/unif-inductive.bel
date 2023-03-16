@@ -35,10 +35,10 @@ inductive Eval : [ |- exp T] -> [ |- exp T] -> ctype =
 ;
 
 % rec beta_d0: {V0 :[|- exp _]}
-%             Eval [|- (app (lam \x. (lam \y. app x y)) V0)] [|- lam \x. (lam \y. app V0[] y)] =  ? ;
+%             Eval [|- app (lam \x. (lam \y. app x y)) V0] [|- lam \x. (lam \y. app V0[] y)] =  ? ;
 
 rec beta_d : {V0 :[|- exp _]} {W0 :[|- exp _]} {M :[|- exp T]} Eval [|- app V0 W0] [|- M]
-             -> Eval [|- (app (app (lam \x. (lam \y. app x y)) V0) W0)] [|- M] =
+             -> Eval [|- app (app (lam \x. (lam \y. app x y)) V0) W0] [|- M] =
  mlam V, W, M => fn d => (Ev-app (Ev-app (Ev-val Val-lam) (Ev-val Val-lam)) d)
 %    fun [|- V] [|- W] [|- M] d => (Ev-app (Ev-app (Ev-val Val-lam) (Ev-val Val-lam)) d)
 ;

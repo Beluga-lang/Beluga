@@ -128,7 +128,7 @@ rec deterministic_CtxRel : CtxRel [g] [h] $[g |- $W[..]]
 fn cr1 => fn cr2 => case (cr1 , cr2) of
 | (Cnil , Cnil) => (RefCtx ,  RefSub [] [] $[ |- ^])
 | (Ccons [g] [h] $[g |- $W[..]] cr1, Ccons [g] [h'] $[g |- $W'[..]] cr2  ) =>
-  let (RefCtx , RefSub [g] [h] [g |- $W[..]] ) = deterministic_CtxRel cr1 cr2 in
+  let (RefCtx , RefSub [g] [h] [g |- $W[..]]) = deterministic_CtxRel cr1 cr2 in
    (RefCtx , RefSub [g, b:block (x:tm, u:aeq x x, v: deq x x)]
                     [h, b:block (x:tm, u:aeq x x)]
                     [g, b:block (x:tm, u:aeq x x, v: deq x x) |- $W[..], <b.1 ; b.2>])
@@ -145,7 +145,7 @@ fn g => case g of
 | Context_daG [ ] =>  Exists_xaG [] Cnil
 | Context_daG [g, b:block (x:tm, u:aeq x x, v:deq x x)] =>
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in
-  let (cr : CtxRel [g] [h] [g |- $W[..]] ) = cr in
+  let (cr : CtxRel [g] [h] [g |- $W[..]]) = cr in
   Exists_xaG [h, b:block (x:tm, u:aeq x x)] (Ccons [g] [h] [g |- $W[..]] cr)
 ;
 
@@ -153,7 +153,7 @@ rec str_tm : {g:daG}{M:[g |- tm]} StrTm [g |- M[..]] =
 mlam g => mlam M => case [g |- M[..]] of
 | [g, b:block (x:tm, ae_v: aeq x x, de_v:deq x x)  |- b.1] =>
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in
-  let (cr : CtxRel [g] [h] [g |- $W[..]] ) = cr in
+  let (cr : CtxRel [g] [h] [g |- $W[..]]) = cr in
    StrTm [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
          [g, b:block (x:tm, u:aeq x x, v: deq x x) |- $W[..], < b.1 ; b.2 >]
@@ -182,7 +182,7 @@ mlam g => mlam M => case [g |- M[..]] of
 | [g |- app M[..] N[..]] =>
  let StrTm [g] [h] [g |- $W[..]] cr [h |- M'[..]] = str_tm [g] [g |- M[..]] in
   let StrTm [g] [h] [g |- $W'[..]] cr' [h |- N'[..]] = str_tm [g] [g |- N[..]] in
-  let (RefCtx , RefSub [g] [h] [g |- $W[..]] ) = deterministic_CtxRel cr cr' in
+  let (RefCtx , RefSub [g] [h] [g |- $W[..]]) = deterministic_CtxRel cr cr' in
   StrTm [g] [h] [g |- $W[..]] cr  [h |- app M'[..] N'[..]]
  ;
 
@@ -204,7 +204,7 @@ rec str_aeq : {g:daG}{M:[g |- tm]}{N:[g |- tm]}
 mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
 | [g, b:block (x:tm, u:aeq x x, v:deq x x) |- b.2] =>
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in
-  let (cr : CtxRel [g] [h] [g |- $W[..]] ) = cr in
+  let (cr : CtxRel [g] [h] [g |- $W[..]]) = cr in
   StrAeq [g, b:block (x:tm, u:aeq x x, v:deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
          [g, b:block (x:tm, u:aeq x x, v:deq x x) |- $W[..], < b.1 ; b.2 >]
@@ -218,7 +218,7 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
             [h |- _] [h |- _] cr [h |- D1'[..]] = str_aeq [g] [g |- _] [g |- _] [g |- D1[..]] in
   let StrAeq [g] [h] [g |- $W'[..]]
              [h |- _] [h |- _] cr' [h |- D2'[..]] = str_aeq [g] [g |- _] [g |- _] [g |- D2[..]] in
-  let (RefCtx , RefSub [g] [h] [g |- $W[..]] ) = deterministic_CtxRel cr cr' in
+  let (RefCtx , RefSub [g] [h] [g |- $W[..]]) = deterministic_CtxRel cr cr' in
 
   StrAeq [g] [h] [g |- $W[..]] [h |- _] [h |- _] cr [h |- ae_a D1'[..] D2'[..]]
 

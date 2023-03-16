@@ -47,7 +47,7 @@ fn c => case c of
       [ |- result (ev_match_s D3 D1) C']
    )
 
- | [ |- (next C1 st_pair)] =>
+ | [ |- next C1 st_pair] =>
     let [ |- result D1 (next (next C2 st_pair1) S1)] = csd [ |- C1] in
     let [ |- st_return (\x1. pair1 x1 E2) K] = [ |- S1] in
     let [ |- result D2 (next C' S2)] = csd [ |- C2] in
@@ -55,19 +55,19 @@ fn c => case c of
       [ |- result (ev_pair D2 D1) C']
 
 
- | [ |- (next C1 st_fst)] =>
+ | [ |- next C1 st_fst] =>
     let [ |- result D1 (next (next C' st_fst1) S1)] = csd [ |- C1] in
     let [ |- st_return (\x. fst1 x) K] =  [ |- S1] in
       [ |- result (ev_fst D1) C']
 
- |  [ |- (next C1 st_snd)] =>
+ |  [ |- next C1 st_snd] =>
     let [ |- result D1 (next (next C' st_snd1) S1)] = csd [ |- C1] in
     let [ |- st_return (\x. snd1 x) K] = [ |- S1] in
       [ |- result (ev_snd D1) C']
 
- | [ |- (next C' st_lam)] => [ |- result ev_lam C']
+ | [ |- next C' st_lam] => [ |- result ev_lam C']
 
- | [ |- (next C1 st_app)] =>
+ | [ |- next C1 st_app] =>
    let [ |- result D1 (next (next C2 st_app1) S1)] =  csd [ |- C1] in
    let [ |- st_return (\x1. app1 x1 E2) K]  = [ |- S1] in
    let [ |- result D2 (next (next C3 st_app2) S2)] = csd [ |- C2] in
@@ -76,22 +76,22 @@ fn c => case c of
     [ |- result (ev_app D3 D2 D1) C']
 
 
- | [ |- (next C1 st_letv)] =>
+ | [ |- next C1 st_letv] =>
      let [ |- result D1 (next C2 S1)]          = csd [ |- C1] in
      let [ |- st_return (\x1. ev E2[x1]) K] = [ |- S1] in
      let [ |- result D2 C']                  = csd [ |- C2] in
        [ |- result (ev_letv D2 D1) C']
 
- | [ |- (next C1 st_letn)] =>
+ | [ |- next C1 st_letn] =>
      let [ |- result D2 C'] = csd [ |- C1] in
        [ |- result (ev_letn D2) C']
 
 
- | [ |- (next C1 st_fix)] =>
+ | [ |- next C1 st_fix] =>
      let [ |- result D1 C'] = csd [ |- C1] in
        [ |- result (ev_fix D1) C']
 
-| [ |- (next C' st_vl)] => [ |- result ev_vl C']
+| [ |- next C' st_vl] => [ |- result ev_vl C']
 ;
 
 rec ceval_sound : [ |- ceval E V] -> [ |- eval E V] =

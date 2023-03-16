@@ -127,7 +127,7 @@ mlam T => fn s1, s2, e => case [|- T] of
   let [g |- S2] = s2 in
   LogArr [g |- _] [g |- _] (mlam h,$W, P1, P2 => fn rp =>
    let q0 = f [h] $[h |- $W] [h |- P1] [h |- P2] rp in
-   closed [|- T2] (mstep_app [h |- S1[$W]] ) (mstep_app [h |- S2[$W]]) q0
+   closed [|- T2] (mstep_app [h |- S1[$W]]) (mstep_app [h |- S2[$W]]) q0
   );
 
 % Symmetry of algorithmic equivalence

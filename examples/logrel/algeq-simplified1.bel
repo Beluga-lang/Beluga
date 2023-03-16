@@ -121,7 +121,7 @@ mlam T => fn s1, s2, e => case [|- T] of
   let [g |- S2] = s2 in
   LogArr [g |- _] [g |- _] (mlam h,$W, P1, P2 => fn rp =>
    let q0 = f [h] $[h |- $W] [h |- P1] [h |- P2] rp in
-   closed [|- T2] (mstep_app [h |- S1[$W]] ) (mstep_app [h |- S2[$W]]) q0
+   closed [|- T2] (mstep_app [h |- S1[$W]]) (mstep_app [h |- S2[$W]]) q0
   );
 
 % Symmetry of algorithmic equivalence
@@ -317,7 +317,7 @@ inductive DecEq : {G:[|-dctx]}(g:ctx) [g |- tm] -> [g |- tm] -> [ |- tp] -> ctyp
  =
 | DecBeta : DecEq [|- G with T] [g, x:tm |- M2] [g, x |- N2] [ |- S]
           -> DecEq [|-G] [g |- M1] [g |- N1] [ |- T]
-          -> DecEq [|-G] [g |- (app (lam (\x. M2)) M1)] [g |- N2[.., N1]] [ |- S]
+          -> DecEq [|-G] [g |- app (lam (\x. M2)) M1] [g |- N2[.., N1]] [ |- S]
 | DecLam :  DecEq [|- G with T] [g, x:tm |- M] [g, x |- N] [ |- S]
           -> DecEq [|-G] [g |- lam (\x. M)] [g |- lam (\x. N)] [ |- arr T S]
 | DecExt :  DecEq [|- G with T] [g, x:tm |- app M[..] x] [g, x |- app N[..] x] [ |- S]

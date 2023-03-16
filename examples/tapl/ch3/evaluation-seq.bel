@@ -76,7 +76,7 @@ fn s1 => fn s2 => case s1 of
    | [ |- e_if E]  =>
        let [ |- ref]        = det [ |- D] [ |- E] in  [ |- ref]
    | [ |- e_if_false] => impossible [ |- D]
-   | [ |- e_if_true]  => impossible [ |- D] )
+   | [ |- e_if_true]  => impossible [ |- D])
 ;
 
 
@@ -151,7 +151,7 @@ fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
   (case ms2 of
    | [ |- m_ref] => (case vn2 of
       | [ |- v_true]  => impossible [ |- S1]
-      | [ |- v_false] => impossible [ |- S1] )
+      | [ |- v_false] => impossible [ |- S1])
    | [ |- m_step S2 MS2] =>
      let [ |- ref] = det [ |- S1] [ |- S2] in
        unique [ |- MS1] [ |- MS2] vn1 vn2
@@ -162,7 +162,7 @@ fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
      | [ |- m_step S2 MS2] =>
    (case vn1 of
     | [ |- v_true]  => impossible [ |- S2]
-    | [ |- v_false] => impossible [ |- S2] )
+    | [ |- v_false] => impossible [ |- S2])
   )
 
 %{  let [ ] V1 = vn1 in

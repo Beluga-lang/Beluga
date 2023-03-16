@@ -21,7 +21,7 @@ fn e => ([ |- z] , [ |- nat])
 
 rec testPairs2 : [ |- exp] -> [ |- exp] * [ |- tp] =
  fn e => case e of
-   [ |- z] => ( e , [ |- nat] )
+   [ |- z] => ( e , [ |- nat])
 
  | [ |- s U] =>
    let ( x, y ) = testPairs2 [ |- U] in

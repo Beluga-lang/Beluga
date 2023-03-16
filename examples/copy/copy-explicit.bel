@@ -14,18 +14,18 @@ mlam g => mlam T => fn e =>
 (case e of
 
   {T':[ |- tp]} {#p:#[g |- term T'[]]}
-  [g |- #p] : [g |- (term T'[])]        => [g |- #p]
+  [g |- #p] : [g |- term T'[]]        => [g |- #p]
 
 | {T1:[ |- tp]} {T2:[ |- tp]} {U:[g, x :term T1[] |- term T2[]]}
 
-     [g |- lam T1[] T2[] (\ x. U)] : [g |- (term (arrow T1[] T2[]))]
+     [g |- lam T1[] T2[] (\ x. U)] : [g |- term (arrow T1[] T2[])]
 
        => (case copy [g, x:term T1[]]  [ |- T2[]] [g, x |- U] of
 
-          {T1':[ |- tp]} {T2':[ |- tp]} {V:[g, x:term (T1'[]) |- term (T2'[])]}
+          {T1':[ |- tp]} {T2':[ |- tp]} {V:[g, x:term T1'[] |- term T2'[]]}
 
-           [g, x:term (T1'[]) |- V] : [g, x:term (T1'[]) |- (term (T2'[]))]
+           [g, x:term T1'[] |- V] : [g, x:term T1'[] |- term T2'[]]
 
-                 => [g |- lam (T1'[]) (T2'[])  (\x. V)])
+                 => [g |- lam T1'[] T2'[]  (\x. V)])
 
 );

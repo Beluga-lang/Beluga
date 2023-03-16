@@ -78,7 +78,7 @@ fn e => case e of
 rec makeproj': [ |- nat]  -> [xenv:target |- target] =
 / total n (makeproj' n ) /
 fn n => case n of
-| [ |- z] => [xenv:target |- (tfst xenv)]
+| [ |- z] => [xenv:target |- tfst xenv]
 | [ |- suc M] =>
   let [xenv:target |- N] = makeproj' [ |- M] in
       [xenv:target |- tsnd N]
@@ -109,7 +109,7 @@ fn l => fn map => fn n => case l of
 let [ |- N] = n in
  (mlam #q => case ([g, x:term |- #q], [g, x:term |- #p[..]]) of
                 | ([g, x:term |- #v], [g, x:term |- #v]) => makeproj [ |- N]
-                | ([g, x:term |- _] , [g, x:term |- _] ) =>
+                | ([g, x:term |- _] , [g, x:term |- _]) =>
                  b_map l map [ |- suc N] [g, x:term |- #q])
 
 ;

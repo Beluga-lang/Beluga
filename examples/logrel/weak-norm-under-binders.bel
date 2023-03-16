@@ -201,7 +201,7 @@ inductive RedSub : {g:ctx}(h:ctx){$S:$[h |- g]} ctype =
 % Weakening a term M that is reducible at type A
 rec wknRed : Reduce  [ |- A] [g |- M] -> IsVarSub [g] $[h |- $W] -> Reduce [ |- A] $[h |- M[$W]] =
 / total (wknRed) /
-fn r => fn iv => let (iv : IsVarSub [g] $[h |- $W] ) = iv in
+fn r => fn iv => let (iv : IsVarSub [g] $[h |- $W]) = iv in
 case r of
 | Base (Halts/c [g |- S] q2) => Base (Halts/c [h |- S[$W]] (nwkn q2 iv))
 | Arr [g |- M] f =>
@@ -244,7 +244,7 @@ mlam g => case [g] of
 
 rec eval : {M:[g |- tm A[]]} RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M[$S]] =
 / total m (eval g a h sigma m) /
-mlam M => fn rs => let (rs : RedSub [g] $[h |- $S] ) = rs in
+mlam M => fn rs => let (rs : RedSub [g] $[h |- $S]) = rs in
  case [g |- M] of
 | [g' |- #p] => redVar [g'] [g' |- #p] rs
 | [g' |- app M1 M2]  =>

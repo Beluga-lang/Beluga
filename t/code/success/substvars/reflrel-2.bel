@@ -41,7 +41,7 @@ rec refl : {phi:xG}{M: [phi  |- tm]}
 mlam phi => mlam M => fn cr => case [phi  |- M[..]] of
 | [phi |- #p[..]] => ctx_membership [phi |- #p] cr
 
-| [phi  |- app (M[..] ) N[..]] =>
+| [phi  |- app (M[..]) N[..]] =>
   let [psi |- D1[..]] = refl [phi] [phi |- M[..]] cr in
   let [psi |- D2[..]] = refl [phi] [phi |- N[..]] cr in
     [psi |- ae_a D1[..] D2[..]]
@@ -120,7 +120,7 @@ rec reflR : {phi:xG}{M: [phi  |- tm]}
 | [phi |- #p[..]] =>
   let Eq_v m' = m in
   ctx_member [phi |- #p[..]] cr m'
-| [phi  |- app (M[..] ) N[..]] =>
+| [phi  |- app (M[..]) N[..]] =>
   let Eq_a m1 m2 = m in
   let [psi |- D1[..]] = reflR [phi] [phi |- M[..]] cr m1 in
   let [psi |- D2[..]] = reflR [phi] [phi |- N[..]] cr m2 in
@@ -165,7 +165,7 @@ rec transR:
   let [psi |- #q.2[..]] = d2 in
   let Eq_v m' = m in
   let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] $[psi, b:block (x:tm, u:aeq x x) |- $S[..]]
-                [phi |- #r[..]] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]] ) = m' in
+                [phi |- #r[..]] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]]) = m' in
   ctx_member [phi |- #r] cr m'
 
 | [psi |- ae_a D1[..] D2[..]] =>
@@ -273,7 +273,7 @@ inductive ExistsEq' : {gamma:xG}{phi: xdG}{$S: $[phi |- gamma]} {L: [phi |- tm]}
 
 rec existsEqV' : Ctx_xdR [gamma] [phi] $[phi |- $T[..]] -> {#p: #[phi |- block (x:tm, u:deq x x)]}
                  ExistsEq' [gamma] [phi] $[phi |- $T[..]] [phi |- #p.1[..]] =
-fn cr_xd => mlam #p => let (cr_xd : Ctx_xdR [gamma] [phi] $[phi |- $T[..]] ) = cr_xd in
+fn cr_xd => mlam #p => let (cr_xd : Ctx_xdR [gamma] [phi] $[phi |- $T[..]]) = cr_xd in
 case [phi |- #p.1[..]] of
 | [phi, b:block (x:tm, u:deq x x) |- b.1] =>
   let Cons_xd cr'_xd = cr_xd in
@@ -288,7 +288,7 @@ case [phi |- #p.1[..]] of
 
 rec existsEq' : Ctx_xdR [gamma] [phi] $[phi |- $T[..]] -> {Ld: [phi |- tm]}
                  ExistsEq' [gamma] [phi] $[phi |- $T[..]]  [phi |- Ld] =
-fn cr_xd => mlam Ld => let (cr_xd : Ctx_xdR [gamma] [phi] $[phi |- $T[..]] ) = cr_xd in
+fn cr_xd => mlam Ld => let (cr_xd : Ctx_xdR [gamma] [phi] $[phi |- $T[..]]) = cr_xd in
 case [phi |- Ld[..]] of
 | [phi |- #p.1[..]] => existsEqV' cr_xd [phi |- #p[..]]
 
@@ -319,7 +319,7 @@ inductive ExistsEq : {gamma:xG}{psi: xaG}{$S: $[psi |- gamma]} {L: [gamma |- tm]
 
 rec existsEqV : Ctx_xaR [gamma] [psi] $[psi |- $S[..]] -> {#p: [gamma |- tm]}
                  ExistsEq [gamma] [psi] $[psi |- $S[..]]  [gamma |- #p[..]] =
-fn cr_xa => mlam #p => let (cr_xa : Ctx_xaR [gamma] [psi] $[psi |- $S[..]] ) = cr_xa in
+fn cr_xa => mlam #p => let (cr_xa : Ctx_xaR [gamma] [psi] $[psi |- $S[..]]) = cr_xa in
 case [gamma |- #p[..]] of
 | [gamma, x:tm |- x] =>
   let Cons_xa cr'_xa = cr_xa in
@@ -337,7 +337,7 @@ case [gamma |- #p[..]] of
 rec existsEq : Ctx_xaR [gamma] [psi] $[psi |- $S[..]] -> {L: [gamma |- tm]}
                  ExistsEq [gamma] [psi] $[psi |- $S[..]]  [gamma |- L[..]] =
 
-fn cr_xa => mlam L => let (cr_xa : Ctx_xaR [gamma] [psi] $[psi |- $S[..]] ) = cr_xa in
+fn cr_xa => mlam L => let (cr_xa : Ctx_xaR [gamma] [psi] $[psi |- $S[..]]) = cr_xa in
 case [gamma |- L[..]] of
 | [gamma |- #p[..]] =>  existsEqV  cr_xa [gamma |- #p[..]]
 

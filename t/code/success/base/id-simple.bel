@@ -34,4 +34,4 @@ rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] =
        [ |- z]  => y
      | [ |- s U] =>
        let [ |- V] = plus' [ |- U] y in
-           [ |- (s V)];
+           [ |- s V];

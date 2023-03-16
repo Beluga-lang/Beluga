@@ -102,12 +102,12 @@ fn br => fn pt => case br of
 
 
 | {#p:[g |- block (x:tm, _b:({u : nf}  bred N[..] u -> bred x u), _q: ({q : p} path  N[..] q -> path x q))]}
-  [g |- (#p._b[..]) U[..] R[..]] => % [g |- bred x U[..]]
+  [g |- #p._b[..] U[..] R[..]] => % [g |- bred x U[..]]
    % R : bred N[..] U[..]
    % pt: path x P[..]
   case pt of
     |{#p:[g |- block (x:tm, _b:({u : nf}  bred N[..] u -> bred x u), _q: ({q : p} path  N[..] q -> path x q))]}
-       [g |- (#p._q[..]) Q[..] Qp[..]] => % [g |- path x Q[..]]
+       [g |- #p._q[..] Q[..] Qp[..]] => % [g |- path x Q[..]]
         % Qp : path N[..] Q[..]
           bred_ltr [g |- R[..]] [g |- Qp[..]] % path U[..] Q[..]
 
@@ -150,10 +150,10 @@ fn br => fn pt => case br of
 
 
 | {#p:[g |- block (x:tm, _b:({u : nf}  bred N[..] u -> bred x u), _q: ({q : p} path  N[..] q -> path x q))]}
-  [g |- (#p._b[..]) U[..] R[..]] => % [g |- bred x U[..]]
+  [g |- #p._b[..] U[..] R[..]] => % [g |- bred x U[..]]
   let ([g |- Pt[..]] : [g |- npath U[..] P[..]]) = pt in
   let [g |- Qt[..]] = bred_rtl [g |- R[..]] pt % path N[..] P[..]
-  in [g |- (#p._q[..]) P[..] Qt[..]]
+  in [g |- #p._q[..] P[..] Qt[..]]
  ;
 
 inductive eq : tm -> tm -> type =

@@ -71,13 +71,13 @@ fn r => case r of
     eq2 [g, b:block x:term, t:pred x x |- R1[.., b.1]] in
     [g |- lm \x.\u. S1[..,<x ; u>]]
 
-| [g |- apl1 R1] : [g |- (step (app M1 M2) (app M1' M2))]  =>
+| [g |- apl1 R1] : [g |- step (app M1 M2) (app M1' M2)]  =>
   let [g |- S1] = eq2 [g |- R1] in
   let [g |- I2] = identity [g] [g |- M2]  in
     [g |- ap S1 I2]
 
 
-| [g |- apr1 R2] : [g |- (step (app M1 M2) (app M1 M2'))]  =>
+| [g |- apr1 R2] : [g |- step (app M1 M2) (app M1 M2')]  =>
   let [g |- S2] = eq2 [g |- R2] in
   let [g |- I1] = identity [g] [g |- M1]  in
     [g |- ap I1 S2]

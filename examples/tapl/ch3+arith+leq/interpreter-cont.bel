@@ -26,7 +26,7 @@ fn t => fn cont => case t of
              | [ |- succ V] => cont [ |- false]
              | [ |- _]      => [ |- no_interim]
           )
-     | [ |- no]  => small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- (iszero M')])
+     | [ |- no]  => small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- iszero M'])
   )
 
 | [ |- switch M M1 M2]      =>
@@ -35,7 +35,7 @@ fn t => fn cont => case t of
              | [ |- true]  => cont [ |- M1]
              | [ |- false] => cont [ |- M2]
              | [ |- V]     => [ |- no_interim])
-     | [ |- no] =>  small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- (switch M' M1 M2)])
+     | [ |- no] =>  small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- switch M' M1 M2])
   )
 
 | [ |- leq M N] =>
@@ -43,16 +43,16 @@ fn t => fn cont => case t of
      | [ |- yes] => (case isvalue [ |- N] of
              | [ |- yes] =>  (case [ |- M] of
                       | [ |- z] => cont [ |- true]
-                      | [ |- (succ V)] => (case [ |- N] of
+                      | [ |- succ V] => (case [ |- N] of
                                | [ |- z]      => cont [ |- false]
-                               | [ |- succ W] => cont [ |- (leq V W)]
+                               | [ |- succ W] => cont [ |- leq V W]
                                | [ |- _]      => [ |- no_interim])
 
                       | [ |- _]        => [ |- no_interim]
                    )
              | [ |- no] =>  small_step_cont [ |- N] (fn n' => let [ |- N'] = n' in cont [ |- leq M N'])
           )
-     | [ |- no] =>  small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- (leq M' N)])
+     | [ |- no] =>  small_step_cont [ |- M] (fn m' => let [ |- M'] = m' in cont [ |- leq M' N])
   )
 
 ;
@@ -62,7 +62,7 @@ rec mstep' : [ |- term] -> [ |- optVal] =
 % / total m (mstep' m)/
 fn m => case isvalue m of
 | [ |- yes] => let [ |- M] = m in [ |- val M]
-| [ |- no]  => (case small_step_cont m (fn m => let [ |- M] = m in [ |- interim M] )of
+| [ |- no]  => (case small_step_cont m (fn m => let [ |- M] = m in [ |- interim M])of
         | [ |- no_interim] => [ |- no_val]
         | [ |- interim M'] => mstep' [ |- M']
          )

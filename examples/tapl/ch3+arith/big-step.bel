@@ -105,7 +105,7 @@ fn d => case d of
 | [ |- ev_true]  => [ |- ms_ref]
 | [ |- ev_false] => [ |- ms_ref]
 
-| [ |- ev_switch_true D D1] : [ |- (eval (switch M M1 M2) V)] =>
+| [ |- ev_switch_true D D1] : [ |- eval (switch M M1 M2) V] =>
   let [ |- Mtrue]  = big_to_small [ |- D] in
     % Mtrue : multi_step M true
   let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mtrue] in
@@ -115,7 +115,7 @@ fn d => case d of
     [ |- ms_tr MS (ms_tr (ms_step  e_switch_true) MS1)]
 
 
-| [ |- ev_switch_false D D1] : [ |- (eval (switch M M1 M2) V)] =>
+| [ |- ev_switch_false D D1] : [ |- eval (switch M M1 M2) V] =>
   let [ |- Mfalse]  = big_to_small [ |- D] in
     % Mfalse : multi_step M false
   let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mfalse] in

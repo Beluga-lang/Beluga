@@ -169,7 +169,7 @@ fn r, e => let e : LogEq [g] [g' |- M1[..]] [g' |- M2[..]] [ |- A] = e in case e
 inductive DecEq : {g:tctx}(g':ctx) [g' |- tm] -> [g' |- tm] -> [ |- tp] -> ctype =
 | DecBeta : DecEq [g, b:block x:tm, d:oft x T[]] [g', x:tm |- M2] [g', x |- N2] [ |- S]
           -> DecEq [g] [g' |- M1[..]] [g' |- N1[..]] [ |- T]
-          -> DecEq [g] [g' |- (app (lam (\x. M2)) M1[..])] [g' |- N2[.., N1]] [ |- S]
+          -> DecEq [g] [g' |- app (lam (\x. M2)) M1[..]] [g' |- N2[.., N1]] [ |- S]
 | DecLam :  DecEq [g, b:block x:tm, d:oft x T[]] [g', x:tm |- M] [g', x |- N] [ |- S]
           -> DecEq [g] [g' |- lam (\x. M)] [g' |- lam (\x. N)] [ |- arr T S]
 | DecExt :  DecEq [g, b:block x:tm, d:oft x T[]] [g', x:tm |- app M[..] x] [g', x |- app N[..] x] [ |- S]
@@ -235,7 +235,7 @@ fn s1, s2, e => case e of
   let [g' |- S2[..]] = s2 in
   LogArr [g' |- _] [g' |- _] (mlam h, h', $W, P1, P2 => fn rh, iv, rp =>
    let q0 = f [h] [h'] $[h' |- $W[..]] [h' |- P1[..]] [h' |- P2[..]] rh iv rp in
-   closed (mstep_app [h' |- S1[$W]] ) (mstep_app [h' |- S2[$W]]) q0
+   closed (mstep_app [h' |- S1[$W]]) (mstep_app [h' |- S2[$W]]) q0
   );
 
 % Looking up a variable in logically equivalence substitutions gives a logical equivalence

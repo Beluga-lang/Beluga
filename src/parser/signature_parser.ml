@@ -395,7 +395,7 @@ module Make
         }
 
     let signature_oldstyle_lf_decl =
-      seq2 (identifier <& colon) (alt lf_kind lf_typ)
+      seq2 (identifier <& colon) (alt (trying lf_kind) lf_typ)
       <& dot |> span
       $> (fun (location, (identifier, typ_or_const)) ->
            Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant

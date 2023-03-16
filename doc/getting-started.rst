@@ -13,18 +13,9 @@ instruction `here <https://opam.ocaml.org/doc/Install.html>`_.
 We use recent versions of OCaml, so check which are supported on our
 `continuous integration <https://github.com/Beluga-lang/Beluga/actions>`_
 before creating an opam switch.
-At time of writing, version 4.10.0 is the latest supported version.
 
-.. code-block:: Text
-
-    opam switch create <switch-name> 4.10.0
-    opam switch set <switch-name>
-    eval $(opam env)
-
-Please replace ``<switch-name>`` with your preferable switch name.
-
-Install using opam
-^^^^^^^^^^^^^^^^^^
+Install using ``opam``
+^^^^^^^^^^^^^^^^^^^^^^
 
 The following command will install ``beluga`` under the switch you created.
 
@@ -54,12 +45,11 @@ Now, build the source with the following commands:
 
 .. code-block:: Text
 
-    opam install --deps-only .
-    make
+    make setup-install
+    make install
 
-This will place ``beluga`` and ``harpoon`` binaries in the ``bin``
-subdirectory. They can be copied wherever you like, or you can add this
-subdirectory to your PATH.
+This will place ``beluga`` and ``harpoon`` binaries in ``$OPAM_SWITCH_PREFIX/bin``.
+They can be copied wherever you like, or you can add this directory to your ``PATH`` environment variable.
 
 Harpoon Example
 ---------------
@@ -102,9 +92,9 @@ The session wizard will ask for the name of theorem, the actual statement, and t
     Configuring theorem #1
       Name of theorem (:quit or empty to finish): halts_step
       Statement of theorem: [|- step M M'] -> [|- halts M'] -> [|- halts M]
-      Induction order (empty for none): 
+      Induction order (empty for none):
     Configuring theorem #2
-      Name of theorem (:quit or empty to finish): 
+      Name of theorem (:quit or empty to finish):
 
 Users can give any numbers of theorems they want. Here, for the purpose of this example, we will finish the session wizard, by typing the enter key. Then, Harpoon will display an interactive session:
 
@@ -122,12 +112,12 @@ Users can give any numbers of theorems they want. Here, for the purpose of this 
     Meta-context:
       A : ( |- tp)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq A A]
 
-    > 
+    >
 
 Now we can use interactive tactics to prove the goal (the type under the line). First, by applying ``split [|- A]``, we split the type into cases.
 
@@ -138,7 +128,7 @@ Now we can use interactive tactics to prove the goal (the type under the line). 
     Meta-context:
       A : ( |- tp)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq A A]
@@ -155,7 +145,7 @@ This will generate two subgoals, and you will notice that the label (the string 
       X : ( |- tp)
       X1 : ( |- tp)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq (arr X X1) (arr X X1)]
@@ -172,7 +162,7 @@ To prove this, we need ``[|- eq X X]`` and ``[|- eq X1 X1]``. We can get these b
       X : ( |- tp)
       X1 : ( |- tp)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq (arr X X1) (arr X X1)]
@@ -188,14 +178,14 @@ To prove this, we need ``[|- eq X X]`` and ``[|- eq X1 X1]``. We can get these b
       X1 : ( |- tp)
       EQ_X : ( |- eq X X)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq (arr X X1) (arr X X1)]
 
     > by tp-refl [|- X1] as EQ_X1 unboxed
 
-With these two, we are able to use ``eq_arr``. 
+With these two, we are able to use ``eq_arr``.
 
 .. code-block:: Text
 
@@ -207,7 +197,7 @@ With these two, we are able to use ``eq_arr``.
       EQ_X : ( |- eq X X)
       EQ_X1 : ( |- eq X1 X1)
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq (arr X X1) (arr X X1)]
@@ -221,9 +211,9 @@ This will solve the subgoal, and Harpoon will subsequently show the next case, w
     Theorem: tp-refl
     intros <- split [ |- FREE MVar 1] (case i)
     Meta-context:
-      
+
     Computational context:
-      
+
 
     --------------------------------------------------------------------------------
     [ |- eq i i]
@@ -238,18 +228,18 @@ After solving all subgoals, Harpoon will print the proof script as well as its t
     Full proof script:
       intros
       { A : ( |- tp)
-      | 
+      |
       ; split [ |- A] as
         case arr:
         { X : ( |- tp), X1 : ( |- tp)
-        | 
+        |
         ; by tp-refl [ |- X] as EQ_Y unboxed;
           by tp-refl [ |- X1] as EQ_X unboxed;
           solve [ |- eq_arr EQ_Y EQ_X]
         }
         case i:
-        { 
-        | 
+        {
+        |
         ; solve [ |- eq_i]
         }
       }

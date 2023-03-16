@@ -177,6 +177,11 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
 
+  val start_module : Unit.t t
+
+  val stop_module :
+    ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
+
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
 

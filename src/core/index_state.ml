@@ -188,6 +188,11 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
 
+  val start_module : Unit.t t
+
+  val stop_module :
+    ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
+
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
 
@@ -897,6 +902,10 @@ module Persistent_indexing_state = struct
         Binding_tree.add_toplevel identifier
           { binding_location; desc = Program_constant { cid } }
           bindings)
+
+  let start_module = Obj.magic () (* TODO: *)
+
+  let stop_module ?location identifier cid = Obj.magic () (* TODO: *)
 
   let add_module ?location identifier cid m = Obj.magic () (* TODO: *)
 

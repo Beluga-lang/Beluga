@@ -88,7 +88,7 @@ mlam g => mlam A => fn d => fn e => case e of
 
  | [g, h: hyp A |- truer] => [g |- truer]
 
- | [g, h: hyp A |- falsel (H[..] )] => [g |- falsel H]
+ | [g, h: hyp A |- falsel (H[..])] => [g |- falsel H]
 
  | [g, h:hyp A |- forallr (\a. E1[.., a, h])] =>
    let [g |- D] = d in

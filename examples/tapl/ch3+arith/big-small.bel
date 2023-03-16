@@ -296,7 +296,7 @@ fn d => case d of
 | [ |- ev_true]  => [ |- m_ref]
 | [ |- ev_false] => [ |- m_ref]
 
-| [ |- ev_switch_true D D1] : [ |- (eval (switch M M1 M2) V)] =>
+| [ |- ev_switch_true D D1] : [ |- eval (switch M M1 M2) V] =>
   let [ |- Mtrue]  = big_to_small [ |- D] in
     % Mtrue : multi_step M true
   let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mtrue] in
@@ -306,7 +306,7 @@ fn d => case d of
    m_trans [ |- MS] [ |- m_step s_switch_true MS1]
 
 
- | [ |- ev_switch_false D D1] : [ |- (eval (switch M M1 M2) V)] =>
+ | [ |- ev_switch_false D D1] : [ |- eval (switch M M1 M2) V] =>
   let [ |- Mfalse]  = big_to_small [ |- D] in
     % Mfalse : multi_step M false
   let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mfalse] in
@@ -544,10 +544,10 @@ empty : type.
 rec values_dont_step : [ |- step M M'] -> [ |- value M] -> [ |- empty]=
 / total v (values_dont_step m m' s v )/
 fn s => fn v => case v of
-| [ |- v_true]    => impossible s % (case s of [ |- {}] )
-| [ |- v_false]   => impossible s % (case s of [ |- {}] )
-| [ |- v_z] => impossible s % (case s of [ |- {}] )
-| [ |- (v_s V)] =>
+| [ |- v_true]    => impossible s % (case s of [ |- {}])
+| [ |- v_false]   => impossible s % (case s of [ |- {}])
+| [ |- v_z] => impossible s % (case s of [ |- {}])
+| [ |- v_s V] =>
     (case s of [ |- s_succ D] =>
     values_dont_step [ |- D] [ |- V])
 ;

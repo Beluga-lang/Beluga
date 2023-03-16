@@ -34,11 +34,11 @@ schema ctx = block x:exp, x':cval , _t:(cval -> cexp) ;
 rec cmp : (g:ctx) [g |- exp] -> [g, x:cval |- cexp] -> [g |- cexp] =
 fn e => fn k => let [g, x:cval |- K] = k in
 case e of
-| [g |- #p.x[..]] => [g |- ((#p._t[..] ) (#p.x'[..]))]
+| [g |- #p.x[..]] => [g |- #p._t[..] #p.x'[..]]
 
 | [g |- z] => [g |- K[..] z+]
 
-| [g |- s (E[..] )] =>
+| [g |- s (E[..])] =>
   cmp [g |- E[..]] [g, x |- K[..] (s+ x)]
 
 | [g |- lam \x. E] =>
@@ -46,7 +46,7 @@ case e of
       cmp [g, b:block (x:exp, x':cval , _t:(cval -> cexp)) |- E[..] b.x] [g, b, x1 |- b._t x1] in
    [g |- K[..] (lam+ (\v.\k. E'[..] v k))]
 
-| [g |- app E1[..] (E2[..] )] =>
+| [g |- app E1[..] (E2[..])] =>
     let [g, b:block x1:exp, x1':cval , _t:(cval -> cexp) |- E2'[..] b.x1'] =
         cmp [g, b:block x1:exp, x1':cval , _t:(cval -> cexp) |- E1[..]]
             [g, b, x2 |- app+ b.x1' x2 (\v. K[..] v)] in

@@ -37,7 +37,7 @@ stratified Red : {A : [ |- ty]} (g : cxt) {M : [g |- tm A[]]} ctype =
 % Corollary: closure under weak head expansion
 
 rec whExp : Red [|- A] [g |- M [.., N]]
-         -> Red [|- A] [g |- (app (abs \ x. M) N)] =
+         -> Red [|- A] [g |- app (abs \ x. M) N] =
   ?
   ;
 

@@ -74,7 +74,7 @@ case d of
   in
   [g |- eq_lam (\x.\u. E1)]
 
-| [g |- eval_app1 D1 D2] : [g |- (eval (app M N) R)] =>
+| [g |- eval_app1 D1 D2] : [g |- eval (app M N) R] =>
   (case f of
     | [g |- eval_app1 F1 F2] =>
       let [g |- eq_lam (\x.\u. E1)] = deterministic [g |- D1] [g |- F1] in
@@ -86,7 +86,7 @@ case d of
     | [g |- eval_app2 F1 NL F2] =>
       let [g |- eq_lam (\x.\u. E1)] =
         deterministic [g |- D1] [g |- F1] in
-      impossible [g |- NL] )
+      impossible [g |- NL])
 
 | [g |- #p.2] => let [g |- #q.2] = f in eq_refl [g] [g |- _]
 ;

@@ -15,10 +15,10 @@ rec identity : {g:natCtx} [g |- nat] -> [g |- nat] =
 mlam g =>
  fn x =>
   (case x of
-      [g |- z]                  =>  [g |- z]
-    | [g |- #p[..]]            =>  [g |- z]
-    | [g |- U[..]]             =>  [g |- U[..]]
-    | [g |- zoo (\x. (U))] =>  [g |- (U[..,(s z)])]
+      [g |- z]             =>  [g |- z]
+    | [g |- #p[..]]        =>  [g |- z]
+    | [g |- U[..]]         =>  [g |- U[..]]
+    | [g |- zoo (\x. (U))] =>  [g |- U[..,(s z)]]
 
 );
 

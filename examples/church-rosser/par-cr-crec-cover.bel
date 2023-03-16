@@ -56,7 +56,7 @@ fn d => case d of
       dia [g, b:block y:term, _t:pred y y |- assume (R1a[.., b.1, b.2]) (R1'[.., b.1, b.2])] in
 
     let [g |- S''] = subst [g, y, v |- S1'[..,<y ; v>]] [g |- S2'] in
-      [g |- (dia_result H1[.., H2] (beta (\y.\v. S1[..,<y ; v>]) S2) S'')]
+      [g |- dia_result H1[.., H2] (beta (\y.\v. S1[..,<y ; v>]) S2) S'']
 
  | [g |- assume (ap R1 R2) (ap R1' R2')] =>
   let [g |- dia_result N1 S1 S1'] = dia  [g |- assume R1 R1'] in

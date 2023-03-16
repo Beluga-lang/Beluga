@@ -51,7 +51,7 @@ rec eq1: (g:ctx) [g |- pred M N] -> [g |- step* M N] =
 rec eq2 : (g:ctx) [g |- step M N] -> [g |- pred M N] =
 % / total r (eq2 g m n r) /
 fn r => case r of
- | [g |- beta1] : [g |- (step (app (lam \x. M1) M2) M1[.., M2])]  =>
+ | [g |- beta1] : [g |- step (app (lam \x. M1) M2) M1[.., M2]]  =>
   let [g, b:block x:term, t:pred x x |- I1] =
     identity [g, b:block x:term, t:pred x x] [g, b |- M1[.., b.1]] in
   let [g |- I2] = identity [g] [g |- M2] in
@@ -63,13 +63,13 @@ fn r => case r of
     [g |- lm \x.\u. S1[..,<x ; u>]]
 
 
-| [g |- apl1 R1] : [g |- (step (app M1 M2) (app M1' M2))]  =>
+| [g |- apl1 R1] : [g |- step (app M1 M2) (app M1' M2)]  =>
   let [g |- S1] = eq2 [g |- R1] in
   let [g |- I2] = identity  [g] [g |- M2]  in
     [g |- ap S1 I2]
 
 
-| [g |- apr1 R2] : [g |- (step (app M1 M2) (app M1 M2'))]  =>
+| [g |- apr1 R2] : [g |- step (app M1 M2) (app M1 M2')]  =>
   let [g |- S2] = eq2 [g |- R2] in
   let [g |- I1] = identity  [g] [g |- M1]  in
     [g |- ap I1 S2]

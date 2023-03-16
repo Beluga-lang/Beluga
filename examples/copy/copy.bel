@@ -16,7 +16,7 @@ LF term : tp -> type =
 schema tctx = some [t:tp] term t;
 % schema W = term nat;
 
-% total ([g] [g |- M])  (copy [g] [g |- M] ).
+% total ([g] [g |- M])  (copy [g] [g |- M]).
 
 rec copy : {g:tctx} [g |- term T] -> [g |- term T] =
 / total e (copy _ _ e ) /

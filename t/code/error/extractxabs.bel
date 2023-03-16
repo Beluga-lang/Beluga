@@ -14,7 +14,7 @@ schema tctx = tm ;
 
 inductive Nlist: {g:tctx} [ |- nat] -> ctype =
 | Nnil : Nlist [g] [ |- zero]
-| Ncons: [g |- tm] -> Nlist [g] [ |- N] -> Nlist [g] [ |- (succ N)]
+| Ncons: [g |- tm] -> Nlist [g] [ |- N] -> Nlist [g] [ |- succ N]
 ;
 
 

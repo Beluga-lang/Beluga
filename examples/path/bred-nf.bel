@@ -113,7 +113,7 @@ fn br => fn pt => case br of
 
 
 | {#p:#[g |- block (x:tm, _b:({u : nf}  bred N[..] u -> bred x u), _q: ({q : p} path  N[..] q -> path x q))]}
-  [g |- (#p.2) U R] => % [g |- bred x U]
+  [g |- #p.2 U R] => % [g |- bred x U]
    % R : bred N U
    % pt: path x P
   case pt of
@@ -160,7 +160,7 @@ fn br => fn pt => case br of
 
 
 | {#p:#[g |- block (x:tm, _b:({u : nf}  bred N[..] u -> bred x u), _q: ({q : p} path  N[..] q -> path x q))]}
-  [g |- (#p.2) U R] => % [g |- bred x U]
+  [g |- #p.2 U R] => % [g |- bred x U]
   let ([g |- Pt] : [g |- npath U P]) = pt in
   let [g |- Qt] = bred_rtl [g |- R] pt % path N P
   in [g |- #p.3 P Qt]

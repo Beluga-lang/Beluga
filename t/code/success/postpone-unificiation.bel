@@ -126,7 +126,7 @@ mlam T => fn s1, s2, e => case [|- T] of
   let [g |- S2[..]] = s2 in
   LogArr (mlam h,$W, P1, P2 => fn rp =>
    let q0 = f [h] $[h |- $W[..]] [h |- P1[..]] [h |- P2[..]] rp in
-   closed [|- T2] (mstep_app [h |- S1[$W]] ) (mstep_app [h |- S2[$W]]) q0
+   closed [|- T2] (mstep_app [h |- S1[$W]]) (mstep_app [h |- S2[$W]]) q0
   );
 
 % Symmetry of algorithmic equivalence
@@ -314,13 +314,13 @@ with : dctx -> tp -> dctx.
 --infix with 5 right.
 
 inductive Lookup : {G:[|-dctx]}(g:ctx)[g |- tm] -> [ |- tp] -> ctype  =
-| Top : Lookup [|- (G) with T] [g, x:tm |- x] [ |- T]
+| Top : Lookup [|- G with T] [g, x:tm |- x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p[..]] [ |- T]
-      -> Lookup [|- (G) with S] [g, x:tm |- #p[..]] [ |- T];
+      -> Lookup [|- G with S] [g, x:tm |- #p[..]] [ |- T];
 
 inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair] -> [ |- tp] -> ctype
  =
-| DecBeta : Decl [|- G with T] [g, x:tm |- (M2) sim (N2)] [ |- S]
+| DecBeta : Decl [|- G with T] [g, x:tm |- M2 sim N2] [ |- S]
           -> Decl [|-G] [g |- M1[..] sim N1[..]] [ |- T]
           -> Decl [|-G] [g |- (app (lam (\x. M2)) M1[..]) sim N2[.., N1]] [ |- S]
 | DecLam :  Decl [|- G with T] [g, x:tm |- (M) sim (N)] [ |- S]

@@ -1,3 +1,5 @@
+% t : .
+
 LF nat : type =
 | z : nat
 | s : nat -> nat

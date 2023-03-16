@@ -70,7 +70,7 @@ case d of
      [g, b |- F1[.., b.x, b.v, b._t]] in
   [g |- eq_lam (\x.\u. E1)]
 
-| [g |- eval_app1 D1[..] D2[..]] : [g |- (eval (app M[..] N[..]) R[..])] =>
+| [g |- eval_app1 D1[..] D2[..]] : [g |- eval (app M[..] N[..]) R[..]] =>
   (case f of
     | [g |- eval_app1 F1[..] F2[..]] =>
       let [g |- eq_lam (\x.\u. E1)] = deterministic [g |- D1[..]] [g |- F1[..]] in

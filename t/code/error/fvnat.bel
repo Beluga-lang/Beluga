@@ -52,6 +52,6 @@ mlam g  =>
 % but the overall function requires opt[g]
 % THIS IS THE CORRECT BEHAVIOR
   | [g |- lam (\x. (U))] =>
-       free_var [g, x:exp _] [g, x |- (U)]
+       free_var [g, x:exp _] [g, x |- U]
 
 );

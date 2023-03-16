@@ -58,9 +58,9 @@ rec makeproj: {N: [ |- nat]} [ |- member_tp N R Q] -> [xenv:(target Q) |- target
 mlam N  => fn p => case [ |- N] of
 | [ |- z] =>
   let [ |- m_last] = p in
-  [xenv:(target Q) |- (tfst xenv)]
+  [xenv:(target Q) |- tfst xenv]
 | [ |- suc M] =>
-  let [ |- (m_cons L)] : [ |- member_tp (suc N) R (cross T' S)] = p in
+  let [ |- m_cons L] : [ |- member_tp (suc N) R (cross T' S)] = p in
   let [xenv:target S  |- F] = makeproj [ |- M] [ |- L] in
       [xenv:target (cross T' S) |- F[(tsnd xenv)]]
 ;

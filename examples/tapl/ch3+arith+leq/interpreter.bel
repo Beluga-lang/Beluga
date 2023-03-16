@@ -76,7 +76,7 @@ fn m => case m of
    (case isvalue [ |- N] of
       | [ |- yes] =>  (case [ |- M] of
            | [ |- z] => [ |- interim true]
-           | [ |- (succ V)] => (case [ |- N] of [ |- z] => [ |- interim false]
+           | [ |- succ V] => (case [ |- N] of [ |- z] => [ |- interim false]
                    | [ |- succ W] => [ |- interim (leq V W)]
                    | [ |- _]      => [ |- no_interim])
 

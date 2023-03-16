@@ -44,7 +44,7 @@ and rec cpse : (g:ctx)[g |- exp A] -> [g, k:ccont A |- contra] =
 fn e => case e of
 | [g |- ret V] =>
   let [g |- V'] = cps [g |- V] in
-    [g, k |- cthrow k (V'[..] )]
+    [g, k |- cthrow k (V'[..])]
 
 | [g |- app E1 E2] =>
   let [g, k:ccont (arr B A) |- E1'] = cpse [g |- E1] in
@@ -69,7 +69,7 @@ let r1 = cpse [b:block x:value o , _t:cvalue o |- ret b.1] ;
 
 let r2 = cps [ |- lam o \x. ret x] ;
 
-let r3 = cps  [ |- (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x )))))] ;
+let r3 = cps  [ |- lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x ))))] ;
 }%
 
 %{

@@ -17,5 +17,5 @@ fn f => fn l => case l of
         [ |- cons HH TT]
 ;
 
-let l = [ |- (cons (s z) ( cons z nil ))];
+let l = [ |- cons (s z) (cons z nil)];
 let y = map [ |- z] l ;

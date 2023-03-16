@@ -54,7 +54,7 @@ fn h =>  case h of
 % ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
 % we define a little lemma trivial_imp which generates proofs of the right form.
  | [g, u: hil A |- u]    =>
-   let [g |- D] = trivial_imp [g] [g |- A] in [g |- (mp (mp s k) D)]
+   let [g |- D] = trivial_imp [g] [g |- A] in [g |- mp (mp s k) D]
 
  | [g, u: hil _  |- k]  => [g |- mp k k]
  | [g, h: hil _  |- s]  => [g |- mp k s]
@@ -87,7 +87,7 @@ schema ndhilCtx = some [a:o] block _t:nd a, u:hil a  + i + o ;
 rec ndhil : (g:ndhilCtx) [g |- nd A] -> [g |- hil A] =
  / total d (ndhil g a d) /
 fn d =>  case d of
-| [g |- (#p.1)] => [g |- (#p.2)]
+| [g |- #p.1] => [g |- #p.2]
 
 | {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd B1 |- nd B2[..]]}
   [g |- impi \u. D] =>
@@ -120,7 +120,7 @@ fn d =>  case d of
   [g |- noti (\p.(\u.D[.., u, p]))] =>
   let {H:[g, u: hil A, p:o |- hil p]}
       [g, w:block (_t:nd A, u:hil A[..]), p:o |- H[.., w.2, p]] =
-      ndhil [g, w : block (_t:nd B1, u:hil B1[..] ), p:o |- D[.., w.1, p]] in
+      ndhil [g, w : block (_t:nd B1, u:hil B1[..]), p:o |- D[.., w.1, p]] in
   let [g |- H1']  = ded [g, u |- H[.., u,(not A[..])]] in
   let [g |- H1''] = ded [g, u |- H[.., u, A[..]]] in
     [g |- mp (mp n1 H1') H1'']

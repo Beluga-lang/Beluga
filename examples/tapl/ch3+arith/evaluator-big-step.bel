@@ -49,9 +49,9 @@ fn m => case m of
 
 
 %{
-let r = eval [ |- (switch (switch (switch true false false)
+let r = eval [ |- switch (switch (switch true false false)
                                true
                                true)
                        false
-                       false)] ;
+                       false] ;
 }%

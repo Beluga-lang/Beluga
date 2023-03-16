@@ -24,4 +24,4 @@ fn x => fn y => let c = compare x y in
     | [ |- _] => x
 ;
 
-let y = max [ |- (s (s (s z)))] [ |- (s z)] ;
+let y = max [ |- s (s (s z))] [ |- s z] ;

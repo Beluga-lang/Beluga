@@ -24,6 +24,6 @@ fn t => case t of
              | [ |- value V]   => eval [ |- M'[V]]
              | [ |- no_result] => [ |- no_result]
           )
-     | [ |- no_result] => [ |- no_result] )
+     | [ |- no_result] => [ |- no_result])
 | [ |- lam \x. M] => [ |- value (lam \x. M)]
 ;

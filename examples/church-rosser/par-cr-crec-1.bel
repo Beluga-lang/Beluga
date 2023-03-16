@@ -52,11 +52,11 @@ mlam g => fn d => fn e => case d of
       dia [g, b:block y:term, _t:pred y y] [g, b |- R1a[..] b.1 b.2] [g, b |- R1'[..] b.1 b.2] in
 
     let [g |- S''[..]] = subst [g, y, v |- S1'[..] <y, v>] [g |- S2'[..]] in
-      [g |- (dia_result (H1[..] H2[..]) (beta (\y.\v. S1[..] <y, v>) S2[..]) S''[..])]
+      [g |- dia_result (H1[..] H2[..]) (beta (\y.\v. S1[..] <y, v>) S2[..]) S''[..]]
 
 | [g |- ap R1[..] R2[..]] =>
   let  [g |- ap R1'[..] R2'[..]] = e in
-  let [g |- dia_result (N1[..] ) S1[..] S1'[..]] = dia [g] [g |- R1[..]] [g |- R1'[..]] in
+  let [g |- dia_result (N1[..]) S1[..] S1'[..]] = dia [g] [g |- R1[..]] [g |- R1'[..]] in
   let [g |- dia_result N2[..] S2[..] S2'[..]] = dia [g] [g |- R2[..]] [g |- R2'[..]] in
     [g |- dia_result (app N1[..] N2[..]) (ap S1[..] S2[..]) (ap S1'[..] S2'[..])]
 
@@ -126,7 +126,7 @@ conf_result: pred* M' N -> pred* M'' N
           -> conf_prop M' M''.
 
 rec conf : (g:ctx) [g |- pred* M[..] M'[..]] -> [g |- pred* M[..] M''[..]]
-         -> [g |- conf_prop M'[..] (M''[..] )] =
+         -> [g |- conf_prop M'[..] (M''[..])] =
 fn r => fn s => case r of
 | [g |- id*] => let [g |- R*[..]] = s in [g |- conf_result (R*[..]) id*]
 | [g |- next R1[..] (R2*[..])] =>

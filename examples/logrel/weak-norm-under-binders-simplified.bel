@@ -223,7 +223,7 @@ mlam g, #p => fn rs => case [g] of
 
 rec eval : {M:[gamma |- tm A[]]} LogSub [gamma] $[phi |- $S] -> Reduce [ |- A] [phi |- M[$S]] =
 / total m (eval gamma phi a sigma m) /
-mlam M => fn rs => let (rs : LogSub [gamma] $[phi |- $S] ) = rs in
+mlam M => fn rs => let (rs : LogSub [gamma] $[phi |- $S]) = rs in
  case [gamma |- M] of
 | [gamma |- #p] => redVar [gamma] [gamma |- #p] rs
 | [gamma |- app M1 M2]  =>

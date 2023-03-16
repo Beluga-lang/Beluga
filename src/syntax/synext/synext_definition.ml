@@ -911,6 +911,19 @@ end
       \end{aligned}
     } *)
 
+(** Name resolution for computation-level patterns is intricate.
+
+    - All variables outside a pattern are not considered in scope.
+    - All free variables in patterns are considered pattern variables. This
+      includes free meta-variables in contextual LF terms.
+    - Variables introduced by the meta-context occurring in a pattern are
+      considered pattern variables. That is, the pattern meta-context applies
+      to the branch expression.
+    - Bound variables in a pattern (bound by contextual LF abstractions or
+      the meta-context) are not pattern variables.
+    - Patterns have to be linear, meaning that all pattern variables in a
+      pattern-matching branch have to be unique. *)
+
 module Comp = struct
   (** External computation-level kinds. *)
   module rec Kind : sig

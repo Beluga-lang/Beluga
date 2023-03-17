@@ -1,5 +1,7 @@
 (** Map data structure from namespaced identifiers to values. *)
 
+open Support
+
 exception Unbound_identifier of Identifier.t
 
 exception Unbound_qualified_identifier of Qualified_identifier.t
@@ -46,6 +48,55 @@ val lookup_toplevel : Identifier.t -> 'a t -> 'a * 'a t
     @raise Unbound_qualified_identifier
     @raise Unbound_namespace *)
 val lookup : Qualified_identifier.t -> 'a t -> 'a * 'a t
+
+(** [lookup_toplevel_filter identifier p tree] is
+    [lookup_toplevel identifier tree = (value, subtree)] if
+    [p (value, subtree)]. That is, the predicate [p] decides whether
+    [identifier] should be unbound in [tree] after performing the lookup.
+
+    This is useful because lookups performed in computation-level patterns
+    discard all variable bindings in the outer scope.
+
+    @raise Unbound_identifier
+      if [lookup_toplevel identifier tree] raises it, or if
+      [(value, subtree)] does not satisfy [p]. *)
+val lookup_toplevel_filter :
+  Identifier.t -> ('a * 'a t -> bool) -> 'a t -> 'a * 'a t
+
+(** [maximum_lookup identifiers tree] looks up as many bound identifiers in
+    [identifiers] as possible against [tree] in sequence. This effectively
+    matches [identifiers] as a path in [tree].
+
+    [maximum_lookup identifiers tree] is one of three outcomes, in increasing
+    length of matching path:
+
+    + [`Unbound identifiers] if the first identifier in [identifiers] is not
+      bound in [tree], so [identifiers] is not a path in [tree].
+    + [`Partially_bound (bound, (entry, subtree), unbound_identifiers)] if
+      not all identifiers in [identifiers] are bound in [tree], so first few
+      identifiers form a path in [tree].
+    + [`Bound (entry, subtree)] if all identifiers in [identifiers] are
+      bound, so they form a path in [tree]. *)
+val maximum_lookup :
+     Identifier.t List1.t
+  -> 'a t
+  -> [ `Unbound of Identifier.t List1.t
+     | `Partially_bound of
+       ('a * 'a t) List.t * ('a * 'a t) * Identifier.t List1.t
+     | `Bound of 'a * 'a t
+     ]
+
+(** [maximum_lookup_filter identifier p tree] is the analog of
+    {!lookup_toplevel_filter} for {!maximum_lookup}. *)
+val maximum_lookup_filter :
+     Identifier.t List1.t
+  -> ('a * 'a t -> bool)
+  -> 'a t
+  -> [ `Unbound of Identifier.t List1.t
+     | `Partially_bound of
+       ('a * 'a t) List.t * ('a * 'a t) * Identifier.t List1.t
+     | `Bound of 'a * 'a t
+     ]
 
 (** [open_namespace qualified_identifier tree] is the binding tree derived
     from [tree] by adding all the bindings from [subtree] if

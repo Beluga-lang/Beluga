@@ -1,5 +1,5 @@
 open Support
-open Common_disambiguation
+open Disambiguation_state
 
 module type COMP_DISAMBIGUATION = sig
   (** @closed *)

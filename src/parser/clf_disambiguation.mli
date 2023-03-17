@@ -1,6 +1,6 @@
 open Support
 open Beluga_syntax
-open Common_disambiguation
+open Disambiguation_state
 
 module type CLF_DISAMBIGUATION = sig
   (** @closed *)

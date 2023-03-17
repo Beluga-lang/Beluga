@@ -640,8 +640,9 @@ module Make
            - [Stream.nil .tl .hd] (constructor with observations [.tl .hd])
 
            - [fibonacci .tl] (variable/program with observation [.tl]) *)
-        partial_lookup identifier >>= function
-        | `Totally_unbound (List1.T (free_variable, rest))
+        maximum_lookup (Qualified_identifier.to_list1 identifier)
+        >>= function
+        | `Unbound (List1.T (free_variable, rest))
         (* A free computation-level variable with (possibly) trailing
            observations *) -> (
             let location = Identifier.location free_variable in
@@ -654,72 +655,62 @@ module Make
             | x :: xs ->
                 disambiguate_trailing_observations scrutinee
                   (List1.from x xs))
-        | `Partially_bound (bound_segments, unbound_segments) -> (
-            match bound_segments with
-            | List1.T ((variable, entry), [])
-              when Entry.is_computation_variable entry
-                   (* A bound computation-level variable with trailing
-                      observations *) ->
-                let location = Identifier.location variable in
-                let scrutinee =
-                  Synext.Comp.Expression.Variable
-                    { location; identifier = variable }
-                in
-                disambiguate_trailing_observations scrutinee unbound_segments
-            | bound_segments -> (
-                let bound_segments_identifier =
-                  Qualified_identifier.from_list1
-                    (List1.map Pair.fst bound_segments)
-                in
-                match List1.last bound_segments with
-                | _identifier, entry
-                  when Entry.is_computation_term_constructor entry
-                       (* [bound_segments] forms a valid constant *) ->
-                    let location =
-                      Qualified_identifier.location bound_segments_identifier
-                    in
-                    let scrutinee =
-                      Synext.Comp.Expression.Constructor
-                        { location; identifier = bound_segments_identifier }
-                    in
-                    disambiguate_trailing_observations scrutinee
-                      unbound_segments
-                | _identifier, entry
-                  when Entry.is_program_constant entry
-                       (* [bound_segments] forms a valid constant *) ->
-                    let location =
-                      Qualified_identifier.location bound_segments_identifier
-                    in
-                    let scrutinee =
-                      Synext.Comp.Expression.Program
-                        { location; identifier = bound_segments_identifier }
-                    in
-                    disambiguate_trailing_observations scrutinee
-                      unbound_segments
-                | ( _identifier
-                  , entry (* [bound_segments] forms an invalid constant *) )
-                  ->
-                    Error.raise_at1 location
-                      (Error.composite_exception2
-                         (Expected_program_or_constructor_constant
-                            bound_segments_identifier)
-                         (actual_binding_exn bound_segments_identifier entry))
-                ))
-        | `Totally_bound bound_segments (* A constant *) -> (
-            match List1.last bound_segments with
-            | _identifier, entry
-              when Entry.is_computation_term_constructor entry ->
-                return
-                  (Synext.Comp.Expression.Constructor
-                     { location; identifier })
-            | _identifier, entry when Entry.is_program_constant entry ->
-                return
-                  (Synext.Comp.Expression.Program { location; identifier })
-            | _identifier, entry ->
-                Error.raise_at1 location
-                  (Error.composite_exception2
-                     (Expected_program_or_constructor_constant identifier)
-                     (actual_binding_exn identifier entry))))
+        | `Partially_bound ([], (identifier, entry), unbound_segments)
+          when Entry.is_computation_variable entry
+               (* A bound computation-level variable with trailing
+                  observations *) ->
+            let location = Identifier.location identifier in
+            let scrutinee =
+              Synext.Comp.Expression.Variable { location; identifier }
+            in
+            disambiguate_trailing_observations scrutinee unbound_segments
+        | `Partially_bound
+            (bound_segments, (identifier, entry), unbound_segments)
+          when Entry.is_computation_term_constructor entry
+               (* [constant] forms a valid constructor constant *) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            let location = Qualified_identifier.location constant in
+            let scrutinee =
+              Synext.Comp.Expression.Constructor
+                { location; identifier = constant }
+            in
+            disambiguate_trailing_observations scrutinee unbound_segments
+        | `Partially_bound
+            (bound_segments, (identifier, entry), unbound_segments)
+          when Entry.is_program_constant entry
+               (* [constant] forms a valid program constant *) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            let location = Qualified_identifier.location constant in
+            let scrutinee =
+              Synext.Comp.Expression.Program
+                { location; identifier = constant }
+            in
+            disambiguate_trailing_observations scrutinee unbound_segments
+        | `Partially_bound
+            (bound_segments, (identifier, entry), _unbound_segments)
+        (* [constant] forms an invalid constant *) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            Error.raise_at1 location
+              (Error.composite_exception2
+                 (Expected_program_or_constructor_constant constant)
+                 (actual_binding_exn constant entry))
+        | `Bound (identifier, entry)
+          when Entry.is_computation_term_constructor entry ->
+            return
+              (Synext.Comp.Expression.Constructor { location; identifier })
+        | `Bound (identifier, entry) when Entry.is_program_constant entry ->
+            return (Synext.Comp.Expression.Program { location; identifier })
+        | `Bound (identifier, entry) ->
+            Error.raise_at1 location
+              (Error.composite_exception2
+                 (Expected_program_or_constructor_constant identifier)
+                 (actual_binding_exn identifier entry)))
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
         let* body' =
           with_function_parameters parameters
@@ -872,60 +863,59 @@ module Make
       branches
 
   and disambiguate_trailing_observations scrutinee trailing_identifiers =
-    partial_lookup' trailing_identifiers >>= function
-    | `Totally_unbound _ ->
+    maximum_lookup trailing_identifiers >>= function
+    | `Unbound _ ->
         let qualified_identifier =
           Qualified_identifier.from_list1 trailing_identifiers
         in
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
           (Unbound_comp_term_destructor_constant qualified_identifier)
-    | `Partially_bound (bound_segments, unbound_segments) -> (
-        let bound_segments_identifier =
-          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+    | `Partially_bound (bound_segments, (identifier, entry), unbound_segments)
+      when Entry.is_computation_term_destructor entry
+           (* [constant] forms a destructor *) ->
+        let constant =
+          Qualified_identifier.make ~namespaces:bound_segments identifier
         in
-        match List1.last bound_segments with
-        | _identifier, entry
-          when Entry.is_computation_term_destructor entry
-               (* [bound_segments] forms a destructor *) ->
-            let destructor = bound_segments_identifier in
-            let location =
-              Location.join
-                (Synext.location_of_comp_expression scrutinee)
-                (Qualified_identifier.location destructor)
-            in
-            let scrutinee' =
-              Synext.Comp.Expression.Observation
-                { scrutinee; destructor; location }
-            in
-            disambiguate_trailing_observations scrutinee' unbound_segments
-        | _identifier, _entry
-        (* [bound_segments] forms an invalid constant *) ->
-            Error.raise_at1
-              (Qualified_identifier.location bound_segments_identifier)
-              Expected_comp_term_destructor_constant)
-    | `Totally_bound bound_segments -> (
-        let bound_segments_identifier =
-          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+        let destructor = constant in
+        let location =
+          Location.join
+            (Synext.location_of_comp_expression scrutinee)
+            (Qualified_identifier.location destructor)
         in
-        match List1.last bound_segments with
-        | _identifier, entry
-          when Entry.is_computation_term_destructor entry
-               (* [bound_segments] forms a destructor *) ->
-            let destructor = bound_segments_identifier in
-            let location =
-              Location.join
-                (Synext.location_of_comp_expression scrutinee)
-                (Qualified_identifier.location destructor)
-            in
-            return
-              (Synext.Comp.Expression.Observation
-                 { scrutinee; destructor; location })
-        | _identifier, _entry
-        (* [bound_segments] forms an invalid constant *) ->
-            Error.raise_at1
-              (Qualified_identifier.location bound_segments_identifier)
-              Expected_comp_term_destructor_constant)
+        let scrutinee' =
+          Synext.Comp.Expression.Observation
+            { scrutinee; destructor; location }
+        in
+        disambiguate_trailing_observations scrutinee' unbound_segments
+    | `Partially_bound
+        (bound_segments, (identifier, entry), _unbound_segments)
+    (* [constant] forms an invalid constant *) ->
+        let constant =
+          Qualified_identifier.make ~namespaces:bound_segments identifier
+        in
+        Error.raise_at1
+          (Qualified_identifier.location constant)
+          (Error.composite_exception2 Expected_comp_term_destructor_constant
+             (actual_binding_exn constant entry))
+    | `Bound (identifier, entry)
+      when Entry.is_computation_term_destructor entry
+           (* [bound_segments] forms a destructor *) ->
+        let destructor = identifier in
+        let location =
+          Location.join
+            (Synext.location_of_comp_expression scrutinee)
+            (Qualified_identifier.location destructor)
+        in
+        return
+          (Synext.Comp.Expression.Observation
+             { scrutinee; destructor; location })
+    | `Bound (identifier, entry)
+    (* [bound_segments] forms an invalid constant *) ->
+        Error.raise_at1
+          (Qualified_identifier.location identifier)
+          (Error.composite_exception2 Expected_comp_term_destructor_constant
+             (actual_binding_exn identifier entry))
 
   and disambiguate_comp_expression_application objects =
     let* objects' = traverse_list2 guard_expression_operator objects in
@@ -1043,12 +1033,11 @@ module Make
         (* This raw qualified identifier [<identifier> <dot-identifier>+] may
            be a computation-level variable or constant pattern followed by
            observations *)
-        partial_lookup identifier >>= function
-        | `Totally_unbound _ ->
+        let identifiers = Qualified_identifier.to_list1 identifier in
+        maximum_lookup identifiers >>= function
+        | `Unbound _ ->
             (* This is a variable pattern followed by observations *)
-            let[@warning "-8"] (List1.T (variable, d :: ds)) =
-              Qualified_identifier.to_list1 identifier
-            in
+            let[@warning "-8"] (List1.T (variable, d :: ds)) = identifiers in
             let destructors = List1.from d ds in
             let pattern' =
               Synext.Comp.Pattern.Variable
@@ -1080,75 +1069,148 @@ module Make
               ; patterns = pattern' :: patterns
               ; observations
               }
-        | `Partially_bound (List1.T (bound_segment, []), unbound_segments)
-          -> (
-            let constructor =
-              Qualified_identifier.make_simple (Pair.fst bound_segment)
+        | `Partially_bound ([], (identifier, entry), unbound_segments)
+          when Entry.is_computation_term_constructor entry ->
+            (* This is a constructor pattern followed by observations *)
+            let constructor = Qualified_identifier.make_simple identifier in
+            let pattern' =
+              Synext.Comp.Pattern.Constructor
+                { location = Qualified_identifier.location constructor
+                ; identifier = constructor
+                }
             in
-            match bound_segment with
-            | _identifier, entry
-              when Entry.is_computation_term_constructor entry ->
-                (* This is a constructor pattern followed by observations *)
-                let pattern' =
-                  Synext.Comp.Pattern.Constructor
-                    { location = Qualified_identifier.location constructor
-                    ; identifier = constructor
-                    }
-                in
-                let destructors_as_qualified_identifier =
-                  Qualified_identifier.from_list1 unbound_segments
-                in
-                let* { Synext.Comp.Copattern.location = rest_location
-                     ; patterns
-                     ; observations
-                     } =
-                  disambiguate_comp_copattern
-                    (List1.from
-                       (Synprs.Comp.Copattern_object.Raw_observation
-                          { location =
-                              Qualified_identifier.location
-                                destructors_as_qualified_identifier
-                          ; observation = destructors_as_qualified_identifier
-                          })
-                       rest)
-                in
+            let destructors_as_qualified_identifier =
+              Qualified_identifier.from_list1 unbound_segments
+            in
+            let* { Synext.Comp.Copattern.location = rest_location
+                 ; patterns
+                 ; observations
+                 } =
+              disambiguate_comp_copattern
+                (List1.from
+                   (Synprs.Comp.Copattern_object.Raw_observation
+                      { location =
+                          Qualified_identifier.location
+                            destructors_as_qualified_identifier
+                      ; observation = destructors_as_qualified_identifier
+                      })
+                   rest)
+            in
+            return
+              { Synext.Comp.Copattern.location =
+                  Location.join location rest_location
+              ; patterns = pattern' :: patterns
+              ; observations
+              }
+        | `Partially_bound ([], (identifier, entry), _unbound_segments)
+          when Entry.is_variable entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
+            Error.raise_at1 location
+              (Error.composite_exception2
+                 (Expected_constructor_constant qualified_identifier)
+                 (actual_binding_exn qualified_identifier entry))
+        | `Partially_bound ([], (identifier, _entry), unbound_segments) ->
+            (* This is a variable pattern followed by observations *)
+            let pattern' =
+              Synext.Comp.Pattern.Variable
+                { location = Identifier.location identifier; identifier }
+            in
+            let* () = add_free_computation_variable identifier in
+            let destructors_as_qualified_identifier =
+              Qualified_identifier.from_list1 unbound_segments
+            in
+            let* { Synext.Comp.Copattern.location = rest_location
+                 ; patterns
+                 ; observations
+                 } =
+              disambiguate_comp_copattern
+                (List1.from
+                   (Synprs.Comp.Copattern_object.Raw_observation
+                      { location =
+                          Qualified_identifier.location
+                            destructors_as_qualified_identifier
+                      ; observation = destructors_as_qualified_identifier
+                      })
+                   rest)
+            in
+            return
+              { Synext.Comp.Copattern.location =
+                  Location.join location rest_location
+              ; patterns = pattern' :: patterns
+              ; observations
+              }
+        | `Partially_bound
+            (bound_segments, (identifier, entry), unbound_segments)
+          when Entry.is_computation_term_constructor entry ->
+            (* This is a constructor pattern followed by observations *)
+            let constructor =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            let pattern' =
+              Synext.Comp.Pattern.Constructor
+                { location = Qualified_identifier.location constructor
+                ; identifier = constructor
+                }
+            in
+            let destructors_as_qualified_identifier =
+              Qualified_identifier.from_list1 unbound_segments
+            in
+            let* { Synext.Comp.Copattern.location = rest_location
+                 ; patterns
+                 ; observations
+                 } =
+              disambiguate_comp_copattern
+                (List1.from
+                   (Synprs.Comp.Copattern_object.Raw_observation
+                      { location =
+                          Qualified_identifier.location
+                            destructors_as_qualified_identifier
+                      ; observation = destructors_as_qualified_identifier
+                      })
+                   rest)
+            in
+            return
+              { Synext.Comp.Copattern.location =
+                  Location.join location rest_location
+              ; patterns = pattern' :: patterns
+              ; observations
+              }
+        | `Partially_bound
+            (bound_segments, (identifier, entry), _unbound_segments) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            Error.raise_at1
+              (Qualified_identifier.location constant)
+              (Error.composite_exception2
+                 Expected_comp_term_destructor_constant
+                 (actual_binding_exn constant entry))
+        | `Bound (constructor, entry)
+          when Entry.is_computation_term_constructor entry -> (
+            (* This qualified identifier is a constructor pattern *)
+            let pattern' =
+              Synext.Comp.Pattern.Constructor
+                { location = Qualified_identifier.location constructor
+                ; identifier = constructor
+                }
+            in
+            match rest with
+            | [] ->
+                (* The constructor pattern is not followed by copatterns *)
                 return
-                  { Synext.Comp.Copattern.location =
-                      Location.join location rest_location
-                  ; patterns = pattern' :: patterns
-                  ; observations
+                  { Synext.Comp.Copattern.location
+                  ; patterns = [ pattern' ]
+                  ; observations = []
                   }
-            | identifier, entry when Entry.is_variable entry ->
-                let qualified_identifier =
-                  Qualified_identifier.make_simple identifier
-                in
-                Error.raise_at1 location
-                  (Error.composite_exception2
-                     (Expected_constructor_constant qualified_identifier)
-                     (actual_binding_exn qualified_identifier entry))
-            | identifier, _entry ->
-                (* This is a variable pattern followed by observations *)
-                let pattern' =
-                  Synext.Comp.Pattern.Variable
-                    { location = Identifier.location identifier; identifier }
-                in
-                let* () = add_free_computation_variable identifier in
-                let destructors_as_qualified_identifier =
-                  Qualified_identifier.from_list1 unbound_segments
-                in
+            | x :: xs ->
+                (* The constructor pattern is followed by copatterns *)
                 let* { Synext.Comp.Copattern.location = rest_location
                      ; patterns
                      ; observations
                      } =
-                  disambiguate_comp_copattern
-                    (List1.from
-                       (Synprs.Comp.Copattern_object.Raw_observation
-                          { location =
-                              Qualified_identifier.location
-                                destructors_as_qualified_identifier
-                          ; observation = destructors_as_qualified_identifier
-                          })
-                       rest)
+                  disambiguate_comp_copattern (List1.from x xs)
                 in
                 return
                   { Synext.Comp.Copattern.location =
@@ -1156,94 +1218,12 @@ module Make
                   ; patterns = pattern' :: patterns
                   ; observations
                   })
-        | `Partially_bound (bound_segments, unbound_segments) -> (
-            let constructor =
-              Qualified_identifier.from_list1
-                (List1.map Pair.fst bound_segments)
-            in
-            match List1.last bound_segments with
-            | _identifier, entry
-              when Entry.is_computation_term_constructor entry ->
-                (* This is a constructor pattern followed by observations *)
-                let pattern' =
-                  Synext.Comp.Pattern.Constructor
-                    { location = Qualified_identifier.location constructor
-                    ; identifier = constructor
-                    }
-                in
-                let destructors_as_qualified_identifier =
-                  Qualified_identifier.from_list1 unbound_segments
-                in
-                let* { Synext.Comp.Copattern.location = rest_location
-                     ; patterns
-                     ; observations
-                     } =
-                  disambiguate_comp_copattern
-                    (List1.from
-                       (Synprs.Comp.Copattern_object.Raw_observation
-                          { location =
-                              Qualified_identifier.location
-                                destructors_as_qualified_identifier
-                          ; observation = destructors_as_qualified_identifier
-                          })
-                       rest)
-                in
-                return
-                  { Synext.Comp.Copattern.location =
-                      Location.join location rest_location
-                  ; patterns = pattern' :: patterns
-                  ; observations
-                  }
-            | _identifier, entry ->
-                Error.raise_at1
-                  (Qualified_identifier.location constructor)
-                  (Error.composite_exception2
-                     Expected_comp_term_destructor_constant
-                     (actual_binding_exn constructor entry)))
-        | `Totally_bound bound_segments -> (
-            let constructor =
-              Qualified_identifier.from_list1
-                (List1.map Pair.fst bound_segments)
-            in
-            match List1.last bound_segments with
-            | _identifier, entry
-              when Entry.is_computation_term_constructor entry -> (
-                (* This qualified identifier is a constructor pattern *)
-                let pattern' =
-                  Synext.Comp.Pattern.Constructor
-                    { location = Qualified_identifier.location constructor
-                    ; identifier = constructor
-                    }
-                in
-                match rest with
-                | [] ->
-                    (* The constructor pattern is not followed by
-                       copatterns *)
-                    return
-                      { Synext.Comp.Copattern.location
-                      ; patterns = [ pattern' ]
-                      ; observations = []
-                      }
-                | x :: xs ->
-                    (* The constructor pattern is followed by copatterns *)
-                    let* { Synext.Comp.Copattern.location = rest_location
-                         ; patterns
-                         ; observations
-                         } =
-                      disambiguate_comp_copattern (List1.from x xs)
-                    in
-                    return
-                      { Synext.Comp.Copattern.location =
-                          Location.join location rest_location
-                      ; patterns = pattern' :: patterns
-                      ; observations
-                      })
-            | _identifier, entry ->
-                Error.raise_at1
-                  (Qualified_identifier.location constructor)
-                  (Error.composite_exception2
-                     Expected_comp_term_destructor_constant
-                     (actual_binding_exn constructor entry))))
+        | `Bound (constructor, entry) ->
+            Error.raise_at1
+              (Qualified_identifier.location constructor)
+              (Error.composite_exception2
+                 Expected_comp_term_destructor_constant
+                 (actual_binding_exn constructor entry)))
     | Synprs.Comp.Copattern_object.Raw_observation { location; observation }
       -> (
         (* This raw observation may be multiple observations *)
@@ -1304,45 +1284,42 @@ module Make
               })
 
   and disambiguate_destructors identifiers =
-    partial_lookup' identifiers >>= function
-    | `Totally_unbound _ ->
+    maximum_lookup identifiers >>= function
+    | `Unbound _ ->
         let qualified_identifier =
           Qualified_identifier.from_list1 identifiers
         in
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
           (Unbound_comp_term_destructor_constant qualified_identifier)
-    | `Partially_bound (bound_segments, unbound_segments) -> (
-        let bound_segments_identifier =
-          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+    | `Partially_bound (bound_segments, (identifier, entry), unbound_segments)
+      when Entry.is_computation_term_destructor entry
+           (* [bound_segments] forms a destructor *) ->
+        let destructor =
+          Qualified_identifier.make ~namespaces:bound_segments identifier
         in
-        match List1.last bound_segments with
-        | _identifier, entry
-          when Entry.is_computation_term_destructor entry
-               (* [bound_segments] forms a destructor *) ->
-            let destructor = bound_segments_identifier in
-            let* destructors = disambiguate_destructors unbound_segments in
-            return (List1.cons destructor destructors)
-        | _identifier, _entry
-        (* [bound_segments] forms an invalid constant *) ->
-            Error.raise_at1
-              (Qualified_identifier.location bound_segments_identifier)
-              Expected_comp_term_destructor_constant)
-    | `Totally_bound bound_segments -> (
-        let bound_segments_identifier =
-          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+        let* destructors = disambiguate_destructors unbound_segments in
+        return (List1.cons destructor destructors)
+    | `Partially_bound
+        (bound_segments, (identifier, entry), _unbound_segments)
+    (* [bound_segments] forms an invalid constant *) ->
+        let constant =
+          Qualified_identifier.make ~namespaces:bound_segments identifier
         in
-        match List1.last bound_segments with
-        | _identifier, entry
-          when Entry.is_computation_term_destructor entry
-               (* [bound_segments] forms a destructor *) ->
-            let destructor = bound_segments_identifier in
-            return (List1.singleton destructor)
-        | _identifier, _entry
-        (* [bound_segments] forms an invalid constant *) ->
-            Error.raise_at1
-              (Qualified_identifier.location bound_segments_identifier)
-              Expected_comp_term_destructor_constant)
+        Error.raise_at1
+          (Qualified_identifier.location constant)
+          (Error.composite_exception2 Expected_comp_term_destructor_constant
+             (actual_binding_exn constant entry))
+    | `Bound (identifier, entry)
+      when Entry.is_computation_term_destructor entry
+           (* [bound_segments] forms a destructor *) ->
+        return (List1.singleton identifier)
+    | `Bound (identifier, entry)
+    (* [bound_segments] forms an invalid constant *) ->
+        Error.raise_at1
+          (Qualified_identifier.location identifier)
+          (Error.composite_exception2 Expected_comp_term_destructor_constant
+             (actual_binding_exn identifier entry))
 
   and disambiguate_trailing_observation_copatterns destructor objects =
     (* [destructor] appears before [objects], so patterns in [objects] are

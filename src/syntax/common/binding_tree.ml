@@ -106,8 +106,9 @@ let lookup qualified_identifier tree =
   with_namespaces_and_identifier qualified_identifier lookup_nested tree
 
 let lookup_toplevel_filter identifier p tree =
-  let result = lookup_toplevel identifier tree in
-  if p result then result else Error.raise (Unbound_identifier identifier)
+  let value, subtree = lookup_toplevel identifier tree in
+  if p value then (value, subtree)
+  else Error.raise (Unbound_identifier identifier)
 
 let rec maximum_lookup identifiers tree =
   match identifiers with
@@ -122,9 +123,9 @@ let rec maximum_lookup identifiers tree =
           match maximum_lookup (List1.from x2 xs) subtree with
           | `Bound result -> `Bound result
           | `Partially_bound (bound, result, unbound) ->
-              `Partially_bound ((entry, subtree) :: bound, result, unbound)
+              `Partially_bound (x1 :: bound, result, unbound)
           | `Unbound unbound ->
-              `Partially_bound ([], (entry, subtree), unbound)))
+              `Partially_bound ([], (x1, entry, subtree), unbound)))
 
 let rec maximum_lookup_filter identifiers p tree =
   match identifiers with
@@ -132,19 +133,19 @@ let rec maximum_lookup_filter identifiers p tree =
       match Identifier.Hamt.find_opt identifier tree with
       | Option.None -> `Unbound (List1.singleton identifier)
       | Option.Some { entry; subtree } ->
-          if p (entry, subtree) then `Bound (entry, subtree)
+          if p entry then `Bound (entry, subtree)
           else `Unbound (List1.singleton identifier))
   | List1.T (x1, x2 :: xs) -> (
       match Identifier.Hamt.find_opt x1 tree with
       | Option.None -> `Unbound identifiers
       | Option.Some { entry; subtree } ->
-          if p (entry, subtree) then
+          if p entry then
             match maximum_lookup_filter (List1.from x2 xs) p subtree with
             | `Bound result -> `Bound result
             | `Partially_bound (bound, result, unbound) ->
-                `Partially_bound ((entry, subtree) :: bound, result, unbound)
+                `Partially_bound (x1 :: bound, result, unbound)
             | `Unbound unbound ->
-                `Partially_bound ([], (entry, subtree), unbound)
+                `Partially_bound ([], (x1, entry, subtree), unbound)
           else `Unbound identifiers)
 
 let open_namespace qualified_identifier tree =

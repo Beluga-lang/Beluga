@@ -548,8 +548,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 })
             base projections
         in
-        partial_lookup identifier >>= function
-        | `Totally_unbound (List1.T (free_variable, projections)) ->
+        maximum_lookup (Qualified_identifier.to_list1 identifier)
+        >>= function
+        | `Unbound (List1.T (free_variable, projections)) ->
             (* Projections of a free variable. *)
             let* () = add_free_meta_variable free_variable in
             let location = Identifier.location free_variable in
@@ -559,7 +560,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             in
             return (reduce_projections term projections)
         | `Partially_bound
-            (List1.T ((variable_identifier, entry), []), unbound_segments)
+            ([], (variable_identifier, entry), unbound_segments)
           when Entry.is_lf_variable entry
                (* Projections of an LF-bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -569,7 +570,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             in
             return (reduce_projections term (List1.to_list unbound_segments))
         | `Partially_bound
-            (List1.T ((variable_identifier, entry), []), unbound_segments)
+            ([], (variable_identifier, entry), unbound_segments)
           when Entry.is_meta_variable entry
                (* Projections of a bound meta-variable *) ->
             let location = Identifier.location variable_identifier in
@@ -578,33 +579,31 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 { location; identifier = variable_identifier }
             in
             return (reduce_projections term (List1.to_list unbound_segments))
-        | `Partially_bound (bound_segments, unbound_segments)
-        (* Projections of a bound constant *) -> (
+        | `Partially_bound
+            (bound_segments, (identifier, entry), unbound_segments)
+          when Entry.is_lf_term_constant entry ->
             let constant =
-              Qualified_identifier.from_list1
-                (List1.map Pair.fst bound_segments)
+              Qualified_identifier.make ~namespaces:bound_segments identifier
             in
-            match List1.last bound_segments with
-            | _identifier, entry when Entry.is_lf_term_constant entry ->
-                let location = Qualified_identifier.location constant in
-                let term =
-                  Synext.CLF.Term.Constant
-                    { location; identifier = constant }
-                in
-                return
-                  (reduce_projections term (List1.to_list unbound_segments))
-            | _identifier, entry ->
-                Error.raise_at1 location
-                  (Error.composite_exception2 Illegal_clf_term_projection
-                     (actual_binding_exn constant entry)))
-        | `Totally_bound bound_segments (* A constant *) -> (
-            match List1.last bound_segments with
-            | _identifier, entry when Entry.is_lf_term_constant entry ->
-                return (Synext.CLF.Term.Constant { identifier; location })
-            | _identifier, entry ->
-                Error.raise_at1 location
-                  (Error.composite_exception2 Expected_clf_term_constant
-                     (actual_binding_exn identifier entry))))
+            let location = Qualified_identifier.location constant in
+            let term =
+              Synext.CLF.Term.Constant { location; identifier = constant }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound
+            (bound_segments, (identifier, entry), _unbound_segments) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            Error.raise_at1 location
+              (Error.composite_exception2 Illegal_clf_term_projection
+                 (actual_binding_exn constant entry))
+        | `Bound (identifier, entry) when Entry.is_lf_term_constant entry ->
+            return (Synext.CLF.Term.Constant { identifier; location })
+        | `Bound (identifier, entry) ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_clf_term_constant
+                 (actual_binding_exn identifier entry)))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         (* We don't have to disambiguate the qualified identifiers in
            [objects] before we disambiguate applications. It is always the
@@ -977,8 +976,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 })
             base projections
         in
-        partial_lookup identifier >>= function
-        | `Totally_unbound (List1.T (free_variable, projections))
+        maximum_lookup (Qualified_identifier.to_list1 identifier)
+        >>= function
+        | `Unbound (List1.T (free_variable, projections))
         (* Projections of a free variable *) ->
             let location = Identifier.location free_variable in
             let term =
@@ -988,7 +988,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let* () = add_free_meta_variable free_variable in
             return (reduce_projections term projections)
         | `Partially_bound
-            (List1.T ((variable_identifier, entry), []), unbound_segments)
+            ([], (variable_identifier, entry), unbound_segments)
           when Entry.is_lf_variable entry
                (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -998,7 +998,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             in
             return (reduce_projections term (List1.to_list unbound_segments))
         | `Partially_bound
-            (List1.T ((variable_identifier, entry), []), unbound_segments)
+            ([], (variable_identifier, entry), unbound_segments)
           when Entry.is_meta_variable entry
                (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -1007,7 +1007,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 { location; identifier = variable_identifier }
             in
             return (reduce_projections term (List1.to_list unbound_segments))
-        | `Partially_bound (List1.T ((identifier, entry), []), _) ->
+        | `Partially_bound ([], (identifier, entry), _) ->
             let identifier_location = Identifier.location identifier in
             let qualified_identifier =
               Qualified_identifier.make_simple identifier
@@ -1016,35 +1016,32 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
         | `Partially_bound
-            ((List1.T (_, _ :: _) as bound_segments), unbound_segments)
-        (* Projections of a bound constant *) -> (
+            (bound_segments, (identifier, entry), unbound_segments)
+          when Entry.is_lf_term_constant entry ->
             let constant =
-              Qualified_identifier.from_list1
-                (List1.map Pair.fst bound_segments)
+              Qualified_identifier.make ~namespaces:bound_segments identifier
             in
-            match List1.last bound_segments with
-            | _identifier, entry when Entry.is_lf_term_constant entry ->
-                let location = Qualified_identifier.location constant in
-                let term =
-                  Synext.CLF.Term.Pattern.Constant
-                    { location; identifier = constant }
-                in
-                return
-                  (reduce_projections term (List1.to_list unbound_segments))
-            | _identifier, entry ->
-                Error.raise_at1 location
-                  (Error.composite_exception2 Illegal_clf_term_projection
-                     (actual_binding_exn constant entry)))
-        | `Totally_bound bound_segments (* A constant *) -> (
-            match List1.last bound_segments with
-            | _identifier, entry when Entry.is_lf_term_constant entry ->
-                return
-                  (Synext.CLF.Term.Pattern.Constant { identifier; location })
-            | _identifier, entry ->
-                Error.raise_at1 location
-                  (Error.composite_exception2 Expected_clf_term_constant
-                     (Disambiguation_state.actual_binding_exn identifier
-                        entry))))
+            let location = Qualified_identifier.location constant in
+            let term =
+              Synext.CLF.Term.Pattern.Constant
+                { location; identifier = constant }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound
+            (bound_segments, (identifier, entry), _unbound_segments) ->
+            let constant =
+              Qualified_identifier.make ~namespaces:bound_segments identifier
+            in
+            Error.raise_at1 location
+              (Error.composite_exception2 Illegal_clf_term_projection
+                 (actual_binding_exn constant entry))
+        | `Bound (identifier, entry) when Entry.is_lf_term_constant entry ->
+            return
+              (Synext.CLF.Term.Pattern.Constant { identifier; location })
+        | `Bound (identifier, entry) ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_clf_term_constant
+                 (Disambiguation_state.actual_binding_exn identifier entry)))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term_pattern applicand in

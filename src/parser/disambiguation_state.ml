@@ -323,21 +323,14 @@ module type DISAMBIGUATION_STATE = sig
 
   val lookup : Qualified_identifier.t -> (Entry.t, exn) Result.t t
 
-  val partial_lookup :
-       Qualified_identifier.t
-    -> [ `Partially_bound of
-         (Identifier.t * Entry.t) List1.t * Identifier.t List1.t
-       | `Totally_bound of (Identifier.t * Entry.t) List1.t
-       | `Totally_unbound of Identifier.t List1.t
-       ]
-       t
-
-  val partial_lookup' :
+  val maximum_lookup :
        Identifier.t List1.t
-    -> [ `Partially_bound of
-         (Identifier.t * Entry.t) List1.t * Identifier.t List1.t
-       | `Totally_bound of (Identifier.t * Entry.t) List1.t
-       | `Totally_unbound of Identifier.t List1.t
+    -> [ `Unbound of Identifier.t List1.t
+       | `Partially_bound of
+         Identifier.t List.t
+         * (Identifier.t * Entry.t)
+         * Identifier.t List1.t
+       | `Bound of Qualified_identifier.t * Entry.t
        ]
        t
 
@@ -882,23 +875,6 @@ module Persistent_disambiguation_state = struct
 
   (** {1 Free Variables} *)
 
-  let get_inner_pattern_bindings =
-    let* state = get in
-    match state.substate with
-    | Pattern_state substate ->
-        return (Option.some substate.inner_pattern_bindings)
-    | Module_state _
-    | Scope_state _ ->
-        return Option.none
-
-  let is_inner_pattern_binding identifier =
-    get_inner_pattern_bindings >>= function
-    | Option.Some inner_pattern_bindings ->
-        return
-          (Option.some
-             (Identifier.Hamt.mem identifier inner_pattern_bindings))
-    | Option.None -> return Option.none
-
   let push_inner_pattern_binding identifier entry =
     modify (fun state ->
         match state.substate with
@@ -1117,47 +1093,35 @@ module Persistent_disambiguation_state = struct
 
   (** {1 Lookups} *)
 
-  let forget_variables_outside_pattern' inner_pattern_bindings_opt query
-      entry subtree =
-    if Entry.is_variable entry then
-      match inner_pattern_bindings_opt with
-      | Option.None -> (entry, subtree)
-      | Option.Some inner_pattern_bindings ->
-          if Identifier.Hamt.mem query inner_pattern_bindings then
-            (entry, subtree)
-          else Error.raise (Unbound_identifier query)
-    else (entry, subtree)
-
-  let forget_variables_outside_pattern query entry subtree =
-    if Entry.is_variable entry then
-      is_inner_pattern_binding query >>= function
-      | Option.None
-      | Option.Some true ->
-          return (entry, subtree)
-      | Option.Some false -> Error.raise (Unbound_identifier query)
-    else return (entry, subtree)
-
   let lookup_toplevel' query =
-    let* bindings = get_bindings in
-    try
-      let entry, subtree = Binding_tree.lookup_toplevel query bindings in
-      forget_variables_outside_pattern query entry subtree
-    with
-    | Binding_tree.Unbound_identifier identifier -> (
-        get_inner_pattern_bindings >>= function
-        | Option.None -> Error.raise (Unbound_identifier identifier)
-        | Option.Some inner_pattern_bindings -> (
+    get_substate >>= function
+    | Pattern_state { pattern_bindings; inner_pattern_bindings; _ } -> (
+        try
+          let entry, _subtree =
+            Binding_tree.lookup_toplevel_filter query
+              (fun entry -> Bool.not (Entry.is_variable entry))
+              pattern_bindings
+          in
+          return entry
+        with
+        | Binding_tree.Unbound_identifier _ -> (
             match Identifier.Hamt.find_opt query inner_pattern_bindings with
-            | Option.Some (List1.T (entry, _)) ->
-                return (entry, Binding_tree.empty)
-            | Option.None -> Error.raise (Unbound_identifier identifier)))
+            | Option.Some (List1.T (entry, _)) -> return entry
+            | Option.None -> Error.raise (Unbound_identifier query)))
+    | _ ->
+        let* bindings = get_bindings in
+        let entry, _subtree = Binding_tree.lookup_toplevel query bindings in
+        return entry
 
   let lookup_toplevel query =
     try_catch
       (lazy
-        (let* entry, _subtree = lookup_toplevel' query in
+        (let* entry = lookup_toplevel' query in
          return (Result.ok entry)))
-      ~on_exn:(fun cause -> return (Result.error cause))
+      ~on_exn:(function
+        | Binding_tree.Unbound_identifier identifier ->
+            return (Result.error (Unbound_identifier identifier))
+        | cause -> return (Result.error cause))
 
   let lookup' query =
     let* bindings = get_bindings in
@@ -1177,59 +1141,42 @@ module Persistent_disambiguation_state = struct
          return (Result.ok entry)))
       ~on_exn:(fun cause -> return (Result.error cause))
 
-  let rec partial_lookup_nested inner_pattern_bindings_opt namespaces
-      identifier tree =
-    match namespaces with
-    | [] -> (
-        try
-          let entry, subtree =
-            Binding_tree.lookup_toplevel identifier tree
-          in
-          (* TODO: Refactor *)
-          ignore
-            (forget_variables_outside_pattern' inner_pattern_bindings_opt
-               identifier entry subtree);
-          `Totally_bound (List1.singleton (identifier, entry))
-        with
-        | Unbound_identifier _
-        | Binding_tree.Unbound_identifier _ ->
-            `Totally_unbound (List1.singleton identifier))
-    | x :: xs -> (
-        try
-          let entry, subtree = Binding_tree.lookup_toplevel x tree in
-          (* TODO: Refactor *)
-          ignore
-            (forget_variables_outside_pattern' inner_pattern_bindings_opt x
-               entry subtree);
-          match
-            partial_lookup_nested inner_pattern_bindings_opt xs identifier
-              subtree
-          with
-          | `Totally_bound xs' -> `Totally_bound (List1.cons (x, entry) xs')
-          | `Partially_bound (bound, unbound) ->
-              `Partially_bound (List1.cons (x, entry) bound, unbound)
-          | `Totally_unbound xs' ->
-              `Partially_bound (List1.singleton (x, entry), xs')
-        with
-        | Unbound_identifier _
-        | Binding_tree.Unbound_identifier _ ->
-            `Totally_unbound
-              (List1.append (List1.from x xs) (List1.singleton identifier)))
+  let discard_subtree_maximum_lookup query = function
+    | `Unbound _ as result -> result
+    | `Partially_bound
+        (bound_segments, (identifier, entry, _subtree), unbound_segments) ->
+        `Partially_bound
+          (bound_segments, (identifier, entry), unbound_segments)
+    | `Bound (entry, _subtree) ->
+        `Bound (Qualified_identifier.from_list1 query, entry)
 
-  let partial_lookup' query =
-    let namespaces, identifier = List1.unsnoc query in
-    let* inner_pattern_bindings_opt = get_inner_pattern_bindings in
-    let* bindings = get_bindings in
-    return
-      (partial_lookup_nested inner_pattern_bindings_opt namespaces identifier
-         bindings)
-
-  let partial_lookup query =
-    let identifier = Qualified_identifier.name query
-    and namespaces = Qualified_identifier.namespaces query in
-    let* inner_pattern_bindings_opt = get_inner_pattern_bindings in
-    get_bindings
-    $> partial_lookup_nested inner_pattern_bindings_opt namespaces identifier
+  let maximum_lookup query =
+    get_substate >>= function
+    | Pattern_state { pattern_bindings; inner_pattern_bindings; _ } -> (
+        match
+          discard_subtree_maximum_lookup query
+            (Binding_tree.maximum_lookup_filter query
+               (fun entry -> Bool.not (Entry.is_variable entry))
+               pattern_bindings)
+        with
+        | `Unbound _ as r -> (
+            let (List1.T (x, xs)) = query in
+            match Identifier.Hamt.find_opt x inner_pattern_bindings with
+            | Option.Some (List1.T (entry, _)) -> (
+                match xs with
+                | [] ->
+                    return
+                      (`Bound (Qualified_identifier.make_simple x, entry))
+                | y :: ys ->
+                    return
+                      (`Partially_bound ([], (x, entry), List1.from y ys)))
+            | Option.None -> return r)
+        | r -> return r)
+    | _ ->
+        let* bindings = get_bindings in
+        return
+          (discard_subtree_maximum_lookup query
+             (Binding_tree.maximum_lookup query bindings))
 
   let add_synonym ?location qualified_identifier synonym =
     let* entry, subtree = lookup' qualified_identifier in
@@ -1270,29 +1217,29 @@ module Persistent_disambiguation_state = struct
     &> m
     <& pop_inner_pattern_binding identifier
 
-  let with_inner_bound_lf_variable ?location identifier m =
+  let with_inner_bound_lf_variable ?location identifier =
     let entry = make_lf_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
-  let with_inner_bound_meta_variable ?location identifier m =
+  let with_inner_bound_meta_variable ?location identifier =
     let entry = make_meta_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
-  let with_inner_bound_parameter_variable ?location identifier m =
+  let with_inner_bound_parameter_variable ?location identifier =
     let entry = make_parameter_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
-  let with_inner_bound_substitution_variable ?location identifier m =
+  let with_inner_bound_substitution_variable ?location identifier =
     let entry = make_substitution_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
-  let with_inner_bound_context_variable ?location identifier m =
+  let with_inner_bound_context_variable ?location identifier =
     let entry = make_context_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
-  let with_inner_bound_contextual_variable ?location identifier m =
+  let with_inner_bound_contextual_variable ?location identifier =
     let entry = make_contextual_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry m
+    with_inner_bound_entry identifier entry
 
   let with_lf_variable ?location identifier m =
     with_bindings_checkpoint

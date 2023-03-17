@@ -50,18 +50,18 @@ val lookup_toplevel : Identifier.t -> 'a t -> 'a * 'a t
 val lookup : Qualified_identifier.t -> 'a t -> 'a * 'a t
 
 (** [lookup_toplevel_filter identifier p tree] is
-    [lookup_toplevel identifier tree = (value, subtree)] if
-    [p (value, subtree)]. That is, the predicate [p] decides whether
-    [identifier] should be unbound in [tree] after performing the lookup.
+    [lookup_toplevel identifier tree = (value, subtree)] if [p value]. That
+    is, the predicate [p] decides whether [identifier] should be unbound in
+    [tree] after performing the lookup.
 
     This is useful because lookups performed in computation-level patterns
     discard all variable bindings in the outer scope.
 
     @raise Unbound_identifier
-      if [lookup_toplevel identifier tree] raises it, or if
-      [(value, subtree)] does not satisfy [p]. *)
+      if [lookup_toplevel identifier tree] raises it, or if [value] does not
+      satisfy [p]. *)
 val lookup_toplevel_filter :
-  Identifier.t -> ('a * 'a t -> bool) -> 'a t -> 'a * 'a t
+  Identifier.t -> ('a -> bool) -> 'a t -> 'a * 'a t
 
 (** [maximum_lookup identifiers tree] looks up as many bound identifiers in
     [identifiers] as possible against [tree] in sequence. This effectively
@@ -82,7 +82,9 @@ val maximum_lookup :
   -> 'a t
   -> [ `Unbound of Identifier.t List1.t
      | `Partially_bound of
-       ('a * 'a t) List.t * ('a * 'a t) * Identifier.t List1.t
+       Identifier.t List.t
+       * (Identifier.t * 'a * 'a t)
+       * Identifier.t List1.t
      | `Bound of 'a * 'a t
      ]
 
@@ -90,11 +92,13 @@ val maximum_lookup :
     {!lookup_toplevel_filter} for {!maximum_lookup}. *)
 val maximum_lookup_filter :
      Identifier.t List1.t
-  -> ('a * 'a t -> bool)
+  -> ('a -> bool)
   -> 'a t
   -> [ `Unbound of Identifier.t List1.t
      | `Partially_bound of
-       ('a * 'a t) List.t * ('a * 'a t) * Identifier.t List1.t
+       Identifier.t List.t
+       * (Identifier.t * 'a * 'a t)
+       * Identifier.t List1.t
      | `Bound of 'a * 'a t
      ]
 

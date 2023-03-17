@@ -21,7 +21,7 @@ module Signature_parser = Signature_parser
 
 (** {1 Disambiguation} *)
 
-module type DISAMBIGUATION_STATE = Common_disambiguation.DISAMBIGUATION_STATE
+module type DISAMBIGUATION_STATE = Disambiguation_state.DISAMBIGUATION_STATE
 
 module Application_disambiguation = Application_disambiguation
 module Lf_disambiguation = Lf_disambiguation
@@ -118,6 +118,7 @@ struct
   let parse parser =
     let* parser_state = get_parser_state in
     let parser_state', parsed = Parser_state.run parser parser_state in
+    (* FIXME: Restructure exception *)
     let* () = put_parser_state parser_state' in
     return parsed
 
@@ -200,7 +201,7 @@ module Simple = struct
     Parser_combinator.Make_persistent_state (Located_token)
 
   module Disambiguation_state =
-    Common_disambiguation.Persistent_disambiguation_state
+    Disambiguation_state.Persistent_disambiguation_state
 
   include Make (Parser_state) (Disambiguation_state)
 

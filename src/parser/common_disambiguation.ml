@@ -140,7 +140,9 @@ let () =
     | Invalid_prefix_pragma { actual_arity } -> (
         match actual_arity with
         | Option.Some actual_arity ->
-            Format.dprintf "Can't make an operator with arity %d prefix."
+            Format.dprintf
+              "Can't make an operator with arity %d prefix.@ Prefix \
+               operators must have arity 1."
               actual_arity
         | Option.None ->
             Format.dprintf
@@ -149,7 +151,9 @@ let () =
     | Invalid_infix_pragma { actual_arity } -> (
         match actual_arity with
         | Option.Some actual_arity ->
-            Format.dprintf "Can't make an operator with arity %d infix."
+            Format.dprintf
+              "Can't make an operator with arity %d infix.@ Infix operators \
+               must have arity 2."
               actual_arity
         | Option.None ->
             Format.dprintf
@@ -158,7 +162,9 @@ let () =
     | Invalid_postfix_pragma { actual_arity } -> (
         match actual_arity with
         | Option.Some actual_arity ->
-            Format.dprintf "Can't make an operator with arity %d postfix."
+            Format.dprintf
+              "Can't make an operator with arity %d postfix.@ Postfix \
+               operators must have arity 1."
               actual_arity
         | Option.None ->
             Format.dprintf

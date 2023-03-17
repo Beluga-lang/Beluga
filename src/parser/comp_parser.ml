@@ -511,13 +511,13 @@ module Make
       <comp-expression-object2> ::=
         | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>
         | `fun' [`|'] <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>
-        (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
+          (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
         | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression-object>
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
         | `impossible' <comp-expression-object>
         | `case' <comp-expression-object> `of' [`--not']
-        [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
-        (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
+          [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
         | <comp-expresion-object3>
 
       <comp-expression-object3> ::=

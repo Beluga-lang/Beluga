@@ -1,7 +1,7 @@
 \documentclass[11pt]{article}
 
 \usepackage[utf8x]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
 
 \usepackage[margin=1in]{geometry}
 
@@ -32,6 +32,8 @@
 \acrodef{AST}{abstract syntax tree}
 \acrodefplural{AST}[ASTs]{abstract syntax trees}
 
+\acrodef{EBNF}{extended Backus-Naur form}
+
 \title{%
 \Beluga Language Specification%
 \\\Large\textit{Release 1.0}
@@ -55,7 +57,7 @@ It is intended to serve as a specification for validating the parser's implement
 Rewriting of the grammar for optimization, left recursion elimination, and disambiguation purposes is outside the scope of this presentation.
 Section~\ref{section:resolving-grammar-ambiguities} presents a context-free grammar for \Beluga that is suitable for parsing with a separate stage for disambiguation.
 
-The EBNF metasyntax used in the sections hereafter follows this notation:
+The \ac{EBNF} metasyntax used in the sections hereafter follows this notation:
 
 \begin{itemize}
 \item $ (a)* $ represents the repeated application of $ a $ zero or more times.
@@ -191,7 +193,7 @@ The production \synt{any} stands for any unicode character.
 
 <identifier-continue> ::= <any> - (<ascii-control> | <white-space> | <reserved-character>)
 
-<identifier-start> ::= <identifier-continue> - <digit>
+<identifier-start> ::= <identifier-continue> - (<digit> | `$' | `#')
 
 <identifier> ::= <identifier-start> <identifier-continue>* \hfill \texttt{(* Identifier definition *)}
 
@@ -451,9 +453,9 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
   `in' <comp-expression> \hfill \texttt{(* Let *)}\\
 | <meta-object> \hfill \texttt{(* Meta-object *)}\\
 | `impossible' <comp-expression> \hfill \texttt{(* Impossible case analysis *)} \\
-| `case' <comp-expression> [`----not'] `of'\\{}
+| `case' <comp-expression> [`--not'] `of'\\{}
   [`|'] <comp-case-branch>\\
-  (`|' <comp-case-branch>>)* \hfill \texttt{(* Case analysis *)}\\
+  (`|' <comp-case-branch>)* \hfill \texttt{(* Case analysis *)}\\
 | `(' <comp-expression> (`,' <comp-expression>)+ `)' \hfill \texttt{(* Tuple *)}\\
 | `?' [<identifier>] \hfill \texttt{(* Hole *)}\\
 | `_' \hfill \texttt{(* Box hole *)}\\
@@ -602,19 +604,20 @@ In particular, pragmas allow the user to choose a notation for operators.
 
 \begin{grammar}
 <pragma> ::= \hfill\\
-| `----prefix' <qualified-identifier> [<precedence>] `.'\\
-| `----infix' <qualified-identifier> [<precedence>] [<associativity>] `.'\\
-| `----postfix' <qualified-identifier> [<precedence>] `.'\\
-| `----name' <qualified-identifier> <identifier> [<identifier>] `.'\\
-| `----not'\\
-| `----assoc <associativity> `.'\\
-| `----open <qualified-identifier> `.'\\
-| `----abbrev <qualified-identifier> <identifier> `.'
+| `--prefix' <qualified-identifier> [<precedence>] `.'\\
+| `--infix' <qualified-identifier> [<precedence>] [<associativity>] `.'\\
+| `--postfix' <qualified-identifier> [<precedence>] `.'\\
+| `--name' <qualified-identifier> <identifier> [<identifier>] `.'\\
+| `--not'\\
+| `--assoc <associativity> `.'\\
+| `--open <qualified-identifier> `.'\\
+| `--abbrev <qualified-identifier> <identifier> `.'\\
+| `--query' (`*' | <integer>) (`*' | <integer>) (`{' <meta-object-identifier> `:' <meta-type> `}')* [<identifier> `:'] <lf-term> `.'
 
 <global-pragma> ::= \hfill\\
-| `----nostrenghten'\\
-| `----coverage'\\
-| `----warncoverage'
+| `--nostrenghten'\\
+| `--coverage'\\
+| `--warncoverage'
 \end{grammar}
 
 \subsection{Signature}\label{section:syntax-signature}
@@ -636,9 +639,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 | <mutually-recursive-programs-declaration>\\
 | <schema-declaration>\\
 | <typedef-declaration>\\
-| <let-declaration>\\
-| <query-declaration>\\
-| <mquery-declaration>
+| <let-declaration>
 
 <module-declaration> ::= `module' <identifier> `=' `struct' <entry>* `end' [`;']
 
@@ -723,10 +724,6 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 <typedef-declaration> ::= `typedef' <identifier> `:' <comp-kind> `=' <comp-type> `;'
 
 <let-declaration> ::= `let' <identifier> `:' <comp-type> `=' <comp-expression> `;'
-
-<query-declaration> ::= `----query' (`*' | <integer>) (`*' | <integer>) (`{' <meta-object-identifier> `:' <meta-type> `}')* [<identifier> `:'] <lf-term> `.'
-
-<mquery-declaration> ::= `----mquery' (`*' | <integer>) (`*' | <integer>) (`*' | <integer>) [<identifier> `:'] <comp-type> `.'
 
 <documentation-comment> ::= `%{{' <any>* `}}%'
 \end{grammar}

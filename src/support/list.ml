@@ -13,7 +13,7 @@ let rec pairs = function
 
 let null = function
   | [] -> true
-  | _ -> false
+  | _ :: _ -> false
 
 let nonempty l = Bool.not (null l)
 
@@ -28,7 +28,7 @@ let rec traverse f xs =
 let rec traverse_ f xs =
   match xs with
   | [] -> Stdlib.Option.some ()
-  | x :: xs -> Stdlib.Option.bind (f x) (fun _ -> traverse_ f xs)
+  | x :: xs -> Stdlib.Option.bind (f x) (fun _y -> traverse_ f xs)
 
 let rec fold_left_opt f acc xs =
   match xs with
@@ -44,11 +44,11 @@ let filter_rev p l =
   go [] l
 
 let rec find_map f = function
-  | [] -> None
+  | [] -> Stdlib.Option.none
   | x :: l -> (
       match f x with
-      | Some _ as result -> result
-      | None -> find_map f l)
+      | Stdlib.Option.Some _ as result -> result
+      | Stdlib.Option.None -> find_map f l)
 
 let rec find_apply fs a =
   match fs with
@@ -59,12 +59,8 @@ let rec find_apply fs a =
       | Stdlib.Option.None -> find_apply fs a)
 
 let uncons = function
-  | [] -> None
-  | x :: xs -> Some (x, xs)
-
-let rec concat_map f = function
-  | [] -> []
-  | x :: xs -> f x @ concat_map f xs
+  | [] -> Stdlib.Option.none
+  | x :: xs -> Stdlib.Option.some (x, xs)
 
 let concat_mapi f =
   let rec go i = function
@@ -88,8 +84,8 @@ let rec equal eq l1 l2 =
   | _ -> false
 
 let hd_opt = function
-  | [] -> None
-  | x :: _ -> Some x
+  | [] -> Stdlib.Option.none
+  | x :: _ -> Stdlib.Option.some x
 
 let index l = mapi (fun i x -> (i, x)) l
 
@@ -176,8 +172,8 @@ let take_while_map p =
     match l with
     | x :: xs -> (
         match p x with
-        | Some y -> take_while_map_tl xs (y :: acc)
-        | None -> (rev acc, l))
+        | Stdlib.Option.Some y -> take_while_map_tl xs (y :: acc)
+        | Stdlib.Option.None -> (rev acc, l))
     | [] -> (rev acc, [])
   in
   fun l -> take_while_map_tl l []
@@ -187,9 +183,9 @@ let rec compare cmp l1 l2 =
   | [], [] -> 0
   | [], _ :: _ -> -1
   | _ :: _, [] -> 1
-  | a1 :: l1, a2 :: l2 ->
-      let c = cmp a1 a2 in
-      if c <> 0 then c else compare cmp l1 l2
+  | x :: xs, y :: ys ->
+      let c = cmp x y in
+      if c <> 0 then c else compare cmp xs ys
 
 let pp = Format.pp_print_list
 

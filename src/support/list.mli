@@ -3,19 +3,19 @@ include module type of Stdlib.List
 (** [last l] is the last element in the list.
 
     @raise Invalid_argument if the list is empty. *)
-val last : 'a list -> 'a
+val last : 'a t -> 'a
 
 (** [pairs \[x_1; x_2; ...; x_n\]] is
     [\[(x_1, x_2); (x_2, x_3); ...; (x_n-1, x_n)\]], the list of all
     successive pairs in [\[x_1; x_2; ...; x_n\]]. The output list has one
     element less than the input list. *)
-val pairs : 'a list -> ('a * 'a) list
+val pairs : 'a t -> ('a * 'a) t
 
 (** [null l] is true if and only if [l = \[\]]. *)
-val null : 'a list -> bool
+val null : 'a t -> bool
 
 (** [nonempty l] is true if and only if [l <> \[\]]. *)
-val nonempty : 'a list -> bool
+val nonempty : 'a t -> bool
 
 (** Maps a function that may fail over a list, and eagerly fails as soon as
     any individual call fails. Elements beyond the first failing one will not
@@ -34,33 +34,28 @@ val fold_left_opt : ('b -> 'a -> 'b option) -> 'b -> 'a t -> 'b option
 (** [filter_rev p l] returns all the elements of the list [l] that satisfy
     the predicate [f]. The order of the elements in the input list is
     reversed. *)
-val filter_rev : ('a -> bool) -> 'a list -> 'a list
+val filter_rev : ('a -> bool) -> 'a t -> 'a t
 
 (** [find_map f l] applies [f] to the elements of [l] in order, and returns
     the first result of the form [Option.Some v], or [Option.None] if none
     exist. *)
-val find_map : ('a -> 'b option) -> 'a list -> 'b option
+val find_map : ('a -> 'b option) -> 'a t -> 'b option
 
 (** [find_apply fs a] applies [a] to the functions in [fs] in order until one
     of them returns [Option.Some v] for some [v]. Otherwise, [Option.None] is
     returned. *)
-val find_apply : ('a -> 'b option) list -> 'a -> 'b option
+val find_apply : ('a -> 'b option) t -> 'a -> 'b option
 
 (** [uncons l] is [Option.Some (hd l, tl l)] if [l <> \[\]] and [Option.None]
     otherwise. *)
-val uncons : 'a list -> ('a * 'a list) option
-
-(** [concat_map f \[x1; x2; ...; xn\]] is [f x1 @ f x2 @ ... @ f xn]. It is
-    the "bind" monadic operation for lists. It is more efficient than
-    separately mapping and concatenating lists. *)
-val concat_map : ('a -> 'b list) -> 'a list -> 'b list
+val uncons : 'a t -> ('a * 'a t) option
 
 (** [concat_mapi f \[x0; x1; ...; xn\]] is [f 0 x0 @ f 1 x1 @ ... @ f n xn]. *)
-val concat_mapi : (int -> 'a -> 'b list) -> 'a list -> 'b list
+val concat_mapi : (int -> 'a -> 'b t) -> 'a t -> 'b t
 
 (** [index_of p l] is the index of the first element in [l] that satisfies
     the predicate [p]. Returns [Option.None] if no such element was found. *)
-val index_of : ('a -> bool) -> 'a list -> int option
+val index_of : ('a -> bool) -> 'a t -> int option
 
 (** [equal eq \[a1; ...; an\] \[b1; ..; bm\]] holds when the two input lists
     have the same length, and for each pair of elements [ai], [bi] at the
@@ -71,10 +66,10 @@ val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 
 (** [hd_opt l] is [Option.Some (hd l)] if [l <> \[\]] and [Option.None]
     otherwise. *)
-val hd_opt : 'a list -> 'a option
+val hd_opt : 'a t -> 'a option
 
 (** [index \[x0; x1; ...; xn\]] is [\[(0, x0); (1, x1); ...; (n, xn)\]]. *)
-val index : 'a list -> (int * 'a) list
+val index : 'a t -> (int * 'a) t
 
 (** Same as {!fold_left2} but for three lists. *)
 val fold_left3 :
@@ -99,29 +94,29 @@ val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 
 (** [drop k l] is [l] without its first [k] elements. If [l] has fewer than
     [k] elements, then [\[\]] is returned. *)
-val drop : int -> 'a list -> 'a list
+val drop : int -> 'a t -> 'a t
 
 (** [ap \[x1; x2; ...; xn\] \[f1; f2; ...; fn\]] is
     [\[f1 x1; f2 x2; ...; fn xn\]].
 
     @raise Invalid_argument
       if the two lists are determined to have different lengths. *)
-val ap : 'a list -> ('a -> 'b) list -> 'b list
+val ap : 'a t -> ('a -> 'b) t -> 'b t
 
 (** [flap x \[f1; f2; ...; fn\]] is [\[f1 x; f2 x; ...; fn x\]]. *)
-val flap : 'a -> ('a -> 'b) list -> 'b list
+val flap : 'a -> ('a -> 'b) t -> 'b t
 
 (** Transform a list of pairs into a pair of lists:
     [split \[(a1, b1); ...; (an, bn)\]] is
     [(\[a1; ...; an\], \[b1; ...; bn\])]. *)
-val split : ('a * 'b) list -> 'a list * 'b list
+val split : ('a * 'b) t -> 'a t * 'b t
 
 (** Transform a pair of lists into a list of pairs:
     [combine \[a1; ...; an\] \[b1; ...; bn\]] is
     [\[(a1, b1); ...; (an, bn)\]].
 
     @raise Invalid_argument if the two lists have different lengths. *)
-val combine : 'a list -> 'b list -> ('a * 'b) list
+val combine : 'a t -> 'b t -> ('a * 'b) t
 
 (** [take k \[x1; x2; ...; xn\]] is
     [(\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])].
@@ -130,25 +125,25 @@ val combine : 'a list -> 'b list -> ('a * 'b) list
       [(\[\], \[x1; x2; ...; xn\])].
     - If [k >= n], then [take k \[x1; x2; ...; xn\]] is
       [(\[x1; x2; ...; xn\], \[\])]. *)
-val take : int -> 'a list -> 'a list * 'a list
+val take : int -> 'a t -> 'a t * 'a t
 
 (** [take_opt k \[x1; x2; ...; xn\]] is
     [Option.Some (\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])] if
     [0 <= k <= n], and [Option.None] otherwise.
 
     @raise Invalid_argument if [k < 0]. *)
-val take_opt : int -> 'a list -> ('a list * 'a list) option
+val take_opt : int -> 'a t -> ('a t * 'a t) option
 
 (** [take_while p \[x1; x2; ...; xn\]] is
     [(\[x1; x2; ...; x(k-1)\], \[xk; x(k+1); ...; xn\])], where [x1], [x2],
     ..., [x(k-1)] all satisfy [p], and [xk] does not satisfy [p]. *)
-val take_while : ('a -> bool) -> 'a list -> 'a list * 'a list
+val take_while : ('a -> bool) -> 'a t -> 'a t * 'a t
 
 (** [take_while_map p \[x1; x2; ...; xn\]] is
     [(\[y1; y2; ...; y(k-1)\], \[xk; x(k+1); ...; xn\])], where [y1], [y2],
     ..., [y(k-1)] are such that [p xi = Option.Some yi], and [xk] is the
     first element such that [p xk = Option.None]. *)
-val take_while_map : ('a -> 'b option) -> 'a list -> 'b list * 'a list
+val take_while_map : ('a -> 'b option) -> 'a t -> 'b t * 'a t
 
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
@@ -160,7 +155,7 @@ val take_while_map : ('a -> 'b option) -> 'a list -> 'b list * 'a list
     - the empty list [\[\]] is strictly smaller than non-empty lists Note:
       the [cmp] function will be called even if the lists have different
       lengths. *)
-val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
 
 (** {1 Printing} *)
 

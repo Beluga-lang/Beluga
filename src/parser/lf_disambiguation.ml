@@ -131,6 +131,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   (** {1 Disambiguation} *)
 
+  (** LF object definition for application disambiguation. *)
   module Lf_object = struct
     type t = Synprs.lf_object
 
@@ -142,7 +143,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
   module Lf_application_disambiguation =
     Application_disambiguation.Make_application_disambiguation (Lf_object)
 
-  let guard_operator_identifier expression identifier =
+  (** [identify_operator_identifier expression identifier state] is
+      [(state', primitive)] where [primitive] is the application
+      disambiguation source expression corresponding to [expression].
+      [primitive] is either a user-defined operator with [identifier], or a
+      plain expression. *)
+  let identify_operator_identifier expression identifier =
     lookup_operator identifier >>= function
     | Option.None ->
         return (Lf_application_disambiguation.make_expression expression)
@@ -151,22 +157,30 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Lf_application_disambiguation.make_operator expression operator
              identifier)
 
-  let guard_operator expression =
+  (** [identify_operator expression state] is [(state', primitive)] where
+      [primitive] is the application disambiguation source expression
+      corresponding to [expression]. [primitive] is either a user-defined
+      operator, or a plain expression. *)
+  let identify_operator expression =
     match expression with
     | Synprs.LF.Object.Raw_qualified_identifier
         { identifier; prefixed = false; _ } ->
-        guard_operator_identifier expression identifier
+        identify_operator_identifier expression identifier
     | Synprs.LF.Object.Raw_identifier { identifier; prefixed = false; _ } ->
-        guard_operator_identifier expression
+        identify_operator_identifier expression
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Lf_application_disambiguation.make_expression expression)
 
+  (** [with_lf_variable_opt identifier_opt m state] is [m] run in the state
+      locally derived from [state] with the addition of [identifier] as a
+      bound LF variable if [identifier_opt = Option.Some identifier]. *)
   let[@inline] with_lf_variable_opt = function
     | Option.None -> Fun.id
     | Option.Some identifier -> with_lf_variable identifier
 
-  (** [disambiguate_lf_kind object_ state] is [object_] rewritten as an LF
-      kind with respect to the disambiguation context [state].
+  (** [disambiguate_lf_kind object_ kind] is [(state', kind')] where [kind']
+      is the LF kind disambiguated from [kind] in the disambiguation state
+      [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -216,8 +230,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
              ; body = body'
              })
 
-  (** [disambiguate_lf_typ object_ state] is [object_] rewritten as an LF
-      type with respect to the disambiguation context [state].
+  (** [disambiguate_lf_typ typ state] is [(state', typ')] where [typ'] is the
+      LF type disambiguated from [typ] in the disambiguation state [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -238,16 +252,22 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
+        (* Lookup the identifier in the current state *)
         lookup_toplevel identifier >>= function
         | Result.Ok entry when Entry.is_lf_type_constant entry ->
+            (* [identifier] appears as a bound LF type constant in the
+               state *)
             return
               (Synext.LF.Typ.Constant
                  { location; identifier = qualified_identifier })
         | Result.Ok entry ->
+            (* [identifier] appears as a bound entry in the state, but it is
+               not an LF type constant *)
             Error.raise_at1 location
               (Error.composite_exception2 Expected_lf_type_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
+            (* [identifier] is unbound in the state *)
             Error.raise_at1 location
               (Unbound_lf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
@@ -301,8 +321,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Synext.LF.Typ.Application
              { applicand = applicand'; arguments = arguments'; location })
 
-  (** [disambiguate_lf_term object_ state] is [object_] rewritten as an LF
-      term with respect to the disambiguation context [state].
+  (** [disambiguate_lf_term term state] is [(state', term')] where [term'] is
+      the LF term disambiguated from [term] in the disambiguation state
+      [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -326,22 +347,23 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         (* Lookup the identifier in the current state *)
         lookup_toplevel identifier >>= function
         | Result.Ok entry when Entry.is_lf_term_constant entry ->
-            (* [identifier] appears as an LF term-level constant *)
+            (* [identifier] appears as an LF term-level constant in the
+               state *)
             return
               (Synext.LF.Term.Constant
                  { location; identifier = qualified_identifier })
         | Result.Ok entry when Entry.is_lf_variable entry ->
-            (* [identifier] appears as an LF bound variable *)
+            (* [identifier] appears as an LF bound variable in the state *)
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
-               term-level constant or variable *)
+               term-level constant or variable in the state *)
             Error.raise_at1 location
               (Error.composite_exception2 Expected_lf_term_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
-            (* [identifier] does not appear in the state, so it is a free
-               variable. *)
+            (* [identifier] is unbound in the state, so it is a free
+               variable *)
             let* () = add_free_lf_variable identifier in
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
@@ -402,10 +424,18 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Synext.LF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
 
+  (** [disambiguate_lf_application objects state] is
+      [(state', (applicand, arguments))] where [applicand] and [arguments]
+      the topmost applicand and arguments to use for the application node.
+      Arguments in [arguments] may be applications themselves. User-defined
+      operators and term juxtapositions are supported. *)
   and disambiguate_lf_application objects =
-    let* objects' = traverse_list2 guard_operator objects in
+    let* objects' = traverse_list2 identify_operator objects in
     return (Lf_application_disambiguation.disambiguate_application objects')
 
+  (** [elaborate_lf_operand operand state] is [(state', operand')] where
+      [operand'] is [operand] disambiguated as an LF term with respect to the
+      disambiguation state [state]. *)
   and elaborate_lf_operand operand =
     match operand with
     | Lf_application_disambiguation.Atom { expression; _ } ->

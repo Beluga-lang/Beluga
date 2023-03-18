@@ -297,7 +297,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
   module Clf_application_disambiguation =
     Application_disambiguation.Make_application_disambiguation (Clf_object)
 
-  let guard_operator_identifier expression identifier =
+  let identify_operator_identifier expression identifier =
     lookup_operator identifier >>= function
     | Option.None ->
         return (Clf_application_disambiguation.make_expression expression)
@@ -306,14 +306,14 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Clf_application_disambiguation.make_operator expression operator
              identifier)
 
-  let guard_operator expression =
+  let identify_operator expression =
     match expression with
     | Synprs.CLF.Object.Raw_qualified_identifier
         { identifier; prefixed = false; _ } ->
-        guard_operator_identifier expression identifier
+        identify_operator_identifier expression identifier
     | Synprs.CLF.Object.Raw_identifier
         { identifier = identifier, `Plain; prefixed = false; _ } ->
-        guard_operator_identifier expression
+        identify_operator_identifier expression
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Clf_application_disambiguation.make_expression expression)
 
@@ -871,7 +871,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   }))
 
   and disambiguate_clf_application objects =
-    let* objects' = traverse_list2 guard_operator objects in
+    let* objects' = traverse_list2 identify_operator objects in
     return (Clf_application_disambiguation.disambiguate_application objects')
 
   and elaborate_clf_operand operand =

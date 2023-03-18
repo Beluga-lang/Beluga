@@ -99,7 +99,9 @@ module Make_fallback_application_disambiguation
           List2.map prepare_error_expression expressions
         in
         ignore
-          (Error_disambiguation.disambiguate_application error_expressions);
+          (Error_disambiguation.disambiguate_application
+             error_expressions (* Should raise *));
+        (* Did not raise, the two algorithms are not equivalent *)
         Error.raise Inconsistent_application_disambiguation
 end
 

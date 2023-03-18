@@ -18,9 +18,13 @@ let eliminate default f = function
   | None -> default ()
   | Some x -> f x
 
-let get' e o = eliminate (Misc.throw e) Fun.id o
+let get' e = function
+  | Some x -> x
+  | None -> raise e
 
-let get_or_else default = eliminate default Fun.id
+let get_or_else default = function
+  | None -> default ()
+  | Some x -> x
 
 let of_bool = function
   | true -> some ()
@@ -41,15 +45,20 @@ let ( <||> ) = lazy_alt
 
 let alt o1 o2 =
   match (o1, o2) with
-  | Some x, _ -> Some x
-  | _, Some y -> Some y
-  | _ -> None
+  | Some x, _ -> some x
+  | _, Some y -> some y
+  | _ -> none
 
 let ( <|> ) = alt
 
-let void o = o $> Fun.const ()
+let void = function
+  | Some _ -> some ()
+  | None -> none
 
-let when_some l f = eliminate (Fun.const ()) f l
+let when_some l f =
+  match l with
+  | None -> ()
+  | Some x -> f x
 
 let print ppv ppf = function
   | None -> ()

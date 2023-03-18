@@ -4,30 +4,46 @@ let eliminate left right = function
   | Left e -> left e
   | Right x -> right x
 
-let bimap f g e = eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
+let bimap f g = function
+  | Left x -> left (f x)
+  | Right x -> right (g x)
 
-let void_right e = map_right (fun _ -> ()) e
+let void_right = function
+  | Right _ -> right ()
+  | Left x -> left x
 
-let void_left e = map_left (fun _ -> ()) e
+let void_left = function
+  | Left _ -> left ()
+  | Right x -> right x
 
-let void e = bimap (fun _ -> ()) (fun _ -> ()) e
+let void = function
+  | Right _ -> right ()
+  | Left _ -> left ()
 
-let bind k e = eliminate left k e
+let bind k = function
+  | Left x -> left x
+  | Right x -> k x
 
-let forget e = eliminate (fun _ -> None) Option.some e
+let forget = function
+  | Left _ -> Option.none
+  | Right x -> Option.some x
 
-let of_option o = Option.eliminate (fun () -> Left ()) right o
+let of_option = function
+  | Option.None -> left ()
+  | Option.Some x -> right x
 
-let of_option' f o = Option.eliminate (fun () -> f () |> left) right o
+let of_option' f = function
+  | Option.None -> left (f ())
+  | Option.Some x -> right x
 
 let to_option = function
-  | Right x -> Some x
-  | Left _ -> None
+  | Right x -> Option.some x
+  | Left _ -> Option.none
 
 let ( >>= ) e k = bind k e
 
 let ( $> ) e f = map_right f e
 
 let trap f =
-  try Right (f ()) with
-  | e -> Left e
+  try right (f ()) with
+  | e -> left e

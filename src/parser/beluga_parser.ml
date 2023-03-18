@@ -118,7 +118,6 @@ struct
   let parse parser =
     let* parser_state = get_parser_state in
     let parser_state', parsed = Parser_state.run parser parser_state in
-    (* FIXME: Restructure exception *)
     let* () = put_parser_state parser_state' in
     return parsed
 

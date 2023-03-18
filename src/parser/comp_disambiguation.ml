@@ -206,7 +206,7 @@ module Make
     Application_disambiguation.Make_application_disambiguation
       (Comp_sort_object)
 
-  let guard_typ_operator_identifier expression identifier =
+  let identify_typ_operator_identifier expression identifier =
     lookup_operator identifier >>= function
     | Option.None ->
         return
@@ -216,14 +216,14 @@ module Make
           (Comp_typ_application_disambiguation.make_operator expression
              operator identifier)
 
-  let guard_typ_operator expression =
+  let identify_typ_operator expression =
     match expression with
     | Synprs.Comp.Sort_object.Raw_qualified_identifier
         { identifier; prefixed = false; _ } ->
-        guard_typ_operator_identifier expression identifier
+        identify_typ_operator_identifier expression identifier
     | Synprs.Comp.Sort_object.Raw_identifier
         { identifier; prefixed = false; _ } ->
-        guard_typ_operator_identifier expression
+        identify_typ_operator_identifier expression
           (Qualified_identifier.make_simple identifier)
     | _ ->
         return
@@ -241,7 +241,7 @@ module Make
     Application_disambiguation.Make_application_disambiguation
       (Comp_expression_object)
 
-  let guard_expression_operator_identifier expression identifier =
+  let identify_expression_operator_identifier expression identifier =
     lookup_operator identifier >>= function
     | Option.None ->
         return
@@ -252,14 +252,14 @@ module Make
           (Comp_expression_application_disambiguation.make_operator
              expression operator identifier)
 
-  let guard_expression_operator expression =
+  let identify_expression_operator expression =
     match expression with
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
         { identifier; prefixed = false; _ } ->
-        guard_expression_operator_identifier expression identifier
+        identify_expression_operator_identifier expression identifier
     | Synprs.Comp.Expression_object.Raw_identifier
         { identifier; prefixed = false; _ } ->
-        guard_expression_operator_identifier expression
+        identify_expression_operator_identifier expression
           (Qualified_identifier.make_simple identifier)
     | _ ->
         return
@@ -278,7 +278,7 @@ module Make
     Application_disambiguation.Make_application_disambiguation
       (Comp_pattern_object)
 
-  let guard_pattern_operator_identifier expression identifier =
+  let identify_pattern_operator_identifier expression identifier =
     lookup_operator identifier >>= function
     | Option.None ->
         return
@@ -288,14 +288,14 @@ module Make
           (Comp_pattern_application_disambiguation.make_operator expression
              operator identifier)
 
-  let guard_pattern_operator expression =
+  let identify_pattern_operator expression =
     match expression with
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
         { identifier; prefixed = false; _ } ->
-        guard_pattern_operator_identifier expression identifier
+        identify_pattern_operator_identifier expression identifier
     | Synprs.Comp.Pattern_object.Raw_identifier
         { identifier; prefixed = false; _ } ->
-        guard_pattern_operator_identifier expression
+        identify_pattern_operator_identifier expression
           (Qualified_identifier.make_simple identifier)
     | _ ->
         return
@@ -584,7 +584,7 @@ module Make
         Error.raise_at1 location Expected_meta_object
 
   and disambiguate_comp_typ_application objects =
-    let* objects' = traverse_list2 guard_typ_operator objects in
+    let* objects' = traverse_list2 identify_typ_operator objects in
     return
       (Comp_typ_application_disambiguation.disambiguate_application objects')
 
@@ -918,7 +918,7 @@ module Make
              (actual_binding_exn identifier entry))
 
   and disambiguate_comp_expression_application objects =
-    let* objects' = traverse_list2 guard_expression_operator objects in
+    let* objects' = traverse_list2 identify_expression_operator objects in
     return
       (Comp_expression_application_disambiguation.disambiguate_application
          objects')
@@ -1330,7 +1330,7 @@ module Make
     return (List1.from (destructor, patterns) observations)
 
   and disambiguate_comp_pattern_application objects =
-    let* objects' = traverse_list2 guard_pattern_operator objects in
+    let* objects' = traverse_list2 identify_pattern_operator objects in
     return
       (Comp_pattern_application_disambiguation.disambiguate_application
          objects')

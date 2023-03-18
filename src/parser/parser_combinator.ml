@@ -1,7 +1,6 @@
 open Support
 open Beluga_syntax
 
-(* TODO: This is awfully like a lexer state, without [mark] and [rollback] *)
 module type PARSER_STATE = sig
   include State.STATE
 

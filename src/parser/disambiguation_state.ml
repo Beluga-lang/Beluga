@@ -786,92 +786,98 @@ module Persistent_disambiguation_state = struct
 
   let make_lf_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Lf_variable }
+    { Entry.binding_location; desc = Entry.Lf_variable }
 
   let make_meta_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Meta_variable }
+    { Entry.binding_location; desc = Entry.Meta_variable }
 
   let make_parameter_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Parameter_variable }
+    { Entry.binding_location; desc = Entry.Parameter_variable }
 
   let make_substitution_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Substitution_variable }
+    { Entry.binding_location; desc = Entry.Substitution_variable }
 
   let make_context_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Context_variable }
+    { Entry.binding_location; desc = Entry.Context_variable }
 
   let make_contextual_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Contextual_variable }
+    { Entry.binding_location; desc = Entry.Contextual_variable }
 
   let make_computation_variable_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Computation_variable }
+    { Entry.binding_location; desc = Entry.Computation_variable }
 
   (** {1 Constants} *)
 
   let make_lf_type_constant_entry ?location ?operator ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Lf_type_constant { operator; arity } }
+    { Entry.binding_location
+    ; desc = Entry.Lf_type_constant { operator; arity }
+    }
 
   let make_lf_term_constant_entry ?location ?operator ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Lf_term_constant { operator; arity } }
+    { Entry.binding_location
+    ; desc = Entry.Lf_term_constant { operator; arity }
+    }
 
   let make_schema_constant_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Schema_constant }
+    { Entry.binding_location; desc = Entry.Schema_constant }
 
   let make_inductive_computation_type_constant_entry ?location ?operator
       ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
     { Entry.binding_location
-    ; desc = Computation_inductive_type_constant { operator; arity }
+    ; desc = Entry.Computation_inductive_type_constant { operator; arity }
     }
 
   let make_stratified_computation_type_constant_entry ?location ?operator
       ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
     { Entry.binding_location
-    ; desc = Computation_stratified_type_constant { operator; arity }
+    ; desc = Entry.Computation_stratified_type_constant { operator; arity }
     }
 
   let make_coinductive_computation_type_constant_entry ?location ?operator
       ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
     { Entry.binding_location
-    ; desc = Computation_coinductive_type_constant { operator; arity }
+    ; desc = Entry.Computation_coinductive_type_constant { operator; arity }
     }
 
   let make_abbreviation_computation_type_constant_entry ?location ?operator
       ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
     { Entry.binding_location
-    ; desc = Computation_abbreviation_type_constant { operator; arity }
+    ; desc = Entry.Computation_abbreviation_type_constant { operator; arity }
     }
 
   let make_computation_term_constructor_entry ?location ?operator ?arity
       identifier =
     let binding_location = make_binding_location ?location identifier in
     { Entry.binding_location
-    ; desc = Computation_term_constructor { operator; arity }
+    ; desc = Entry.Computation_term_constructor { operator; arity }
     }
 
   let make_computation_term_destructor_entry ?location identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Computation_term_destructor }
+    { Entry.binding_location; desc = Entry.Computation_term_destructor }
 
   let make_program_constant_entry ?location ?operator ?arity identifier =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Program_constant { operator; arity } }
+    { Entry.binding_location
+    ; desc = Entry.Program_constant { operator; arity }
+    }
 
   let make_module_entry ?location identifier _declarations =
     let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Module }
+    { Entry.binding_location; desc = Entry.Module }
 
   (** {1 Free Variables} *)
 
@@ -1198,7 +1204,7 @@ module Persistent_disambiguation_state = struct
 
   let open_module identifier =
     lookup identifier >>= function
-    | Result.Ok { desc = Module; _ } -> open_namespace identifier
+    | Result.Ok { Entry.desc = Entry.Module; _ } -> open_namespace identifier
     | Result.Ok _ ->
         Error.raise_at1
           (Qualified_identifier.location identifier)
@@ -1446,7 +1452,7 @@ module Persistent_disambiguation_state = struct
 
   let add_module_abbreviation ?location module_identifier abbreviation =
     lookup module_identifier >>= function
-    | Result.Ok { desc = Module; _ } ->
+    | Result.Ok { Entry.desc = Entry.Module; _ } ->
         add_synonym ?location module_identifier abbreviation
     | Result.Ok entry ->
         Error.raise_at1

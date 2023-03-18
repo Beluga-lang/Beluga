@@ -27,3 +27,17 @@ Nat.add
 
 \sum. (M : sum z z z)
 ;;
+
+% Unbound type constant
+unbound X1 X2
+;;
+
+unbound.unbound X1 X2
+;;
+
+% Invalid constant
+X1 Statics.arrow X2
+;;
+
+(Statics.arrow) X1 X2
+;;

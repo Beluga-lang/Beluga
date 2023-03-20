@@ -23,23 +23,23 @@ let thm_thm loc cid1 =
   let name = Store.Cid.Comp.name cid1 in
   let loc' = Name.location name in
   function
-  | None -> () (* no cid from whose POV to do the scopechecking *)
-  | Some cid2 ->
+  | Option.None -> () (* no cid from whose POV to do the scopechecking *)
+  | Option.Some cid2 ->
      match get_decl cid1, get_decl cid2 with
-     | Some d1, Some d2 when Bool.not Decl.(d1 < d2) ->
+     | Option.Some d1, Option.Some d2 when Bool.not Decl.(d1 < d2) ->
         FixedFixed (Format.asprintf "theorem %a" Name.pp name, loc', cid2)
         |> throw loc
-     | None, Some _ ->
+     | Option.None, Option.Some _ ->
         Error.raise_violation
           "[thm_thm] floating-fixed interaction is impossible"
-     | None, None ->
+     | Option.None, Option.None ->
         FloatingFloating (cid1, cid2)
         |> throw loc
-     | _ ->
-        (* catch-all for the 2 allowed cases:
-           1. d1 is indeed in scope for d2
-           2. a floating theorem can always refer to a fixed theorem
-         *)
+     | Option.Some _, Option.None ->
+        (* a floating theorem can always refer to a fixed theorem *)
+        ()
+     | Option.Some _, Option.Some _ ->
+        (* d1 is indeed in scope for d2 *)
         ()
 
 (** Performs late scopechecking for a other-theorem interaction.
@@ -48,11 +48,11 @@ let thm_thm loc cid1 =
     the theorem specified by `mcid`, if any.
  *)
 let other_thm loc name d1 loc' = function
-  | None -> ()
-  | Some cid ->
+  |Option.None -> ()
+  | Option.Some cid ->
      match Store.Cid.Comp.( (get cid).Entry.decl ) with
-     | None -> ()
-     | Some d2 ->
+     | Option.None -> ()
+     | Option.Some d2 ->
         if Bool.not Decl.(d1 < d2) then
           FixedFixed (name, loc', cid)
           |> throw loc

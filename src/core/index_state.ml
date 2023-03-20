@@ -76,6 +76,8 @@ exception Expected_computation_variable
 
 exception Illegal_free_variable
 
+exception Duplicate_pattern_variables of Identifier.t List2.t
+
 module type INDEXING_STATE = sig
   include State.STATE
 
@@ -188,11 +190,6 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
 
-  val start_module : Unit.t t
-
-  val stop_module :
-    ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
-
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
 
@@ -248,36 +245,117 @@ module Meta_level : LEVEL = Level
 module Comp_level : LEVEL = Level
 
 module Persistent_indexing_state = struct
-  type entry =
-    { binding_location : Location.t
-    ; desc : entry_desc
-    }
+  module Entry = struct
+    type t =
+      { binding_location : Location.t
+      ; desc : desc
+      }
 
-  and entry_desc =
-    | Lf_variable of { lf_level : Lf_level.t }
-    | Meta_variable of { meta_level : Meta_level.t }
-    | Parameter_variable of { meta_level : Meta_level.t }
-    | Substitution_variable of { meta_level : Meta_level.t }
-    | Context_variable of { meta_level : Meta_level.t }
-    | Contextual_variable of { meta_level : Meta_level.t }
-        (** A contextual variable is either a meta, parameter, substitution,
-            or contextual variable. Contextual variables are introduced
-            ambiguously by [mlam]-expressions. *)
-    | Computation_variable of { comp_level : Comp_level.t }
-    | Lf_type_constant of { cid : Id.cid_typ }
-    | Lf_term_constant of { cid : Id.cid_term }
-    | Schema_constant of { cid : Id.cid_schema }
-    | Computation_inductive_type_constant of { cid : Id.cid_comp_typ }
-    | Computation_stratified_type_constant of { cid : Id.cid_comp_typ }
-    | Computation_coinductive_type_constant of { cid : Id.cid_comp_cotyp }
-    | Computation_abbreviation_type_constant of { cid : Id.cid_comp_typdef }
-    | Computation_term_constructor of { cid : Id.cid_comp_const }
-    | Computation_term_destructor of { cid : Id.cid_comp_dest }
-    | Program_constant of { cid : Id.cid_prog }
-    | Module of { cid : Id.module_id }
+    and desc =
+      | Lf_variable of { lf_level : Lf_level.t }
+      | Meta_variable of { meta_level : Meta_level.t }
+      | Parameter_variable of { meta_level : Meta_level.t }
+      | Substitution_variable of { meta_level : Meta_level.t }
+      | Context_variable of { meta_level : Meta_level.t }
+      | Contextual_variable of { meta_level : Meta_level.t }
+          (** A contextual variable is either a meta, parameter,
+              substitution, or context variable. Contextual variables are
+              introduced ambiguously by [mlam]-expressions. *)
+      | Computation_variable of { comp_level : Comp_level.t }
+      | Lf_type_constant of { cid : Id.cid_typ }
+      | Lf_term_constant of { cid : Id.cid_term }
+      | Schema_constant of { cid : Id.cid_schema }
+      | Computation_inductive_type_constant of { cid : Id.cid_comp_typ }
+      | Computation_stratified_type_constant of { cid : Id.cid_comp_typ }
+      | Computation_coinductive_type_constant of { cid : Id.cid_comp_cotyp }
+      | Computation_abbreviation_type_constant of
+          { cid : Id.cid_comp_typdef }
+      | Computation_term_constructor of { cid : Id.cid_comp_const }
+      | Computation_term_destructor of { cid : Id.cid_comp_dest }
+      | Program_constant of { cid : Id.cid_prog }
+      | Module of { cid : Id.module_id }
+
+    let[@inline] binding_location ?location identifier =
+      match location with
+      | Option.Some binding_location -> binding_location
+      | Option.None -> Identifier.location identifier
+
+    let[@inline] make_entry ?location identifier desc =
+      let binding_location = binding_location ?location identifier in
+      { binding_location; desc }
+
+    let[@inline] make_lf_variable_entry ?location identifier lf_level =
+      make_entry ?location identifier (Lf_variable { lf_level })
+
+    let[@inline] make_meta_variable_entry ?location identifier meta_level =
+      make_entry ?location identifier (Meta_variable { meta_level })
+
+    let[@inline] make_parameter_variable_entry ?location identifier
+        meta_level =
+      make_entry ?location identifier (Parameter_variable { meta_level })
+
+    let[@inline] make_substitution_variable_entry ?location identifier
+        meta_level =
+      make_entry ?location identifier (Substitution_variable { meta_level })
+
+    let[@inline] make_context_variable_entry ?location identifier meta_level
+        =
+      make_entry ?location identifier (Context_variable { meta_level })
+
+    let[@inline] make_contextual_variable_entry ?location identifier
+        meta_level =
+      make_entry ?location identifier (Contextual_variable { meta_level })
+
+    let[@inline] make_computation_variable_entry ?location identifier
+        comp_level =
+      make_entry ?location identifier (Computation_variable { comp_level })
+
+    let[@inline] make_lf_type_constant_entry ?location identifier cid =
+      make_entry ?location identifier (Lf_type_constant { cid })
+
+    let[@inline] make_lf_term_constant_entry ?location identifier cid =
+      make_entry ?location identifier (Lf_term_constant { cid })
+
+    let[@inline] make_schema_constant_entry ?location identifier cid =
+      make_entry ?location identifier (Schema_constant { cid })
+
+    let[@inline] make_computation_inductive_type_constant_entry ?location
+        identifier cid =
+      make_entry ?location identifier
+        (Computation_inductive_type_constant { cid })
+
+    let[@inline] make_computation_stratified_type_constant_entry ?location
+        identifier cid =
+      make_entry ?location identifier
+        (Computation_stratified_type_constant { cid })
+
+    let[@inline] make_computation_coinductive_type_constant_entry ?location
+        identifier cid =
+      make_entry ?location identifier
+        (Computation_coinductive_type_constant { cid })
+
+    let[@inline] make_computation_abbreviation_type_constant_entry ?location
+        identifier cid =
+      make_entry ?location identifier
+        (Computation_abbreviation_type_constant { cid })
+
+    let[@inline] make_computation_term_constructor_entry ?location identifier
+        cid =
+      make_entry ?location identifier (Computation_term_constructor { cid })
+
+    let[@inline] make_computation_term_destructor_entry ?location identifier
+        cid =
+      make_entry ?location identifier (Computation_term_destructor { cid })
+
+    let[@inline] make_program_constant_entry ?location identifier cid =
+      make_entry ?location identifier (Program_constant { cid })
+
+    let[@inline] make_module_entry ?location identifier cid =
+      make_entry ?location identifier (Module { cid })
+  end
 
   type bindings_state =
-    { bindings : entry Binding_tree.t
+    { bindings : Entry.t Binding_tree.t
     ; lf_context_size : Int.t
           (** The length of [cPsi], the context of LF-bound variables. *)
     ; meta_context_size : Int.t
@@ -291,9 +369,14 @@ module Persistent_indexing_state = struct
         { bindings : bindings_state
         ; parent : substate Option.t
         }
+    | Module_state of
+        { bindings : bindings_state
+        ; declarations : Entry.t Binding_tree.t
+        ; parent : substate Option.t
+        }
     | Pattern_state of
         { pattern_bindings : bindings_state
-        ; inner_pattern_bindings : entry List1.t Identifier.Hamt.t
+        ; inner_pattern_bindings : Entry.t List1.t Identifier.Hamt.t
         ; pattern_variables_rev : Identifier.t List.t
         ; expression_bindings : bindings_state
         }
@@ -347,11 +430,13 @@ module Persistent_indexing_state = struct
 
   let[@inline] set_substate_bindings bindings = function
     | Scope_state state -> Scope_state { state with bindings }
+    | Module_state state -> Module_state { state with bindings }
     | Pattern_state state ->
         Pattern_state { state with pattern_bindings = bindings }
 
   let get_substate_bindings = function
     | Scope_state state -> state.bindings
+    | Module_state state -> state.bindings
     | Pattern_state state -> state.pattern_bindings
 
   let[@inline] set_bindings_state bindings =
@@ -424,7 +509,7 @@ module Persistent_indexing_state = struct
     let entry, _subtree = Binding_tree.lookup_toplevel identifier bindings in
     return entry
 
-  let actual_binding_exn identifier { binding_location; desc } =
+  let actual_binding_exn identifier { Entry.binding_location; desc } =
     Error.located_exception1 binding_location
       (match desc with
       | Lf_variable _ -> Bound_lf_term_variable identifier
@@ -553,11 +638,21 @@ module Persistent_indexing_state = struct
         | Binding_tree.Unbound_identifier _ -> return Option.none
         | cause -> Error.raise cause)
 
+  let[@inline] index_of_lf_level lf_level =
+    let* lf_context_size = get_lf_context_size in
+    return (lf_context_size - Lf_level.to_int lf_level)
+
+  let[@inline] index_of_meta_level meta_level =
+    let* meta_context_size = get_meta_context_size in
+    return (meta_context_size - Meta_level.to_int meta_level)
+
+  let[@inline] index_of_comp_level comp_level =
+    let* comp_context_size = get_comp_context_size in
+    return (comp_context_size - Comp_level.to_int comp_level)
+
   let index_of_lf_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc = Lf_variable { lf_level }; _ } ->
-        let* lf_context_size = get_lf_context_size in
-        return (lf_context_size - Lf_level.to_int lf_level)
+    | { desc = Lf_variable { lf_level }; _ } -> index_of_lf_level lf_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -574,8 +669,7 @@ module Persistent_indexing_state = struct
           Meta_variable { meta_level } | Contextual_variable { meta_level }
       ; _
       } ->
-        let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - Meta_level.to_int meta_level)
+        index_of_meta_level meta_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -594,8 +688,7 @@ module Persistent_indexing_state = struct
           | Contextual_variable { meta_level } )
       ; _
       } ->
-        let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - Meta_level.to_int meta_level)
+        index_of_meta_level meta_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -614,8 +707,7 @@ module Persistent_indexing_state = struct
           | Contextual_variable { meta_level } )
       ; _
       } ->
-        let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - Meta_level.to_int meta_level)
+        index_of_meta_level meta_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -634,8 +726,7 @@ module Persistent_indexing_state = struct
           | Contextual_variable { meta_level } )
       ; _
       } ->
-        let* meta_context_size = get_meta_context_size in
-        return (meta_context_size - Meta_level.to_int meta_level)
+        index_of_meta_level meta_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -650,8 +741,7 @@ module Persistent_indexing_state = struct
   let index_of_comp_variable identifier =
     lookup_toplevel identifier >>= function
     | { desc = Computation_variable { comp_level }; _ } ->
-        let* comp_context_size = get_comp_context_size in
-        return (comp_context_size - Comp_level.to_int comp_level)
+        index_of_comp_level comp_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -710,24 +800,16 @@ module Persistent_indexing_state = struct
   let[@inline] with_shifted_comp_context m =
     shift_comp_context &> m <& unshift_comp_context
 
-  let with_bindings_checkpoint m =
-    let* bindings = get_bindings in
+  let with_bindings_state_checkpoint m =
+    let* bindings_state = get_bindings_state in
     let* x = m in
-    let* () = set_bindings bindings in
+    let* () = set_bindings_state bindings_state in
     return x
 
-  let binding_location ?location identifier =
-    match location with
-    | Option.Some binding_location -> binding_location
-    | Option.None -> Identifier.location identifier
-
-  let add_lf_level_variable ?location identifier make_entry =
-    let binding_location = binding_location ?location identifier in
+  let add_lf_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
         let lf_context_size' = state.lf_context_size + 1 in
-        let entry =
-          make_entry binding_location (Lf_level.of_int lf_context_size')
-        in
+        let entry = make_entry (Lf_level.of_int lf_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -736,13 +818,10 @@ module Persistent_indexing_state = struct
         ; lf_context_size = lf_context_size'
         })
 
-  let add_meta_level_variable ?location identifier make_entry =
-    let binding_location = binding_location ?location identifier in
+  let add_meta_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
         let meta_context_size' = state.meta_context_size + 1 in
-        let entry =
-          make_entry binding_location (Meta_level.of_int meta_context_size')
-        in
+        let entry = make_entry (Meta_level.of_int meta_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -751,13 +830,10 @@ module Persistent_indexing_state = struct
         ; meta_context_size = meta_context_size'
         })
 
-  let add_comp_level_variable ?location identifier make_entry =
-    let binding_location = binding_location ?location identifier in
+  let add_comp_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
         let comp_context_size' = state.comp_context_size + 1 in
-        let entry =
-          make_entry binding_location (Comp_level.of_int comp_context_size')
-        in
+        let entry = make_entry (Comp_level.of_int comp_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -767,147 +843,152 @@ module Persistent_indexing_state = struct
         })
 
   let add_lf_variable ?location identifier =
-    add_lf_level_variable ?location identifier
-      (fun binding_location lf_level ->
-        { binding_location; desc = Lf_variable { lf_level } })
+    add_lf_level_variable identifier
+      (Entry.make_lf_variable_entry ?location identifier)
 
   let add_meta_variable ?location identifier =
-    add_meta_level_variable ?location identifier
-      (fun binding_location meta_level ->
-        { binding_location; desc = Meta_variable { meta_level } })
+    add_meta_level_variable identifier
+      (Entry.make_meta_variable_entry ?location identifier)
 
   let add_parameter_variable ?location identifier =
-    add_meta_level_variable ?location identifier
-      (fun binding_location meta_level ->
-        { binding_location; desc = Parameter_variable { meta_level } })
+    add_meta_level_variable identifier
+      (Entry.make_meta_variable_entry ?location identifier)
 
   let add_substitution_variable ?location identifier =
-    add_meta_level_variable ?location identifier
-      (fun binding_location meta_level ->
-        { binding_location; desc = Substitution_variable { meta_level } })
+    add_meta_level_variable identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
 
   let add_context_variable ?location identifier =
-    add_meta_level_variable ?location identifier
-      (fun binding_location meta_level ->
-        { binding_location; desc = Context_variable { meta_level } })
+    add_meta_level_variable identifier
+      (Entry.make_context_variable_entry ?location identifier)
 
   let add_contextual_variable ?location identifier =
-    add_meta_level_variable ?location identifier
-      (fun binding_location meta_level ->
-        { binding_location; desc = Contextual_variable { meta_level } })
+    add_meta_level_variable identifier
+      (Entry.make_contextual_variable_entry ?location identifier)
 
   let add_comp_variable ?location identifier =
-    add_comp_level_variable ?location identifier
-      (fun binding_location comp_level ->
-        { binding_location; desc = Computation_variable { comp_level } })
+    add_comp_level_variable identifier
+      (Entry.make_computation_variable_entry ?location identifier)
 
   let with_bound_lf_variable ?location identifier m =
-    with_bindings_checkpoint (add_lf_variable ?location identifier &> m)
+    with_bindings_state_checkpoint (add_lf_variable ?location identifier &> m)
 
   let with_bound_meta_variable ?location identifier m =
-    with_bindings_checkpoint (add_meta_variable ?location identifier &> m)
+    with_bindings_state_checkpoint
+      (add_meta_variable ?location identifier &> m)
 
   let with_bound_parameter_variable ?location identifier m =
-    with_bindings_checkpoint
+    with_bindings_state_checkpoint
       (add_parameter_variable ?location identifier &> m)
 
   let with_bound_substitution_variable ?location identifier m =
-    with_bindings_checkpoint
+    with_bindings_state_checkpoint
       (add_substitution_variable ?location identifier &> m)
 
   let with_bound_context_variable ?location identifier m =
-    with_bindings_checkpoint (add_context_variable ?location identifier &> m)
+    with_bindings_state_checkpoint
+      (add_context_variable ?location identifier &> m)
 
   let with_bound_contextual_variable ?location identifier m =
-    with_bindings_checkpoint
+    with_bindings_state_checkpoint
       (add_contextual_variable ?location identifier &> m)
 
   let with_bound_comp_variable ?location identifier m =
-    with_bindings_checkpoint (add_comp_variable ?location identifier &> m)
+    with_bindings_state_checkpoint
+      (add_comp_variable ?location identifier &> m)
+
+  let[@inline] add_binding identifier ?subtree entry =
+    modify_bindings (Binding_tree.add_toplevel identifier ?subtree entry)
+
+  let[@inline] add_declaration identifier ?subtree entry =
+    let* () = add_binding identifier ?subtree entry in
+    modify_substate (function
+      | Module_state state ->
+          let declarations' =
+            Binding_tree.add_toplevel identifier ?subtree entry
+              state.declarations
+          in
+          Module_state { state with declarations = declarations' }
+      | _state -> Error.raise_violation "[add_declaration] invalid state")
 
   let add_lf_type_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Lf_type_constant { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_lf_type_constant_entry ?location identifier cid)
 
   let add_lf_term_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Lf_term_constant { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_lf_term_constant_entry ?location identifier cid)
 
   let add_schema_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Schema_constant { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_schema_constant_entry ?location identifier cid)
 
   let add_inductive_computation_type_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location
-          ; desc = Computation_inductive_type_constant { cid }
-          }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_inductive_type_constant_entry ?location
+         identifier cid)
 
   let add_stratified_computation_type_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location
-          ; desc = Computation_stratified_type_constant { cid }
-          }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_stratified_type_constant_entry ?location
+         identifier cid)
 
   let add_coinductive_computation_type_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location
-          ; desc = Computation_coinductive_type_constant { cid }
-          }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_coinductive_type_constant_entry ?location
+         identifier cid)
 
   let add_abbreviation_computation_type_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location
-          ; desc = Computation_abbreviation_type_constant { cid }
-          }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_abbreviation_type_constant_entry ?location
+         identifier cid)
 
   let add_computation_term_constructor ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Computation_term_constructor { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_term_constructor_entry ?location identifier cid)
 
   let add_computation_term_destructor ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Computation_term_destructor { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_computation_term_destructor_entry ?location identifier cid)
 
   let add_program_constant ?location identifier cid =
-    let binding_location = binding_location ?location identifier in
-    modify_bindings (fun bindings ->
-        Binding_tree.add_toplevel identifier
-          { binding_location; desc = Program_constant { cid } }
-          bindings)
+    add_declaration identifier
+      (Entry.make_program_constant_entry ?location identifier cid)
 
-  let start_module = Obj.magic () (* TODO: *)
+  let start_module =
+    let* bindings = get_bindings_state in
+    modify (fun state ->
+        { state with
+          substate =
+            Module_state
+              { bindings
+              ; declarations = Binding_tree.empty
+              ; parent = Option.some state.substate
+              }
+        })
 
-  let stop_module ?location identifier cid = Obj.magic () (* TODO: *)
+  let stop_module ?location identifier cid =
+    get_substate >>= function
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[stop_module] invalid state"
+    | Module_state substate -> (
+        match substate.parent with
+        | Option.None ->
+            Error.raise_violation "[stop_module] no parent state"
+        | Option.Some parent ->
+            let* () = set_substate parent in
+            modify_bindings (fun bindings ->
+                Binding_tree.add_toplevel identifier
+                  ~subtree:substate.declarations
+                  (Entry.make_module_entry ?location identifier cid)
+                  bindings))
 
-  let add_module ?location identifier cid m = Obj.magic () (* TODO: *)
+  let add_module ?location identifier cid m =
+    let* () = start_module in
+    let* x = m in
+    let* () = stop_module ?location identifier cid in
+    return x
 
   let with_scope m =
     let* state = get in
@@ -935,11 +1016,67 @@ module Persistent_indexing_state = struct
             return x
         | Option.None ->
             Error.raise_violation "[with_parent_scope] invalid state")
+    | Module_state _
     | Pattern_state _ ->
         Error.raise_violation "[with_parent_scope] invalid state"
 
+  let get_pattern_variables_and_expression_state =
+    let* state = get in
+    match state.substate with
+    | Pattern_state o ->
+        let pattern_variables = List.rev o.pattern_variables_rev in
+        return (pattern_variables, o.expression_bindings)
+    | Module_state _
+    | Scope_state _ ->
+        Error.raise_violation
+          "[get_pattern_variables_and_expression_state] invalid state"
+
+  let raise_duplicate_identifiers_exception f duplicates =
+    match duplicates with
+    | List1.T ((_identifier, duplicates), []) ->
+        Error.raise_at
+          (List2.to_list1 (List2.map Identifier.location duplicates))
+          (f duplicates)
+    | List1.T (x1, x2 :: xs) ->
+        Error.raise_aggregate_exception
+          (List2.map
+             (fun (_identifier, duplicates) ->
+               Error.located_exception
+                 (List2.to_list1 (List2.map Identifier.location duplicates))
+                 (f duplicates))
+             (List2.from x1 x2 xs))
+
   let with_free_variables_as_pattern_variables ~pattern ~expression =
-    Obj.magic () (* TODO: *)
+    let* state = get in
+    let* bindings = get_bindings_state in
+    let* () =
+      put
+        { state with
+          substate =
+            Pattern_state
+              { pattern_bindings = bindings
+              ; inner_pattern_bindings = Identifier.Hamt.empty
+              ; pattern_variables_rev = []
+              ; expression_bindings = bindings
+              }
+        }
+    in
+    let* pattern' = pattern in
+    let* pattern_variables, expression_bindings =
+      get_pattern_variables_and_expression_state
+    in
+    match Identifier.find_duplicates pattern_variables with
+    | Option.Some duplicates ->
+        let* () = put state in
+        raise_duplicate_identifiers_exception
+          (fun identifiers -> Duplicate_pattern_variables identifiers)
+          duplicates
+    | Option.None ->
+        let* () = put state in
+        let* () = set_bindings_state expression_bindings in
+        let* expression' = expression pattern' in
+        let* () = put state in
+        return expression'
 
   let add_computation_pattern_variable ?location identifier =
     Obj.magic () (* TODO: *)
@@ -959,13 +1096,14 @@ module Persistent_indexing_state = struct
 
   let initial_state =
     { substate =
-        Scope_state
+        Module_state
           { bindings =
               { bindings = Binding_tree.empty
               ; lf_context_size = 0
               ; meta_context_size = 0
               ; comp_context_size = 0
               }
+          ; declarations = Binding_tree.empty
           ; parent = Option.none
           }
     ; free_variables_allowed = false

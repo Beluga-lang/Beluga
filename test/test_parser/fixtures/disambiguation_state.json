@@ -289,6 +289,10 @@
       "precedence": 3
     },
     {
+      "sort": "comp_inductive_type_constant",
+      "identifier": "List"
+    },
+    {
       "sort": "comp_constructor",
       "identifier": "nil"
     },

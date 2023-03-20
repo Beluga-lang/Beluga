@@ -6,7 +6,6 @@
 
 open Support.Equality
 open Support
-open ExtString.String
 module P = Pretty.Int.DefaultPrinter
 open Format
 open Syntax.Int
@@ -479,8 +478,8 @@ let get_type =
   { name = "get-type"
   ; run =
       command_with_arguments 2 (fun ppf [ line; col ] ->
-          let line = to_int line in
-          let col = to_int col in
+          let line = ExtString.String.to_int line in
+          let col = ExtString.String.to_int col in
           let typ = Typeinfo.type_of_position line col in
           fprintf ppf "%s;\n@?" typ)
   ; help =
@@ -527,11 +526,11 @@ let () =
 let register cmd f hp = reg := { name = cmd; run = f; help = hp } :: !reg
 
 let is_command str =
-  let str' = strip str in
+  let str' = String.trim str in
   let l = String.length str' in
   if l > 1 && String.(equal (sub str' 0 2) "%:") then
     let _, cmd = ExtString.String.split str' ":" in
-    `Cmd (strip cmd)
+    `Cmd (String.trim cmd)
   else `Input str
 
 let do_command ppf cmd =

@@ -217,10 +217,10 @@ end = struct
 
   let open_module = open_namespace
 
-  let add_module identifier ~id declarations =
+  let add_module identifier ~id m =
     let* state = get in
     let* () = put { state with declarations = Binding_tree.empty } in
-    let* declarations' = declarations in
+    let* x = m in
     let* state' = get in
     (* Restore the state to what it was before printing the module's
        declarations, but keep the final state's ID-generation data
@@ -238,7 +238,7 @@ end = struct
            { id; operator = Option.none })
       <& add_declaration identifier
     in
-    return declarations'
+    return x
 
   let set_default_associativity default_associativity =
     modify (fun state -> { state with default_associativity })

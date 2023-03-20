@@ -569,5 +569,665 @@
         "stop_column": 70
       }
     }
+  ],
+  [
+    "Comp.Typ.Arrow",
+    {
+      "domain": [
+        "Comp.Typ.Box",
+        {
+          "meta_type": [
+            "Meta.Typ.Contextual_typ",
+            {
+              "context": [
+                "CLF.Context",
+                {
+                  "head": [
+                    "CLF.Context.Head.None",
+                    {
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 2,
+                        "stop_line": 10,
+                        "stop_column": 2
+                      }
+                    }
+                  ],
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 10,
+                    "start_column": 2,
+                    "stop_line": 10,
+                    "stop_column": 2
+                  }
+                }
+              ],
+              "typ": [
+                "CLF.Typ.Constant",
+                {
+                  "identifier": {
+                    "name": {
+                      "name": "nat",
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 4,
+                        "stop_line": 10,
+                        "stop_column": 7
+                      }
+                    },
+                    "namespaces": [],
+                    "location": {
+                      "filename": "comp_types_ok.input.bel",
+                      "start_line": 10,
+                      "start_column": 4,
+                      "stop_line": 10,
+                      "stop_column": 7
+                    }
+                  },
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 10,
+                    "start_column": 4,
+                    "stop_line": 10,
+                    "stop_column": 7
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 10,
+                "start_column": 1,
+                "stop_line": 10,
+                "stop_column": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 10,
+            "start_column": 1,
+            "stop_line": 10,
+            "stop_column": 8
+          }
+        }
+      ],
+      "range": [
+        "Comp.Typ.Arrow",
+        {
+          "domain": [
+            "Comp.Typ.Box",
+            {
+              "meta_type": [
+                "Meta.Typ.Contextual_typ",
+                {
+                  "context": [
+                    "CLF.Context",
+                    {
+                      "head": [
+                        "CLF.Context.Head.None",
+                        {
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 10,
+                            "start_column": 12,
+                            "stop_line": 10,
+                            "stop_column": 12
+                          }
+                        }
+                      ],
+                      "bindings": [],
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 12,
+                        "stop_line": 10,
+                        "stop_column": 12
+                      }
+                    }
+                  ],
+                  "typ": [
+                    "CLF.Typ.Constant",
+                    {
+                      "identifier": {
+                        "name": {
+                          "name": "nat",
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 10,
+                            "start_column": 14,
+                            "stop_line": 10,
+                            "stop_column": 17
+                          }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_types_ok.input.bel",
+                          "start_line": 10,
+                          "start_column": 14,
+                          "stop_line": 10,
+                          "stop_column": 17
+                        }
+                      },
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 14,
+                        "stop_line": 10,
+                        "stop_column": 17
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 10,
+                    "start_column": 11,
+                    "stop_line": 10,
+                    "stop_column": 18
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 10,
+                "start_column": 11,
+                "stop_line": 10,
+                "stop_column": 18
+              }
+            }
+          ],
+          "range": [
+            "Comp.Typ.Box",
+            {
+              "meta_type": [
+                "Meta.Typ.Contextual_typ",
+                {
+                  "context": [
+                    "CLF.Context",
+                    {
+                      "head": [
+                        "CLF.Context.Head.None",
+                        {
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 10,
+                            "start_column": 22,
+                            "stop_line": 10,
+                            "stop_column": 22
+                          }
+                        }
+                      ],
+                      "bindings": [],
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 22,
+                        "stop_line": 10,
+                        "stop_column": 22
+                      }
+                    }
+                  ],
+                  "typ": [
+                    "CLF.Typ.Constant",
+                    {
+                      "identifier": {
+                        "name": {
+                          "name": "nat",
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 10,
+                            "start_column": 24,
+                            "stop_line": 10,
+                            "stop_column": 27
+                          }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_types_ok.input.bel",
+                          "start_line": 10,
+                          "start_column": 24,
+                          "stop_line": 10,
+                          "stop_column": 27
+                        }
+                      },
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 10,
+                        "start_column": 24,
+                        "stop_line": 10,
+                        "stop_column": 27
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 10,
+                    "start_column": 21,
+                    "stop_line": 10,
+                    "stop_column": 28
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 10,
+                "start_column": 21,
+                "stop_line": 10,
+                "stop_column": 28
+              }
+            }
+          ],
+          "orientation": "forward",
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 10,
+            "start_column": 11,
+            "stop_line": 10,
+            "stop_column": 28
+          }
+        }
+      ],
+      "orientation": "forward",
+      "location": {
+        "filename": "comp_types_ok.input.bel",
+        "start_line": 10,
+        "start_column": 1,
+        "stop_line": 10,
+        "stop_column": 28
+      }
+    }
+  ],
+  [
+    "Comp.Typ.Arrow",
+    {
+      "domain": [
+        "Comp.Typ.Arrow",
+        {
+          "domain": [
+            "Comp.Typ.Box",
+            {
+              "meta_type": [
+                "Meta.Typ.Contextual_typ",
+                {
+                  "context": [
+                    "CLF.Context",
+                    {
+                      "head": [
+                        "CLF.Context.Head.None",
+                        {
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 13,
+                            "start_column": 3,
+                            "stop_line": 13,
+                            "stop_column": 3
+                          }
+                        }
+                      ],
+                      "bindings": [],
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 3,
+                        "stop_line": 13,
+                        "stop_column": 3
+                      }
+                    }
+                  ],
+                  "typ": [
+                    "CLF.Typ.Constant",
+                    {
+                      "identifier": {
+                        "name": {
+                          "name": "nat",
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 13,
+                            "start_column": 5,
+                            "stop_line": 13,
+                            "stop_column": 8
+                          }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_types_ok.input.bel",
+                          "start_line": 13,
+                          "start_column": 5,
+                          "stop_line": 13,
+                          "stop_column": 8
+                        }
+                      },
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 5,
+                        "stop_line": 13,
+                        "stop_column": 8
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 13,
+                    "start_column": 2,
+                    "stop_line": 13,
+                    "stop_column": 9
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 13,
+                "start_column": 2,
+                "stop_line": 13,
+                "stop_column": 9
+              }
+            }
+          ],
+          "range": [
+            "Comp.Typ.Box",
+            {
+              "meta_type": [
+                "Meta.Typ.Contextual_typ",
+                {
+                  "context": [
+                    "CLF.Context",
+                    {
+                      "head": [
+                        "CLF.Context.Head.None",
+                        {
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 13,
+                            "start_column": 13,
+                            "stop_line": 13,
+                            "stop_column": 13
+                          }
+                        }
+                      ],
+                      "bindings": [],
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 13,
+                        "stop_line": 13,
+                        "stop_column": 13
+                      }
+                    }
+                  ],
+                  "typ": [
+                    "CLF.Typ.Constant",
+                    {
+                      "identifier": {
+                        "name": {
+                          "name": "nat",
+                          "location": {
+                            "filename": "comp_types_ok.input.bel",
+                            "start_line": 13,
+                            "start_column": 15,
+                            "stop_line": 13,
+                            "stop_column": 18
+                          }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_types_ok.input.bel",
+                          "start_line": 13,
+                          "start_column": 15,
+                          "stop_line": 13,
+                          "stop_column": 18
+                        }
+                      },
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 15,
+                        "stop_line": 13,
+                        "stop_column": 18
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 13,
+                    "start_column": 12,
+                    "stop_line": 13,
+                    "stop_column": 19
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 13,
+                "start_column": 12,
+                "stop_line": 13,
+                "stop_column": 19
+              }
+            }
+          ],
+          "orientation": "forward",
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 13,
+            "start_column": 1,
+            "stop_line": 13,
+            "stop_column": 20
+          }
+        }
+      ],
+      "range": [
+        "Comp.Typ.Box",
+        {
+          "meta_type": [
+            "Meta.Typ.Contextual_typ",
+            {
+              "context": [
+                "CLF.Context",
+                {
+                  "head": [
+                    "CLF.Context.Head.None",
+                    {
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 24,
+                        "stop_line": 13,
+                        "stop_column": 24
+                      }
+                    }
+                  ],
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 13,
+                    "start_column": 24,
+                    "stop_line": 13,
+                    "stop_column": 24
+                  }
+                }
+              ],
+              "typ": [
+                "CLF.Typ.Constant",
+                {
+                  "identifier": {
+                    "name": {
+                      "name": "nat",
+                      "location": {
+                        "filename": "comp_types_ok.input.bel",
+                        "start_line": 13,
+                        "start_column": 26,
+                        "stop_line": 13,
+                        "stop_column": 29
+                      }
+                    },
+                    "namespaces": [],
+                    "location": {
+                      "filename": "comp_types_ok.input.bel",
+                      "start_line": 13,
+                      "start_column": 26,
+                      "stop_line": 13,
+                      "stop_column": 29
+                    }
+                  },
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 13,
+                    "start_column": 26,
+                    "stop_line": 13,
+                    "stop_column": 29
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 13,
+                "start_column": 23,
+                "stop_line": 13,
+                "stop_column": 30
+              }
+            }
+          ],
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 13,
+            "start_column": 23,
+            "stop_line": 13,
+            "stop_column": 30
+          }
+        }
+      ],
+      "orientation": "forward",
+      "location": {
+        "filename": "comp_types_ok.input.bel",
+        "start_line": 13,
+        "start_column": 1,
+        "stop_line": 13,
+        "stop_column": 30
+      }
+    }
+  ],
+  [
+    "Comp.Typ.Arrow",
+    {
+      "domain": [
+        "Comp.Typ.Arrow",
+        {
+          "domain": [
+            "Comp.Typ.Inductive_typ_constant",
+            {
+              "identifier": {
+                "name": {
+                  "name": "List",
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 16,
+                    "start_column": 2,
+                    "stop_line": 16,
+                    "stop_column": 6
+                  }
+                },
+                "namespaces": [],
+                "location": {
+                  "filename": "comp_types_ok.input.bel",
+                  "start_line": 16,
+                  "start_column": 2,
+                  "stop_line": 16,
+                  "stop_column": 6
+                }
+              },
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 16,
+                "start_column": 2,
+                "stop_line": 16,
+                "stop_column": 6
+              }
+            }
+          ],
+          "range": [
+            "Comp.Typ.Inductive_typ_constant",
+            {
+              "identifier": {
+                "name": {
+                  "name": "List",
+                  "location": {
+                    "filename": "comp_types_ok.input.bel",
+                    "start_line": 16,
+                    "start_column": 9,
+                    "stop_line": 16,
+                    "stop_column": 13
+                  }
+                },
+                "namespaces": [],
+                "location": {
+                  "filename": "comp_types_ok.input.bel",
+                  "start_line": 16,
+                  "start_column": 9,
+                  "stop_line": 16,
+                  "stop_column": 13
+                }
+              },
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 16,
+                "start_column": 9,
+                "stop_line": 16,
+                "stop_column": 13
+              }
+            }
+          ],
+          "orientation": "forward",
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 16,
+            "start_column": 1,
+            "stop_line": 16,
+            "stop_column": 14
+          }
+        }
+      ],
+      "range": [
+        "Comp.Typ.Inductive_typ_constant",
+        {
+          "identifier": {
+            "name": {
+              "name": "List",
+              "location": {
+                "filename": "comp_types_ok.input.bel",
+                "start_line": 16,
+                "start_column": 17,
+                "stop_line": 16,
+                "stop_column": 21
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_types_ok.input.bel",
+              "start_line": 16,
+              "start_column": 17,
+              "stop_line": 16,
+              "stop_column": 21
+            }
+          },
+          "location": {
+            "filename": "comp_types_ok.input.bel",
+            "start_line": 16,
+            "start_column": 17,
+            "stop_line": 16,
+            "stop_column": 21
+          }
+        }
+      ],
+      "orientation": "forward",
+      "location": {
+        "filename": "comp_types_ok.input.bel",
+        "start_line": 16,
+        "start_column": 1,
+        "stop_line": 16,
+        "stop_column": 21
+      }
+    }
   ]
 ]

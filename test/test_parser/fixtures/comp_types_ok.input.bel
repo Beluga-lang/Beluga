@@ -6,3 +6,12 @@
 
 {N1 : [⊢ nat]} {N2 : [⊢ nat]} [⊢ N1] Leq [⊢ N2] → [⊢ N1] Leq [⊢ s N2]
 ;;
+
+[⊢ nat] → [⊢ nat] → [⊢ nat]
+;;
+
+([⊢ nat] → [⊢ nat]) → [⊢ nat]
+;;
+
+(List → List) → List
+;;

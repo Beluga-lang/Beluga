@@ -656,6 +656,79 @@ module Persistent_disambiguation_state = struct
       match entry.desc with
       | Module -> true
       | _ -> false
+
+    let[@inline] make_binding_location ?location identifier =
+      match location with
+      | Option.None -> Identifier.location identifier
+      | Option.Some location -> location
+
+    let[@inline] make_entry ?location identifier desc =
+      let binding_location = make_binding_location ?location identifier in
+      { binding_location; desc }
+
+    let make_lf_variable_entry ?location identifier =
+      make_entry ?location identifier Lf_variable
+
+    let make_meta_variable_entry ?location identifier =
+      make_entry ?location identifier Meta_variable
+
+    let make_parameter_variable_entry ?location identifier =
+      make_entry ?location identifier Parameter_variable
+
+    let make_substitution_variable_entry ?location identifier =
+      make_entry ?location identifier Substitution_variable
+
+    let make_context_variable_entry ?location identifier =
+      make_entry ?location identifier Context_variable
+
+    let make_contextual_variable_entry ?location identifier =
+      make_entry ?location identifier Contextual_variable
+
+    let make_computation_variable_entry ?location identifier =
+      make_entry ?location identifier Computation_variable
+
+    let make_lf_type_constant_entry ?location ?operator ?arity identifier =
+      make_entry ?location identifier (Lf_type_constant { operator; arity })
+
+    let make_lf_term_constant_entry ?location ?operator ?arity identifier =
+      make_entry ?location identifier (Lf_term_constant { operator; arity })
+
+    let make_schema_constant_entry ?location identifier =
+      make_entry ?location identifier Schema_constant
+
+    let make_inductive_computation_type_constant_entry ?location ?operator
+        ?arity identifier =
+      make_entry ?location identifier
+        (Computation_inductive_type_constant { operator; arity })
+
+    let make_stratified_computation_type_constant_entry ?location ?operator
+        ?arity identifier =
+      make_entry ?location identifier
+        (Computation_stratified_type_constant { operator; arity })
+
+    let make_coinductive_computation_type_constant_entry ?location ?operator
+        ?arity identifier =
+      make_entry ?location identifier
+        (Computation_coinductive_type_constant { operator; arity })
+
+    let make_abbreviation_computation_type_constant_entry ?location ?operator
+        ?arity identifier =
+      make_entry ?location identifier
+        (Computation_abbreviation_type_constant { operator; arity })
+
+    let make_computation_term_constructor_entry ?location ?operator ?arity
+        identifier =
+      make_entry ?location identifier
+        (Computation_term_constructor { operator; arity })
+
+    let make_computation_term_destructor_entry ?location identifier =
+      make_entry ?location identifier Computation_term_destructor
+
+    let make_program_constant_entry ?location ?operator ?arity identifier =
+      make_entry ?location identifier (Program_constant { operator; arity })
+
+    let make_module_entry ?location identifier =
+      make_entry ?location identifier Module
   end
 
   type bindings = Entry.t Binding_tree.t
@@ -696,7 +769,10 @@ module Persistent_disambiguation_state = struct
 
   let initial_state =
     { substate =
-        Scope_state { bindings = Binding_tree.empty; parent = Option.none }
+        Module_state
+          { bindings = Binding_tree.empty
+          ; declarations = Binding_tree.empty
+          }
     ; default_precedence = Synext.default_precedence
     ; default_associativity = Synext.default_associativity
     }
@@ -755,129 +831,6 @@ module Persistent_disambiguation_state = struct
     let* bindings = get_bindings in
     let bindings' = f bindings in
     set_bindings bindings'
-
-  let get_module_declarations =
-    get_substate >>= function
-    | Module_state substate -> return (Option.some substate.declarations)
-    | Pattern_state _
-    | Scope_state _ ->
-        return Option.none
-
-  let[@inline] set_module_declarations declarations =
-    modify_substate (function
-      | Module_state substate -> Module_state { substate with declarations }
-      | Pattern_state _
-      | Scope_state _ ->
-          Error.raise_violation "[set_module_declarations] invalid state")
-
-  let[@inline] modify_module_declarations f =
-    get_module_declarations >>= function
-    | Option.None -> return ()
-    | Option.Some declarations ->
-        let declarations' = f declarations in
-        set_module_declarations declarations'
-
-  (** {1 Variables} *)
-
-  let[@inline] make_binding_location ?location identifier =
-    match location with
-    | Option.None -> Identifier.location identifier
-    | Option.Some location -> location
-
-  let make_lf_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Lf_variable }
-
-  let make_meta_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Meta_variable }
-
-  let make_parameter_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Parameter_variable }
-
-  let make_substitution_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Substitution_variable }
-
-  let make_context_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Context_variable }
-
-  let make_contextual_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Contextual_variable }
-
-  let make_computation_variable_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Computation_variable }
-
-  (** {1 Constants} *)
-
-  let make_lf_type_constant_entry ?location ?operator ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Lf_type_constant { operator; arity }
-    }
-
-  let make_lf_term_constant_entry ?location ?operator ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Lf_term_constant { operator; arity }
-    }
-
-  let make_schema_constant_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Schema_constant }
-
-  let make_inductive_computation_type_constant_entry ?location ?operator
-      ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Computation_inductive_type_constant { operator; arity }
-    }
-
-  let make_stratified_computation_type_constant_entry ?location ?operator
-      ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Computation_stratified_type_constant { operator; arity }
-    }
-
-  let make_coinductive_computation_type_constant_entry ?location ?operator
-      ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Computation_coinductive_type_constant { operator; arity }
-    }
-
-  let make_abbreviation_computation_type_constant_entry ?location ?operator
-      ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Computation_abbreviation_type_constant { operator; arity }
-    }
-
-  let make_computation_term_constructor_entry ?location ?operator ?arity
-      identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Computation_term_constructor { operator; arity }
-    }
-
-  let make_computation_term_destructor_entry ?location identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Computation_term_destructor }
-
-  let make_program_constant_entry ?location ?operator ?arity identifier =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location
-    ; desc = Entry.Program_constant { operator; arity }
-    }
-
-  let make_module_entry ?location identifier _declarations =
-    let binding_location = make_binding_location ?location identifier in
-    { Entry.binding_location; desc = Entry.Module }
 
   (** {1 Free Variables} *)
 
@@ -962,121 +915,119 @@ module Persistent_disambiguation_state = struct
     &> add_inner_pattern_binding identifier entry
 
   let add_free_lf_variable ?location identifier =
-    let entry = make_lf_variable_entry ?location identifier in
-    add_free_meta_level_variable identifier entry
+    add_free_meta_level_variable identifier
+      (Entry.make_lf_variable_entry ?location identifier)
 
   let add_free_meta_variable ?location identifier =
-    let entry = make_meta_variable_entry ?location identifier in
-    add_free_meta_level_variable identifier entry
+    add_free_meta_level_variable identifier
+      (Entry.make_meta_variable_entry ?location identifier)
 
   let add_free_parameter_variable ?location identifier =
-    let entry = make_parameter_variable_entry ?location identifier in
-    add_free_meta_level_variable identifier entry
+    add_free_meta_level_variable identifier
+      (Entry.make_parameter_variable_entry ?location identifier)
 
   let add_free_substitution_variable ?location identifier =
-    let entry = make_substitution_variable_entry ?location identifier in
-    add_free_meta_level_variable identifier entry
+    add_free_meta_level_variable identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
 
   let add_free_context_variable ?location identifier =
-    let entry = make_context_variable_entry ?location identifier in
-    add_free_meta_level_variable identifier entry
+    add_free_meta_level_variable identifier
+      (Entry.make_context_variable_entry ?location identifier)
 
   let add_free_computation_variable ?location identifier =
-    let entry = make_computation_variable_entry ?location identifier in
-    let adder = Binding_tree.add_toplevel identifier entry in
+    let adder =
+      Binding_tree.add_toplevel identifier
+        (Entry.make_computation_variable_entry ?location identifier)
+    in
     add_free_variable identifier adder
 
   let[@inline] add_binding identifier ?subtree entry =
     modify_bindings (Binding_tree.add_toplevel identifier ?subtree entry)
 
   let[@inline] add_declaration identifier ?subtree entry =
-    let adder = Binding_tree.add_toplevel identifier ?subtree entry in
-    modify_bindings adder <& modify_module_declarations adder
+    let* () = add_binding identifier ?subtree entry in
+    modify_substate (function
+      | Module_state state ->
+          let declarations' =
+            Binding_tree.add_toplevel identifier ?subtree entry
+              state.declarations
+          in
+          Module_state { state with declarations = declarations' }
+      | state -> state)
 
   let add_lf_variable ?location identifier =
-    let entry = make_lf_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_lf_variable_entry ?location identifier)
 
   let add_meta_variable ?location identifier =
-    let entry = make_meta_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_meta_variable_entry ?location identifier)
 
   let add_parameter_variable ?location identifier =
-    let entry = make_parameter_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_parameter_variable_entry ?location identifier)
 
   let add_substitution_variable ?location identifier =
-    let entry = make_substitution_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
 
   let add_context_variable ?location identifier =
-    let entry = make_context_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_context_variable_entry ?location identifier)
 
   let add_contextual_variable ?location identifier =
-    let entry = make_contextual_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_contextual_variable_entry ?location identifier)
 
   let add_computation_variable ?location identifier =
-    let entry = make_computation_variable_entry ?location identifier in
-    add_binding identifier entry
+    add_binding identifier
+      (Entry.make_computation_variable_entry ?location identifier)
 
   let add_lf_type_constant ?location ?arity identifier =
-    let entry = make_lf_type_constant_entry ?location ?arity identifier in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_lf_type_constant_entry ?location ?arity identifier)
 
   let add_lf_term_constant ?location ?arity identifier =
-    let entry = make_lf_term_constant_entry ?location ?arity identifier in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_lf_term_constant_entry ?location ?arity identifier)
 
   let add_schema_constant ?location identifier =
-    let entry = make_schema_constant_entry ?location identifier in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_schema_constant_entry ?location identifier)
 
   let add_inductive_computation_type_constant ?location ?arity identifier =
-    let entry =
-      make_inductive_computation_type_constant_entry ?location ?arity
-        identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_inductive_computation_type_constant_entry ?location ?arity
+         identifier)
 
   let add_stratified_computation_type_constant ?location ?arity identifier =
-    let entry =
-      make_stratified_computation_type_constant_entry ?location ?arity
-        identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_stratified_computation_type_constant_entry ?location ?arity
+         identifier)
 
   let add_coinductive_computation_type_constant ?location ?arity identifier =
-    let entry =
-      make_coinductive_computation_type_constant_entry ?location ?arity
-        identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_coinductive_computation_type_constant_entry ?location
+         ?arity identifier)
 
   let add_abbreviation_computation_type_constant ?location ?arity identifier
       =
-    let entry =
-      make_abbreviation_computation_type_constant_entry ?location ?arity
-        identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_abbreviation_computation_type_constant_entry ?location
+         ?arity identifier)
 
   let add_computation_term_constructor ?location ?arity identifier =
-    let entry =
-      make_computation_term_constructor_entry ?location ?arity identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_computation_term_constructor_entry ?location ?arity
+         identifier)
 
   let add_computation_term_destructor ?location identifier =
-    let entry =
-      make_computation_term_destructor_entry ?location identifier
-    in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_computation_term_destructor_entry ?location identifier)
 
   let add_program_constant ?location ?arity identifier =
-    let entry = make_program_constant_entry ?location ?arity identifier in
-    add_declaration identifier entry
+    add_declaration identifier
+      (Entry.make_program_constant_entry ?location ?arity identifier)
 
   let add_module ?location identifier m =
     let* state = get in
@@ -1089,13 +1040,17 @@ module Persistent_disambiguation_state = struct
         }
     in
     let* x = m in
-    get_module_declarations >>= function
-    | Option.None -> Error.raise_violation "[add_module] invalid state"
-    | Option.Some declarations ->
+    get_substate >>= function
+    | Module_state substate ->
         let* () = put state in
-        let entry = make_module_entry ?location identifier declarations in
-        let* () = add_declaration identifier ~subtree:declarations entry in
+        let entry = Entry.make_module_entry ?location identifier in
+        let* () =
+          add_declaration identifier ~subtree:substate.declarations entry
+        in
         return x
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[add_module] invalid state"
 
   (** {1 Lookups} *)
 
@@ -1224,28 +1179,28 @@ module Persistent_disambiguation_state = struct
     <& pop_inner_pattern_binding identifier
 
   let with_inner_bound_lf_variable ?location identifier =
-    let entry = make_lf_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_lf_variable_entry ?location identifier)
 
   let with_inner_bound_meta_variable ?location identifier =
-    let entry = make_meta_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_meta_variable_entry ?location identifier)
 
   let with_inner_bound_parameter_variable ?location identifier =
-    let entry = make_parameter_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_parameter_variable_entry ?location identifier)
 
   let with_inner_bound_substitution_variable ?location identifier =
-    let entry = make_substitution_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
 
   let with_inner_bound_context_variable ?location identifier =
-    let entry = make_context_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_context_variable_entry ?location identifier)
 
   let with_inner_bound_contextual_variable ?location identifier =
-    let entry = make_contextual_variable_entry ?location identifier in
-    with_inner_bound_entry identifier entry
+    with_inner_bound_entry identifier
+      (Entry.make_contextual_variable_entry ?location identifier)
 
   let with_lf_variable ?location identifier m =
     with_bindings_checkpoint

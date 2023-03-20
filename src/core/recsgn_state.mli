@@ -168,8 +168,14 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
 end
 
-module Make_signature_reconstruction_state
-    (Index_state : Index_state.INDEXING_STATE) : sig
+module Make_signature_reconstruction_state (Index_state : sig
+  include Index_state.INDEXING_STATE
+
+  val start_module : Unit.t t
+
+  val stop_module :
+    ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
+end) : sig
   include SIGNATURE_RECONSTRUCTION_STATE
 
   val initial_state : Index_state.state -> state

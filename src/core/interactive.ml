@@ -468,7 +468,7 @@ let thin_line ppf () = Format.fprintf ppf "%s" thin_line
 
 let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : unit =
   let open Format in
-  let { Holes.loc; Holes.name; Holes.cD; Holes.info } = h in
+  let { Holes.location; Holes.name; Holes.cD; Holes.info } = h in
   (* First, we do some preparations. *)
   (* Normalize the LF and computational contexts as well as the goal type. *)
   let cD = Whnf.normMCtx cD in
@@ -481,7 +481,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
   (* 1. The 'hole identification component' contains the hole name (if any) and its number. *)
   fprintf ppf
     "@[<hov>%a:@ Hole number %a, %a@]@,  @[<v>"
-    Location.print loc
+    Location.print location
     HoleId.fmt_ppr_id i
     HoleId.fmt_ppr_name name;
   (* thin_line ppf (); *)

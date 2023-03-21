@@ -172,7 +172,8 @@ struct
       right-associative. Otherwise, [x] and [y] are ambiguous in the operator
       stack. *)
   let[@inline] validate_left_associative_operator_placement ~x ~px ~y ~py =
-    if Int.(px = py) && Operator.is_right_associative x.operator then
+    if Int.(px = py) && Bool.not (Operator.is_left_associative x.operator)
+    then
       Error.raise_at2
         (Expression.location x.applicand)
         (Expression.location y.applicand)
@@ -184,7 +185,8 @@ struct
       left-associative. Otherwise, [x] and [y] are ambiguous in the operator
       stack. *)
   let[@inline] validate_right_associative_operator_placement ~x ~px ~y ~py =
-    if Int.(px = py) && Operator.is_left_associative x.operator then
+    if Int.(px = py) && Bool.not (Operator.is_right_associative x.operator)
+    then
       Error.raise_at2
         (Expression.location x.applicand)
         (Expression.location y.applicand)
@@ -208,27 +210,22 @@ struct
       @raise Ambiguous_operator_placement *)
   let[@inline] rec pop y output stack =
     match stack with
-    | (index, x) :: xs -> (
+    | (index, x) :: xs ->
         (* In the original input list to {!shunting_yard}, [x] is an operator
            on the left, and [y] is an operator on the right. *)
-        let[@inline] write_x_if cond =
-          if cond then
-            let output' = write (index, x) output in
-            pop y output' xs
-          else (output, stack)
-        in
         let px = Operator.precedence x.operator in
         let py = Operator.precedence y.operator in
-        match Operator.associativity y.operator with
+        (match Operator.associativity y.operator with
         | Associativity.Left_associative ->
-            validate_left_associative_operator_placement ~x ~px ~y ~py;
-            write_x_if Int.(px >= py)
+            validate_left_associative_operator_placement ~x ~px ~y ~py
         | Associativity.Right_associative ->
-            validate_right_associative_operator_placement ~x ~px ~y ~py;
-            write_x_if Int.(px > py)
+            validate_right_associative_operator_placement ~x ~px ~y ~py
         | Associativity.Non_associative ->
-            validate_non_associative_operator_placement ~x ~y;
-            write_x_if Int.(px >= py))
+            validate_non_associative_operator_placement ~x ~y);
+        if px > py then
+          let output' = write (index, x) output in
+          pop y output' xs
+        else (output, stack)
     | [] -> (output, stack)
 
   let[@inline] rec pop_all output operators =

@@ -62,6 +62,8 @@ exception Expected_computation_term_destructor
 
 exception Expected_program_constant
 
+exception Expected_module
+
 exception Expected_lf_term_variable
 
 exception Expected_meta_variable
@@ -192,6 +194,9 @@ module type INDEXING_STATE = sig
 
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
+
+  val open_module :
+    ?location:Location.t -> Qualified_identifier.t -> Unit.t t
 
   val with_scope : 'a t -> 'a t
 
@@ -989,6 +994,14 @@ module Persistent_indexing_state = struct
     let* x = m in
     let* () = stop_module ?location identifier cid in
     return x
+
+  let open_namespace identifier =
+    modify_bindings (Binding_tree.open_namespace identifier)
+
+  let open_module ?location identifier =
+    lookup identifier >>= function
+    | { Entry.desc = Entry.Module _; _ } -> open_namespace identifier
+    | _ -> Error.raise_at1_opt location Expected_module
 
   let with_scope m =
     let* state = get in

@@ -93,7 +93,8 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     -> Qualified_identifier.t
     -> Unit.t t
 
-  val open_module : location:Location.t -> Qualified_identifier.t -> Unit.t t
+  val open_module :
+    ?location:Location.t -> Qualified_identifier.t -> Unit.t t
 
   val add_module_abbreviation :
        ?location:Location.t
@@ -174,7 +175,8 @@ module Make_signature_reconstruction_state (Index_state : sig
 
   val stop_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
-end) =
+end)
+(Index : Index.INDEXER with type state = Index_state.state) =
 struct
   type state =
     { leftover_vars : (Abstract.free_var Synint.LF.ctx * Location.t) List.t
@@ -369,12 +371,12 @@ struct
     | Option.None -> get_default_associativity
     | Option.Some associativity -> return associativity
 
-  let lookup_operator_arity =
+  let lookup_operator_arity ?location constant =
     Obj.magic () (* TODO: Lookup constant ID, then lookup in the store *)
 
   let set_operator_prefix ?location ?precedence constant =
     let* precedence = get_default_precedence_opt precedence in
-    lookup_operator_arity >>= function
+    lookup_operator_arity ?location constant >>= function
     | Option.None ->
         Error.raise_at1_opt location (Unknown_constant_arity constant)
     | Option.Some arity ->
@@ -390,7 +392,7 @@ struct
   let set_operator_infix ?location ?precedence ?associativity constant =
     let* precedence = get_default_precedence_opt precedence in
     let* associativity = get_default_associativity_opt associativity in
-    lookup_operator_arity >>= function
+    lookup_operator_arity ?location constant >>= function
     | Option.None ->
         Error.raise_at1_opt location (Unknown_constant_arity constant)
     | Option.Some arity ->
@@ -405,7 +407,7 @@ struct
 
   let set_operator_postfix ?location ?precedence constant =
     let* precedence = get_default_precedence_opt precedence in
-    lookup_operator_arity >>= function
+    lookup_operator_arity ?location constant >>= function
     | Option.None ->
         Error.raise_at1_opt location (Unknown_constant_arity constant)
     | Option.Some arity ->
@@ -422,27 +424,48 @@ struct
 
   let set_name_generation_bases = Obj.magic () (* TODO: *)
 
-  let open_module = Obj.magic () (* TODO: *)
+  let open_module ?location module_identifier =
+    modify_index_state
+      Index_state.(exec (open_module ?location module_identifier))
 
-  let index_lf_kind = Obj.magic () (* TODO: *)
+  let with_index_state m =
+    let* state = get in
+    let index_state', x = Index.run m state.index_state in
+    let* () = set_index_state index_state' in
+    return x
 
-  let index_lf_typ = Obj.magic () (* TODO: *)
+  let index_lf_kind kind =
+    with_index_state (Index.index_lf_typ_constant_kind kind)
 
-  let index_schema = Obj.magic () (* TODO: *)
+  let index_lf_typ typ =
+    with_index_state (Index.index_lf_term_constant_typ typ)
+
+  let index_schema schema = with_index_state (Index.index_schema schema)
 
   let index_meta_context = Obj.magic () (* TODO: *)
 
-  let index_comp_kind = Obj.magic () (* TODO: *)
+  let index_comp_kind kind =
+    with_index_state (Index.index_comp_typ_constant_kind kind)
 
-  let index_closed_comp_typ = Obj.magic () (* TODO: *)
+  let index_closed_comp_typ typ =
+    with_index_state (Index.index_comp_term_constant_typ typ)
 
   let index_comp_typ = Obj.magic () (* TODO: *)
 
-  let index_comp_expression = Obj.magic () (* TODO: *)
+  let index_comp_expression expression =
+    with_index_state (Index.index_comp_expression expression)
 
-  let index_comp_typedef = Obj.magic () (* TODO: *)
+  let index_comp_typedef typ kind =
+    with_index_state (Index.index_computation_typ_abbreviation typ kind)
 
-  let index_comp_theorem = Obj.magic () (* TODO: *)
+  let index_comp_theorem theorem =
+    with_index_state Index.(index_comp_theorem theorem)
 
-  let index_harpoon_proof = Obj.magic () (* TODO: *)
+  let index_harpoon_proof proof =
+    with_index_state Index.(index_harpoon_proof proof)
 end
+
+module Signature_reconstruction_state =
+  Make_signature_reconstruction_state
+    (Index_state.Persistent_indexing_state)
+    (Index.Indexer)

@@ -74,7 +74,8 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     -> Qualified_identifier.t
     -> Unit.t t
 
-  val open_module : location:Location.t -> Qualified_identifier.t -> Unit.t t
+  val open_module :
+    ?location:Location.t -> Qualified_identifier.t -> Unit.t t
 
   val add_module_abbreviation :
        ?location:Location.t
@@ -175,8 +176,16 @@ module Make_signature_reconstruction_state (Index_state : sig
 
   val stop_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
-end) : sig
+end)
+(Index : Index.INDEXER with type state = Index_state.state) : sig
   include SIGNATURE_RECONSTRUCTION_STATE
 
   val initial_state : Index_state.state -> state
 end
+[@@warning "-67"]
+
+module Signature_reconstruction_state :
+    module type of
+      Make_signature_reconstruction_state
+        (Index_state.Persistent_indexing_state)
+        (Index.Indexer)

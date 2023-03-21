@@ -256,15 +256,16 @@ let rec iter_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> unit) : unit =
 let iter_rev' (ctx : 'a LF.ctx) (f : 'a -> unit) : unit =
   iter_rev ctx (fun _ -> f)
 
-let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a * int) option =
+let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) :
+    ('a * int) option =
   let rec go (ctx : 'a LF.ctx) (idx : int) =
     match ctx with
-    | Empty -> None
-    | Dec (ctx', x) ->
-       let open Option in
-       lazy (go ctx' (idx + 1))
-       <||> lazy (of_bool (f ctx' (x, idx)) &> Some (x, idx))
-       |> Lazy.force
+    | Empty -> Option.none
+    | Dec (ctx', x) -> (
+        match go ctx' (idx + 1) with
+        | Option.None ->
+            if f ctx' (x, idx) then Option.some (x, idx) else Option.none
+        | x -> x)
   in
   go ctx 1
 

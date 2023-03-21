@@ -77,7 +77,14 @@ module type INDEXER = sig
 
   val index_schema : Synext.schema -> Synapx.LF.schema t
 
+  val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
+
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
+
+  val index_computation_typ_abbreviation :
+       Synext.comp_typ
+    -> Synext.comp_kind
+    -> (Synapx.Comp.typ * Synapx.Comp.kind) t
 end
 
 module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :

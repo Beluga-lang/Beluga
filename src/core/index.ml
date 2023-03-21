@@ -47,7 +47,14 @@ module type INDEXER = sig
 
   val index_schema : Synext.schema -> Synapx.LF.schema t
 
+  val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
+
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
+
+  val index_computation_typ_abbreviation :
+       Synext.comp_typ
+    -> Synext.comp_kind
+    -> (Synapx.Comp.typ * Synapx.Comp.kind) t
 end
 
 module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
@@ -79,6 +86,11 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
     | Synext.Meta.Typ.Plain_substitution_typ _
     | Synext.Meta.Typ.Renaming_substitution_typ _ ->
         with_bound_substitution_variable identifier
+
+  let with_meta_level_binding_opt identifier_opt typ =
+    match identifier_opt with
+    | Option.None -> Fun.id
+    | Option.Some identifier -> with_bound_meta_variable' identifier typ
 
   let with_bound_omittable_meta_variable identifier_opt typ =
     match identifier_opt with
@@ -1753,6 +1765,22 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
                        ; hypothetical_loc = location
                        })))
 
+  let index_computation_typ_abbreviation typ kind =
+    let* kind' = disallow_free_variables (index_comp_kind kind) in
+    let rec with_unrolled_kind kind f =
+      match kind with
+      | Synext.Comp.Kind.Pi { parameter_identifier; parameter_type; body; _ }
+        ->
+          with_meta_level_binding_opt parameter_identifier parameter_type
+            (with_unrolled_kind body f)
+      | Synext.Comp.Kind.Arrow { range; _ } -> with_unrolled_kind range f
+      | Synext.Comp.Kind.Ctype _ -> f
+    in
+    let* typ' =
+      disallow_free_variables (with_unrolled_kind kind (index_comp_typ typ))
+    in
+    return (typ', kind')
+
   let index_lf_typ_constant_kind kind =
     allow_free_variables (index_lf_kind kind)
 
@@ -1771,6 +1799,11 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
   let index_comp_typ typ = disallow_free_variables (index_comp_typ typ)
 
   let index_schema schema = disallow_free_variables (index_schema schema)
+
+  let index_comp_theorem theorem =
+    disallow_free_variables
+      ( index_comp_expression theorem $> fun theorem' ->
+        Synapx.Comp.Program theorem' )
 
   let index_harpoon_proof proof =
     disallow_free_variables

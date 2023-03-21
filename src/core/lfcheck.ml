@@ -256,13 +256,13 @@ let rec checkW cD cPsi sM sA =
            (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
        end
 
-  | ((LFHole (loc, id, name), s), sA) ->
+  | ((LFHole (location, id, name), s), sA) ->
      let open! Holes in
      begin match get (by_id id) with
      | None ->
         (* no hole here yet, so we should fill it in *)
         let info = { cPsi; lfGoal = sA; lfSolution = None } in
-        assign id (Exists (LFInfo, { loc; name; cD; info }))
+        assign id (Exists (LFInfo, { location; name; cD; info }))
      | Some (_, Exists (CompInfo, _)) ->
         (* this hole ID belongs to a computation hole;
            this is supposed to be impossible
@@ -270,7 +270,7 @@ let rec checkW cD cPsi sM sA =
         Error.raise_violation "hole kind mismatch"
      | Some (id, Exists (LFInfo, { name; info = {lfSolution; _ }; _})) ->
         begin match lfSolution with
-        | None -> () (* raise (Error (loc, UnsolvedHole (name, id))) *)
+        | None -> ()
         | Some sM ->
            dprintf
              begin fun p ->

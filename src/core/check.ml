@@ -1063,15 +1063,14 @@ module Comp = struct
        else
          raise (Error (loc, MismatchChk (cD, cG, e, (tau, t), (tau', t'))))
 
-    | (Hole (loc, id, name), (tau, t)) ->
-       Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
+    | (Hole (location, id, name), (tau, t)) ->
+       Typeinfo.Comp.add location (Typeinfo.Comp.mk_entry cD ttau)
          (Format.asprintf "Hole %a" (P.fmt_ppr_cmp_exp cD cG P.l0) e);
        let open Holes in
        begin match get (by_id id) with
        | None ->
           let info = { Holes.cG; compGoal = (tau, t); compSolution = None } in
-          let h = { Holes.loc; name; cD; info } in
-          let h = Holes.Exists (Holes.CompInfo, h) in
+          let h = Holes.Exists (Holes.CompInfo, { Holes.location; name; cD; info }) in
           Holes.assign id h
        | Some (_, (Exists (w, h))) ->
           begin match w with

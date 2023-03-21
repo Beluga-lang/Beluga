@@ -206,14 +206,14 @@ let lochole =
   ; run =
       command_with_arguments 1 (fun ppf arglist ->
           with_hole_from_strategy_string ppf (List.hd arglist)
-            (fun (_, Holes.Exists (w, { Holes.loc; _ })) ->
-              let file_name = Beluga_syntax.Location.filename loc in
-              let start_line = Beluga_syntax.Location.start_line loc in
-              let start_bol = Beluga_syntax.Location.start_bol loc in
-              let start_off = Beluga_syntax.Location.start_offset loc in
-              let stop_line = Beluga_syntax.Location.stop_line loc in
-              let stop_bol = Beluga_syntax.Location.stop_bol loc in
-              let stop_off = Beluga_syntax.Location.stop_offset loc in
+            (fun (_, Holes.Exists (w, { Holes.location; _ })) ->
+              let file_name = Beluga_syntax.Location.filename location in
+              let start_line = Beluga_syntax.Location.start_line location in
+              let start_bol = Beluga_syntax.Location.start_bol location in
+              let start_off = Beluga_syntax.Location.start_offset location in
+              let stop_line = Beluga_syntax.Location.stop_line location in
+              let stop_bol = Beluga_syntax.Location.stop_bol location in
+              let stop_off = Beluga_syntax.Location.stop_offset location in
               fprintf ppf "(\"%s\" %d %d %d %d %d %d);\n@?" file_name
                 start_line start_bol start_off stop_line stop_bol stop_off))
   ; help =

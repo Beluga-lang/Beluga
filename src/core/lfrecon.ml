@@ -1037,18 +1037,18 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Ann (_loc, m, a) ->
      elTerm' recT cD cPsi m sP
 
-  | Apx.LF.LFHole (loc, m_name) ->
+  | Apx.LF.LFHole (location, m_name) ->
      let open Holes in
      let open HoleId in
      let name = name_of_option m_name in
      let info = { cPsi; lfGoal = sP; lfSolution = None } in
      let id = allocate () in
-     assign id (Exists (LFInfo, { loc; name; cD; info }));
+     assign id (Exists (LFInfo, { location; name; cD; info }));
      dprintf
        (fun p ->
          p.fmt "[elTerm'] elaborated LFHole at %a"
-           Location.print_short loc);
-     Int.LF.LFHole (loc, id, name)
+           Location.print_short location);
+     Int.LF.LFHole (location, id, name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
      let { Store.Cid.Term.Entry.typ = tA; implicit_arguments = i; _ } = Store.Cid.Term.get c in

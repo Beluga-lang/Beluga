@@ -21,17 +21,14 @@ type _ hole_info =
 
 (** A hole with a known kind of information. *)
 type 'a hole =
-  { loc : Location.t
+  { location : Location.t
   ; name : HoleId.name
-    (** "Context Delta", for metavariables. *)
-  ; cD : LF.mctx
-    (** information specific to the hole type. *)
-  ; info : 'a
+  ; cD : LF.mctx  (** "Context Delta", for metavariables. *)
+  ; info : 'a  (** information specific to the hole type. *)
   }
 
 (** Existential wrapper for 'a hole with a singleton type. *)
-type some_hole =
-  | Exists : 'a hole_info * 'a hole -> some_hole
+type some_hole = Exists : 'a hole_info * 'a hole -> some_hole
 
 (** A strategy for retrieving a hole. *)
 type lookup_strategy
@@ -39,32 +36,20 @@ type lookup_strategy
 (** Gets a string representation of the given strategy. *)
 val string_of_lookup_strategy : lookup_strategy -> string
 
-type error =
-  | InvalidHoleIdentifier of string
-  | NoSuchHole of lookup_strategy
-  | NameShadowing of string * Location.t
-  | UnsolvedHole of HoleId.name * HoleId.t
-
-(** An error that arises when lookup by a given strategy fails. *)
-exception Error of Location.t * error
-
 (** Parses a lookup strategy.
- * An integer gives the `by_id` strategy, whereas a non-integer gives
- * the `by_name` strategy
- * Returns None if the parsing fails. *)
+
+    An integer gives the `by_id` strategy, whereas a non-integer gives the
+    `by_name` strategy Returns None if the parsing fails. *)
 val parse_lookup_strategy : string -> lookup_strategy option
 
-(** Parses a lookup strategy, throwing an exception on failure.
-    The given location is used in the thrown exception.
- *)
+(** Parses a lookup strategy, throwing an exception on failure. The given
+    location is used in the thrown exception. *)
 val unsafe_parse_lookup_strategy : Location.t -> string -> lookup_strategy
 
-(** Looks up a hole by its number.
-  * Use strategies with `get`. *)
+(** Looks up a hole by its number. Use strategies with `get`. *)
 val by_id : HoleId.t -> lookup_strategy
 
-(** Looks up a hole by its name.
-  * Use strategies with `get`. *)
+(** Looks up a hole by its name. Use strategies with `get`. *)
 val by_name : string -> lookup_strategy
 
 type snapshot
@@ -72,15 +57,12 @@ type snapshot
 (** Gets a snapshot of the current hole ids. *)
 val get_snapshot : unit -> snapshot
 
-(** Gets a list of holes added since the given snapshot.
-    This can be used to whether an ad hoc expression contained any
-    holes.
- *)
+(** Gets a list of holes added since the given snapshot. This can be used to
+    whether an ad hoc expression contained any holes. *)
 val holes_since : snapshot -> (HoleId.t * some_hole) list
 
-(** Runs a function, and catches any new holes added as a result of
-    running it.
- *)
+(** Runs a function, and catches any new holes added as a result of running
+    it. *)
 val catch : (unit -> 'a) -> (HoleId.t * some_hole) list * 'a
 
 (** Decides whether this is an LF hole. *)
@@ -104,8 +86,8 @@ val none : unit -> bool
 (** Retrieves a single hole using the given strategy. *)
 val get : lookup_strategy -> (HoleId.t * some_hole) option
 
-(** Retrieves a single hole using the given strategy,
- * raising NoSuchHole if the hole does not exist. *)
+(** Retrieves a single hole using the given strategy, * raising NoSuchHole if
+    the hole does not exist. *)
 val unsafe_get : lookup_strategy -> HoleId.t * some_hole
 
 (** Looks up a hole, retrieving the hole itself and its number. *)
@@ -129,10 +111,8 @@ val assign : HoleId.t -> some_hole -> unit
 (** Clears the hole arrays. *)
 val clear : unit -> unit
 
-(** Gets the current list of holes.
-    The list is in sorted order of the hole locations in the source
-    file.
- *)
+(** Gets the current list of holes. The list is in sorted order of the hole
+    locations in the source file. *)
 val list : unit -> (HoleId.t * some_hole) list
 
 (** Adds a Harpoon subgoal to the internal list. *)

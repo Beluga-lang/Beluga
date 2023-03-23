@@ -15,6 +15,8 @@ open Disambiguation_state
 
 (** {1 Exceptions} *)
 
+exception Duplicate_identifiers_recursive_declaration of Identifier.t List1.t
+
 (** {2 Exceptions for declaration disambiguation} *)
 
 exception
@@ -37,6 +39,15 @@ let () =
            - @[<hov 0>As@ an@ LF@ type:@ %t@]@,\
            - @[<hov 0>As@ an@ LF@ term:@ %t@]@]" as_type_constant_printer
           as_term_constant_printer
+    | Duplicate_identifiers_recursive_declaration duplicates ->
+        Format.dprintf
+          "@[<v 0>@[<hov 0>Illegal@ duplicate@ identifiers@ in@ mutually@ \
+           recursive@ declaration.@ The@ following@ identifiers@ are@ in@ \
+           conflict:@]@,\
+           %a@]"
+          (List1.pp ~pp_sep:Format.pp_print_cut (fun ppf identifier ->
+               Format.fprintf ppf "@[<hov 0>- %a@]" Identifier.pp identifier))
+          duplicates
     | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type SIGNATURE_DISAMBIGUATION = sig
@@ -105,72 +116,72 @@ struct
     | Option.None -> Fun.id
     | Option.Some identifier -> with_meta_level_binding typ identifier
 
-  let add_default_lf_type_constant identifier kind =
+  let add_default_lf_type_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_lf_kind kind in
-    add_lf_type_constant ~arity identifier
+    add_lf_type_constant ?location ~arity identifier
 
-  let add_default_lf_type_constant' identifier kind' =
+  let add_default_lf_type_constant' ?location identifier kind' =
     let arity = Synext.explicit_arguments_lf_kind kind' in
-    add_lf_type_constant ~arity identifier
+    add_lf_type_constant ?location ~arity identifier
 
-  let add_default_lf_term_constant identifier typ =
+  let add_default_lf_term_constant ?location identifier typ =
     let arity = Synprs.explicit_arguments_lf_typ typ in
-    add_lf_term_constant ~arity identifier
+    add_lf_term_constant ?location ~arity identifier
 
-  let add_default_lf_term_constant' identifier typ' =
+  let add_default_lf_term_constant' ?location identifier typ' =
     let arity = Synext.explicit_arguments_lf_typ typ' in
-    add_lf_term_constant ~arity identifier
+    add_lf_term_constant ?location ~arity identifier
 
-  let add_default_inductive_comp_typ_constant identifier kind =
+  let add_default_inductive_comp_typ_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_comp_kind kind in
-    add_inductive_computation_type_constant ~arity identifier
+    add_inductive_computation_type_constant ?location ~arity identifier
 
-  let add_default_inductive_comp_typ_constant' identifier kind' =
+  let add_default_inductive_comp_typ_constant' ?location identifier kind' =
     let arity = Synext.explicit_arguments_comp_kind kind' in
-    add_inductive_computation_type_constant ~arity identifier
+    add_inductive_computation_type_constant ?location ~arity identifier
 
-  let add_default_stratified_comp_typ_constant identifier kind =
+  let add_default_stratified_comp_typ_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_comp_kind kind in
-    add_stratified_computation_type_constant ~arity identifier
+    add_stratified_computation_type_constant ?location ~arity identifier
 
-  let add_default_stratified_comp_typ_constant' identifier kind' =
+  let add_default_stratified_comp_typ_constant' ?location identifier kind' =
     let arity = Synext.explicit_arguments_comp_kind kind' in
-    add_stratified_computation_type_constant ~arity identifier
+    add_stratified_computation_type_constant ?location ~arity identifier
 
-  let add_default_abbreviation_comp_typ_constant identifier kind =
+  let add_default_abbreviation_comp_typ_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_comp_kind kind in
-    add_abbreviation_computation_type_constant ~arity identifier
+    add_abbreviation_computation_type_constant ?location ~arity identifier
 
-  let add_default_abbreviation_comp_typ_constant' identifier kind' =
+  let add_default_abbreviation_comp_typ_constant' ?location identifier kind'
+      =
     let arity = Synext.explicit_arguments_comp_kind kind' in
-    add_abbreviation_computation_type_constant ~arity identifier
+    add_abbreviation_computation_type_constant ?location ~arity identifier
 
-  let add_default_coinductive_comp_typ_constant identifier kind =
+  let add_default_coinductive_comp_typ_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_comp_kind kind in
-    add_coinductive_computation_type_constant ~arity identifier
+    add_coinductive_computation_type_constant ?location ~arity identifier
 
-  let add_default_coinductive_comp_typ_constant' identifier kind' =
+  let add_default_coinductive_comp_typ_constant' ?location identifier kind' =
     let arity = Synext.explicit_arguments_comp_kind kind' in
-    add_coinductive_computation_type_constant ~arity identifier
+    add_coinductive_computation_type_constant ?location ~arity identifier
 
-  let add_default_comp_constructor_constant identifier typ =
+  let add_default_comp_constructor_constant ?location identifier typ =
     let arity = Synprs.explicit_arguments_comp_typ typ in
-    add_computation_term_constructor ~arity identifier
+    add_computation_term_constructor ?location ~arity identifier
 
-  let add_default_comp_constructor_constant' identifier typ' =
+  let add_default_comp_constructor_constant' ?location identifier typ' =
     let arity = Synext.explicit_arguments_comp_typ typ' in
-    add_computation_term_constructor ~arity identifier
+    add_computation_term_constructor ?location ~arity identifier
 
-  let add_default_program_constant ?typ identifier =
+  let add_default_program_constant ?location ?typ identifier =
     let arity = Option.map Synprs.explicit_arguments_comp_typ typ in
-    add_program_constant ?arity identifier
+    add_program_constant ?location ?arity identifier
 
-  let[@warning "-32"] add_default_program_constant' ?typ' identifier =
+  let add_default_program_constant' ?location ?typ' identifier =
     let arity = Option.map Synext.explicit_arguments_comp_typ typ' in
-    add_program_constant ?arity identifier
+    add_program_constant ?location ?arity identifier
 
-  let add_recursive_declaration declaration =
-    match declaration with
+  let add_declaration = function
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant _
     (* Old style LF declarations can't be disambiguated without knowing the
        identifiers in scope and their sort, and the sort of an old style LF
@@ -221,6 +232,74 @@ struct
         add_default_abbreviation_comp_typ_constant identifier kind
     | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
         add_default_program_constant ?typ identifier
+
+  let add_declaration' = function
+    | Synext.Signature.Declaration.Typ { identifier; kind; _ } ->
+        add_default_lf_type_constant' identifier kind
+    | Synext.Signature.Declaration.Const { identifier; typ; _ } ->
+        add_default_lf_term_constant' identifier typ
+    | Synext.Signature.Declaration.CompTyp
+        { identifier; kind; datatype_flavour; _ } -> (
+        match datatype_flavour with
+        | `Inductive ->
+            add_default_inductive_comp_typ_constant' identifier kind
+        | `Stratified ->
+            add_default_stratified_comp_typ_constant' identifier kind)
+    | Synext.Signature.Declaration.CompCotyp { identifier; kind; _ } ->
+        add_default_coinductive_comp_typ_constant' identifier kind
+    | Synext.Signature.Declaration.CompConst { identifier; typ; _ } ->
+        add_default_comp_constructor_constant' identifier typ
+    | Synext.Signature.Declaration.CompDest { identifier; _ } ->
+        add_computation_term_destructor identifier
+    | Synext.Signature.Declaration.Schema { identifier; _ } ->
+        add_schema_constant identifier
+    | Synext.Signature.Declaration.Theorem { identifier; typ; _ } ->
+        add_default_program_constant' identifier ~typ':typ
+    | Synext.Signature.Declaration.Proof { identifier; typ; _ } ->
+        add_default_program_constant' identifier ~typ':typ
+    | Synext.Signature.Declaration.CompTypAbbrev { identifier; kind; _ } ->
+        add_default_abbreviation_comp_typ_constant' identifier kind
+    | Synext.Signature.Declaration.Val { identifier; typ; _ } ->
+        add_default_program_constant' ?typ':typ identifier
+    | Synext.Signature.Declaration.Recursive_declarations _ ->
+        Error.raise_violation
+          "[add_declaration'] unsupported recursive declarations"
+    | Synext.Signature.Declaration.Module _ ->
+        Error.raise_violation
+          "[add_declaration'] unsupported module declaration"
+
+  let declaration_identifiers declarations =
+    List.fold_right
+      (fun declaration accumulator ->
+        match declaration with
+        | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_lf_typ_constant { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_lf_term_constant { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_comp_expression_constructor
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_comp_expression_destructor
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
+            { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_schema { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_theorem { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_proof { identifier; _ }
+        | Synprs.Signature.Declaration.Raw_val { identifier; _ } ->
+            identifier :: accumulator
+        | Synprs.Signature.Declaration.Raw_recursive_declarations _ ->
+            Error.raise_violation
+              "[declaration_identifiers] unsupported recursive declarations"
+        | Synprs.Signature.Declaration.Raw_module _ ->
+            Error.raise_violation
+              "[declaration_identifiers] unsupported module declaration")
+      declarations []
 
   (** {1 Disambiguation} *)
 
@@ -280,20 +359,17 @@ struct
         ; expected_solutions
         ; maximum_tries
         } ->
-        let* meta_context', typ' =
-          with_disambiguated_meta_context meta_context (fun meta_context' ->
-              let* typ' = disambiguate_lf_typ typ in
-              return (meta_context', typ'))
-        in
-        return
-          (Synext.Signature.Pragma.Query
-             { location
-             ; identifier
-             ; meta_context = meta_context'
-             ; typ = typ'
-             ; expected_solutions
-             ; maximum_tries
-             })
+        with_disambiguated_meta_context meta_context (fun meta_context' ->
+            let* typ' = disambiguate_lf_typ typ in
+            return
+              (Synext.Signature.Pragma.Query
+                 { location
+                 ; identifier
+                 ; meta_context = meta_context'
+                 ; typ = typ'
+                 ; expected_solutions
+                 ; maximum_tries
+                 }))
 
   and disambiguate_global_pragma = function
     | Synprs.Signature.Global_pragma.No_strengthening { location } ->
@@ -369,13 +445,9 @@ struct
              { location; arguments = arguments' })
 
   and disambiguate_mutually_recursive_declarations declarations =
-    let* () = traverse_list1_void add_recursive_declaration declarations in
+    let* () = traverse_list1_void add_declaration declarations in
     let* declarations =
-      with_scope
-        (traverse_list1
-           (fun declaration ->
-             with_parent_scope (disambiguate_declaration declaration))
-           declarations)
+      traverse_list1 disambiguate_declaration declarations
     in
     return declarations
 
@@ -386,14 +458,12 @@ struct
         let disambiguate_as_lf_typ_declaration =
           lazy
             (let* kind' = disambiguate_lf_kind typ_or_const in
-             let* () = add_default_lf_type_constant' identifier kind' in
              return
                (Synext.Signature.Declaration.Typ
                   { location; identifier; kind = kind' }))
         and disambiguate_as_lf_const_declaration =
           lazy
             (let* typ' = disambiguate_lf_typ typ_or_const in
-             let* () = add_default_lf_term_constant' identifier typ' in
              return
                (Synext.Signature.Declaration.Const
                   { location; identifier; typ = typ' }))
@@ -416,23 +486,18 @@ struct
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_lf_kind kind in
-        let* () = add_default_lf_type_constant' identifier kind' in
         return
           (Synext.Signature.Declaration.Typ
              { location; identifier; kind = kind' })
     | Synprs.Signature.Declaration.Raw_lf_term_constant
         { location; identifier; typ } ->
         let* typ' = disambiguate_lf_typ typ in
-        let* () = add_default_lf_term_constant' identifier typ' in
         return
           (Synext.Signature.Declaration.Const
              { location; identifier; typ = typ' })
     | Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_comp_kind kind in
-        let* () =
-          add_default_inductive_comp_typ_constant' identifier kind'
-        in
         return
           (Synext.Signature.Declaration.CompTyp
              { location
@@ -443,9 +508,6 @@ struct
     | Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_comp_kind kind in
-        let* () =
-          add_default_stratified_comp_typ_constant' identifier kind'
-        in
         return
           (Synext.Signature.Declaration.CompTyp
              { location
@@ -456,16 +518,12 @@ struct
     | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_comp_kind kind in
-        let* () =
-          add_default_coinductive_comp_typ_constant' identifier kind'
-        in
         return
           (Synext.Signature.Declaration.CompCotyp
              { location; identifier; kind = kind' })
     | Synprs.Signature.Declaration.Raw_comp_expression_constructor
         { location; identifier; typ } ->
         let* typ' = disambiguate_comp_typ typ in
-        let* () = add_default_comp_constructor_constant' identifier typ' in
         return
           (Synext.Signature.Declaration.CompConst
              { location; identifier; typ = typ' })
@@ -473,7 +531,6 @@ struct
         { location; identifier; observation_type; return_type } ->
         let* observation_type' = disambiguate_comp_typ observation_type in
         let* return_type' = disambiguate_comp_typ return_type in
-        let* () = add_computation_term_destructor identifier in
         return
           (Synext.Signature.Declaration.CompDest
              { location
@@ -494,34 +551,21 @@ struct
           | Synext.Comp.Kind.Ctype _ -> f
         in
         let* typ' = with_unrolled_kind kind' (disambiguate_comp_typ typ) in
-        let* () =
-          add_default_abbreviation_comp_typ_constant' identifier kind'
-        in
         return
           (Synext.Signature.Declaration.CompTypAbbrev
              { location; identifier; kind = kind'; typ = typ' })
     | Synprs.Signature.Declaration.Raw_schema
         { location; identifier; schema } ->
         let* schema' = disambiguate_schema schema in
-        let* () = add_schema_constant identifier in
         return
           (Synext.Signature.Declaration.Schema
              { location; identifier; schema = schema' })
-    | Synprs.Signature.Declaration.Raw_recursive_declarations
-        { location; declarations } ->
-        let* declarations' =
-          disambiguate_mutually_recursive_declarations declarations
-        in
-        return
-          (Synext.Signature.Declaration.Recursive_declarations
-             { location; declarations = declarations' })
     | Synprs.Signature.Declaration.Raw_theorem
         { location; identifier; typ; order; body } ->
         let* typ' = disambiguate_comp_typ typ in
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_default_program_constant ~typ identifier in
         let* body' = disambiguate_comp_expression body in
         return
           (Synext.Signature.Declaration.Theorem
@@ -537,7 +581,6 @@ struct
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_default_program_constant ~typ identifier in
         let* body' = with_scope (disambiguate_harpoon_proof body) in
         return
           (Synext.Signature.Declaration.Proof
@@ -551,10 +594,56 @@ struct
         { location; identifier; typ; expression } ->
         let* typ' = traverse_option disambiguate_comp_typ typ in
         let* expression' = disambiguate_comp_expression expression in
-        let* () = add_default_program_constant ?typ identifier in
         return
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })
+    | Synprs.Signature.Declaration.Raw_recursive_declarations _ ->
+        Error.raise_violation
+          "[disambiguate_declaration] can't disambiguate mutually recursive \
+           declarations without adding its entries to the state"
+    | Synprs.Signature.Declaration.Raw_module _ ->
+        Error.raise_violation
+          "[disambiguate_declaration] can't disambiguate a module without \
+           adding its entries to the state"
+
+  and disambiguate_and_add_declaration = function
+    | ( Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant _
+      | Synprs.Signature.Declaration.Raw_lf_typ_constant _
+      | Synprs.Signature.Declaration.Raw_lf_term_constant _
+      | Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant _
+      | Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant _
+      | Synprs.Signature.Declaration.Raw_comp_cotyp_constant _
+      | Synprs.Signature.Declaration.Raw_comp_expression_constructor _
+      | Synprs.Signature.Declaration.Raw_comp_expression_destructor _
+      | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation _
+      | Synprs.Signature.Declaration.Raw_schema _
+      | Synprs.Signature.Declaration.Raw_theorem _
+      | Synprs.Signature.Declaration.Raw_proof _
+      | Synprs.Signature.Declaration.Raw_val _ ) as declaration ->
+        let* declaration' = disambiguate_declaration declaration in
+        let* () = add_declaration' declaration' in
+        return declaration'
+    | Synprs.Signature.Declaration.Raw_recursive_declarations
+        { location; declarations } -> (
+        match
+          Identifier.find_duplicates
+            (declaration_identifiers (List1.to_list declarations))
+        with
+        | Option.Some duplicates ->
+            Error.raise_at
+              (List1.concat_map
+                 (fun (_, duplicates) ->
+                   List2.to_list1 (List2.map Identifier.location duplicates))
+                 duplicates)
+              (Duplicate_identifiers_recursive_declaration
+                 (List1.map Pair.fst duplicates))
+        | Option.None ->
+            let* declarations' =
+              disambiguate_mutually_recursive_declarations declarations
+            in
+            return
+              (Synext.Signature.Declaration.Recursive_declarations
+                 { location; declarations = declarations' }))
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; entries } ->
         add_module ~location identifier
@@ -568,7 +657,7 @@ struct
         let* pragma' = disambiguate_pragma pragma in
         return (Synext.Signature.Entry.Pragma { pragma = pragma'; location })
     | Synprs.Signature.Entry.Raw_declaration { declaration; location } ->
-        let* declaration' = disambiguate_declaration declaration in
+        let* declaration' = disambiguate_and_add_declaration declaration in
         return
           (Synext.Signature.Entry.Declaration
              { declaration = declaration'; location })

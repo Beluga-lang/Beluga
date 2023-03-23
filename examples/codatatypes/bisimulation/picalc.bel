@@ -63,7 +63,7 @@ and oneb  : p -> (n -> a) -> (n -> p) -> type =
   | srb   : oneb Q A R -> oneb (plus P Q) A M
 
   % par
-  | prb   : oneb P A (\x.M x) -> oneb (par P Q) A (\x. par (M x) Q)
+  | plb   : oneb P A (\x.M x) -> oneb (par P Q) A (\x. par (M x) Q)
   | prb   : oneb Q A (\x.M x) -> oneb (par P Q) A (\x. par P (M x))
 
   % restriction

@@ -141,8 +141,7 @@ module Make
 
   (** {1 Disambiguation} *)
 
-  let rec disambiguate_meta_typ meta_thing =
-    match meta_thing with
+  let rec disambiguate_meta_typ = function
     | Synprs.Meta.Thing.RawContext { location; _ } ->
         Error.raise_at1 location Illegal_context_meta_type
     | Synprs.Meta.Thing.RawSchema { location; schema } -> (
@@ -205,8 +204,7 @@ module Make
                   (Synext.Meta.Typ.Renaming_substitution_typ
                      { location; domain = domain'; range = range' })))
 
-  and disambiguate_meta_object meta_thing =
-    match meta_thing with
+  and disambiguate_meta_object = function
     | Synprs.Meta.Thing.RawSchema { location; _ } ->
         Error.raise_at1 location Expected_meta_object
     | Synprs.Meta.Thing.RawTurnstile { location; variant = `Hash; _ } ->
@@ -247,8 +245,7 @@ module Make
               (Synext.Meta.Object.Renaming_substitution
                  { location; domain = domain'; range = range' }))
 
-  and disambiguate_meta_pattern meta_thing =
-    match meta_thing with
+  and disambiguate_meta_pattern = function
     | Synprs.Meta.Thing.RawSchema { location; _ } ->
         Error.raise_at1 location Expected_meta_pattern
     | Synprs.Meta.Thing.RawTurnstile { location; variant = `Hash; _ } ->

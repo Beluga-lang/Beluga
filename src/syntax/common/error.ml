@@ -124,6 +124,23 @@ let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
 
 (** {1 Printing Located Exceptions} *)
 
+(** [replace_tabs_with_spaces line] is [line] where each tab character ['\t']
+    is replaced with a single space [' '].
+
+    In the lexer, each tab counts as one codepoint, so locations assume that
+    each tab has length [1]. However, when we print source lines, tabs may be
+    displayed with different lengths in the terminal depending on its
+    configuration.
+
+    This function is used to enforce that tabs are printed with length [1],
+    which in turn makes it easier to print caret lines with the correct
+    alignment. While we could pad the caret line with tabs on the left to
+    somewhat fix the alignment of the carets, this would not fix the issue in
+    the case where the range of characters to underline with carets contains
+    a tab. *)
+let replace_tabs_with_spaces line =
+  String.concat " " (String.split_on_char '\t' line)
+
 (** [tokenize_line lexer_buffer] tokenizes from [lexer_buffer] a line ending
     in the character ['\n'], without including it in the line. The newline
     character is skipped for subsequent tokenizations. The length of the line
@@ -140,7 +157,7 @@ let tokenize_line lexer_buffer =
       let length = Sedlexing.lexeme_length lexer_buffer in
       (* Skip the next newline character, if any. *)
       ignore (Sedlexing.next lexer_buffer : Uchar.t Option.t);
-      Option.some (length, line)
+      Option.some (length, replace_tabs_with_spaces line)
   | _ -> assert false
 
 exception Failed_to_read_line of Int.t

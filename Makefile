@@ -3,9 +3,9 @@ build: # Build the public executables
 	dune build @install
 
 .PHONY: test
-test: # Build and run the OUnit2 test suite and the integration tests
+test: build # Build and run the OUnit2 test suite and the integration tests
 	dune runtest --force
-	dune exec ./TEST.sh
+	./TEST.sh
 
 .PHONY: coverage
 coverage: # Build and run the OUnit2 test suite and generate code coverage reports
@@ -15,11 +15,11 @@ coverage: # Build and run the OUnit2 test suite and generate code coverage repor
 
 .PHONY: harpoon-test
 harpoon-test: # Run only the Harpoon intergration tests
-	dune exec ./TEST.sh -- --harpoon
+	./TEST.sh -- --harpoon
 
 .PHONY: all-test
 all-test: test
-	dune exec ./TEST.sh -- -- +htmltest
+	./TEST.sh -- -- +htmltest
 
 .PHONY: setup-development
 setup-development: # Setup a development environment

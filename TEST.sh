@@ -21,6 +21,11 @@ declare -r ROOTDIR=${ROOTDIR:-$(pwd)}
 declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
 declare SKIP_RSYNC=0
 
+declare -r BELUGA=${BELUGA:-$(dune exec which beluga)}
+declare -r HARPOON=${HARPOON:-$(dune exec which harpoon)}
+declare -r REPLAY=${REPLAY:-$(dune exec which replay)}
+declare -r LEX_CHECK=${LEX_CHECK:-$(dune exec which lex_check)}
+
 declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
 declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
@@ -31,7 +36,6 @@ declare -i TIMEOUT=${TIMEOUT:-10}
 
 function rsync_test_artifacts {
     rsync -ak "${ROOTDIR}/.admissible-fail" "${TEMPDIR}/.admissible-fail"
-    rsync -ak "${ROOTDIR}/run_harpoon_test.sh" "${TEMPDIR}/run_harpoon_test.sh"
     rsync -ak --chmod=Fa+w "${ROOTDIR}/${TESTROOTDIR}/" "${TEMPDIR}/${TESTROOTDIR}"
     rsync -ak "${ROOTDIR}/${EXAMPLEDIR}/" "${TEMPDIR}/${EXAMPLEDIR}"
 }
@@ -127,7 +131,7 @@ function parse_opts {
 }
 
 function do_testing {
-    local exit_code=0 is_failed=0
+    local is_failed=0
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
@@ -165,8 +169,8 @@ function do_testing {
         for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
             start_test_case "${f}"
 
-            local exe=$(which beluga)
-            local output="$(replay "${exe}" "${f}")"
+            local output exit_code
+            output=$("${REPLAY}" "${BELUGA}" "${f}")
             exit_code=$?
 
             if [ "${exit_code}" -eq 152 ] ; then
@@ -215,7 +219,7 @@ function lex_check_test_case {
 
     local exit_code
 
-    lex_check "${file_path}" > /dev/null 2>&1
+    "${LEX_CHECK}" "${file_path}" > /dev/null 2>&1
     exit_code=$?
 
     if [ "${exit_code}" -eq 2 ] ; then
@@ -242,7 +246,7 @@ function check_compiler_test_case {
 
     # ${...[@]+${...[@]}} is a workaround for bash < 4.4
     # In bash < 4.4, array without an item is considered as an undefined variable.
-    output=$(beluga +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
+    output=$("${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
     exit_code=$?
     diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.
@@ -281,9 +285,12 @@ function check_compiler_test_case {
 function check_harpoon {
     local -r file_path=$1
 
-    local output exit_code
+    local output exit_code sig
 
-    output=$(./run_harpoon_test.sh "${file_path}" --no-save-back --stop 2>&1)
+    # Read the first line in the file at "${file_path}"
+    sig=$(sed -n '1p' "${file_path}")
+
+    output=$("${HARPOON}" --sig "${sig}" --test "${file_path}" --test-start 2 --no-save-back --stop 2>&1)
     exit_code=$?
 
     if [ ${exit_code} -ne 0 ] ; then
@@ -321,7 +328,7 @@ function stop_on_failure {
 function find_compiler_tests_in {
     local -a tests
 
-    for dir in $(find "$1" -mindepth 1 -type d) ; do
+    for dir in $(find "$1" -type d) ; do
         tests=("${dir}/"*.cfg)
         if [ "${#tests[@]}" -eq 0 ]; then
             tests=("${dir}/"*.bel)
@@ -360,6 +367,9 @@ function usage {
 function print_paths {
     echo "Parameters for this run (override as necessary using environment variables):"
     echo
+    echo -e "\t BELUGA: ${BELUGA}"
+    echo -e "\t HARPOON: ${HARPOON}"
+    echo -e "\t REPLAY: ${REPLAY}"
     echo -e "\t TESTDIR: ${TESTDIR}"
     echo -e "\t INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR}"
     echo -e "\t EXAMPLEDIR: ${EXAMPLEDIR}"

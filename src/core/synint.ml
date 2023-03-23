@@ -898,7 +898,8 @@ module Sgn = struct
 
   type thm_decl =
     | Theorem of
-      { name : cid_prog
+      { name : Name.t
+      ; cid : cid_prog
       ; typ : Comp.typ
       ; body : Comp.thm
       ; location : Location.t
@@ -908,18 +909,21 @@ module Sgn = struct
   type decl =
     | Typ of
       { location: Location.t
-      ; identifier: cid_typ
+      ; cid : Id.cid_typ
+      ; identifier: Name.t
       ; kind: LF.kind
       } (** LF type family declaration *)
 
     | Const of
       { location: Location.t
-      ; identifier: cid_term
+      ; cid : Id.cid_term
+      ; identifier: Name.t
       ; typ: LF.typ
       } (** LF type constant declaration *)
 
     | CompTyp of
       { location: Location.t
+      ; cid : Id.cid_comp_typ
       ; identifier: Name.t
       ; kind: Comp.kind
       ; positivity_flag: positivity_flag
@@ -927,18 +931,21 @@ module Sgn = struct
 
     | CompCotyp of
       { location: Location.t
+      ; cid : Id.cid_comp_cotyp
       ; identifier: Name.t
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
 
     | CompConst of
       { location: Location.t
+      ; cid : Id.cid_comp_const
       ; identifier: Name.t
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
 
     | CompDest of
       { location: Location.t
+      ; cid : Id.cid_comp_dest
       ; identifier: Name.t
       ; mctx: LF.mctx
       ; observation_typ: Comp.typ
@@ -947,6 +954,7 @@ module Sgn = struct
 
     | CompTypAbbrev of
       { location: Location.t
+      ; cid : Id.cid_comp_typdef
       ; identifier: Name.t
       ; kind: Comp.kind
       ; typ: Comp.typ
@@ -954,7 +962,8 @@ module Sgn = struct
 
     | Schema of
       { location: Location.t
-      ; identifier: cid_schema
+      ; cid: cid_schema
+      ; identifier : Name.t
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
 
@@ -969,6 +978,7 @@ module Sgn = struct
 
     | Val of
       { location: Location.t
+      ; cid : Id.cid_prog
       ; identifier: Name.t
       ; typ: Comp.typ
       ; expression: Comp.exp
@@ -982,6 +992,7 @@ module Sgn = struct
 
     | Module of
       { location: Location.t
+      ; cid : Id.module_id
       ; identifier: Identifier.t
       ; declarations: decl list
       } (** Namespace declaration for other declarations *)

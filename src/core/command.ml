@@ -381,13 +381,14 @@ let printfun =
   ; run =
       command_with_arguments 1 (fun ppf [ arg ] ->
           try
-            let n = Name.(mk_name (SomeString arg)) in
-            let entry = Store.Cid.Comp.(index_of_name n |> get) in
+            let name = Name.(mk_name (SomeString arg)) in
+            let entry = Store.Cid.Comp.get (Store.Cid.Comp.index_of_name name) in
             match Store.Cid.Comp.Entry.(entry.prog) with
-            | Option.Some (Synint.Comp.ThmValue (name, body, _ms, _env)) ->
+            | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
                 let d =
                   Syntax.Int.Sgn.Theorem
                     { name
+                    ; cid
                     ; typ = entry.Store.Cid.Comp.Entry.typ
                     ; body
                     ; location = Beluga_syntax.Location.ghost

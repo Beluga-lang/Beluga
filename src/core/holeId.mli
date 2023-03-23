@@ -24,12 +24,14 @@ val name_of_option : string option -> name
 (** Converts a name to an option type. *)
 val option_of_name : name -> string option
 
-(** Stringifies a hole name. * If the hole is anonymous, then its name is the
-    empty string. *)
+(** Stringifies a hole name.
+
+    If the hole is anonymous, then its name is the empty string. *)
 val string_of_name : name -> string
 
-(** Stringifies a hole name. * If the hole is anonymous, then use its hole
-    id. *)
+(** Stringifies a hole name.
+
+    If the hole is anonymous, then use its hole id. *)
 val string_of_name_or_id : name * t -> string
 
 (** Decides whether a hole name is anonymous. *)

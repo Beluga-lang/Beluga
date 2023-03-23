@@ -191,7 +191,7 @@ module Make
           | Synext.LF.Typ.Constant { identifier; _ } -> identifier
           | Synext.LF.Typ.Application { applicand; _ } ->
               get_lf_typ_target applicand
-          | typ ->
+          | (Synext.LF.Typ.Arrow _ | Synext.LF.Typ.Pi _) as typ ->
               let location = Synext.location_of_lf_typ typ in
               Error.raise_at1 location Invalid_lf_typ_target
         in
@@ -217,7 +217,8 @@ module Make
               identifier
           | Synext.Comp.Typ.Application { applicand; _ } ->
               get_comp_typ_target applicand
-          | typ ->
+          | ( Synext.Comp.Typ.Pi _ | Synext.Comp.Typ.Arrow _
+            | Synext.Comp.Typ.Cross _ | Synext.Comp.Typ.Box _ ) as typ ->
               let location = Synext.location_of_comp_typ typ in
               Error.raise_at1 location Invalid_comp_typ_target
         in
@@ -242,7 +243,8 @@ module Make
               identifier
           | Synext.Comp.Typ.Application { applicand; _ } ->
               get_comp_cotyp_target applicand
-          | typ ->
+          | ( Synext.Comp.Typ.Pi _ | Synext.Comp.Typ.Arrow _
+            | Synext.Comp.Typ.Cross _ | Synext.Comp.Typ.Box _ ) as typ ->
               let location = Synext.location_of_comp_typ typ in
               Error.raise_at1 location Invalid_comp_cotyp_target
         in
@@ -483,7 +485,7 @@ module Make
       Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
     in
     let* () = add_lf_type_constant ~location identifier cid in
-    return (Synint.Sgn.Typ { location; identifier = cid; kind = tK' })
+    return (Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' })
 
   and reconstruct_lf_const_declaration location identifier extT =
     let name = Name.make_from_identifier identifier in
@@ -540,7 +542,7 @@ module Make
           Store.Cid.Term.mk_entry name tA' i)
     in
     let* () = add_lf_term_constant ~location identifier cid in
-    return (Synint.Sgn.Const { location; identifier = cid; typ = tA' })
+    return (Synint.Sgn.Const { location; identifier = name; cid; typ = tA' })
 
   and reconstruct_comp_typ_constant location identifier kind datatype_flavour
       =
@@ -597,7 +599,12 @@ module Make
     in
     return
       (Synint.Sgn.CompTyp
-         { location; identifier = name; kind = cK'; positivity_flag = p })
+         { location
+         ; identifier = name
+         ; cid
+         ; kind = cK'
+         ; positivity_flag = p
+         })
 
   and reconstruct_comp_cotyp_constant location identifier kind =
     dprintf (fun p ->
@@ -643,7 +650,8 @@ module Make
           Store.Cid.CompCotyp.mk_entry name cK' i)
     in
     let* () = add_comp_cotype_constant ~location identifier cid in
-    return (Synint.Sgn.CompCotyp { location; identifier = name; kind = cK' })
+    return
+      (Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' })
 
   and reconstruct_comp_constructor location identifier typ =
     dprintf (fun p ->
@@ -704,7 +712,8 @@ module Make
           Store.Cid.CompConst.mk_entry name tau' i)
     in
     let* () = add_comp_constructor ~location identifier cid in
-    return (Synint.Sgn.CompConst { location; identifier = name; typ = tau' })
+    return
+      (Synint.Sgn.CompConst { location; identifier = name; cid; typ = tau' })
 
   and reconstruct_comp_destructor location identifier observation_type
       return_type =
@@ -767,6 +776,7 @@ module Make
       (Synint.Sgn.CompDest
          { location
          ; identifier = name
+         ; cid
          ; mctx = mctx'
          ; observation_typ = observation_type'
          ; return_typ = return_type'
@@ -803,7 +813,8 @@ module Make
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')
     in
     let* () = add_schema_constant ~location identifier cid in
-    return (Synint.Sgn.Schema { location; identifier = cid; schema = sW' })
+    return
+      (Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' })
 
   and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
     let name = Name.make_from_identifier identifier in
@@ -830,7 +841,7 @@ module Make
     let* () = add_comp_typedef ~location identifier cid in
     return
       (Synint.Sgn.CompTypAbbrev
-         { location; identifier = name; kind = cK; typ = cT })
+         { location; identifier = name; cid; kind = cK; typ = cT })
 
   and reconstruct_val_declaration location identifier typ_opt expression =
     match typ_opt with
@@ -891,6 +902,7 @@ module Make
       (Synint.Sgn.Val
          { location
          ; identifier = name
+         ; cid
          ; typ = tau'
          ; expression = expression''
          ; expression_value = value_opt
@@ -961,6 +973,7 @@ module Make
       (Synint.Sgn.Val
          { location
          ; identifier = name
+         ; cid
          ; typ = tau'
          ; expression = expression''
          ; expression_value = value_opt
@@ -1023,7 +1036,8 @@ module Make
         (traverse_list reconstruct_signature_entry entries)
     in
     return
-      (Synint.Sgn.Module { location; identifier; declarations = entries' })
+      (Synint.Sgn.Module
+         { location; identifier; cid; declarations = entries' })
 
   and reconstruct_recursive_declarations location declarations =
     let (List1.T (first_declaration, declarations')) = declarations in
@@ -1047,7 +1061,14 @@ module Make
             declarations'
         in
         reconstruct_recursive_theorem_declarations location groups
-    | _ ->
+    | Synext.Signature.Declaration.Const _
+    | Synext.Signature.Declaration.CompConst _
+    | Synext.Signature.Declaration.CompDest _
+    | Synext.Signature.Declaration.Schema _
+    | Synext.Signature.Declaration.Recursive_declarations _
+    | Synext.Signature.Declaration.CompTypAbbrev _
+    | Synext.Signature.Declaration.Val _
+    | Synext.Signature.Declaration.Module _ ->
         Error.raise_at1
           (Synext.location_of_signature_declaration first_declaration)
           Unsupported_recursive_declaration
@@ -1515,6 +1536,7 @@ module Make
 
     let* ds =
       let reconOne (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
+        let name = Name.make_from_identifier thm_name in
         let* e_r', tau' =
           reconThm thm_location (thm_name, thm_cid, thm_body, thm_typ)
         in
@@ -1531,7 +1553,8 @@ module Make
         Store.Cid.Comp.set_prog thm_cid (Fun.const (Option.some v));
         return
           (Synint.Sgn.Theorem
-             { name = thm_cid
+             { name
+             ; cid = thm_cid
              ; body = e_r'
              ; location = thm_location
              ; typ = tau'

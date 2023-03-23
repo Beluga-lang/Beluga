@@ -1646,10 +1646,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fmt_ppr_sgn_thm_decl ppf =
     function
-    | Sgn.Theorem { name; typ; body; _ } ->
-       fprintf ppf "%a %s : %a =@ @[<v2>%a;@]"
+    | Sgn.Theorem { name; cid; typ; body; _ } ->
+       fprintf ppf "%a %a : %a =@ @[<v2>%a;@]"
          fmt_ppr_cmp_thm_prefix body
-         (R.render_cid_prog name)
+         Name.pp name
          (fmt_ppr_cmp_typ LF.Empty 0) typ
          fmt_ppr_cmp_thm body
 
@@ -1657,13 +1657,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     function
     | Sgn.CompTypAbbrev _ -> ()
     | Sgn.Const { identifier; typ; _ } ->
-       fprintf ppf "%s : %a.@\n"
-         (R.render_cid_term identifier)
+       fprintf ppf "%a : %a.@\n"
+         Name.pp identifier
          (fmt_ppr_lf_typ LF.Empty LF.Null l0) typ
 
     | Sgn.Typ { identifier; kind; _ } ->
-       fprintf ppf "%s : %a.@\n"
-         (R.render_cid_typ identifier)
+       fprintf ppf "%a : %a.@\n"
+         Name.pp identifier
          (fmt_ppr_lf_kind LF.Null l0) kind
 
     | Sgn.CompTyp { identifier; kind; _ } ->
@@ -1713,8 +1713,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_value l0) value
 
     | Sgn.Schema { identifier; schema; _ } ->
-       fprintf ppf "@\nschema %s = @[%a@];@\n"
-         (R.render_cid_schema identifier)
+       fprintf ppf "@\nschema %a = @[%a@];@\n"
+         Name.pp identifier
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
     | Sgn.Theorems { theorems; _ } ->

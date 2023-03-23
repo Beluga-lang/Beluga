@@ -24,7 +24,6 @@ declare SKIP_RSYNC=0
 declare -r BELUGA=${BELUGA:-$(dune exec which beluga)}
 declare -r HARPOON=${HARPOON:-$(dune exec which harpoon)}
 declare -r REPLAY=${REPLAY:-$(dune exec which replay)}
-declare -r LEX_CHECK=${LEX_CHECK:-$(dune exec which lex_check)}
 
 declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
 declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}
@@ -141,10 +140,6 @@ function do_testing {
         for file_path in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
             start_test_case "${file_path}"
 
-            if ! lex_check_test_case "${file_path}"; then
-                continue
-            fi
-
             check_compiler_test_case "${file_path}"
         done
     fi
@@ -154,10 +149,6 @@ function do_testing {
 
         for file_path in $(find_compiler_tests_in "${TESTDIR}") ; do
             start_test_case "${file_path}"
-
-            if ! lex_check_test_case "${file_path}"; then
-                continue
-            fi
 
             check_compiler_test_case "${file_path}"
         done
@@ -219,31 +210,6 @@ function do_testing {
     # double-negate the failure count to get 0 if it was zero, and
     # 1 if it was nonzero.
     exit $(( ! ! is_failed ))
-}
-
-function lex_check_test_case {
-    local -r file_path=$1
-
-    local exit_code
-
-    "${LEX_CHECK}" "${file_path}" > /dev/null 2>&1
-    exit_code=$?
-
-    if [ "${exit_code}" -eq 2 ] ; then
-        echo -e "${C_FAIL}FATAL LEXER FAILURE${C_END}"
-        (( TEST_RESULT_LEXER_FAIL+=1 ))
-        stop_on_failure
-        return 1
-    fi
-
-    if [ "${exit_code}" -ne 0 ] ; then
-        echo -e "${C_FAIL}LEXER FAILURE${C_END}"
-        (( TEST_RESULT_LEXER_FAIL+=1 ))
-        stop_on_failure
-        return 1
-    fi
-
-    return 0
 }
 
 function check_compiler_test_case {
@@ -377,7 +343,6 @@ function print_paths {
     echo -e "\t BELUGA: ${BELUGA}"
     echo -e "\t HARPOON: ${HARPOON}"
     echo -e "\t REPLAY: ${REPLAY}"
-    echo -e "\t LEX_CHECK: ${LEX_CHECK}"
     echo -e "\t TESTDIR: ${TESTDIR}"
     echo -e "\t INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR}"
     echo -e "\t EXAMPLEDIR: ${EXAMPLEDIR}"

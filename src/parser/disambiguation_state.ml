@@ -889,8 +889,6 @@ module Persistent_disambiguation_state = struct
         | Scope_state _ ->
             state)
 
-  let add_inner_pattern_binding = push_inner_pattern_binding
-
   let add_free_variable identifier f =
     modify (fun state ->
         match state.substate with
@@ -909,10 +907,34 @@ module Persistent_disambiguation_state = struct
             state)
 
   let add_free_meta_level_variable identifier entry =
-    let adder = Binding_tree.add_toplevel identifier entry in
-    modify_bindings adder
-    &> add_free_variable identifier adder
-    &> add_inner_pattern_binding identifier entry
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            let entries =
+              match
+                Identifier.Hamt.find_opt identifier
+                  substate.inner_pattern_bindings
+              with
+              | Option.None -> List1.singleton entry
+              | Option.Some entries -> List1.cons entry entries
+            in
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    inner_pattern_bindings =
+                      Identifier.Hamt.add identifier entries
+                        substate.inner_pattern_bindings
+                  ; expression_bindings =
+                      Binding_tree.add_toplevel identifier entry
+                        substate.expression_bindings
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
 
   let add_free_lf_variable ?location identifier =
     add_free_meta_level_variable identifier
@@ -953,7 +975,12 @@ module Persistent_disambiguation_state = struct
               state.declarations
           in
           Module_state { state with declarations = declarations' }
-      | state -> state)
+      | Pattern_state _ ->
+          Error.raise_violation
+            "[add_declaration] invalid pattern disambiguation state"
+      | Scope_state _ ->
+          Error.raise_violation
+            "[add_declaration] invalid scope disambiguation state")
 
   let add_lf_variable ?location identifier =
     add_binding identifier

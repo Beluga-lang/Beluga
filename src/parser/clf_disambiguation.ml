@@ -321,8 +321,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     | Option.None -> Fun.id
     | Option.Some identifier -> with_lf_variable identifier
 
-  let rec disambiguate_clf_typ object_ =
-    match object_ with
+  let rec disambiguate_clf_typ = function
     | Synprs.CLF.Object.Raw_hole { location; _ } ->
         Error.raise_at1 location Illegal_hole_clf_type
     | Synprs.CLF.Object.Raw_lambda { location; _ } ->
@@ -446,8 +445,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         return
           (Synext.CLF.Typ.Block { location; elements = `Record elements' })
 
-  and disambiguate_binding_list_as_clf_dependent_types bindings =
-    match bindings with
+  and disambiguate_binding_list_as_clf_dependent_types = function
     | [] -> return []
     | (identifier, typ) :: xs ->
         let* typ' = disambiguate_clf_typ typ in

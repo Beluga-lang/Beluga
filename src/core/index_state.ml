@@ -1,7 +1,7 @@
 open Support
 open Beluga_syntax
 
-[@@@warning "-A-4-44"] (* TODO: *)
+[@@@warning "+A-4-44"]
 
 exception Bound_lf_type_constant of Qualified_identifier.t
 
@@ -76,7 +76,17 @@ exception Expected_context_variable
 
 exception Expected_computation_variable
 
-exception Illegal_free_variable
+exception Illegal_free_lf_variable
+
+exception Illegal_free_meta_variable
+
+exception Illegal_free_parameter_variable
+
+exception Illegal_free_substitution_variable
+
+exception Illegal_free_context_variable
+
+exception Illegal_free_computation_variable
 
 exception Duplicate_pattern_variables of Identifier.t List2.t
 
@@ -357,6 +367,34 @@ module Persistent_indexing_state = struct
 
     let[@inline] make_module_entry ?location identifier cid =
       make_entry ?location identifier (Module { cid })
+
+    let actual_binding_exn identifier { binding_location; desc } =
+      Error.located_exception1 binding_location
+        (match desc with
+        | Lf_variable _ -> Bound_lf_term_variable identifier
+        | Meta_variable _ -> Bound_meta_variable identifier
+        | Parameter_variable _ -> Bound_parameter_variable identifier
+        | Substitution_variable _ -> Bound_substitution_variable identifier
+        | Context_variable _ -> Bound_context_variable identifier
+        | Contextual_variable _ -> Bound_contextual_variable identifier
+        | Computation_variable _ -> Bound_computation_variable identifier
+        | Lf_type_constant _ -> Bound_lf_type_constant identifier
+        | Lf_term_constant _ -> Bound_lf_term_constant identifier
+        | Schema_constant _ -> Bound_schema_constant identifier
+        | Computation_inductive_type_constant _ ->
+            Bound_computation_inductive_type_constant identifier
+        | Computation_stratified_type_constant _ ->
+            Bound_computation_stratified_type_constant identifier
+        | Computation_coinductive_type_constant _ ->
+            Bound_computation_coinductive_type_constant identifier
+        | Computation_abbreviation_type_constant _ ->
+            Bound_computation_abbreviation_type_constant identifier
+        | Computation_term_constructor _ ->
+            Bound_computation_term_constructor identifier
+        | Computation_term_destructor _ ->
+            Bound_computation_term_destructor identifier
+        | Program_constant _ -> Bound_program_constant identifier
+        | Module _ -> Bound_module identifier)
   end
 
   type bindings_state =
@@ -514,37 +552,11 @@ module Persistent_indexing_state = struct
     let entry, _subtree = Binding_tree.lookup_toplevel identifier bindings in
     return entry
 
-  let actual_binding_exn identifier { Entry.binding_location; desc } =
-    Error.located_exception1 binding_location
-      (match desc with
-      | Lf_variable _ -> Bound_lf_term_variable identifier
-      | Meta_variable _ -> Bound_meta_variable identifier
-      | Parameter_variable _ -> Bound_parameter_variable identifier
-      | Substitution_variable _ -> Bound_substitution_variable identifier
-      | Context_variable _ -> Bound_context_variable identifier
-      | Contextual_variable _ -> Bound_contextual_variable identifier
-      | Computation_variable _ -> Bound_computation_variable identifier
-      | Lf_type_constant _ -> Bound_lf_type_constant identifier
-      | Lf_term_constant _ -> Bound_lf_term_constant identifier
-      | Schema_constant _ -> Bound_schema_constant identifier
-      | Computation_inductive_type_constant _ ->
-          Bound_computation_inductive_type_constant identifier
-      | Computation_stratified_type_constant _ ->
-          Bound_computation_stratified_type_constant identifier
-      | Computation_coinductive_type_constant _ ->
-          Bound_computation_coinductive_type_constant identifier
-      | Computation_abbreviation_type_constant _ ->
-          Bound_computation_abbreviation_type_constant identifier
-      | Computation_term_constructor _ ->
-          Bound_computation_term_constructor identifier
-      | Computation_term_destructor _ ->
-          Bound_computation_term_destructor identifier
-      | Program_constant _ -> Bound_program_constant identifier
-      | Module _ -> Bound_module identifier)
+  let actual_binding_exn = Entry.actual_binding_exn
 
   let index_of_lf_typ_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Lf_type_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Lf_type_constant { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -553,7 +565,7 @@ module Persistent_indexing_state = struct
 
   let index_of_lf_term_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Lf_term_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Lf_term_constant { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -562,7 +574,9 @@ module Persistent_indexing_state = struct
 
   let index_of_inductive_comp_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_inductive_type_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_inductive_type_constant { cid }; _ }
+      ->
+        cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -572,7 +586,9 @@ module Persistent_indexing_state = struct
 
   let index_of_stratified_comp_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_stratified_type_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_stratified_type_constant { cid }; _ }
+      ->
+        cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -582,7 +598,9 @@ module Persistent_indexing_state = struct
 
   let index_of_coinductive_comp_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_coinductive_type_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_coinductive_type_constant { cid }; _ }
+      ->
+        cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -592,7 +610,10 @@ module Persistent_indexing_state = struct
 
   let index_of_abbreviation_comp_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_abbreviation_type_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_abbreviation_type_constant { cid }
+      ; _
+      } ->
+        cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -602,7 +623,7 @@ module Persistent_indexing_state = struct
 
   let index_of_schema_constant qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Schema_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Schema_constant { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -611,7 +632,7 @@ module Persistent_indexing_state = struct
 
   let index_of_comp_constructor qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_term_constructor { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_term_constructor { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -620,7 +641,7 @@ module Persistent_indexing_state = struct
 
   let index_of_comp_destructor qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Computation_term_destructor { cid }; _ } -> cid
+    | { Entry.desc = Entry.Computation_term_destructor { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -629,7 +650,7 @@ module Persistent_indexing_state = struct
 
   let index_of_comp_program qualified_identifier =
     lookup qualified_identifier $> function
-    | { desc = Program_constant { cid }; _ } -> cid
+    | { Entry.desc = Entry.Program_constant { cid }; _ } -> cid
     | entry ->
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
@@ -657,7 +678,8 @@ module Persistent_indexing_state = struct
 
   let index_of_lf_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc = Lf_variable { lf_level }; _ } -> index_of_lf_level lf_level
+    | { Entry.desc = Entry.Lf_variable { lf_level }; _ } ->
+        index_of_lf_level lf_level
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -670,8 +692,9 @@ module Persistent_indexing_state = struct
 
   let index_of_meta_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc =
-          Meta_variable { meta_level } | Contextual_variable { meta_level }
+    | { Entry.desc =
+          ( Entry.Meta_variable { meta_level }
+          | Entry.Contextual_variable { meta_level } )
       ; _
       } ->
         index_of_meta_level meta_level
@@ -688,9 +711,9 @@ module Persistent_indexing_state = struct
 
   let index_of_parameter_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc =
-          ( Parameter_variable { meta_level }
-          | Contextual_variable { meta_level } )
+    | { Entry.desc =
+          ( Entry.Parameter_variable { meta_level }
+          | Entry.Contextual_variable { meta_level } )
       ; _
       } ->
         index_of_meta_level meta_level
@@ -707,9 +730,9 @@ module Persistent_indexing_state = struct
 
   let index_of_substitution_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc =
-          ( Substitution_variable { meta_level }
-          | Contextual_variable { meta_level } )
+    | { Entry.desc =
+          ( Entry.Substitution_variable { meta_level }
+          | Entry.Contextual_variable { meta_level } )
       ; _
       } ->
         index_of_meta_level meta_level
@@ -726,9 +749,9 @@ module Persistent_indexing_state = struct
 
   let index_of_context_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc =
-          ( Context_variable { meta_level }
-          | Contextual_variable { meta_level } )
+    | { Entry.desc =
+          ( Entry.Context_variable { meta_level }
+          | Entry.Contextual_variable { meta_level } )
       ; _
       } ->
         index_of_meta_level meta_level
@@ -745,7 +768,7 @@ module Persistent_indexing_state = struct
 
   let index_of_comp_variable identifier =
     lookup_toplevel identifier >>= function
-    | { desc = Computation_variable { comp_level }; _ } ->
+    | { Entry.desc = Entry.Computation_variable { comp_level }; _ } ->
         index_of_comp_level comp_level
     | entry ->
         Error.raise_at1
@@ -765,24 +788,6 @@ module Persistent_indexing_state = struct
         { state' with free_variables_allowed = state.free_variables_allowed }
     in
     return x
-
-  let allow_free_variables m =
-    with_free_variables_state ~free_variables_allowed:true m
-
-  let disallow_free_variables m =
-    with_free_variables_state ~free_variables_allowed:false m
-
-  let are_free_variables_allowed =
-    let* state = get in
-    return state.free_variables_allowed
-
-  let add_free_variable ?location identifier adder =
-    are_free_variables_allowed >>= function
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_variable
-    | true -> adder ?location identifier
 
   let shift_lf_context = modify_lf_context_size (( + ) 1)
 
@@ -1091,21 +1096,170 @@ module Persistent_indexing_state = struct
         let* () = put state in
         return expression'
 
-  let add_computation_pattern_variable ?location identifier =
-    Obj.magic () (* TODO: *)
+  let push_entry identifier entry bindings =
+    let entries' =
+      match Identifier.Hamt.find_opt identifier bindings with
+      | Option.None -> List1.singleton entry
+      | Option.Some entries -> List1.cons entry entries
+    in
+    Identifier.Hamt.add identifier entries' bindings
 
-  let add_free_lf_variable ?location identifier = Obj.magic () (* TODO: *)
+  let add_free_lf_level_variable identifier make_entry =
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            let lf_context_size' =
+              substate.expression_bindings.lf_context_size + 1
+            in
+            let entry = make_entry (Lf_level.of_int lf_context_size') in
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    inner_pattern_bindings =
+                      push_entry identifier entry
+                        substate.inner_pattern_bindings
+                  ; expression_bindings =
+                      { substate.expression_bindings with
+                        bindings =
+                          Binding_tree.add_toplevel identifier entry
+                            substate.expression_bindings.bindings
+                      ; lf_context_size = lf_context_size'
+                      }
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
 
-  let add_free_meta_variable ?location identifier = Obj.magic () (* TODO: *)
+  let add_free_meta_level_variable identifier make_entry =
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            let meta_context_size' =
+              substate.expression_bindings.meta_context_size + 1
+            in
+            let entry = make_entry (Meta_level.of_int meta_context_size') in
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    inner_pattern_bindings =
+                      push_entry identifier entry
+                        substate.inner_pattern_bindings
+                  ; expression_bindings =
+                      { substate.expression_bindings with
+                        bindings =
+                          Binding_tree.add_toplevel identifier entry
+                            substate.expression_bindings.bindings
+                      ; meta_context_size = meta_context_size'
+                      }
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
+
+  let add_free_comp_level_variable identifier make_entry =
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            let comp_context_size' =
+              substate.expression_bindings.comp_context_size + 1
+            in
+            let entry = make_entry (Comp_level.of_int comp_context_size') in
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    expression_bindings =
+                      { substate.expression_bindings with
+                        bindings =
+                          Binding_tree.add_toplevel identifier entry
+                            substate.expression_bindings.bindings
+                      ; comp_context_size = comp_context_size'
+                      }
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
+
+  let allow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:true m
+
+  let disallow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:false m
+
+  let are_free_variables_allowed =
+    let* state = get in
+    return state.free_variables_allowed
+
+  let add_free_lf_variable ?location identifier =
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_lf_level_variable identifier
+          (Entry.make_lf_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_lf_variable
+
+  let add_free_meta_variable ?location identifier =
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_meta_level_variable identifier
+          (Entry.make_meta_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_meta_variable
 
   let add_free_parameter_variable ?location identifier =
-    Obj.magic () (* TODO: *)
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_meta_level_variable identifier
+          (Entry.make_parameter_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_parameter_variable
 
   let add_free_substitution_variable ?location identifier =
-    Obj.magic () (* TODO: *)
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_meta_level_variable identifier
+          (Entry.make_parameter_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_substitution_variable
 
   let add_free_context_variable ?location identifier =
-    Obj.magic () (* TODO: *)
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_meta_level_variable identifier
+          (Entry.make_context_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_context_variable
+
+  let add_computation_pattern_variable ?location identifier =
+    are_free_variables_allowed >>= function
+    | true ->
+        add_free_comp_level_variable identifier
+          (Entry.make_computation_variable_entry ?location identifier)
+    | false ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_free_computation_variable
 
   let initial_state =
     { substate =

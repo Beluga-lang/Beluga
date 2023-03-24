@@ -889,41 +889,24 @@ module Persistent_disambiguation_state = struct
         | Scope_state _ ->
             state)
 
-  let add_free_variable identifier f =
-    modify (fun state ->
-        match state.substate with
-        | Pattern_state substate ->
-            { state with
-              substate =
-                Pattern_state
-                  { substate with
-                    expression_bindings = f substate.expression_bindings
-                  ; pattern_variables_rev =
-                      identifier :: substate.pattern_variables_rev
-                  }
-            }
-        | Module_state _
-        | Scope_state _ ->
-            state)
+  let push_entry identifier entry bindings =
+    let entries' =
+      match Identifier.Hamt.find_opt identifier bindings with
+      | Option.None -> List1.singleton entry
+      | Option.Some entries -> List1.cons entry entries
+    in
+    Identifier.Hamt.add identifier entries' bindings
 
-  let add_free_meta_level_variable identifier entry =
+  let add_free_lf_level_variable identifier entry =
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let entries =
-              match
-                Identifier.Hamt.find_opt identifier
-                  substate.inner_pattern_bindings
-              with
-              | Option.None -> List1.singleton entry
-              | Option.Some entries -> List1.cons entry entries
-            in
             { state with
               substate =
                 Pattern_state
                   { substate with
                     inner_pattern_bindings =
-                      Identifier.Hamt.add identifier entries
+                      push_entry identifier entry
                         substate.inner_pattern_bindings
                   ; expression_bindings =
                       Binding_tree.add_toplevel identifier entry
@@ -936,8 +919,49 @@ module Persistent_disambiguation_state = struct
         | Scope_state _ ->
             state)
 
+  let add_free_meta_level_variable identifier entry =
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    inner_pattern_bindings =
+                      push_entry identifier entry
+                        substate.inner_pattern_bindings
+                  ; expression_bindings =
+                      Binding_tree.add_toplevel identifier entry
+                        substate.expression_bindings
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
+
+  let add_free_comp_level_variable identifier entry =
+    modify (fun state ->
+        match state.substate with
+        | Pattern_state substate ->
+            { state with
+              substate =
+                Pattern_state
+                  { substate with
+                    expression_bindings =
+                      Binding_tree.add_toplevel identifier entry
+                        substate.expression_bindings
+                  ; pattern_variables_rev =
+                      identifier :: substate.pattern_variables_rev
+                  }
+            }
+        | Module_state _
+        | Scope_state _ ->
+            state)
+
   let add_free_lf_variable ?location identifier =
-    add_free_meta_level_variable identifier
+    add_free_lf_level_variable identifier
       (Entry.make_lf_variable_entry ?location identifier)
 
   let add_free_meta_variable ?location identifier =
@@ -957,11 +981,8 @@ module Persistent_disambiguation_state = struct
       (Entry.make_context_variable_entry ?location identifier)
 
   let add_free_computation_variable ?location identifier =
-    let adder =
-      Binding_tree.add_toplevel identifier
-        (Entry.make_computation_variable_entry ?location identifier)
-    in
-    add_free_variable identifier adder
+    add_free_comp_level_variable identifier
+      (Entry.make_computation_variable_entry ?location identifier)
 
   let[@inline] add_binding identifier ?subtree entry =
     modify_bindings (Binding_tree.add_toplevel identifier ?subtree entry)

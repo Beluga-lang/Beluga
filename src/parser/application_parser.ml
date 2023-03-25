@@ -393,10 +393,9 @@ struct
       Location.start_position_as_location (source_location e1)
     in
     let state = initial ~initial_location (Seq.of_list expressions_list) in
-    match run_exn (only parser) state with
-    | _state', Atom _expression -> assert false
-    | _state', Application { applicand; arguments; _ } ->
-        (applicand, arguments)
+    match eval (run_exn (only parser)) state with
+    | Atom _expression -> assert false
+    | Application { applicand; arguments; _ } -> (applicand, arguments)
 
   let () =
     Error.register_exception_printer (function

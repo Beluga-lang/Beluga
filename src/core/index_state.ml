@@ -260,6 +260,8 @@ module Meta_level : LEVEL = Level
 module Comp_level : LEVEL = Level
 
 module Persistent_indexing_state = struct
+  module Binding_tree = Binding_tree.Hamt
+
   module Entry = struct
     type t =
       { binding_location : Location.t

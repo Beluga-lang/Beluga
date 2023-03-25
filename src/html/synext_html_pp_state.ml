@@ -45,6 +45,8 @@ module Html_printing_state : sig
 
   val make_initial_state : Format.formatter -> state
 end = struct
+  module Binding_tree = Binding_tree.Hamt
+
   type entry =
     { id : String.t
     ; operator : Operator.t Option.t

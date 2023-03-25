@@ -37,6 +37,8 @@ module type PRINTING_STATE = sig
 end
 
 module Printing_state = struct
+  module Binding_tree = Binding_tree.Hamt
+
   type entry = { operator : Operator.t Option.t }
 
   type state =

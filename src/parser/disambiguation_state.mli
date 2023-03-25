@@ -99,6 +99,7 @@ end
 (** Abstract definition of the state monad for disambiguating parsed Beluga
     signatures. *)
 module type DISAMBIGUATION_STATE = sig
+  (** @closed *)
   include State.STATE
 
   module Entry : ENTRY
@@ -447,6 +448,7 @@ end
 (** Concrete implementation of {!DISAMBIGUATION_STATE} using a persistent
     (immutable) datastructure. *)
 module Persistent_disambiguation_state : sig
+  (** @closed *)
   include DISAMBIGUATION_STATE
 
   val initial_state : state

@@ -28,15 +28,6 @@ jobs:
       - name: Check whitespaces
         run: ./LINT
 
-      - name: Retrieve opam cache
-        uses: actions/cache@v3
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-${{ hashFiles('*.opam') }}
-          restore-keys: |
-            v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
-
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
@@ -76,19 +67,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Retrieve opam cache
-        uses: actions/cache@v3
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-${{ hashFiles('*.opam') }}
-          restore-keys: |
-            v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
-
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          dune-cache: true
 
       - name: Install dependencies
         run: opam install --locked --deps-only --with-test --with-doc .

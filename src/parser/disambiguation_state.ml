@@ -370,6 +370,8 @@ module type DISAMBIGUATION_STATE = sig
 end
 
 module Persistent_disambiguation_state = struct
+  module Binding_tree = Binding_tree.Hamt
+
   module Entry = struct
     type t =
       { binding_location : Location.t

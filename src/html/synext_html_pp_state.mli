@@ -127,8 +127,8 @@ module type HTML_PRINTING_STATE = sig
 end
 
 (** Concrete implementation of {!HTML_PRINTING_STATE} backed by a (mostly)
-    immutable data structure. The instance of {!Format.formatter} is mutable,
-    and concurrent writes to it will lead to unexpected results. *)
+    immutable data structure. The instance of {!type:Format.formatter} is
+    mutable, and concurrent writes to it will lead to unexpected results. *)
 module Html_printing_state : sig
   (** @closed *)
   include HTML_PRINTING_STATE

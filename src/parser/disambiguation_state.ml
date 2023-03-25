@@ -187,6 +187,8 @@ module type ENTRY = sig
 
   val is_computation_variable : t -> Bool.t
 
+  val is_variable : t -> Bool.t
+
   val is_lf_type_constant : t -> Bool.t
 
   val is_lf_term_constant : t -> Bool.t
@@ -208,8 +210,6 @@ module type ENTRY = sig
   val is_program_constant : t -> Bool.t
 
   val is_module : t -> Bool.t
-
-  val is_variable : t -> Bool.t
 end
 
 module type DISAMBIGUATION_STATE = sig
@@ -1208,10 +1208,11 @@ module Persistent_disambiguation_state = struct
   let open_module identifier =
     lookup identifier >>= function
     | Result.Ok { Entry.desc = Entry.Module; _ } -> open_namespace identifier
-    | Result.Ok _ ->
+    | Result.Ok entry ->
         Error.raise_at1
           (Qualified_identifier.location identifier)
-          (Expected_module identifier)
+          (Error.composite_exception2 (Expected_module identifier)
+             (actual_binding_exn identifier entry))
     | Result.Error cause ->
         Error.raise_at1 (Qualified_identifier.location identifier) cause
 

@@ -1,0 +1,9 @@
+(test
+ (name test_beluga)
+ (modules :standard)
+ (libraries ounit2 test_support test_parser)
+ (deps
+  test_parser/fixtures/disambiguation_state.json
+  (glob_files test_parser/fixtures/*.input.bel)
+  (glob_files test_parser/fixtures/*.output.json)
+  (glob_files_rec ../examples/*)))

@@ -79,99 +79,100 @@ let test_parser ~fixtures_directory
   let open OUnit2 in
   [ "success" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
+let fixtures_directory = "test_parser/fixtures"
+
+let disambiguation_state_configuration_basename = "disambiguation_state.json"
+
 let test_lf_kind =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"lf_kinds_ok.input.bel"
     ~ok_outputs_basename:"lf_kinds_ok.output.json"
     ~error_inputs_basename:"lf_kinds_error.input.bel"
     Parser.parse_only_lf_kind Util.Synext_json.json_of_lf_kind
 
 let test_lf_typ =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"lf_types_ok.input.bel"
     ~ok_outputs_basename:"lf_types_ok.output.json"
     ~error_inputs_basename:"lf_types_error.input.bel"
     Parser.parse_only_lf_typ Util.Synext_json.json_of_lf_typ
 
 let test_lf_term =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"lf_terms_ok.input.bel"
     ~ok_outputs_basename:"lf_terms_ok.output.json"
     ~error_inputs_basename:"lf_terms_error.input.bel"
     Parser.parse_only_lf_term Util.Synext_json.json_of_lf_term
 
 let test_clf_typ =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"clf_types_ok.input.bel"
     ~ok_outputs_basename:"clf_types_ok.output.json"
     ~error_inputs_basename:"clf_types_error.input.bel"
     Parser.parse_only_clf_typ Util.Synext_json.json_of_clf_typ
 
 let test_clf_term =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"clf_terms_ok.input.bel"
     ~ok_outputs_basename:"clf_terms_ok.output.json"
     ~error_inputs_basename:"clf_terms_error.input.bel"
     Parser.parse_only_clf_term Util.Synext_json.json_of_clf_term
 
 let test_meta_typ =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"meta_types_ok.input.bel"
     ~ok_outputs_basename:"meta_types_ok.output.json"
     ~error_inputs_basename:"meta_types_error.input.bel"
     Parser.parse_only_meta_typ Util.Synext_json.json_of_meta_typ
 
 let test_meta_object =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"meta_objects_ok.input.bel"
     ~ok_outputs_basename:"meta_objects_ok.output.json"
     ~error_inputs_basename:"meta_objects_error.input.bel"
     Parser.parse_only_meta_object Util.Synext_json.json_of_meta_object
 
 let test_schema =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"schemas_ok.input.bel"
     ~ok_outputs_basename:"schemas_ok.output.json"
     ~error_inputs_basename:"schemas_error.input.bel" Parser.parse_only_schema
     Util.Synext_json.json_of_schema
 
 let test_comp_kind =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"comp_kinds_ok.input.bel"
     ~ok_outputs_basename:"comp_kinds_ok.output.json"
     ~error_inputs_basename:"comp_kinds_error.input.bel"
     Parser.parse_only_comp_kind Util.Synext_json.json_of_comp_kind
 
 let test_comp_typ =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"comp_types_ok.input.bel"
     ~ok_outputs_basename:"comp_types_ok.output.json"
     ~error_inputs_basename:"comp_types_error.input.bel"
     Parser.parse_only_comp_typ Util.Synext_json.json_of_comp_typ
 
 let test_comp_expression =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+  test_parser ~fixtures_directory
+    ~disambiguation_state_configuration_basename
     ~ok_inputs_basename:"comp_expressions_ok.input.bel"
     ~ok_outputs_basename:"comp_expressions_ok.output.json"
     ~error_inputs_basename:"comp_expressions_error.input.bel"
     Parser.parse_only_comp_expression
     Util.Synext_json.json_of_comp_expression
 
-let tests =
-  (* Set the current working directory to the directory containing this
-     executable file *)
-  Sys.chdir (Filename.concat (Sys.getcwd ()) (Filename.dirname Sys.argv.(0)));
+let tests () =
   let open OUnit2 in
   [ "LF Parsers"
     >::: [ "LF kind" >::: test_lf_kind ()

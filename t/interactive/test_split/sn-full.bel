@@ -214,23 +214,26 @@ The file input.bel has been successfully loaded;
 %:countholes
 2;
 %:split 0 g
- case [g] of
-| [g, x1 : tm A] => ?
-| [] => ?
-;
+case [_] of
+| [] =>
+  ?
+| [_, x : tm A[]] =>
+  ?;
 %:split 0 M
-
-case [g, z58 |- M] of
-| [g, y59 |- #p2[ ..]] => ?
-| [g, x59 |- x59] => ?
-
-| [g, z59 |- abs (\x1. M18)] => ?
-| [g, y60 |- app M16 M17] => ?
-;
+case [_, x1 : tm A[] |- M] of
+| [_, x1 |- #p[..]] =>
+  ?
+| [_, x1 |- x1] =>
+  ?
+| [_, x1 |- abs (\x2. M)] =>
+  ?
+| [_, x1 |- app M M1] =>
+  ?;
 %:split 0 N
-
-case [g |- N] of
-| [g |- #p3] => ?
-| [g |- abs (\x1. M21)] => ?
-| [g |- app M19 M20] => ?
-;
+case [_ |- N] of
+| [_ |- #p] =>
+  ?
+| [_ |- abs (\x. M1)] =>
+  ?
+| [_ |- app M1 M2] =>
+  ?;

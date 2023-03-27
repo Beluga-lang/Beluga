@@ -11,11 +11,13 @@ The file input.bel has been successfully loaded;
 %:countholes
 1;
 %:split foo m
- case m of
-| [ |- true] => ?
-| [ |- false] => ?
-| [ |- if_then_else Y X] => ?
-;
+case m of
+| [ |- true] =>
+  ?
+| [ |- false] =>
+  ?
+| [ |- if_then_else X X1] =>
+  ?;
 %:countholes
 1;
 %:load input.bel

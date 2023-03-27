@@ -92,21 +92,24 @@ The file input.bel has been successfully loaded;
 %:countholes
 2;
 %:split 0 N
-
-case [g |- N] of
-| [g |- #p1] => ?
-| [g |- abs (\x1. M4)] => ?
-| [g |- app M2 M3] => ?
-;
+case [_ |- N] of
+| [_ |- #p] =>
+  ?
+| [_ |- abs (\x. M1)] =>
+  ?
+| [_ |- app M1 M2] =>
+  ?;
 %:split 1 g'
- case [g'] of
-| [g', x2 : tm A] => ?
-| [] => ?
-;
+case [g'] of
+| [] =>
+  ?
+| [g', x : tm A[]] =>
+  ?;
 %:split 1 N
-
 case [g' |- N] of
-| [g' |- #p3] => ?
-| [g' |- abs (\x1. M7)] => ?
-| [g' |- app M5 M6] => ?
-;
+| [g' |- #p] =>
+  ?
+| [g' |- abs (\x. M1)] =>
+  ?
+| [g' |- app M1 M2] =>
+  ?;

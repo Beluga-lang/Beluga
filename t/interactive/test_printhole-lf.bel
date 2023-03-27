@@ -91,20 +91,20 @@ The file input.bel has been successfully loaded;
 1;
 %:printhole 0
 input.bel, line 85, column 22: Hole number 0, <anonymous>
-
-Meta-context:
-  {g : jctx}
-  {z3 : [g |- path]}
-  {y4 : [g |- tm]}
-  {q : #[g |-
-         block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
-  {J : [g |- jpath z3 y4]}
-  {H : [g |- is_path z3 y4]}
-
-LF Context:
-  g
-
-________________________________________________________________________________
-Goal: is_path z3 y4
-
-Variables of this type: H;
+  Meta-context:
+    g : jctx
+    z : (g |- path)
+    y : (g |- tm)
+    #q :
+      #(g |-
+          block (
+            x : tm,
+            _t : {q : path}  is_path q (y[..]) -> is_path q x,
+            _u : jump (y[..]) x))
+    J : (g |- jpath z y)
+    H : (g |- is_path z y)
+  LF Context:
+    g
+  ________________________________________________________________________________
+  Goal: is_path z y
+  Variables of this type: H;

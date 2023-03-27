@@ -131,68 +131,75 @@ function parse_opts {
 }
 
 function do_testing {
-    local is_failed=0
+    local is_failed=0 file_path
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
     if [[ -z "${NO_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
         echo "===== EXAMPLES ====="
 
-        for f in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
-            start_test_case "${f}"
+        for file_path in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
+            start_test_case "${file_path}"
 
-            if ! lex_check_test_case "${f}"; then
+            if ! lex_check_test_case "${file_path}"; then
                 continue
             fi
 
-            check_compiler_test_case "${f}"
+            check_compiler_test_case "${file_path}"
         done
     fi
 
     if [[ -z "${ONLY_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
         echo "===== COMPILER TESTS ====="
 
-        for f in $(find_compiler_tests_in "${TESTDIR}") ; do
-            start_test_case "${f}"
+        for file_path in $(find_compiler_tests_in "${TESTDIR}") ; do
+            start_test_case "${file_path}"
 
-            if ! lex_check_test_case "${f}"; then
+            if ! lex_check_test_case "${file_path}"; then
                 continue
             fi
 
-            check_compiler_test_case "${f}"
+            check_compiler_test_case "${file_path}"
         done
     fi
 
     if [[ -z "${ONLY_HARPOON}" ]]; then
         echo "===== INTERACTIVE MODE TESTS ====="
 
-        for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
-            start_test_case "${f}"
+        for file_path in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
+            start_test_case "${file_path}"
 
             local output exit_code
-            output=$("${REPLAY}" "${BELUGA}" "${f}")
+            output=$("${REPLAY}" "${BELUGA}" "${file_path}")
             exit_code=$?
 
             if [ "${exit_code}" -eq 152 ] ; then
                 echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
                 (( TEST_RESULT_TIMEOUT+=1 ))
-            elif [ "${exit_code}" -ne 0 ] ; then
-                echo -e "${C_FAIL}FAIL${C_END}"
-                (( TEST_RESULT_FAIL+=1 ))
-                echo "${output}"
-            else
+            elif [ "${exit_code}" -eq 0 ] ; then
                 echo -e "${C_OK}OK${C_END}"
                 (( TEST_RESULT_SUCCESS+=1 ))
+            else
+                if grep -q "${file_path}" .admissible-fail ; then
+                    echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+                    (( TEST_RESULT_ADMISSIBLE+=1 ))
+                else
+                    echo -e "${C_FAIL}FAIL${C_END}"
+                    (( TEST_RESULT_FAIL+=1 ))
+                    echo "${output}"
+
+                    stop_on_failure
+                fi
             fi
         done
     fi
 
     echo "===== HARPOON MODE TESTS ====="
 
-    for f in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
-        start_test_case "${f}"
+    for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
+        start_test_case "${file_path}"
 
-        check_harpoon "${f}"
+        check_harpoon "${file_path}"
     done
 
     echo
@@ -370,6 +377,7 @@ function print_paths {
     echo -e "\t BELUGA: ${BELUGA}"
     echo -e "\t HARPOON: ${HARPOON}"
     echo -e "\t REPLAY: ${REPLAY}"
+    echo -e "\t LEX_CHECK: ${LEX_CHECK}"
     echo -e "\t TESTDIR: ${TESTDIR}"
     echo -e "\t INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR}"
     echo -e "\t EXAMPLEDIR: ${EXAMPLEDIR}"

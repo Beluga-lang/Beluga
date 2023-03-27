@@ -19,7 +19,7 @@ harpoon-test: # Run only the Harpoon intergration tests
 
 .PHONY: all-test
 all-test: test
-	./TEST.sh -- -- +htmltest
+	./TEST.sh -- +htmltest
 
 .PHONY: setup-development
 setup-development: # Setup a development environment

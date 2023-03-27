@@ -1,2 +1,9 @@
 ./t/code/success/total/param2.bel
 ./t/code/success/total/param3.bel
+./t/interactive/logic-programming/1.bel
+./t/interactive/test_constructors.bel
+./t/interactive/44.bel
+./t/interactive/test_split/natind.bel
+./t/interactive/test_split/meta_3.1.bel
+./t/interactive/test_printhole-lf.bel
+./t/interactive/test_split/deptypes.bel

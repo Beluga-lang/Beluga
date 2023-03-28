@@ -116,8 +116,6 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
-  val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
-
   val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
 
   val index_comp_typedef :
@@ -445,9 +443,6 @@ struct
 
   let index_comp_kind kind =
     with_index_state (Index.index_open_comp_kind kind)
-
-  let index_closed_comp_typ typ =
-    with_index_state (Index.index_closed_comp_typ typ)
 
   let index_comp_typ typ = with_index_state (Index.index_open_comp_typ typ)
 

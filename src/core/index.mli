@@ -81,7 +81,7 @@ module type INDEXER = sig
 
   (** [index_schema schema state] is [(state', schema')] where [schema'] is
       [schema] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [schema]
+      indices and IDs respectively. Free variables are allowed in [schema]
       with respect to [state]. *)
   val index_schema : Synext.schema -> Synapx.LF.schema t
 

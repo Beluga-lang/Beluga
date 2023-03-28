@@ -106,8 +106,6 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
-  val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
-
   val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
 
   val index_comp_typedef :

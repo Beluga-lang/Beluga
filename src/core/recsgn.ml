@@ -912,7 +912,7 @@ module Make
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at %a" Location.print_short location);
-    let* apx_tau = index_closed_comp_typ tau in
+    let* apx_tau = index_comp_typ tau in
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
     let tau' =
       Monitor.timer
@@ -1369,7 +1369,7 @@ module Make
 
   and reconstruct_recursive_theorem_declarations location declarations =
     let reconstruct_program_typ typ =
-      let* apx_tau = index_closed_comp_typ typ in
+      let* apx_tau = index_comp_typ typ in
       let tau' =
         Monitor.timer
           ( Monitor.function_type_elaboration

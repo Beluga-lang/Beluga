@@ -30,6 +30,40 @@ exception Duplicate_identifiers_in_schema_some_clause of Identifier.t List2.t
 exception
   Duplicate_identifiers_in_schema_block_clause of Identifier.t List2.t
 
+let () =
+  Error.register_exception_printer (function
+    | Unsupported_lf_typ_applicand ->
+        Format.dprintf "Unsupported LF type applicand."
+    | Unsupported_lf_term_applicand ->
+        Format.dprintf "Unsupported LF term applicand."
+    | Unsupported_lf_annotated_term_abstraction ->
+        Format.dprintf
+          "Type-annotating the parameter of an LF abstraction is not \
+           supported."
+    | Unsupported_lf_untyped_pi_kind_parameter ->
+        Format.dprintf "Unsupported untyped LF Pi-kind parameter."
+    | Unsupported_lf_untyped_pi_typ_parameter ->
+        Format.dprintf "Unsupported untyped LF Pi-type paramter."
+    | Unsupported_clf_projection_applicand ->
+        Format.dprintf "Unsupported contextual LF projection applicand."
+    | Unsupported_clf_substitution_applicand ->
+        Format.dprintf "Unsupported contextual LF substitution applicand."
+    | Unsupported_context_schema_element ->
+        Format.dprintf "Unsupported nesting of context schema alternations."
+    | Unsupported_comp_typ_applicand ->
+        Format.dprintf "Unsupported computation-level type applicand."
+    | Unsupported_comp_pattern_applicand ->
+        Format.dprintf "Unsupported computation-level pattern applicand."
+    | Unsupported_copattern_meta_context ->
+        Format.dprintf
+          "Meta-contexts in computation-level copatterns are unsupported."
+    | Duplicate_identifiers_in_schema_some_clause _ ->
+        Format.dprintf "Illegal duplicate identifiers in schema some clause."
+    | Duplicate_identifiers_in_schema_block_clause _ ->
+        Format.dprintf
+          "Illegal duplicate identifiers in schema block clause."
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 module type INDEXER = sig
   include State.STATE
 
@@ -1797,7 +1831,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
   let index_comp_expression expression =
     disallow_free_variables (index_comp_expression expression)
 
-  let index_schema schema = disallow_free_variables (index_schema schema)
+  let index_schema schema = allow_free_variables (index_schema schema)
 
   let index_comp_theorem theorem =
     disallow_free_variables

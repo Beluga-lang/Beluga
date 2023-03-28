@@ -54,7 +54,7 @@ schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 rec unique : {g:tctx}{E:[g |- exp]} [g |- type_of E[..] T] -> [g |- type_of E[..] T']
              ->  [ |- eq T T'] =
 mlam g => mlam E => fn d => fn f => case [g |- E[..]] of
- | [g |- app (E1[..]) (E2[..])] =>
+ | [g |- app E1[..] E2[..]] =>
   let [g |- t_app D1[..] D2[..]] = d in
   let [g |- t_app F1[..] F2[..]] = f in
   let [ |- e_arr C1 C2] = unique [g] [g |- E1[..]] [g |- D1[..]] [g |- F1[..]] in
@@ -96,7 +96,7 @@ e_ref: equal T T.
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of E[..] T] -> [g |- type_of E[..] T']
              ->  [ |- equal T T'] =
 mlam g => mlam E => fn d => fn f => case [g |- E[..]] of
-| [g |- app (E1[..]) (E2[..])] =>
+| [g |- app E1[..] E2[..]] =>
   let [g |- t_app D1[..] D2[..]] = d in
   let [g |- t_app F1[..] F2[..]] = f in
   let [ |- e_ref]  = unique2 [g] [g |- E1[..]] [g |- D1[..]] [g |- F1[..]] in

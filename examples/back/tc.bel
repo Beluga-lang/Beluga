@@ -68,8 +68,8 @@ and rec check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
     [ |- false]
 ;
 
-let r1 = (check []) ;
-let r2 = (check []) [ |- suc (suc z)];
-let r3 = (check []) [ |- suc (suc z)] [ |- even];
+let r1 = check [] ;
+let r2 = check [] [ |- suc (suc z)];
+let r3 = check [] [ |- suc (suc z)] [ |- even];
 let r4 = r2 [ |- even];
 let r5 = r1 [ |- suc (suc z)] [ |- even];

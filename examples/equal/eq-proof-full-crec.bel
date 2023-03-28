@@ -28,7 +28,7 @@ rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq M M] =
 | [g |- lam \x. M1] =>
   let [g, e:block y:exp, _t:eq y y |- EQ] =
       ref [g, e:block q:exp, _t:eq q q] [g, e |- M1[.., e.1]] in
-    [g |- eq_lam \x. \w. (EQ[..,<x ; w>])]
+    [g |- eq_lam \x. \w. EQ[..,<x ; w>]]
 | [g |- app M1 M2] =>
   let [g |- EQ1] = ref [g] [g |- M1] in
   let [g |- EQ2] = ref [g] [g |- M2] in

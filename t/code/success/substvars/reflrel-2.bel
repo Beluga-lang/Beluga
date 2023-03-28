@@ -41,7 +41,7 @@ rec refl : {phi:xG}{M: [phi  |- tm]}
 mlam phi => mlam M => fn cr => case [phi  |- M[..]] of
 | [phi |- #p[..]] => ctx_membership [phi |- #p] cr
 
-| [phi  |- app (M[..]) N[..]] =>
+| [phi  |- app M[..] N[..]] =>
   let [psi |- D1[..]] = refl [phi] [phi |- M[..]] cr in
   let [psi |- D2[..]] = refl [phi] [phi |- N[..]] cr in
     [psi |- ae_a D1[..] D2[..]]
@@ -120,7 +120,7 @@ rec reflR : {phi:xG}{M: [phi  |- tm]}
 | [phi |- #p[..]] =>
   let Eq_v m' = m in
   ctx_member [phi |- #p[..]] cr m'
-| [phi  |- app (M[..]) N[..]] =>
+| [phi  |- app M[..] N[..]] =>
   let Eq_a m1 m2 = m in
   let [psi |- D1[..]] = reflR [phi] [phi |- M[..]] cr m1 in
   let [psi |- D2[..]] = reflR [phi] [phi |- N[..]] cr m2 in

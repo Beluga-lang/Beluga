@@ -45,7 +45,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 
 % Monotonicity of logical equivalence
 rec logEq_Monotone : {h:tctx}{$W:$[h |- g]} Log [g |- M1[..] sim M2[..]] [ |- A]
-                   -> Log [h |- (M1[$W]) sim M2[$W]] [ |- A] =
+                   -> Log [h |- M1[$W] sim M2[$W]] [ |- A] =
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,$W => fn e => case e of
 | LogBase [g |- P[..]] => LogBase [h |- P[$W]]

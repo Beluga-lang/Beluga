@@ -44,7 +44,7 @@ rec invRenStep : {g1 : cxt} {M : [g1 |- tm A[]]} {$R : $[g2 |-# g1]}
     | [g1 |- app M1 M2] =>
 
       % Cannot reconstruct type:
-      % let ih : {$R : $[g2 |-# g1]}  [g2 |- step (M1[$R]) M'] ->
+      % let ih : {$R : $[g2 |-# g1]}  [g2 |- step M1[$R] M'] ->
       %          ExStep [g1 |- M] $[g2 |- $R] [g2 |- M']
       %        = invRenStep [g1] [g1 |- M1] in
 

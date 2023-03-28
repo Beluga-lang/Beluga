@@ -36,7 +36,7 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
 | [g |- lam \x. L] =>
   let [g, e:block yyy:exp, _t:eq yyy yyy |- V] =
          ref [g, e:block q:exp, _t:eq q q] [g, e |- L[.., e.1]]  in
-     [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
+     [g |- eq_lam \x. \w. V[..,<x ; w>]]  % : eq L L
 
 | [g |- app A1 A2] : [g |- exp] =>
   let [g |- EQ1] = ref [g] [g |- A1] in

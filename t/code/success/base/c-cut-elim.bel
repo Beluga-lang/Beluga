@@ -104,13 +104,13 @@ mlam g => mlam A' => fn d => fn e => case e of
 %  | [g, h:hyp A[..]] E[..] h =>
 %    case d of
 %     | [g] axiom H[..] =>   [g] E[..] H[..]
-%     | [g] impl (D1[..]) (\h2. D2[..] h2) H[..] =>
+%     | [g] impl D1[..] (\h2. D2[..] h2) H[..] =>
 %       let [g, h2: hyp B2[..]] D2'[..] h2 = ca [g, h2: hyp _] <g, h2 . A[..] > ([g, h2] D2[..] h2) ([g, h2, h] E[..] h) in
 %        [g] impl D1[..] (\h2. D2'[..] h2) H[..]
 %
-%     | [g] notl D1[..] H[..] => [g] notl (D1[..]) H[..]
+%     | [g] notl D1[..] H[..] => [g] notl D1[..] H[..]
 %
 %     | [g] foralll T[..] (\h1. D1[..] h1) H[..] =>
 %       let [g, h1: hyp _] D1'[..] h1 = ca [g, h1:hyp _] <g, h1. A[..]> ([g, h1] D1[..] h1) ([g, h1, h] E[..] h) in
-%         [g] foralll (T[..]) (\h1. D1'[..] h1) H[..]
+%         [g] foralll T[..] (\h1. D1'[..] h1) H[..]
 ;

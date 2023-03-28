@@ -485,7 +485,7 @@ e[e2'] eval e1';
 ----------------------------------------- ev-app
 (app e1 e2) eval e1';
 
-(e2[e1]) eval v;
+e2[e1] eval v;
 e1 eval v1;
 ------------------------------------------- ev-let
 (let e1 = x in e2[x]) eval v;

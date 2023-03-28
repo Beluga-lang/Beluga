@@ -7,7 +7,7 @@ exception Bound_lf_type_constant of Qualified_identifier.t
 
 exception Bound_lf_term_constant of Qualified_identifier.t
 
-exception Bound_lf_term_variable of Qualified_identifier.t
+exception Bound_lf_variable of Qualified_identifier.t
 
 exception Bound_meta_variable of Qualified_identifier.t
 
@@ -64,7 +64,7 @@ exception Expected_program_constant
 
 exception Expected_module
 
-exception Expected_lf_term_variable
+exception Expected_lf_variable
 
 exception Expected_meta_variable
 
@@ -89,6 +89,114 @@ exception Illegal_free_context_variable
 exception Illegal_free_computation_variable
 
 exception Duplicate_pattern_variables of Identifier.t List2.t
+
+let () =
+  Error.register_exception_printer (function
+    | Bound_lf_type_constant qualified_identifier ->
+        Format.dprintf "%a is a bound LF type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_lf_term_constant qualified_identifier ->
+        Format.dprintf "%a is a bound LF term constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_lf_variable qualified_identifier ->
+        Format.dprintf "%a is a bound LF term variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_meta_variable qualified_identifier ->
+        Format.dprintf "%a is a bound meta-variable." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_parameter_variable qualified_identifier ->
+        Format.dprintf "%a is a bound parameter variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_substitution_variable qualified_identifier ->
+        Format.dprintf "%a is a bound substitution variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_context_variable qualified_identifier ->
+        Format.dprintf "%a is a bound context variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_contextual_variable qualified_identifier ->
+        Format.dprintf "%a is a bound contextual variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_schema_constant qualified_identifier ->
+        Format.dprintf "%a is a bound schema constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_variable qualified_identifier ->
+        Format.dprintf "%a is a bound computation variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_inductive_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level inductive type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_stratified_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level stratified type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_coinductive_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level coinductive type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_abbreviation_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level abbreviation type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_term_constructor qualified_identifier ->
+        Format.dprintf "%a is a bound computation-level term constructor."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_term_destructor qualified_identifier ->
+        Format.dprintf "%a is a bound computation-level term destructor."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_module qualified_identifier ->
+        Format.dprintf "%a is a bound module." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_program_constant qualified_identifier ->
+        Format.dprintf "%a is a bound program." Qualified_identifier.pp
+          qualified_identifier
+    | Expected_lf_typ_constant ->
+        Format.dprintf "Expected an LF type-level constant."
+    | Expected_lf_term_constant ->
+        Format.dprintf "Expected an LF term-level constant."
+    | Expected_schema_constant ->
+        Format.dprintf "Expected a schema constant."
+    | Expected_computation_inductive_type_constant ->
+        Format.dprintf "Expected an inductive computation type constant."
+    | Expected_computation_stratified_type_constant ->
+        Format.dprintf "Expected a stratified computation type constant."
+    | Expected_computation_coinductive_type_constant ->
+        Format.dprintf "Expected a coinductive computation type constant."
+    | Expected_computation_abbreviation_type_constant ->
+        Format.dprintf "Expected an abbreviation computation type constant."
+    | Expected_computation_term_constructor ->
+        Format.dprintf "Expected a computation constructor constant."
+    | Expected_computation_term_destructor ->
+        Format.dprintf "Expected a computation destructor constant."
+    | Expected_program_constant ->
+        Format.dprintf "Expected a computation program constant."
+    | Expected_module -> Format.dprintf "Expected a module constant."
+    | Expected_lf_variable -> Format.dprintf "Expected an LF variable."
+    | Expected_meta_variable -> Format.dprintf "Expected a meta-variable."
+    | Expected_parameter_variable ->
+        Format.dprintf "Expected a parameter variable."
+    | Expected_substitution_variable ->
+        Format.dprintf "Expected a substitution variable."
+    | Expected_context_variable ->
+        Format.dprintf "Expected a context variable."
+    | Expected_computation_variable ->
+        Format.dprintf "Expected a computation-level variable."
+    | Illegal_free_lf_variable ->
+        Format.dprintf "This free LF variable is illegal."
+    | Illegal_free_meta_variable ->
+        Format.dprintf "This free meta-variable is illegal."
+    | Illegal_free_parameter_variable ->
+        Format.dprintf "This free parameter variable is illegal."
+    | Illegal_free_substitution_variable ->
+        Format.dprintf "This free substitution variable is illegal."
+    | Illegal_free_context_variable ->
+        Format.dprintf "This free context variable is illegal."
+    | Illegal_free_computation_variable ->
+        Format.dprintf "This free computation-level variable is illegal."
+    | Duplicate_pattern_variables _ ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Illegal duplicate pattern variables."
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type INDEXING_STATE = sig
   include State.STATE
@@ -373,7 +481,7 @@ module Persistent_indexing_state = struct
     let actual_binding_exn identifier { binding_location; desc } =
       Error.located_exception1 binding_location
         (match desc with
-        | Lf_variable _ -> Bound_lf_term_variable identifier
+        | Lf_variable _ -> Bound_lf_variable identifier
         | Meta_variable _ -> Bound_meta_variable identifier
         | Parameter_variable _ -> Bound_parameter_variable identifier
         | Substitution_variable _ -> Bound_substitution_variable identifier
@@ -551,7 +659,11 @@ module Persistent_indexing_state = struct
 
   let[@inline] lookup_toplevel identifier =
     let* bindings = get_bindings in
-    let entry, _subtree = Binding_tree.lookup_toplevel identifier bindings in
+    let entry, _subtree =
+      try Binding_tree.lookup_toplevel identifier bindings with
+      | Binding_tree.Unbound_identifier _ as cause ->
+          Error.raise_at1 (Identifier.location identifier) cause
+    in
     return entry
 
   let actual_binding_exn = Entry.actual_binding_exn
@@ -662,9 +774,7 @@ module Persistent_indexing_state = struct
   let[@inline] index_of_variable_opt index_of_variable identifier =
     try_catch
       (lazy (index_of_variable identifier $> Option.some))
-      ~on_exn:(function
-        | Binding_tree.Unbound_identifier _ -> return Option.none
-        | cause -> Error.raise cause)
+      ~on_exn:(fun _cause -> return Option.none)
 
   let[@inline] index_of_lf_level lf_level =
     let* lf_context_size = get_lf_context_size in
@@ -685,7 +795,7 @@ module Persistent_indexing_state = struct
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Error.composite_exception2 Expected_lf_term_variable
+          (Error.composite_exception2 Expected_lf_variable
              (actual_binding_exn
                 (Qualified_identifier.make_simple identifier)
                 entry))
@@ -820,8 +930,8 @@ module Persistent_indexing_state = struct
 
   let add_lf_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
+        let entry = make_entry (Lf_level.of_int state.lf_context_size) in
         let lf_context_size' = state.lf_context_size + 1 in
-        let entry = make_entry (Lf_level.of_int lf_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -832,8 +942,8 @@ module Persistent_indexing_state = struct
 
   let add_meta_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
+        let entry = make_entry (Meta_level.of_int state.meta_context_size) in
         let meta_context_size' = state.meta_context_size + 1 in
-        let entry = make_entry (Meta_level.of_int meta_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -844,8 +954,8 @@ module Persistent_indexing_state = struct
 
   let add_comp_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
+        let entry = make_entry (Comp_level.of_int state.comp_context_size) in
         let comp_context_size' = state.comp_context_size + 1 in
-        let entry = make_entry (Comp_level.of_int comp_context_size') in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
         in
@@ -1040,6 +1150,12 @@ module Persistent_indexing_state = struct
     | Pattern_state _ ->
         Error.raise_violation "[with_parent_scope] invalid state"
 
+  let allow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:true m
+
+  let disallow_free_variables m =
+    with_free_variables_state ~free_variables_allowed:false m
+
   let get_pattern_variables_and_expression_state =
     let* state = get in
     match state.substate with
@@ -1081,7 +1197,7 @@ module Persistent_indexing_state = struct
               }
         }
     in
-    let* pattern' = pattern in
+    let* pattern' = allow_free_variables pattern in
     let* pattern_variables, expression_bindings =
       get_pattern_variables_and_expression_state
     in
@@ -1110,10 +1226,11 @@ module Persistent_indexing_state = struct
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let lf_context_size' =
-              substate.expression_bindings.lf_context_size + 1
+            let lf_context_size =
+              substate.expression_bindings.lf_context_size
             in
-            let entry = make_entry (Lf_level.of_int lf_context_size') in
+            let entry = make_entry (Lf_level.of_int lf_context_size) in
+            let lf_context_size' = lf_context_size + 1 in
             { state with
               substate =
                 Pattern_state
@@ -1140,10 +1257,11 @@ module Persistent_indexing_state = struct
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let meta_context_size' =
-              substate.expression_bindings.meta_context_size + 1
+            let meta_context_size =
+              substate.expression_bindings.meta_context_size
             in
-            let entry = make_entry (Meta_level.of_int meta_context_size') in
+            let entry = make_entry (Meta_level.of_int meta_context_size) in
+            let meta_context_size' = meta_context_size + 1 in
             { state with
               substate =
                 Pattern_state
@@ -1170,10 +1288,11 @@ module Persistent_indexing_state = struct
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let comp_context_size' =
-              substate.expression_bindings.comp_context_size + 1
+            let comp_context_size =
+              substate.expression_bindings.comp_context_size
             in
-            let entry = make_entry (Comp_level.of_int comp_context_size') in
+            let entry = make_entry (Comp_level.of_int comp_context_size) in
+            let comp_context_size' = comp_context_size + 1 in
             { state with
               substate =
                 Pattern_state
@@ -1192,12 +1311,6 @@ module Persistent_indexing_state = struct
         | Module_state _
         | Scope_state _ ->
             state)
-
-  let allow_free_variables m =
-    with_free_variables_state ~free_variables_allowed:true m
-
-  let disallow_free_variables m =
-    with_free_variables_state ~free_variables_allowed:false m
 
   let are_free_variables_allowed =
     let* state = get in

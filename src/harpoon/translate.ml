@@ -225,7 +225,7 @@ let fmt_ppr_result ppf =
 let entry { Store.Cid.Comp.Entry.prog; typ = tau; name; _ } =
   let prog =
     Option.get'
-      (Beluga_syntax.Error.raise_violation
+      (Beluga_syntax.Error.Violation
          (Format.asprintf
            "The body of theorem %a is unknown." Name.pp name))
       prog

@@ -735,7 +735,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Pattern.Variable",
+                              "CLF.Term.Pattern.Meta_variable",
                               {
                                 "identifier": {
                                   "name": "x1",

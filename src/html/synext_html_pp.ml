@@ -1938,7 +1938,8 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
             ++ pp_option
                  (fun identifier -> pp_space ++ pp_identifier identifier)
                  identifier
-            ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot)
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_clf_typ typ ++ pp_dot
+            )
         in
         pp_pragma "query" pp_query_pragma
 

@@ -65,6 +65,7 @@ struct
       (Comp_disambiguator)
   module Signature_disambiguator =
     Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+      (Clf_disambiguator)
       (Meta_disambiguator)
       (Comp_disambiguator)
       (Harpoon_disambiguator)

@@ -1551,7 +1551,7 @@ module Signature = struct
           { location : Location.t
           ; identifier : Identifier.t Option.t
           ; meta_context : Meta.Context.t
-          ; typ : LF.Typ.t
+          ; typ : CLF.Typ.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }  (** Logic programming query on an LF type *)

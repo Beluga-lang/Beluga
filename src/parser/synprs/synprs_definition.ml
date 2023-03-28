@@ -782,7 +782,7 @@ module Signature = struct
           { location : Location.t
           ; identifier : Identifier.t Option.t
           ; meta_context : Meta.Context_object.t
-          ; typ : LF.Object.t
+          ; typ : CLF.Object.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }

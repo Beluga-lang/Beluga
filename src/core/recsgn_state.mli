@@ -102,8 +102,6 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_schema : Synext.schema -> Synapx.LF.schema t
 
-  val index_meta_context : Synext.meta_context -> Synapx.LF.mctx t
-
   val index_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
 
   val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
@@ -120,6 +118,11 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
   val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
 
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
+
+  val index_lf_query :
+       Synext.meta_context
+    -> Synext.clf_typ
+    -> (Synapx.LF.mctx * Synapx.LF.typ) t
 
   (** Adding a constant or module introduces an identifier in the state.
       Whenever an extensible declaration is shadowed, it is frozen. *)

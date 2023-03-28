@@ -112,8 +112,6 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_schema : Synext.schema -> Synapx.LF.schema t
 
-  val index_meta_context : Synext.meta_context -> Synapx.LF.mctx t
-
   val index_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
 
   val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
@@ -130,6 +128,11 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
   val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
 
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
+
+  val index_lf_query :
+       Synext.meta_context
+    -> Synext.clf_typ
+    -> (Synapx.LF.mctx * Synapx.LF.typ) t
 
   val add_lf_type_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_typ -> Unit.t t
@@ -434,23 +437,19 @@ struct
     let* () = set_index_state index_state' in
     return x
 
-  let index_lf_kind kind =
-    with_index_state (Index.index_lf_typ_constant_kind kind)
+  let index_lf_kind kind = with_index_state (Index.index_open_lf_kind kind)
 
-  let index_lf_typ typ =
-    with_index_state (Index.index_lf_term_constant_typ typ)
+  let index_lf_typ typ = with_index_state (Index.index_open_lf_typ typ)
 
   let index_schema schema = with_index_state (Index.index_schema schema)
 
-  let index_meta_context = Obj.magic () (* TODO: *)
-
   let index_comp_kind kind =
-    with_index_state (Index.index_comp_typ_constant_kind kind)
+    with_index_state (Index.index_open_comp_kind kind)
 
   let index_closed_comp_typ typ =
-    with_index_state (Index.index_comp_term_constant_typ typ)
+    with_index_state (Index.index_closed_comp_typ typ)
 
-  let index_comp_typ = Obj.magic () (* TODO: *)
+  let index_comp_typ typ = with_index_state (Index.index_open_comp_typ typ)
 
   let index_comp_expression expression =
     with_index_state (Index.index_comp_expression expression)
@@ -459,10 +458,13 @@ struct
     with_index_state (Index.index_computation_typ_abbreviation typ kind)
 
   let index_comp_theorem theorem =
-    with_index_state Index.(index_comp_theorem theorem)
+    with_index_state (Index.index_comp_theorem theorem)
 
   let index_harpoon_proof proof =
-    with_index_state Index.(index_harpoon_proof proof)
+    with_index_state (Index.index_harpoon_proof proof)
+
+  let index_lf_query meta_context typ =
+    with_index_state (Index.index_lf_query meta_context typ)
 end
 
 module Signature_reconstruction_state =

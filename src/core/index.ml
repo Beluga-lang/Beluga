@@ -33,17 +33,23 @@ exception
 module type INDEXER = sig
   include State.STATE
 
-  val index_lf_typ_constant_kind : Synext.lf_kind -> Synapx.LF.kind t
+  val index_open_lf_kind : Synext.lf_kind -> Synapx.LF.kind t
 
-  val index_lf_term_constant_typ : Synext.lf_typ -> Synapx.LF.typ t
+  val index_closed_lf_kind : Synext.lf_kind -> Synapx.LF.kind t
 
-  val index_comp_typ_constant_kind : Synext.comp_kind -> Synapx.Comp.kind t
+  val index_open_lf_typ : Synext.lf_typ -> Synapx.LF.typ t
 
-  val index_comp_term_constant_typ : Synext.comp_typ -> Synapx.Comp.typ t
+  val index_closed_lf_typ : Synext.lf_typ -> Synapx.LF.typ t
+
+  val index_open_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
+
+  val index_closed_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
+
+  val index_open_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
+
+  val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
   val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
-
-  val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
   val index_schema : Synext.schema -> Synapx.LF.schema t
 
@@ -55,10 +61,14 @@ module type INDEXER = sig
        Synext.comp_typ
     -> Synext.comp_kind
     -> (Synapx.Comp.typ * Synapx.Comp.kind) t
+
+  val index_lf_query :
+       Synext.meta_context
+    -> Synext.clf_typ
+    -> (Synapx.LF.mctx * Synapx.LF.typ) t
 end
 
-module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
-  INDEXER with type state = Indexing_state.state = struct
+module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
   include Indexing_state
 
   let with_bound_omittable_lf_variable identifier_opt =
@@ -1765,6 +1775,39 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
                        ; hypothetical_loc = location
                        })))
 
+  let index_open_lf_kind kind = allow_free_variables (index_lf_kind kind)
+
+  let index_closed_lf_kind kind =
+    disallow_free_variables (index_lf_kind kind)
+
+  let index_open_lf_typ typ = allow_free_variables (index_lf_typ typ)
+
+  let index_closed_lf_typ typ = disallow_free_variables (index_lf_typ typ)
+
+  let index_open_comp_kind kind = allow_free_variables (index_comp_kind kind)
+
+  let index_closed_comp_kind kind =
+    disallow_free_variables (index_comp_kind kind)
+
+  let index_open_comp_typ typ = allow_free_variables (index_comp_typ typ)
+
+  let index_closed_comp_typ typ =
+    disallow_free_variables (index_comp_typ typ)
+
+  let index_comp_expression expression =
+    disallow_free_variables (index_comp_expression expression)
+
+  let index_schema schema = disallow_free_variables (index_schema schema)
+
+  let index_comp_theorem theorem =
+    disallow_free_variables
+      ( index_comp_expression theorem $> fun theorem' ->
+        Synapx.Comp.Program theorem' )
+
+  let index_harpoon_proof proof =
+    disallow_free_variables
+      (index_harpoon_proof proof $> fun proof' -> Synapx.Comp.Proof proof')
+
   let index_computation_typ_abbreviation typ kind =
     let* kind' = disallow_free_variables (index_comp_kind kind) in
     let rec with_unrolled_kind kind f =
@@ -1781,33 +1824,11 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
     in
     return (typ', kind')
 
-  let index_lf_typ_constant_kind kind =
-    allow_free_variables (index_lf_kind kind)
-
-  let index_lf_term_constant_typ typ =
-    allow_free_variables (index_lf_typ typ)
-
-  let index_comp_typ_constant_kind kind =
-    allow_free_variables (index_comp_kind kind)
-
-  let index_comp_term_constant_typ typ =
-    allow_free_variables (index_comp_typ typ)
-
-  let index_comp_expression expression =
-    disallow_free_variables (index_comp_expression expression)
-
-  let index_comp_typ typ = disallow_free_variables (index_comp_typ typ)
-
-  let index_schema schema = disallow_free_variables (index_schema schema)
-
-  let index_comp_theorem theorem =
-    disallow_free_variables
-      ( index_comp_expression theorem $> fun theorem' ->
-        Synapx.Comp.Program theorem' )
-
-  let index_harpoon_proof proof =
-    disallow_free_variables
-      (index_harpoon_proof proof $> fun proof' -> Synapx.Comp.Proof proof')
+  let index_lf_query meta_context typ =
+    allow_free_variables
+      (with_indexed_meta_context meta_context (fun meta_context' ->
+           let* typ' = index_clf_typ typ in
+           return (meta_context', typ')))
 end
 
 module Indexer = struct

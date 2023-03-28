@@ -39,6 +39,8 @@ module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
     (Lf_disambiguation : Lf_disambiguation.LF_DISAMBIGUATION
                            with type state = Disambiguation_state.state)
+    (Clf_disambiguation : Clf_disambiguation.CLF_DISAMBIGUATION
+                            with type state = Disambiguation_state.state)
     (Meta_disambiguation : Meta_disambiguation.META_DISAMBIGUATION
                              with type state = Disambiguation_state.state)
     (Comp_disambiguation : Comp_disambiguation.COMP_DISAMBIGUATION

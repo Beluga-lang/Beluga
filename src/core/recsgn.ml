@@ -984,7 +984,7 @@ module Make
     let name_opt = Option.map Name.make_from_identifier identifier_opt in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);
-    let* apxT = index_lf_typ extT in
+    let* cD, apxT = index_lf_query cD extT in
     dprint (fun () -> "Reconstructing query.");
 
     Store.FVar.clear ();
@@ -996,7 +996,6 @@ module Make
             Reconstruct.solve_fvarCnstr Lfrecon.Pi;
             tA )
     in
-    let* cD = index_meta_context cD in
     let cD = Reconstruct.mctx cD in
     dprintf (fun p ->
         p.fmt "Elaboration of query : %a"

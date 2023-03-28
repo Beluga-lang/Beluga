@@ -377,7 +377,7 @@ module Make
       pragma "query"
       &> seq4 (seq2 bound bound) meta_context
            (maybe (identifier <& colon))
-           lf_typ
+           clf_typ
       <& dot |> span
       |> labelled "logic programming engine query pragma"
       $> fun ( location

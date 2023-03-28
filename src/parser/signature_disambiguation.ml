@@ -87,6 +87,8 @@ module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
     (Lf_disambiguation : Lf_disambiguation.LF_DISAMBIGUATION
                            with type state = Disambiguation_state.state)
+    (Clf_disambiguation : Clf_disambiguation.CLF_DISAMBIGUATION
+                            with type state = Disambiguation_state.state)
     (Meta_disambiguation : Meta_disambiguation.META_DISAMBIGUATION
                              with type state = Disambiguation_state.state)
     (Comp_disambiguation : Comp_disambiguation.COMP_DISAMBIGUATION
@@ -97,6 +99,7 @@ module Make
 struct
   include Disambiguation_state
   include Lf_disambiguation
+  include Clf_disambiguation
   include Meta_disambiguation
   include Comp_disambiguation
   include Harpoon_disambiguation
@@ -360,7 +363,7 @@ struct
         ; maximum_tries
         } ->
         with_disambiguated_meta_context meta_context (fun meta_context' ->
-            let* typ' = disambiguate_lf_typ typ in
+            let* typ' = disambiguate_clf_typ typ in
             return
               (Synext.Signature.Pragma.Query
                  { location

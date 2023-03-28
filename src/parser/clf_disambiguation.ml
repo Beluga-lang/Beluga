@@ -949,7 +949,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error (Unbound_identifier _) ->
             let* () = add_free_meta_variable identifier in
             return
-              (Synext.CLF.Term.Pattern.Variable { location; identifier })
+              (Synext.CLF.Term.Pattern.Meta_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
       -> (

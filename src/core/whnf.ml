@@ -1526,7 +1526,7 @@ let prefixSchElem (SchElem (cSome1, typRec1)) (SchElem (cSome2, typRec2)) =
 let mctxLookupDep cD k =
   Context.lookup' cD k
   |> Option.get'
-       (Error.raise_violation
+       (Error.Violation
           (Format.asprintf
             "Meta-variable out of bounds -- looking for %d in context of length %d"
             k

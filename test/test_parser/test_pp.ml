@@ -106,16 +106,16 @@ let make_compiler_test ?(save_json_to_file = false)
   | [] -> Error.raise Empty_configuration_file
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
-      let signature_files =
+      let signature =
         Beluga_parser.Simple.parse_multi_file_signature
           signature_source_files
       in
-      if save_json_to_file then save_signature_files_json signature_files;
-      if save_pp_to_file then save_signature_files_pp signature_files;
-      let signature' = pp_and_parse_signature_files signature_files in
+      if save_json_to_file then save_signature_files_json signature;
+      if save_pp_to_file then save_signature_files_pp signature;
+      let signature' = pp_and_parse_signature_files signature in
       assert_equal_as_json
         Fun.(json_of_signature >> without_locations)
-        ~expected:signature_files ~actual:signature'
+        ~expected:signature ~actual:signature'
 
 let examples_directory = "../examples"
 

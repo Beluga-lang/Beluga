@@ -2,6 +2,7 @@
  (name util)
  (libraries
   support
+  beluga
   beluga_syntax
   (re_export yojson)
   (re_export ounit2))

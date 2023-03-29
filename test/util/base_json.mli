@@ -10,10 +10,6 @@ val without_field : String.t -> Yojson.Safe.t -> Yojson.Safe.t
     ["location"]. *)
 val without_locations : Yojson.Safe.t -> Yojson.Safe.t
 
-(** [without_operators json] is [json] without record fields named
-    ["operator"]. *)
-val without_operators : Yojson.Safe.t -> Yojson.Safe.t
-
 (** {1 Support} *)
 
 val json_of_association : (String.t * Yojson.Safe.t) List.t -> Yojson.Safe.t

@@ -1530,7 +1530,7 @@ let mctxLookupDep cD k =
           (Format.asprintf
             "Meta-variable out of bounds -- looking for %d in context of length %d"
             k
-            (List.length (Context.to_list cD))
+            (Context.length cD)
           )
        )
   |> function

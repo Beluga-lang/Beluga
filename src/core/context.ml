@@ -202,8 +202,10 @@ let to_list_map (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> 'b) : 'b list =
 (** Convert the context to a list.
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
  *)
-let to_list_rev (ctx : 'a LF.ctx) : 'a list =
-  to_list_map_rev ctx (Fun.const Fun.id)
+let rec to_list_rev (ctx : 'a LF.ctx) : 'a list =
+  match ctx with
+  | Empty -> []
+  | Dec (ctx', x) -> x :: to_list_rev ctx'
 
 (** Convert the context to a list, with subcontexts.
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
@@ -214,7 +216,12 @@ let to_sublist_rev (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
 (** Convert the context to a list.
  *)
 let to_list (ctx : 'a LF.ctx) : 'a list =
-  to_list_map ctx (Fun.const Fun.id)
+  let rec go (ctx : 'a LF.ctx) (acc : 'a list) : 'b list =
+    match ctx with
+    | Empty -> acc
+    | Dec (ctx', x) -> go ctx' (x :: acc)
+  in
+  go ctx []
 
 let to_sublist (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
   to_list_map ctx Misc.tuple

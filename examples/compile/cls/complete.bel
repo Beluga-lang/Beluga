@@ -86,14 +86,14 @@ fn d => case d of
    let [ |- C1] = subcomp [ |- push Ks K] [ |- prog (ev F2) (prog mkpair  P)] [ |- S] [ |- D1] in
    let [ |- C2] = subcomp [ |- Ks]   [ |- prog mkpair P] [ |- vcons S W1] [ |- D2] in
    let [ |- C'] = append [ |- to c_pair C1] [ |- C2] in
-     append  [ |- C']  [ |- to c_mkpair id_step]
+     append  [ |- C'] [ |- to c_mkpair id_step]
 
  | [ |- fev_fst D1] : [ |- feval K (fst' F1) W1] =>
-   let [ |- C1] = subcomp [ |- Ks] [ |- prog getfst P]  [ |- S] [ |- D1] in
+   let [ |- C1] = subcomp [ |- Ks] [ |- prog getfst P] [ |- S] [ |- D1] in
      append [ |- to c_fst C1] [ |- to c_getfst id_step]
 
  | [ |- fev_snd D2] : [ |- feval K (snd' F2) W2] =>
-   let [ |- C2] = subcomp [ |- Ks] [ |- prog getsnd P]  [ |- S] [ |- D2] in
+   let [ |- C2] = subcomp [ |- Ks] [ |- prog getsnd P] [ |- S] [ |- D2] in
      append [ |- to c_snd C2] [ |- to c_getsnd id_step]
 
  | [ |- fev_lam] => [ |- to c_lam id_step]
@@ -109,7 +109,7 @@ fn d => case d of
      append [ |- C'] [ |- to c_apply C3]
 
  | [ |- fev_letv D2 D1] : [ |- feval K (letv' F1 F2) W] =>
-   let [ |- C1] = subcomp [ |- push Ks K]  [ |- prog bind (prog (ev F2) P)] [ |- S] [ |- D1] in
+   let [ |- C1] = subcomp [ |- push Ks K] [ |- prog bind (prog (ev F2) P)] [ |- S] [ |- D1] in
    let [ |- C2] = subcomp [ |- Ks] [ |- P] [ |- S] [ |- D2] in
      append [ |- to c_letv C1] [ |- to c_bind C2]
 

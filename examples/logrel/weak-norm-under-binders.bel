@@ -89,7 +89,7 @@ fn iv => fn ivs => case ivs of
 
 % Composing variable substitutions yields a variable substitution
 % Context extensions can be composed.
-rec compose : IsVarSub [g] $[h  |- $W] -> IsVarSub [h] $[h' |- $W2] -> IsVarSub [g] $[h' |- $W[$W2]] =
+rec compose : IsVarSub [g] $[h |- $W] -> IsVarSub [h] $[h' |- $W2] -> IsVarSub [g] $[h' |- $W[$W2]] =
 / total r1 (compose _ _ _ _ _ r1) /
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
@@ -101,13 +101,13 @@ rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h, x:tm A[] |- $S[..]]
 / total r (wknVarSub _ _ _ _ r) /
 fn r => case r of
 | Nil => Nil
-| Cons r' (IsVar [h |- #p]) => Cons (wknVarSub r') (IsVar [h, x:tm _  |- #p[..]]);
+| Cons r' (IsVar [h |- #p]) => Cons (wknVarSub r') (IsVar [h, x:tm _ |- #p[..]]);
 
 % Extending a variable substitution with a new variable-to-variable mapping results in a
 % variable substitution
 rec extVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g, x:tm A[]] $[h, x:tm A[] |- $S[..], x] =
 / total (extVarSub) /
-fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar [h, x:tm _  |- x]);
+fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar [h, x:tm _ |- x]);
 
 % Given a context, we can generate a variable substitution
 rec idIsVarSub : {g:ctx} IsVarSub [g] $[g |- ..] =
@@ -141,7 +141,7 @@ fn r => fn iv => case r of
 % If step M M'   and   M' is reducible at type A
 % then M is reducible at type A
 
-rec haltsStep : {S:[g |- step M (M')]} Halts [ |- A] [g |- M'] -> Halts [ |- A] [g |- M] =
+rec haltsStep : {S:[g |- step M M']} Halts [ |- A] [g |- M'] -> Halts [ |- A] [g |- M] =
 / total (haltsStep) /
 mlam S => fn h => let (h : Halts [ |- A] [g |- M']) = h in
 let Halts/c [g |- R] v = h in Halts/c [g |- s_trans S R] v;
@@ -174,7 +174,7 @@ mlam g, A, R => fn r =>  case [ |- A] of
   Arr [g |- R]
   (mlam h => mlam $W => mlam M2 => fn iv => fn rm2 =>
     let Halts/c [h |- MS] n = reify [h] [|- A] [h |- M2] rm2 in
-    closed _ [h |- _]  [h |- _] [h |- s_app s_refl MS]
+    closed _ [h |- _] [h |- _] [h |- s_app s_refl MS]
            (reflect [h] [|- B] [h |- _] (App (rwkn r iv) n)))
 
 and rec reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}

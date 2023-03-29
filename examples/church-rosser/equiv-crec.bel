@@ -31,14 +31,14 @@ rec eq1: (g:ctx) [g |- pred M N] -> [g |- step* M N] =
   let % {S1*::(step* M1 N1)[g]}
       [g |- S1*]  = eq1   [g |- R1] in
   let % {S*'::(step* (app M1 M2) (app N1 M2))[g]}
-      [g |- S*']  = apl1*  [g |- M2]  [g |- S1*] in
+      [g |- S*'] = apl1* [g |- M2] [g |- S1*] in
 
   let % {S2*:: (step* M2 N2)[g]}
       [g |- S2*]  = eq1   [g |- R2] in
 
   let  % {S*'::(step* (app N1 M2) (app N1 N2))[g]}
        [g |- S*''] = apr1* [g |- N1] [g |- S2*] in
-   appd [g |- S*'] [g |- S*'' ]
+   appd [g |- S*'] [g |- S*'']
 
  | [g |- lm (\x.\u. R1)] =>
   let % {S1* :: (step* M N)[g, x:term]}

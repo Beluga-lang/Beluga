@@ -12,7 +12,7 @@ inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype  =
 | Ae_a : Aeq [g |- E1] [g |- F1] -> Aeq [g |- E2] [g |- F2]
       -> Aeq [g |- app E1 E2] [g |- app F1 F2]
 | Ae_l : Aeq [h, x:term |- E] [h, x:term |- F]
-      -> Aeq [h |- lam (\x. E)]  [h |- lam (\x. F)]
+      -> Aeq [h |- lam (\x. E)] [h |- lam (\x. F)]
 ;
 
 % Declarative Equality

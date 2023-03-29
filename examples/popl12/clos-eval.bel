@@ -26,7 +26,7 @@ inductive List : ctype =
 ;
 
 inductive Clos : ctype =
-Cl : (g:tctx)  [g, x:tm  |- tm] -> ([g |- tm] -> Clos) -> Clos
+| Cl : (g:tctx) [g, x:tm |- tm] -> ([g |- tm] -> Clos) -> Clos
 ;
 
 inductive CtxRel : {g:tctx} {h:tctx} ctype =
@@ -44,15 +44,15 @@ fn x => case x of Cl y f  => x
 rec eval : (g:tctx) [g |- tm] -> ([g |- tm] -> Clos) -> Clos =
 fn e => fn env => case e of
 | [g |- #p] => env [g |- #p]
-| [g |- lam \x. E] => Cl [g, x:tm  |- E] env
+| [g |- lam \x. E] => Cl [g, x:tm |- E] env
 | [g |- app E1 E2] =>
   case eval [g |- E1] env of
-  | Cl [h, x:tm  |- E] env' =>
+  | Cl [h, x:tm |- E] env' =>
     let v = eval [g |- E2] env in
-    eval [h, x:tm  |- E]
+    eval [h, x:tm |- E]
          (fn var => case var of
-               | [h, x:tm  |- x] => v
-               | [h, x:tm  |- #p[..]] => env' [h |- #p]
+               | [h, x:tm |- x] => v
+               | [h, x:tm |- #p[..]] => env' [h |- #p]
          )
 
 ;

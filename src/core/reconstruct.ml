@@ -191,7 +191,7 @@ let error_printer = function
         (List.length elems)
   | ImpossiblePattern (cD, mC_p, mC) ->
       Format.dprintf
-        "@[<v>The pattern \
+        "@[<v>The pattern\
         @,  @[%a@]\
         @,is impossible for this case-expression's scrutinee, namely\
         @,  @[%a@]\

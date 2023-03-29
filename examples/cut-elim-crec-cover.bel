@@ -20,7 +20,7 @@ LF conc : o -> type =  % Conclusion (right)
   | notr    : ({p:o}hyp A -> conc p) -> conc (not A)
   | notl    : conc A -> (hyp (not A) -> conc C)
   | forallr : ({a:i} conc (A a)) -> conc (forall (\x. A x))
-  | foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C)
+  | foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x. A x)) -> conc C)
 ;
 
 schema ctx = some [a: o] hyp a + i + o;
@@ -49,13 +49,13 @@ fn e => case e of
     [g |- F2[.., _]]
 
 | [g |- assume (forall (\x. A1)) (forallr \a. D1) (\h.foralll T[..] (\h1. E1[.., h, h1]) h)] =>
-  let [g, h2: hyp _  |- E1'] =
+  let [g, h2: hyp _ |- E1'] =
          ca [g, h2:hyp _ |- assume (forall (\x. A1[.., x])) (forallr \a. D1[.., a]) (\h. E1[.., h, h2])] in
     ca [g |- assume A1[.., T] D1[.., T] (\h2. E1')]
 
 | [g |- assume A0 (impl D1 (\h2. D2) H) (\h. E)] =>
-  let [g, h2: hyp _  |- D2'] = ca [g, h2: hyp _ |- assume  A0[..]
-                                                           D2 (\h  .   E[.., h])] in
+  let [g, h2: hyp _ |- D2'] = ca [g, h2: hyp _ |- assume  A0[..]
+                                                           D2 (\h.   E[.., h])] in
     [g |- impl D1 (\h2. D2') H]
 
 | [g |- assume A (notl D1 H) (\h. E)] => [g |- notl D1 H]
@@ -72,7 +72,7 @@ fn e => case e of
 
 | [g |- assume A D (\h. impl E1 (\h2. E2) H[..])] =>
   let [g |- E1'] = ca [g |- assume A D (\h. E1)] in
-  let [g, h2: hyp _  |- E2'] = ca [g, h2: hyp _ |- assume A[..] D[..] (\h. E2[.., h, h2])] in
+  let [g, h2: hyp _ |- E2'] = ca [g, h2: hyp _ |- assume A[..] D[..] (\h. E2[.., h, h2])] in
     [g |- impl E1' (\h2. E2') H]
 
 | [g |- assume A D (\h.notr (\p.\h1. E1[.., h, p, h1]))] =>
@@ -90,7 +90,7 @@ fn e => case e of
     [g |- forallr \a. E1']
 
  | [g |- assume A D (\h.foralll T[..] (\h1.E1[.., h, h1]) H[..])] =>
-   let [g, h1:hyp _  |- E1'] = ca [g, h1:hyp _ |- assume A[..] D[..] (\h.E1[.., h, h1])] in
+   let [g, h1:hyp _ |- E1'] = ca [g, h1:hyp _ |- assume A[..] D[..] (\h.E1[.., h, h1])] in
    [g |- foralll T (\h1. E1') H]
 
 ;

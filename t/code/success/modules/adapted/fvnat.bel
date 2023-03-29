@@ -53,15 +53,15 @@ module FVNat = struct
   %     | [g] something  #p[..]  => [g] something  #p[..]
        | [g |- something U[..]]     => [g |- something U[..]])
 
-  | [g |- lam (\x . (U))] =>
+  | [g |- lam (\x. U)] =>
 
      (case (free_var [g, x:exp _] [g, x |- U]) of
-        [g, x: exp _  |- nothing]       => [g |- nothing]
-      | [g, x: exp _  |- something x]   => [g |- nothing]
+        [g, x: exp _ |- nothing]       => [g |- nothing]
+      | [g, x: exp _ |- something x]   => [g |- nothing]
              % technically we need to initiate backtracking
    %   | [g, x: exp _] something #p[..] => [g] something #p[..]
-      | [g, x: exp _  |- something U[..]]  => [g |- something U[..]]
-      | [g, x: exp _  |- something (U)]  => [g |- nothing]
+      | [g, x: exp _ |- something U[..]]  => [g |- something U[..]]
+      | [g, x: exp _ |- something U]  => [g |- nothing]
      )
   ;
 
@@ -98,15 +98,15 @@ module FVNatCrec = struct
          [g |- nothing]   => free_var [g |- V[..]]
        | [g |- something  T[..]]  => [g |- something  T[..]])
 
-  | [g |- lam (\x . (U))] =>
+  | [g |- lam (\x. U)] =>
 
      (case (free_var [g, x:exp _ |- U]) of
-        [g, x: exp _  |- nothing]       => [g |- nothing]
-      | [g, x: exp _  |- something x]   => [g |- nothing]
+        [g, x: exp _ |- nothing]       => [g |- nothing]
+      | [g, x: exp _ |- something x]   => [g |- nothing]
              % technically we need to initiate backtracking
   %    | [g, x: exp _] something #p[..] => [g] something #p[..]
-      | [g, x: exp _  |- something U[..]]  => [g |- something U[..]]
-      | [g, x: exp _  |- something (U)]  => [g |- nothing]
+      | [g, x: exp _ |- something U[..]]  => [g |- something U[..]]
+      | [g, x: exp _ |- something U]  => [g |- nothing]
 
      );
 end;
@@ -131,7 +131,7 @@ module FVNatExplicit = struct
       [g |- #p[..]]     : [g |- exp T'[]] => [g |- something T'[] #p[..]]
 
     | {U:[g |- exp nat]}
-      [g |- suc U[..]] : [g |- exp nat]   => free_var [g] [ |- nat]  [g |- U[..]]
+      [g |- suc U[..]] : [g |- exp nat]   => free_var [g] [ |- nat] [g |- U[..]]
 
    | {U:[g |- exp bool]} {V:[g |- exp bool]}
       [g |- andalso U[..] V[..]] : [g |- exp bool]  =>

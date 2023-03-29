@@ -62,7 +62,7 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
     Arr (haltsMstep s ha)
         (mlam N => fn rn =>
          let [ |- MS] = s in
-         closed [ |- B] [ |- app M N]  [ |- app M' N]
+         closed [ |- B] [ |- app M N] [ |- app M' N]
                 [ |- stepapp MS refl] (f [ |- N] rn))
 ;
 
@@ -83,7 +83,7 @@ mlam g => mlam #p => case [g |- #p[..]] of
                       lookup [g'] [g' |- #q[..]] rs'}%
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A[]]} RedSub [g] $[ |- $S[^]] -> Reduce [|- A]  [ |- M[$S[^]]] =
+rec eval : {g:ctx}{M:[g |- tm A[]]} RedSub [g] $[ |- $S[^]] -> Reduce [|- A] [ |- M[$S[^]]] =
 / total m (eval g a s m) /
  mlam g => mlam M => fn rs => case [g |- M[..]] of
 | [g |- #p[..]] => lookup [g] [g |- #p[..]] rs

@@ -146,7 +146,7 @@ fn a => case a of
 | [g |- algapp R N] =>
   let [g |- R'] = algEqRSym [g |- R] in
   let [g |- N'] = algEqNSym [g |- N] in
-  [g |- algapp (R') (N')]
+  [g |- algapp R' N']
 and rec algEqNSym : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N1 T] =
@@ -154,7 +154,7 @@ and rec algEqNSym : (g:tctx)
 fn a => case a of
 | [g |- algbase S1 S2 R] =>
   let [g |- R'] = algEqRSym [g |- R] in
-  [g |- algbase S2 S1 (R')]
+  [g |- algbase S2 S1 R']
 | [g |- algarr \x.\u.N] =>
   let (a : [g |- algeqn _ _ (arr T[] S[])]) = a in
   let [g, b:block x:tm, y:oft x T[], z:algeqr x x T[] |- N'[.., b.1, b.3]] = algEqNSym [g, b:block x:tm, y:oft x T[], z:algeqr x x T[] |- N[.., b.1, b.3]] in

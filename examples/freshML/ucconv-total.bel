@@ -148,7 +148,7 @@ mlam h => fn map => fn e => case e of
   let [h |- U'] = convert [h] map [g |- U] in
   let [h |- V'] = convert [h] map [g |- V] in
   [h |- topen U'
-      \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) V'[..])]
+      \xenv. tapp (tfst xenv) (tpair (tsnd xenv) V'[..])]
 
 |[g |- elam \x.U] =>
  let fvs = fvar e in

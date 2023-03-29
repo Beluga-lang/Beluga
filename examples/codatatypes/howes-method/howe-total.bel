@@ -24,17 +24,17 @@ inductive Value : [ |- term T] -> ctype =
   | Val_cons : Value [ |- cons M1 M2]
 ;
 
-inductive Eval : [ |- term T] -> [ |- term T] -> ctype =
-  | Ev_app      : Eval [ |- M1] [ |- lam (\x.N)] -> Eval [ |- N[M2]]  [ |- V]
-         -> Eval [ |- app M1 M2] [ |- V]
-  | Ev_val      : Value [ |- V] -> Eval [ |- V] [ |- V]
-  | Ev_fix      : Eval [ |- M[fix \x.M]] [ |- V]
-        ->  Eval [ |- fix \x.M] [ |- V]
-  | Ev_case_nil : Eval [ |- M] [ |- nil] -> Eval [ |- M1] [ |- V]
-         -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
-  | Ev_case_cons: {M2: [x:term S, y: term (list S[]) |- term T[]]}
-      Eval [ |- M]  [ |- cons H L] ->  Eval [ |- M2[H, L]] [ |- V]
-               -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
+inductive Eval   : [ |- term T] -> [ |- term T] -> ctype =
+  | Ev_app       : Eval [ |- M1] [ |- lam (\x.N)] -> Eval [ |- N[M2]] [ |- V]
+                   -> Eval [ |- app M1 M2] [ |- V]
+  | Ev_val       : Value [ |- V] -> Eval [ |- V] [ |- V]
+  | Ev_fix       : Eval [ |- M[fix \x.M]] [ |- V]
+                   ->  Eval [ |- fix \x.M] [ |- V]
+  | Ev_case_nil  : Eval [ |- M] [ |- nil] -> Eval [ |- M1] [ |- V]
+                   -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
+  | Ev_case_cons : {M2: [x:term S, y: term (list S[]) |- term T[]]}
+      Eval [ |- M] [ |- cons H L] ->  Eval [ |- M2[H, L]] [ |- V]
+                   -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
 ;
 
 coinductive Sim : {T:[|- tp]} [|- term T] -> [|- term T] -> ctype =
@@ -298,7 +298,7 @@ fun (Howe_lam h' (OSimC [_] s)) =>
                                 howe_osim_trans h'' a)
 ;
 
-rec howe_ev_unit : Howe [ |- top] [ |- unit] [ |- N] -> Eval [ |- N]  [ |- unit] =
+rec howe_ev_unit : Howe [ |- top] [ |- unit] [ |- N] -> Eval [ |- N] [ |- unit] =
 / total h (howe_ev_unit n h) /
 fun (Howe_unit (OSimC [_]f)) => (f $[|- ^]) .Sim_unit (Ev_val Val_unit)
 ;
@@ -429,7 +429,7 @@ fun d s .Sim_lam e => let ESim_lam d' s' = s .Sim_lam e in
 
 rec fix_sim : {M:[x:term T |- term T[]]} Sim [ |- T] [|- M [fix \x.M]] [|- fix \x.M] =
 / total m (fix_sim t m) /
-fun [x:term top  |- M] .Sim_unit d => Ev_fix d
+fun [x:term top |- M] .Sim_unit d => Ev_fix d
   | [x:term (list T) |- M] .Sim_nil d => Ev_fix d
   | [x:term (list T) |- M] .Sim_cons d =>
     ESim_cons (Ev_fix d) sim_refl sim_refl
@@ -473,14 +473,14 @@ fn e => fn h => case e of
   | (Ev_app d1 d2) =>
     let (Howe_app h1 (h2:Howe [ |- _] [ |- E2] [ |- E2']) (OSimC [_] s)) = h in
     let Howe_lam h' (OSimC [_] s') = down_closed d1 h1 in
-    let ESim_lam (d1': Eval [ |- _]  [ |- lam \x.M]) s'' =
+    let ESim_lam (d1': Eval [ |- _] [ |- lam \x.M]) s'' =
         (s' $[|- ^]) .Sim_lam (Ev_val Val_lam) in
     let ha = howe_osim_trans (howe_subst h' (HCons HNil h2)) (sim_osim (s'' [|- E2'])) in
     let ha1 = down_closed d2 ha in
     let Howe_lam ha' (OSimC [_] sa) = ha1 in
     let ESim_lam (d2': Eval [ |- N0] [ |- lam \x.N]) sa' =
         (sa $[|- ^]) .Sim_lam (Ev_val Val_lam) in
-    let ESim_lam (dd:Eval [ |- _]  [ |- lam \x.N']) ss =
+    let ESim_lam (dd:Eval [ |- _] [ |- lam \x.N']) ss =
         (s $[|- ^]) .Sim_lam (Ev_app d1' d2') in
     let s1 = ev_sim' d2' sim_refl in
     let s2 = ev_sim dd (sim_lam [x:term _ |- N] [x:term _ |- N'] ss) in

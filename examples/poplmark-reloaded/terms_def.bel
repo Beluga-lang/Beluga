@@ -94,7 +94,7 @@ rec subst_mred : (g: cxt) {M : [g, x: tm A[] |- tm B[]]}{N : [g |- tm A[]]}{N': 
     | [g, x:tm A[] |- app M1 M2] =>
       let [g |- S1] = subst_mred [g, x:tm A[] |- M1] [g |- N] [g |- N'] s in
       let [g |- S2] = subst_mred [g, x:tm A[] |- M2] [g |- N] [g |- N'] s in
-      let [g |- MS1] =  mstep_appl [g |- M1[.., N]]  [g |- M1[.., N']] [g |- M2[.., N]]    [g |- S1] in
-      let [g |- MS2] = mstep_appr  [g |- M1[.., N']]  [g |- M2[.., N]]    [g |- M2[.., N']]  [g |- S2] in
+      let [g |- MS1] = mstep_appl [g |- M1[.., N]] [g |- M1[.., N']] [g |- M2[.., N]] [g |- S1] in
+      let [g |- MS2] = mstep_appr [g |- M1[.., N']] [g |- M2[.., N]] [g |- M2[.., N']] [g |- S2] in
       m-trans [g |- _] [g |- MS1] [g |- MS2]
 ;

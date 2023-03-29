@@ -21,7 +21,7 @@ rec fffForgotConcreteVarCase : {g:termCtx} [g, x:term |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of --not
   | [g, x:term |- z]     => [g |- z]
-  | [g, x:term |- suc (U)]   => [g |- z]
+  | [g, x:term |- suc U]   => [g |- z]
   | [g, x:term |- #p[..]]   => [g |- z]
 ;
 
@@ -29,7 +29,7 @@ rec fffConcreteOK : {g:termCtx} [g, x:term |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of
   | [g, x:term |- z]     => [g |- z]
-  | [g, x:term |- suc (U)]   => [g |- z]
+  | [g, x:term |- suc U]   => [g |- z]
   | [g, x:term |- #p[..]]   => [g |- z]
   | [g, x:term |- x]   => [g |- z]
 ;
@@ -76,7 +76,7 @@ mlam g => fn e =>
   case e of
   | [g, x:term |- U[..]]   => [g |- z]
   | [g, x:term |- x]      => [g |- z]
-  | [g, x:term |- suc (U)] => [g |- z]
+  | [g, x:term |- suc U] => [g |- z]
 ;
 
 

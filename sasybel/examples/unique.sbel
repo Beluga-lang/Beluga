@@ -3,7 +3,7 @@ syntax
 
 tp ::= tp -> tp | nat | x ;
 
-exp ::= lam \x .exp[x] | app exp exp;
+exp ::= lam \x.exp[x] | app exp exp;
 
 notation of_typ : exp oft tp;
 
@@ -77,7 +77,7 @@ case rule
 
 D: | g |- {x:exp, x oft T1} (E .. [x] oft T2);
 ---------------------------------------------- t_lam
-| g  |- (lam T1 E ..) oft (T1 -> T2);
+| g |- (lam T1 E ..) oft (T1 -> T2);
 
 is
 

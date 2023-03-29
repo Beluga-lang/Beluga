@@ -112,7 +112,7 @@ mlam g => mlam T => case [g |- T[..]] of
        R[..] b.a b.tr b.w b.ref] =
        refl [g, b: block a:tp, tr:{u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t',
                    w: sub a U[..], ref: sub a a]
-            [g, b  |- T[..] b.a] in
+            [g, b |- T[..] b.a] in
 [g |- sa_all R[..] R'[..]]
 
 ;
@@ -156,7 +156,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
                          w: sub a _, ref: sub a a) |-
                F2[..] b.a b.tr b.w b.ref] =
               trans [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-                                 w: sub a _, ref: sub a a)  |- Q2[..] b.a]
+                                 w: sub a _, ref: sub a a) |- Q2[..] b.a]
                     [g, b |- D2[..] b.a b.tr (b.tr _ Q1[..] E1[..] b.w) b.ref]
                     [g, b |- E2[..] b.a b.tr b.w b.ref] in
           [g |- sa_all F2[..] F1[..]]
@@ -190,9 +190,9 @@ fn d => case d of
 | [g |- sa_all D2[..] D1[..]] : [g |- sub (forall S1[..] S2[..]) (forall T1[..] T2[..])] =>
   let [g |- F1[..]] = sound [g |- D1[..]] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..])  |- F2[..] b.a b.w'] =
+                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..]) |- F2[..] b.a b.w'] =
       sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..])  |- D2[..] b.a b.tr b.w b.ref] in
+                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..]) |- D2[..] b.a b.tr b.w b.ref] in
   [g |- subtype_forall F2[..] F1[..]]
 
 ;
@@ -215,9 +215,9 @@ fn d => case d of
 | [g |- subtype_forall F2[..] F1[..]] : [g |- subtype (forall S1[..] S2[..]) (forall T1[..] T2[..])] =>
   let [g |- D1[..]] = complete [g |- F1[..]] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..])  |- D2[..] b.a b.tr b.w b.ref] =
+                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..]) |- D2[..] b.a b.tr b.w b.ref] =
       complete [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..])  |- F2[..] b.a b.w' ]
+                                w: sub a T1[..], ref: sub a a, w': subtype a T1[..]) |- F2[..] b.a b.w' ]
   in
       [g |- sa_all D2[..] D1[..]]
 
@@ -250,11 +250,11 @@ then F:: G |- (forall a < S1. S2) < (forall a < T1. T2).
 By inversion on D:
 
 D1 : G |- U1 < S1
-D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a  |- S2 < U2
+D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a |- S2 < U2
 
 By inversion on E:
 E1 : G |- T1 < U1
-E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a  |- U2 < T2
+E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a |- U2 < T2
 
 By i.h. on E1 and D1 we can obtain a derivation
 F1 : G |- T1 < S1

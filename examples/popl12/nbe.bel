@@ -107,7 +107,7 @@ and rec extendSem : [g |- neut (arr A[] B[])] ->
 fn r => mlam h => fn s => fn e =>
 let [h |- N] = reify e in
 let [h |- R' ] = weak_neut s r in
-  reflect _ [h |- rapp (R') N]
+  reflect _ [h |- rapp R' N]
 
 and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 / trust /

@@ -451,7 +451,7 @@ syntax
 exp ::= z
 | suc exp
 | x
-| lambda \x .exp[x]
+| lambda \x.exp[x]
 | app exp exp
 | let exp = x in exp[x] ;
 
@@ -465,7 +465,7 @@ e1 value ;
 (suc e1) value ;
 
 ------------------------------ val-lam
-(lambda \x . e1[x]) value ;
+(lambda \x. e1[x]) value ;
 
 notation eval : exp eval exp;
 
@@ -477,9 +477,9 @@ e1 eval e2;
 (suc e1) eval (suc e2);
 
 --------------------------------------------- ev-lam
-(lambda \x .e1[x]) eval (lambda \x .e1[x]);
+(lambda \x.e1[x]) eval (lambda \x.e1[x]);
 
-e1 eval (lambda \x .e[x]);
+e1 eval (lambda \x.e[x]);
 e2 eval e2';
 e[e2'] eval e1';
 ----------------------------------------- ev-app
@@ -523,7 +523,7 @@ end case
 case rule
 
 	-------------------------------------------------------- ev-lam
-	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
+	(lambda \x. e1[x]) eval (lambda \x. e1[x]);
 
 	is
 
@@ -533,7 +533,7 @@ end case
 
 case rule
 
-	D1: e1 eval lambda \x . e3[x];
+	D1: e1 eval lambda \x. e3[x];
 	D2: e2 eval e2';
 	D3: e3[e2'] eval e1';
 	------------------------------------- ev-app

@@ -17,7 +17,7 @@ inductive List : ctype =
 ;
 
 rec append : List -> NuColist -> NuColist =
-fun (Lnil) f => f
+fun Lnil f => f
   | (Lcons g h) f .Out => Cons g (append h f)
 ;
 

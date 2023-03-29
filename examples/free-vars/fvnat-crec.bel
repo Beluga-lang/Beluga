@@ -44,15 +44,15 @@ fn e =>  case e of
        [g |- nothing]   => free_var [g |- V]
      | [g |- something  T]  => [g |- something  T])
 
-| [g |- lam (\x . U)] =>
+| [g |- lam (\x. U)] =>
 
    (case (free_var [g, x:exp _ |- U]) of
-      [g, x: exp _  |- nothing]       => [g |- nothing]
-    | [g, x: exp _  |- something x]   => [g |- nothing]
+      [g, x: exp _ |- nothing]       => [g |- nothing]
+    | [g, x: exp _ |- something x]   => [g |- nothing]
            % technically we need to initiate backtracking
 %    | [g, x: exp _] something #p => [g] something #p
-    | [g, x: exp _  |- something U[..]]  => [g |- something U]
-    | [g, x: exp _  |- something U]  => [g |- nothing]
+    | [g, x: exp _ |- something U[..]]  => [g |- something U]
+    | [g, x: exp _ |- something U]  => [g |- nothing]
 
    )
 ;

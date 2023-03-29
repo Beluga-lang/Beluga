@@ -18,7 +18,7 @@ rec soundSN : (g: cxt) {M: [g |- tm A[]]} SN [g |- M] -> Sn [g |- M] =
     mlam M => fn sn =>
     case sn of
     | SNeu sne => soundSNe [_ |- M] sne
-    | SAbs sn' => let sn'' = soundSN [_ |- _] sn' in abs_sn  [_] [ |- _] [|- _]  [_ |- _] sn''
+    | SAbs sn' => let sn'' = soundSN [_ |- _] sn' in abs_sn  [_] [ |- _] [|- _] [_ |- _] sn''
     | SRed snr sn' => let snr' = soundSNRed [_ |- _] [_ |- _] snr in
               let sn'' = soundSN [_ |- _] sn' in
               backwards_closure [_ |- M] [_ |- _] snr' sn''

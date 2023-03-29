@@ -95,7 +95,7 @@ LF nat: type =
 | abs: (source S -> wrap T N) -> wrap (arr S T) (nsuc N)
 ;
 
-% StrTerm [Γ] [  |- T] ⇔ ∃ Γ' M, Γ' ⊆ Γ ∧ and Γ' ⊢ M : T
+% StrTerm [Γ] [ |- T] ⇔ ∃ Γ' M, Γ' ⊆ Γ ∧ and Γ' ⊢ M : T
 inductive StrTerm': {g:sctx} [ |- tp] -> [|- nat] -> ctype =
 | STm': [g' |- wrap T[] N[]] -> SubCtx [g'] [g] -> StrTerm' [g] [ |- T] [|- N]
 ;
@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
 | M_dot sigma' [x:target S |- M] =>
-    M_dot (extendEnv sigma') [x:target _  |- M[crst x]]
+    M_dot (extendEnv sigma') [x:target _ |- M[crst x]]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] =
@@ -270,7 +270,7 @@ mlam Env1, Env2, Env3 => fn prf => fn m => case prf of
 | App_nil =>  m
 | App_cons p =>
   let [g, l: target _ |- M'] = weakenEnv1 _ _ _ p m in
-    [g, l:target _  |- M' [.., crst l]]
+    [g, l:target _ |- M' [.., crst l]]
 ;
 
 
@@ -338,7 +338,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let ExEnv (a12 : Append [|- _] [|- _] [|- Env3]) = append [|- Env1] [|- Env2] in
   let [h, l:target L[] |- P]                      = weakenEnv2 _ _ _ a12 r1 in
   let [h, l:target L[] |- Q]                      = weakenEnv1 _ _ _ a12 r2 in
-    Result/c [h, l:target L[] |- ccons P Q]  [|- Env3]
+    Result/c [h, l:target L[] |- ccons P Q] [|- Env3]
 
 | [g |- fst M] =>
   let Result/c r [|- Env] = hcc [g |- M] sigma in

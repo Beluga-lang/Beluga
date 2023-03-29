@@ -27,7 +27,7 @@ fn t => fn e => case t of
 | [h, y:term |- y]    => let [g' |- E] = e in [g' |- tfst E]
 | [h, y:term |- #p[..]] =>
     (let [g' |- E] = e in
-     cconv [h |- #p]  [g' |- tsnd E])
+     cconv [h |- #p] [g' |- tsnd E])
 
  | [h |- app E1 E2] =>
   let [g' |- E] = e in

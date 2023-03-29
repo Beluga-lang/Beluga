@@ -136,10 +136,10 @@ rec algEqRSym : (g:tctx)
 / total a (algEqRSym g n1 n2 t a) /
 fn a => case a of
 | [_ |- #p.2] => [_ |- #p.2]
-| [_ |- algapp (R) N] =>
+| [_ |- algapp R N] =>
   let [_ |- R'] = algEqRSym [_ |- R] in
   let [_ |- N'] = algEqNSym [_ |- N] in
-  [_ |- algapp (R') (N')]
+  [_ |- algapp R' N']
 and rec algEqNSym : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N1 T] =
@@ -190,7 +190,7 @@ eqtm : tm -> tm -> type.
 refltm : eqtm M M.
 
 % Determinacy of weak head reduction
-rec determinacy : (g:tctx) [g |- step M N] -> [g |- step M (P)] -> [g |- eqtm N (P)] =
+rec determinacy : (g:tctx) [g |- step M N] -> [g |- step M P] -> [g |- eqtm N P] =
 / total s1 (determinacy g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [_ |- beta] => let [_ |- beta] = s2 in [_ |- refltm]
@@ -204,7 +204,7 @@ inductive HasCommonReduct : (g:tctx) [g |- tm] -> [g |- tm] -> ctype =
 
 % Confluence is trivial because it's deterministic. This is just a convenient
 % way to work with determinacy
-rec confluence : [g |- mstep M N] -> [g |- mstep M (P)] ->
+rec confluence : [g |- mstep M N] -> [g |- mstep M P] ->
                  HasCommonReduct [g |- N] [g |- P] =
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
@@ -290,8 +290,8 @@ fn a1 => fn a2 => case a1 of
 % Transitivity of logical equivalence
 rec logEqTrans : {T:[|- tp]}
    Log [g |- M sim N] [ |- T]
- -> Log [g |- N sim (P)] [ |- T]
- -> Log [g |- M sim (P)] [ |- T] =
+ -> Log [g |- N sim P] [ |- T]
+ -> Log [g |- M sim P] [ |- T] =
 / total t (logEqTrans g m  n p t) /
 mlam T => fn e1 => fn e2 => case [|- T] of
 | [|- i] =>

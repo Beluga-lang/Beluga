@@ -61,6 +61,6 @@ mlam N  => fn p => case [ |- N] of
   [xenv:(target Q) |- tfst xenv]
 | [ |- suc M] =>
   let [ |- m_cons L] : [ |- member_tp (suc N) R (cross T' S)] = p in
-  let [xenv:target S  |- F] = makeproj [ |- M] [ |- L] in
+  let [xenv:target S |- F] = makeproj [ |- M] [ |- L] in
       [xenv:target (cross T' S) |- F[(tsnd xenv)]]
 ;

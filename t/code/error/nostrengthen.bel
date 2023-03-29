@@ -30,7 +30,7 @@ i_andl : focus A1 P → focus (conj A1 A2) P.
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 
 rec cmpai: {g:c_ctx}{E:[g |- pf B[]]}[g |- atm E[..]] ->
-             [g, q:p, u:focus B[] q  |- solve (atom q)] =
+             [g, q:p, u:focus B[] q |- solve (atom q)] =
 % / total at (cmpai g a at)/
 mlam g, E => fn at => case [g |- E[..]] of
   | [g |- andel D1[..]] =>

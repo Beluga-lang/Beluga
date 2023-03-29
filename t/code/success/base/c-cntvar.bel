@@ -13,11 +13,11 @@ mlam g =>
  fn e =>
   case e of  % e : exp (S) [g, x:exp T[..]]
 
-  | [g, xx: exp T  |- zero]           => [ |- zero]
+  | [g, xx: exp T |- zero] => [ |- zero]
 
-  | [g, xx : exp T  |- #p[..]]    => [ |- zero]
+  | [g, xx : exp T |- #p[..]] => [ |- zero]
 
-  | [g, x : exp T  |- x]           => [ |- zero]
+  | [g, x : exp T |- x] => [ |- zero]
 
-  | [g, x : exp T  |- s W]  => [ |- zero]
+  | [g, x : exp T |- s W] => [ |- zero]
 ;

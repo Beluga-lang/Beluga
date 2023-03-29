@@ -58,9 +58,9 @@ proof ref : {g:equalCtx} {U:[g |- exp]} [g |- eq U U] =
 
 % General transitivity is admissible
 proof trans: (g:equalCtx)
-   [g |- eq (TT) (RR)]     % e1 : eq T R
--> [g |- eq (RR) (SS)]     % e2 : eq R S
--> [g |- eq (TT) (SS)]     % result : eq T S
+   [g |- eq TT RR]     % e1 : eq T R
+-> [g |- eq RR SS]     % e2 : eq R S
+-> [g |- eq TT SS]     % result : eq T S
 =
  / total e1 (trans g t r s e1) /
 ?
@@ -80,8 +80,8 @@ proof trans: (g:equalCtx)
 %
 % | [g |- eq_app D1 D2] =>
 %    let [g |- eq_app F1 F2] = e2 in
-%    let [g |- E1] = trans [g |- D1]  [g |- F1] in
-%    let [g |- E2] = trans [g |- D2]  [g |- F2] in
+%    let [g |- E1] = trans [g |- D1] [g |- F1] in
+%    let [g |- E2] = trans [g |- D2] [g |- F2] in
 %      [g |- eq_app  E1  E2]
 % ;
 
@@ -109,5 +109,5 @@ proof ceq: (g:equalCtx)
 % | [g |- e_t D1 D2] =>
 %   let [g |- F2] = ceq [g |- D2] in
 %   let [g |- F1] = ceq [g |- D1] in
-%     trans [g |- F1]  [g |- F2]
+%     trans [g |- F1] [g |- F2]
 % ;

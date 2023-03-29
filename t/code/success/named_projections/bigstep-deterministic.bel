@@ -37,7 +37,7 @@ case f of
    [g |- eval_app1 D1[..] D2[..]] =>
    let [g |- eq_app F1[..] F2[..]] = d in
    let [g |- E1[..]] = eval_respects_eq [g |- F1[..]] [g |- D1[..]] in
-   let [g |- E2[..]] = subst_respects_eq [g] [g, x  |- Y2] [g |- F2[..]] in
+   let [g |- E2[..]] = subst_respects_eq [g] [g, x |- Y2] [g |- F2[..]] in
    let [g |- E3[..]] = eval_respects_eq [g |- E2[..]] [g |- D2[..]] in
    [g |- eval_app1 E1[..] E3[..]]
 

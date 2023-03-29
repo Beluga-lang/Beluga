@@ -35,8 +35,6 @@ let rec without_field field_to_erase json =
 
 let without_locations json = without_field "location" json
 
-let without_operators json = without_field "operator" json
-
 (** {1 Support} *)
 
 let[@inline] json_of_association e = `Assoc e

@@ -30,7 +30,7 @@ stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam :   {g:ctx}
            {A:[ |- tp]}{B:[ |- tp]}
-         ({h:ctx} ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h]  [ |- T]) -> Sem [h] [ |- A] -> Sem [h] [ |- B])
+         ({h:ctx} ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) -> Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
@@ -67,7 +67,7 @@ case n of
 | {R:[g |- neut (atomic P[])]} [g |- embed R] =>
   let [h |- R' ] = nsubst [h] [g] _ s [g |- R] in [h |- embed R']
 
- | {N:[g, x:neut S[]  |- norm S'[]]}
+ | {N:[g, x:neut S[] |- norm S'[]]}
    [g |- nlam (\x. N)]  =>
    let [h, x:neut S[] |- N'] =
     nosubst (extendSub s) [g , x:neut S[] |- N]

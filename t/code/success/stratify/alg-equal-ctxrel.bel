@@ -78,7 +78,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 % let (r:TRel [g |- M[..]] [h |- N[..]]) = r in
 % case [g |- M[..]] of
 % | [g, x:term |- x] =>
-%   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |- b.2]
+%   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x) |- b.2]
 
 % | [g, x:term |- #p[..]] =>
 %   let TRvar r' = r in
@@ -124,8 +124,8 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %   let TRapp t1 t2 = tr in
 %   let TRapp s1 s2 = sr in
 %   let TRapp r1 r2 = rr in
-%   let [h |- AE[..]] = trans t1 s1 r1 [h |- AE1[..]]  [h |- AE3[..]] in
-%   let [h |- AE'[..]] = trans t2 s2 r2 [h |- AE2[..]]  [h |- AE4[..]] in
+%   let [h |- AE[..]] = trans t1 s1 r1 [h |- AE1[..]] [h |- AE3[..]] in
+%   let [h |- AE'[..]] = trans t2 s2 r2 [h |- AE2[..]] [h |- AE4[..]] in
 %     [h |- ae_a  AE[..]  AE'[..]]
 % ;
 
@@ -390,7 +390,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %   let TRlam' sr1' = sr in
 %   let TRlam tr1 = tr' in
 %   let TRlam sr1 = sr' in
-%   let [g, b:block x:term, u:aeq x x  |- AE[..] b.1 b.2] =
+%   let [g, b:block x:term, u:aeq x x |- AE[..] b.1 b.2] =
 %         ceq tr1' sr1' tr1 sr1 (ADcons cr)
 %             [h, b:block x:term, _t:deq x x |- DE[..] b.1 b.2]
 %   in
@@ -401,7 +401,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %    let tdcxt = trelImpliesTdCxt tr in  % tdcxt:TdCxt [l] [h]
 %    let ExWk' (rr : TRel' [l |- R[..]] [h |- R1'[..]]) = exTRel' [h |- R1'[..]] tdcxt in
 %    let tacxt = exCRel tr' in
-%    let ExWk  [g |- R2'[..]] (rr' : TRel [l |- R[..]]  [g |- R2'[..]]) = exTRel [l |- R[..]] tacxt in
+%    let ExWk  [g |- R2'[..]] (rr' : TRel [l |- R[..]] [g |- R2'[..]]) = exTRel [l |- R[..]] tacxt in
 %    let [g |- AE2[..]] = ceq  rr sr rr' sr' cr [h |- DE2[..]] in
 %    let [g |- AE1[..]] = ceq tr rr tr' rr' cr [h |- DE1[..]] in
 %        trans tr' sr' rr' [g |- AE1[..]] [g |- AE2[..]]
@@ -434,6 +434,6 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %                rr' : TRel [l |- R[..]][g |- R2'..]
 %          we obtain[g |- aeq T2'[..] R2'[..]]
 %   let [g |- AE1[..]] = ceq tr rr tr' rr' cr [g |- DE1[..]] in
-%     trans tr' sr' srr [g |- AE1[..]]  [g |- AE2[..]]
+%     trans tr' sr' srr [g |- AE1[..]] [g |- AE2[..]]
 % }%
 % ;

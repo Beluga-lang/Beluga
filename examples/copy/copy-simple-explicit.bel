@@ -3,12 +3,6 @@ lam  : (term -> term) -> term.
 
 schema tctx = some [] term;
 
-% Doesn't cover, and not used below.  Commented out  -jd 2010-05-23
-%
-% rec copy' : term [ ] -> term [ ] =
-%  fn t =>  case t of [ ] lam (\x . x) : term[ ] => t
-% ;
-
 rec copy : {g:tctx} [g |- term] -> [g |- term] =
 / total e (copy g e) /
 mlam g => fn e =>
@@ -18,7 +12,7 @@ mlam g => fn e =>
 
   | {U:[g, x : term |- term]}
     [g |- lam (\x. U)] : [g |- term] =>
-       (case (copy [g, x:term]  [g, x |- U]) of
+       (case (copy [g, x:term] [g, x |- U]) of
           {V: [g, x : term |- term]}
-           [g, x:term  |- V] : [g, x:term |- term] => [g |- lam (\x. V)])
+           [g, x:term |- V] : [g, x:term |- term] => [g |- lam (\x. V)])
 );

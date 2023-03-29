@@ -94,10 +94,10 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
              [g |- eq_app R1 S1 R2 S2
                     F1 F2] =>
              let [g |- E1] = trans [g]   % <g. T1> <g. R1> <g. S1>
-                               [g |- D1]  [g |- F1]
+                               [g |- D1] [g |- F1]
              in
              let [g |- E2] = trans [g]   % <g. T2> <g. R2> <g. S2>
-                               [g |- D2]  [g |- F2]
+                               [g |- D2] [g |- F2]
              in
                  [g |- eq_app  T1 S1 T2 S2
                         E1  E2]

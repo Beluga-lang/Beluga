@@ -63,7 +63,7 @@ case [g |- #p[..]] of
 
 
 rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{$W:$[h |- g]}{$W2:$[h' |- h]}
-    IsVarSub [g] $[h  |- $W[..]]
+    IsVarSub [g] $[h |- $W[..]]
  -> IsVarSub [h] $[h' |- $W2[..]]
  -> IsVarSub [g] $[h' |- $W[$W2[..]]] =
 mlam g => mlam h => mlam h' => mlam $W => mlam $W2 => fn r1 => fn r2 =>

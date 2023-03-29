@@ -91,7 +91,7 @@ FN g => fn l1 => fn l2 => case l1 of
 | [g] nil => l2
 | [g] cons X L =>
   let [g] L' = append [g] ([g] L) l2 in
-    [g] cons X (L')
+    [g] cons X L'
 ;
 
 
@@ -110,7 +110,7 @@ FN g => fn l => case l of
 
  | [g, x:term] cons #p L =>
   let [g] L' = rm [g] ([g, x] L) in
-   [g] cons #p (L')
+   [g] cons #p L'
 
 ;
 
@@ -124,7 +124,7 @@ FN g => fn l => case l of
 % the next case succeeds if x does not occur in U
 | [g, x:term] cons (U ) L =>
   let [g] L' = rm' [g] ([g, x] L) in
-   [g] cons U (L')
+   [g] cons U L'
 
 % this case hence succeeds if x does occur in U
 | [g, x:term] cons U L  =>

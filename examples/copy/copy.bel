@@ -31,7 +31,7 @@ mlam g => fn e => case e of
 | [g |- #p]   => [g |- #p]
 
 | [g |- lam  (\x. U)] =>
-  let [g, x : term _   |- V] = copy [g, x:term _] [g, x  |- U]  in
+  let [g, x : term _ |- V] = copy [g, x:term _] [g, x |- U]  in
     [g |- lam  (\x. V)]
 
 | [g |- app E1 E2] =>
@@ -46,8 +46,8 @@ inductive Term : [|- term T] -> ctype =
 
 
 let t = copy [ ] [ |- z] ;
-let t = copy [x:term nat] [x:term nat  |- x];
-let t = copy [x:term _] [x : term nat |- s x];
+let t = copy [x : term nat] [x : term nat |- x];
+let t = copy [x : term _] [x : term nat |- s x];
 
 let t : [ |- term (arrow nat nat)] =
      copy [ ] [ |- lam \x. x];

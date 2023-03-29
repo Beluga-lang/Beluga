@@ -16,8 +16,8 @@ fn tc => case tc of
 %{
 |[g] tc_imp (\u.\ta. TC1 u ta) =>
  let % {CN1:: (can B (D1 u v))[g, u:pf A, v: atm u]}
-     [g, b:block u:pf A, v:toatm u u  |- atm u] CN1 b.1 b.3 =
-     iscan [g, b:block u:pf _ , v:toatm u u  |- atm u] ([g, b] TC1 b.1 b.2) in
+     [g, b:block u:pf A, v:toatm u u |- atm u] CN1 b.1 b.3 =
+     iscan [g, b:block u:pf _ , v:toatm u u |- atm u] ([g, b] TC1 b.1 b.2) in
   [g |- can_impi (\u.\at. CN1 u at)]
 
 

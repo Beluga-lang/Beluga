@@ -24,18 +24,18 @@ proof tp-refl : {EXTRA : ( |- tp)} {A : ( |- tp)} [ |- eq A A] =
 / total 2 /
 intros
 { EXTRA : ( |- tp), A : ( |- tp)
-| 
+|
 ; split [ |- A] as
   case arr:
   { EXTRA : ( |- tp), X : ( |- tp), X1 : ( |- tp)
-  | 
+  |
   ; by tp-refl [ |- EXTRA] [ |- X] as EQ_Y unboxed;
     by tp-refl [ |- EXTRA] [ |- X1] as EQ_X unboxed;
     solve [ |- eq_arr EQ_Y EQ_X]
   }
   case i:
   { EXTRA : ( |- tp)
-  | 
+  |
   ; solve [ |- eq_i]
   }
 }

@@ -34,10 +34,10 @@ fun [g, x:tm A[] |- x] env =>
 
 rec eval : (phi:ctx) [phi |- tm A[]] -> Env [phi] -> Val [ |- A] =
 fun [phi |- #p] env => lookup [phi |- #p] env
-  | [phi |- abs (\x.E)] env .Out => Closure env [phi, x:tm _  |- E]
-  | [phi |- fix (\f. \x.E)] env => unfold [phi, f:tm _ , x:tm _  |- E] env % Val [ |- arr A B]
+  | [phi |- abs (\x.E)] env .Out => Closure env [phi, x:tm _ |- E]
+  | [phi |- fix (\f. \x.E)] env => unfold [phi, f:tm _ , x:tm _ |- E] env % Val [ |- arr A B]
   | [phi |- app E1 E2] env =>
-  let Closure env' [psi, x:tm _  |- E] = (eval [phi |- E1] env) .Out in
+  let Closure env' [psi, x:tm _ |- E] = (eval [phi |- E1] env) .Out in
   let w = eval [phi |- E2] env in
-    eval [psi, x:tm _  |- E] (Cons w env')
+    eval [psi, x:tm _ |- E] (Cons w env')
 ;

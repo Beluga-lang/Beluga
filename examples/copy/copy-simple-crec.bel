@@ -16,8 +16,8 @@ fn e => case e of
 
 | [g |- #p] => [g |- #p]
 
-| [g |- lam (\ x. U)] =>
-  let [g, x : term  |- V] = copy [g, x:term  |- U]  in
+| [g |- lam (\x. U)] =>
+  let [g, x : term |- V] = copy [g, x:term |- U]  in
     [g |- lam (\x. V)]
 
 | [g |- app U V]  =>

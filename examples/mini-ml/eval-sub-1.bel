@@ -30,12 +30,12 @@ rec eval : [|- exp] -> [|- nat] =
 fn e =>
 (case e of
    [|- num U] => [|- U]
- | [|- plus U W]  =>
+ | [|- plus U W] =>
        add (eval [|- U]) (eval [|- W])
 
- | [|- letv U (\ x . W)]  =>
+ | [|- letv U (\x. W)] =>
 
     case (eval [|- U]) of
-        [|- V]  =>
+        [|- V] =>
           eval [|- W[V]]
 );

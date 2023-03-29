@@ -323,7 +323,7 @@ inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair] -> [ |- tp] -> ctype
 | DecBeta : Decl [|- G with T] [g, x:tm |- M2 sim N2] [ |- S]
           -> Decl [|-G] [g |- M1[..] sim N1[..]] [ |- T]
           -> Decl [|-G] [g |- (app (lam (\x. M2)) M1[..]) sim N2[.., N1]] [ |- S]
-| DecLam :  Decl [|- G with T] [g, x:tm |- (M) sim (N)] [ |- S]
+| DecLam :  Decl [|- G with T] [g, x:tm |- M sim N] [ |- S]
           -> Decl [|-G] [g |- (lam (\x. M)) sim (lam (\x. N))] [ |- arr T S]
 | DecExt :  Decl [|- G with T] [g, x:tm |- (app M[..] x) sim (app N[..] x)] [ |- S]
           -> Decl [|-G] [g |- M[..] sim N[..]] [ |- arr T S]

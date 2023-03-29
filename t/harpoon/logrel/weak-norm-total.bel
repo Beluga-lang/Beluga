@@ -63,7 +63,7 @@ rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |
 mlam S => fn r =>
 let [|- S] : [|- step M M'] = [|- S] in
 let [|- M] : [|- tm A]    = [|- M] in
-  bwd_closed' [|- A] [|- M] [|- M' ]  [|- S] r;
+  bwd_closed' [|- A] [|- M] [|- M' ] [|- S] r;
 
 %{{
 The trivial fact that reducible terms halt has a corresponding

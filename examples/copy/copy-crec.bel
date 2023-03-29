@@ -28,7 +28,7 @@ fn e => case e of
      [g |- s F]
 
 | [g |- lam  (\x. U)] =>
-  let [g, x : term _  |- V] = copy  [g, x: term _ |- U]  in % [g, x:term _]
+  let [g, x : term _ |- V] = copy  [g, x: term _ |- U]  in % [g, x:term _]
     [g |- lam  (\x. V)]
 
 

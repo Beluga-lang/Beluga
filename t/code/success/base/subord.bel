@@ -22,10 +22,8 @@ FN g => fn e =>
   | [g, xx : bool]  Ux     => [] z  % Dot(xx,  Shift(NoCtxShift _, 1))
   | [g, xx : bool]  U xx     => [] z     % Dot(xx,  Shift(CtxShift _, 1))
 }%
-  | [g, xx : bool |- eq U V]     => [ |- z]
-%  | [g, xx : bool]  eq U[..] V     => [] z
-%  | [g, xx : bool]  eq U[..] (Vx)     => [] z
-  | [g, xx : bool |- #px]   => [ |- z]
+  | [g, xx : bool |- eq U V]    => [ |- z]
+  | [g, xx : bool |- #px]       => [ |- z]
 ;
 
 

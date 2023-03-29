@@ -77,25 +77,25 @@ mlam g =>
   case e of  % e : exp S [g, x:exp T]
 
    | % {T':[g |- tp]}
-     [g, x : exp T'  |- tt]
+     [g, x : exp T' |- tt]
      => [ |- z]
 
-  | [g, x : exp _  |- #p]    => [ |- z]
+  | [g, x : exp _ |- #p] => [ |- z]
 
-  | [g, x : exp _  |- x]           => [ |- s z]
+  | [g, x : exp _ |- x] => [ |- s z]
 
 
-  | [g, x : exp _  |- z]           => [ |- z]
+  | [g, x : exp _ |- z] => [ |- z]
 
-  | [g, x : exp _  |- U]  => [ |- z]
+  | [g, x : exp _ |- U] => [ |- z]
 
-  | [g, x : exp _  |- s W]  => cntV [g] [g, x |- W]
+  | [g, x : exp _ |- s W] => cntV [g] [g, x |- W]
 
-  | [g, x : exp _  |- letv T1 U1 (\y . (U2  x y))] =>
-             plus (cntV [g]  [g, x |- U1])
-                  (cntV [g, y:exp _]  [g, y, x |- U2 y])
+  | [g, x : exp _ |- letv T1 U1 (\y. (U2  x y))] =>
+             plus (cntV [g] [g, x |- U1])
+                  (cntV [g, y:exp _] [g, y, x |- U2 y])
 
-   | [g, x: exp _  |- add U W]  =>
+   | [g, x: exp _ |- add U W] =>
      plus (cntV [g] [g, x |- U])
           (cntV [g] [g, x |- W])
 ;

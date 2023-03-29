@@ -46,7 +46,7 @@ The \textmd{Sasybel} can be compiled at the command line like regular \textmd{Be
 \begin{verbatim}
   bin/interpreter file_name.sbel
 \end{verbatim}
-By putting {\tt .sbel} in the file name the compiler will assume that this is \textmd{Sasybel} code.
+By putting {\tt.sbel} in the file name the compiler will assume that this is \textmd{Sasybel} code.
 \subsection{Sasybel Basics}
 
 The \textmd{Sasybel} syntax will be introduced by commented examples:
@@ -216,7 +216,7 @@ denotes that the variable {\tt x} is bound in the expression {\tt exp}.
 \begin{verbatim}
 
 | x
-| lambda \x .exp[x]
+| lambda \x.exp[x]
 
 \end{verbatim}
 The next alternative is simply the application of an expression, which is a function (lambda expression) to another expression. Then there is the declaration of a let statement, the keywords/symbol {\tt let},
@@ -241,7 +241,7 @@ e1 value;
 (suc e1) value;
 
 ------------------------ v_lam
-lambda \x . e1[x] value;
+lambda \x. e1[x] value;
 
 \end{verbatim}
 Inference rules about evaluation:
@@ -267,7 +267,7 @@ eval (let x=e1 in e2[x]) e1';
 ------------------------------------ ev_lam
 eval (lambda \x. e1[x]) (lambda \x. e1[x]);
 
-eval e1 (lambda \x . e[x]);
+eval e1 (lambda \x. e[x]);
 eval e2 e2';
 eval e[e2'] e1';
 -------------------- ev-app
@@ -314,7 +314,7 @@ The other cases correspond to the evaluation rules.
 case rule
 
 	-------------------------------------------------------- ev-lam
-	(lambda \x . e1[x]) eval (lambda \x . e1[x]);
+	(lambda \x. e1[x]) eval (lambda \x. e1[x]);
 
 	is
 
@@ -324,7 +324,7 @@ end case
 
 case rule
 
-	D1: e1 eval lambda \x . e3[x];
+	D1: e1 eval lambda \x. e3[x];
 	D2: e2 eval e2';
 	D3: e3[e2'] eval e1';
 	------------------------------------- ev-app
@@ -397,7 +397,7 @@ This alternative models a regular {\tt if  then  else statement}, since {\tt if}
 Two lambda terms one with one variable and the second with two.
 \begin{verbatim}
 
-| single \ x . exp[x]
+| single \x. exp[x]
 | double \ x y . exp[x] exp[x,y]
 
 \end{verbatim}

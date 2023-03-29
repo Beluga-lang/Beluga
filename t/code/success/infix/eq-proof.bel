@@ -72,9 +72,9 @@ rec trans: {g:eqCtx}
 | [g |- D1[..] eq_app D2[..]] =>
        (case e2 of
          [g |- F1[..] eq_app  F2[..]] =>
-         let [g |- E1[..]] = trans [g]  [g |- D1[..]]  [g |- F1[..]]
+         let [g |- E1[..]] = trans [g] [g |- D1[..]] [g |- F1[..]]
          in
-         let [g |- E2[..]] = trans [g]  [g |- D2[..]]  [g |- F2[..]]
+         let [g |- E2[..]] = trans [g] [g |- D2[..]] [g |- F2[..]]
          in
              [g |- E1[..] eq_app  E2[..]]
        )

@@ -29,7 +29,7 @@ mlam g => fn e => case e of
 | [g |- #p[..]]   => [g |- #p[..]]
 
 | [g |- lam  (\x. U)] =>
-  let [g, x :  term _  |- V] = copy [g, x:term _] [g, x  |- U]  in
+  let [g, x :  term _ |- V] = copy [g, x:term _] [g, x |- U]  in
     [g |- lam  (\x. V)]
 
 | [g |- E1[..] app E2[..]] =>

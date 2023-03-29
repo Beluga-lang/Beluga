@@ -578,7 +578,7 @@ mlam M => fn ms => fn v => case [ |- M] of
 | [ |- pred M] =>
   (case pred_lemma ms v of
      | [ |- pred_subseq_zero Mzero m_ref]  =>  % Mzero : mstep M zero
-       let [ |- D] = small_to_big [ |- M]  [ |- Mzero] [ |- v_z] in
+       let [ |- D] = small_to_big [ |- M] [ |- Mzero] [ |- v_z] in
          [ |- ev_pred_zero D]
 
      | [ |- pred_subseq_succ Msucc NV MS]  =>   % Msuc : mstep M (succ NV)

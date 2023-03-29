@@ -51,7 +51,7 @@ mlam g  =>
 % CAUSES ERROR HERE: because the recursive call will return opt[g, x:exp _]
 % but the overall function requires opt[g]
 % THIS IS THE CORRECT BEHAVIOR
-  | [g |- lam (\x. (U))] =>
+  | [g |- lam (\x. U)] =>
        free_var [g, x:exp _] [g, x |- U]
 
 );

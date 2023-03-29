@@ -204,7 +204,7 @@ mlam M => fn rs => let (rs : LogSub [gamma] $[phi |- $S]) = rs in
      = reify [phi, b:block x:tm _, y:neutral x] _ [phi, b |- M1[$S[..], b.1]] q0 in
    Arr [phi |- lam (\x. M1[$S[..], x])]
    (Halts/c _
-     (m_lam [phi, x:tm A1[]  |- M1[$S[..], x]]  [phi, b:block (x:tm A1[], y:neutral x) |- MS])
+     (m_lam [phi, x:tm A1[] |- M1[$S[..], x]] [phi, b:block (x:tm A1[], y:neutral x) |- MS])
      [phi |- n_lam (\x.\y. NV[..,<x;y>])])
    (mlam psi,$W, N => fn rN =>
      closed _ [psi |- app (lam \x.M1[$S[$W[..]], x]) N] [psi |- M1[$S[$W[..]], N]]

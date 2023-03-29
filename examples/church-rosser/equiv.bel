@@ -36,12 +36,12 @@ fn r => case r of
 | {R1: [g |- pred M1 N1]}{R2: [g |- pred M2 N2]}
   [g |- ap R1 R2] =>
   let % {S1*::(step* M1 N1)[g]}
-      [g |- S1*]  = eq1 [g |- R1] in
+      [g |- S1*] = eq1 [g |- R1] in
   let % {S*'::(step* (app M1 M2) (app N1 M2))[g]}
-      [g |- S*']  = apl1* [g |- M2]  [g |- S1*] in
+      [g |- S*'] = apl1* [g |- M2] [g |- S1*] in
 
   let % {S2*:: (step* M2 N2)[g]}
-      [g |- S2*]  = eq1 [g |- R2] in
+      [g |- S2*] = eq1 [g |- R2] in
 
   let  % {S*'::(step* (app N1 M2) (app N1 N2))[g]}
        [g |- S*''] = apr1* [g |- N1] [g |- S2*] in
@@ -62,7 +62,7 @@ rec eq2 : (g:ctx) [g |- step M N] -> [g |- pred M N] =
 fn r => case r of
 | [g |- beta1] : [g |- step (app (lam \x. M1) M2) M1[.., M2]]  =>
   let [g, b:block x:term, t:pred x x |- I1] =
-    identity [g, b:block x:term, t:pred x x]  [g, b  |- M1[.., b.1]] in
+    identity [g, b:block x:term, t:pred x x] [g, b |- M1[.., b.1]] in
   let [g |- I2] = identity [g] [g |- M2] in
     [g |- beta (\x.\u. I1[..,<x ; u>]) I2]
 

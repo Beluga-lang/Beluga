@@ -259,17 +259,17 @@ mlam T => fn s1, s2, e => case [|- T] of
 %       if we have algeqbin at the "name term level"
 %       (not just the path level) - do we need such a rule?
 | [|- tp/nm] =>
-  let LogName [g |- algeqname (S1') (S2') A] = e in
+  let LogName [g |- algeqname S1' S2' A] = e in
   let [g |- S1''] = mstep_trans s1 [g |- S1'] in
   let [g |- S2''] = mstep_trans s2 [g |- S2'] in
-  LogName [g |- algeqname (S1'') (S2'') A]
+  LogName [g |- algeqname S1'' S2'' A]
 ;
 % | [|- tp/nm] => case e of
 %   | LogName [g |- algeqname S1' S2' A] =>
-%     % let LogName [g |- algeqname (S1') (S2') A] = e in
+%     % let LogName [g |- algeqname S1' S2' A] = e in
 %     let [g |- S1''] = mstep_trans s1 [g |- S1'] in
 %     let [g |- S2''] = mstep_trans s2 [g |- S2'] in
-%     LogName [g |- algeqname (S1'') (S2'') A]
+%     LogName [g |- algeqname S1'' S2'' A]
 %   | LogName [g |- algeqbin A1 A2] =>
 %     let [g |- S1] = s1 in
 %     ?
@@ -286,7 +286,7 @@ fn a => case a of
 | [g |- algeqapp R N] =>
   let [g |- R'] = algEqRSym [g |- R] in
   let [g |- N'] = algEqNSym [g |- N] in
-  [g |- algeqapp (R') (N')]
+  [g |- algeqapp R' N']
 | [g |- algeqproj1 A] => let [g |- A'] = algEqRSym [g |- A] in [g |- algeqproj1 A']
 | [g |- algeqproj2 A] => let [g |- A'] = algEqRSym [g |- A] in [g |- algeqproj2 A']
 | [g |- algeqbinp A1 A2] =>
@@ -301,7 +301,7 @@ and rec algEqNSym : (g:rctx)
 fn a => case a of
 | [g |- algeqname S1 S2 R] =>
   let [g |- R'] = algEqRSym [g |- R] in
-  [g |- algeqname S2 S1 (R')]
+  [g |- algeqname S2 S1 R']
 | [g |- algeqarr \x.\y.N] =>
   let (a : [g |- algeqn _ _ (arr T[] S[])]) = a in
   % key was to swap b.1 with b.2, as well as b.6 with b.5
@@ -353,7 +353,7 @@ rec algEqRUnique : (g:rctx)
 fn e1 => fn e2 => case e1 of
 | [g |- #p.3] => let [g |- #q.3] = e2 in [|- refltp]
 | [g |- algeqapp R N] =>
-  let [g |- algeqapp (R') (N')] = e2 in
+  let [g |- algeqapp R' N'] = e2 in
   let [|- refltp] = algEqRUnique [g |- R] [g |- R'] in [|- refltp]
 | [g |- algeqproj1 A] =>
   let [g |- algeqproj1 A'] = e2 in
@@ -462,8 +462,8 @@ rec algEqRTrans : (g:rctx)
 / total a1 (algEqRTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
 | [g |- #p.3] => let [g |- #q.3] = a2 in [g |- #q.3]
-| [g |- algeqapp (A1') B1] =>
-  let [g |- algeqapp (A2') B2] = a2 in
+| [g |- algeqapp A1' B1] =>
+  let [g |- algeqapp A2' B2] = a2 in
   let [|- refltp] = algEqRUnique [g |- A1'] [g |- A2'] in
   let [g |- R1] = algEqRTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algEqNTrans [g |- B1] [g |- B2] in
@@ -492,8 +492,8 @@ and rec algEqNTrans : (g:rctx)
 -> [g |- algeqn N1 N3 T] =
 / total a1 (algEqNTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- algeqname S1 S2 (A1')] =>
-  let [g |- algeqname (S2') S3 (A2')] = a2 in
+| [g |- algeqname S1 S2 A1'] =>
+  let [g |- algeqname S2' S3 A2'] = a2 in
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
   let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
   [g |- algeqname S1 S3 R]

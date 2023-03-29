@@ -54,7 +54,7 @@ mlam T => fn e =>
 
   | {U:[ |- exp nat]}
     [ |- suc U] : [ |- exp nat] =>
-         (case eval [ |- nat]  [ |- U] of
+         (case eval [ |- nat] [ |- U] of
              {V:[ |- exp nat]}
              [ |- V] : [ |- exp nat] => [ |- suc V])
 
@@ -72,7 +72,7 @@ mlam T => fn e =>
      )
 
    | {T1:[ |- tp]} {T2:[ |- tp]} {U:[ |- exp T1]} {W:[x:exp T1 |- exp T2[]]}
-         [ |- letv T1 T2 U (\x . W)] : [ |- exp T2] =>
+         [ |- letv T1 T2 U (\x. W)] : [ |- exp T2] =>
 
          (case eval [ |- T1] [ |- U] of
 

@@ -46,7 +46,7 @@ tp_s     : oft E nat ->
 tp_match : ({x:exp}oft x nat -> oft (E2 x) T) → oft E1 T → oft E nat → oft (match E E1 (\x. E2 x)) T.
 
 tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2)
-        -> oft (lam T1 (\x . E x)) (arrow T1 T2).
+        -> oft (lam T1 (\x. E x)) (arrow T1 T2).
 
 tp_app : oft E2 T2 ->
          oft E1 (arrow T2 T1)
@@ -54,7 +54,7 @@ tp_app : oft E2 T2 ->
 
 tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
      oft E1 T1
-           -> oft (letv E1 (\ x . E2 x)) T2.
+           -> oft (letv E1 (\x. E2 x)) T2.
 
 tp_fix : ({x:exp }oft x T -> oft (E x) T)
        -> oft (fix E) T.

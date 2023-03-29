@@ -7,12 +7,6 @@ LF term :  type =
 
 schema termCtx = some [] term;
 
-% Doesn't cover, and not used below.  Commented out  -jd 2010-05-23
-%
-% rec copy' : term [ ] -> term [ ] =
-%  fn t =>  case t of [ ] lam (\x . x) => t
-% ;
-
 rec copy : {g:termCtx} [g |- term] -> [g |- term] =
 / total e (copy g e) /
 mlam g => fn e =>
@@ -21,9 +15,9 @@ mlam g => fn e =>
   | [g |- suc U] => let [g |- V] = copy [g] [g |- U] in [g |- suc V]
   | [g |- #p] => [g |- #p]
 
-  | [g |- lam (\ x. U)] =>
+  | [g |- lam (\x. U)] =>
 
-    let [g, x : term |- V] = copy [g, x:term]  [g, x |- U]  in
+    let [g, x : term |- V] = copy [g, x:term] [g, x |- U]  in
 
       [g |- lam (\x. V)]
 

@@ -95,7 +95,7 @@ mlam g => mlam T => case [g |- T] of
 inductive Concat : {g0:as_ctx}{g1:as_ctx}{g:as_ctx}  ctype =
 | Nil : Concat [g0] [ ] [g0]
 | Cons: Concat [g0] [g'] [g]
-      -> Concat [g0] [g', b:block (a:tp, w:assm a U)]  [g, b:block (a:tp, w:assm a U)]
+      -> Concat [g0] [g', b:block (a:tp, w:assm a U)] [g, b:block (a:tp, w:assm a U)]
 ;
 }%
 %{
@@ -223,11 +223,11 @@ then F:: G |- (forall a < S1. S2) < (forall a < T1. T2).
 By inversion on D:
 
 D1 : G |- U1 < S1
-D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a  |- S2 < U2
+D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a |- S2 < U2
 
 By inversion on E:
 E1 : G |- T1 < U1
-E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a  |- U2 < T2
+E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a |- U2 < T2
 
 By i.h. on E1 and D1 we can obtain a derivation
 F1 : G |- T1 < S1

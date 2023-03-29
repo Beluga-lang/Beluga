@@ -110,7 +110,7 @@ rec ceval_complete : [ |- eval E V] -> [ |- ceval E V] =
 / total d (ceval_complete e v d) /
 fn d =>
   let [ |- D] : [ |- eval E V] = d in
-  let [ |- C] = ccp [ |- D]  [ |- next stop st_init] in
+  let [ |- C] = ccp [ |- D] [ |- next stop st_init] in
     [ |- cev C]
 
 ;

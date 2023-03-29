@@ -66,8 +66,8 @@ rec trans: (g:eqCtx)
 
 | [g |- eq_app D1 D2] =>
   let [g |- eq_app F1 F2] = e2 in
-  let [g |- E1] = trans [g |- D1]  [g |- F1] in
-  let [g |- E2] = trans [g |- D2]  [g |- F2] in
+  let [g |- E1] = trans [g |- D1] [g |- F1] in
+  let [g |- E2] = trans [g |- D2] [g |- F2] in
     [g |- eq_app  E1  E2]
 ;
 
@@ -92,11 +92,11 @@ fn e => case e of
 | [g |- e_t D2 D1] =>
   let [g |- F2] = ceq [g |- D2] in
   let [g |- F1] = ceq [g |- D1] in
-    trans [g |- F1]  [g |- F2]
+    trans [g |- F1] [g |- F2]
 
 | [g |- e_l (\x.(\u. D))] =>
   let {F: [g, x:exp, u: eq x x |- eq R Q]}
-     [g, b:block x:exp, _t:equal x x, u:eq x x  |- F[.., b.1, b.3]] =
+     [g, b:block x:exp, _t:equal x x, u:eq x x |- F[.., b.1, b.3]] =
         ceq [g, b:block x:exp, _t:equal x x, u:eq x x |- D[.., b.1, b.2]]
   in
      [g |- eq_lam (\x.\v. F)]

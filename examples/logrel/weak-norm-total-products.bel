@@ -178,9 +178,9 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total (bwd_closed) /
 mlam S => fn r =>
-let [|- S] : [|- step M M'] = [|- S] in
-let [|- M] : [|- tm A]    = [|- M] in
-  bwd_closed' [|- A] [|- M] [|- M' ]  [|- S] r;
+  let [|- S] : [|- step M M'] = [|- S] in
+  let [|- M] : [|- tm A] = [|- M] in
+    bwd_closed' [|- A] [|- M] [|- M'] [|- S] r;
 
 %{{
 The trivial fact that reducible terms halt has a corresponding

@@ -52,7 +52,7 @@ rec invRenStep : {g1 : cxt} {M : [g1 |- tm A[]]} {$R : $[g2 |-# g1]}
       (case [g1 |- M1] of
 
       %% Case beta-redex
-      | [g1 |- abs \ x. M1'] => (case s of
+      | [g1 |- abs \x. M1'] => (case s of
         %% We either contract the beta-redex...
         | [g2 |- rbeta] => Ex [g1 |- rbeta]
         %% ... or reduce in the left or right subterm
@@ -161,8 +161,8 @@ rec renRedS : {g2 : cxt} {$R : $[g2 |-# g1]}
 % Applicative contexts
 
 LF ecxt : (tm A -> tm B) -> type =
-  | eid  : ecxt \ x. x
-  | eext : ecxt C -> ecxt \ x. app (C x) M
+  | eid  : ecxt \x. x
+  | eext : ecxt C -> ecxt \x. app (C x) M
   ;
 
 % Closure under weakhead expansion
@@ -174,7 +174,7 @@ rec whExp : {A : [|- ty]} {B : [|- ty]} {T : [|- ty]}
    [g |- SN N] ->
    {E : [g |- ecxt \y.C]}
     Red [|- T] [g |- C[.., M [.., N]]]
-    -> Red [|- T] [g |- C[.., app (abs \ x. M) N]] = ? ;
+    -> Red [|- T] [g |- C[.., app (abs \x. M) N]] = ? ;
 %{
   %% / total t (whExp g a b t) /
   mlam A, B, T, C, M, N => fn sn => mlam E => fn r =>

@@ -96,7 +96,7 @@ LF wrap: tp -> nat -> type =
 | abs: (source S -> wrap T N) -> wrap (arr S T) (nsuc N)
 ;
 
-% StrTerm [Γ] [  |- T] ⇔ ∃ Γ' M, Γ' ⊆ Γ ∧ and Γ' ⊢ M : T
+% StrTerm [Γ] [ |- T] ⇔ ∃ Γ' M, Γ' ⊆ Γ ∧ and Γ' ⊢ M : T
 inductive StrTerm': {g:sctx} [ |- tp] -> [|- nat] -> ctype =
 | STm': [g' |- wrap T[] N[]] -> SubCtx [g'] [g] -> StrTerm' [g] [ |- T] [|- N]
 ;
@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
  / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M[x]] => M_dot (extendEnv sigma') [x:target _  |- M[crst x]]
+| M_dot sigma' [x:target S |- M[x]] => M_dot (extendEnv sigma') [x:target _ |- M[crst x]]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] =
@@ -272,4 +272,4 @@ fn t => cc' t (M_id [])
 
  let t0 = cc [ |- app (lam (\x.x)) z];
  let t1 = cc [ |- app (lam (\x.(app (lam (\y.y)) x))) z];
- let t2 = cc [ |- app (app (app (lam \x. (lam \y. (lam \w . x))) z) z) z];
+ let t2 = cc [ |- app (app (app (lam \x. (lam \y. (lam \w. x))) z) z) z];

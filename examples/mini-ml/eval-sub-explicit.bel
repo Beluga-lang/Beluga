@@ -34,12 +34,12 @@ fn e =>
 | {U:[ |- exp]}{W:[ |- exp]}
     [ |- app U W] : [ |- exp] =>
     (case (eval [ |- U]) of
-       {V:[x:exp |- exp]} [ |- lam (\ x. V)] : [ |- exp] =>
+       {V:[x:exp |- exp]} [ |- lam (\x. V)] : [ |- exp] =>
           eval [ |- V[W]]
     )
 
 | {U:[x:exp |- exp]}
-  [ |- lam (\ x. U)] : [ |- exp] =>  e
+  [ |- lam (\x. U)] : [ |- exp] => e
 
 
 | {W:[ |- exp]}{U:[x:exp |- exp]}

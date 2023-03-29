@@ -47,9 +47,9 @@ LF oft : exp -> tp -> type =
   | tp_s-even : oft E even -> oft (suc E) odd
   | tp_s-odd : oft E odd -> oft (suc E) even
   | tp_sub : oft E T1 -> subtype T1 T2 -> oft E T2
-  | tp_lam : ({x:exp} oft x T1 -> oft (E x) T2) -> oft (lam (\ x. E x)) (arrow T1 T2)
+  | tp_lam : ({x:exp} oft x T1 -> oft (E x) T2) -> oft (lam (\x. E x)) (arrow T1 T2)
   | tp_app : oft E2 T2 -> oft E1 (arrow T2 T1) -> oft (app E1 E2) T1
-  | tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) -> oft E1 T1 -> oft (letv E1 (\ x. E2 x)) T2
+  | tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) -> oft E1 T1 -> oft (letv E1 (\x. E2 x)) T2
 ;
 --name oft D u.
 
@@ -68,7 +68,7 @@ and rec check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
     [ |- false]
 ;
 
-let r1 = check [] ;
+let r1 = check [];
 let r2 = check [] [ |- suc (suc z)];
 let r3 = check [] [ |- suc (suc z)] [ |- even];
 let r4 = r2 [ |- even];

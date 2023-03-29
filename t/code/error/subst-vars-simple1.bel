@@ -19,9 +19,9 @@ schema cxt = tm A; % some [a : ty] block tm a;
 % Applicative contexts
 
 LF ecxt : (tm A -> tm B) -> type =
-  | eid  : ecxt \ x. x
-  | eext : ecxt C  -> ecxt \ x. app (C x) M
-  ;
+  | eid  : ecxt \x. x
+  | eext : ecxt C  -> ecxt \x. app (C x) M
+;
 
 % Closure under weakhead expansion
 

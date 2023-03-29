@@ -440,22 +440,28 @@ let located_exception_printer cause_printer locations =
              Format.fprintf ppf "@[%a@]" Location.pp location))
         locations cause_printer
 
+(** [find_printer_or_fallback cause] attempts to find a printer for [cause],
+    and otherwise returns a printer using {!Printexc.to_string_default}. *)
+let find_printer_or_fallback cause =
+  match find_printer_opt cause with
+  | Option.Some printer -> printer
+  | Option.None -> Format.dprintf "%s" (Printexc.to_string_default cause)
+
 let () =
   register_exception_printer (function
     | Located_exception { cause; locations } ->
-        let cause_printer = find_printer cause in
-        located_exception_printer cause_printer locations
+        located_exception_printer (find_printer_or_fallback cause) locations
     | Composite_exception { causes } ->
         Format.dprintf "@[<v 0>%a@]"
           (List2.pp ~pp_sep:Format.pp_print_cut (fun ppf printer ->
                Format.fprintf ppf "@[%t@]" printer))
-          (List2.map find_printer causes)
+          (List2.map find_printer_or_fallback causes)
     | Aggregate_exception { exceptions } ->
         Format.dprintf "@[<v 0>%a@]"
           (List2.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
              (fun ppf printer -> Format.fprintf ppf "@[%t@]" printer))
-          (List2.map find_printer exceptions)
+          (List2.map find_printer_or_fallback exceptions)
     | Not_implemented msg ->
         Format.dprintf "@[<hov 0>%a Please report this as a bug.@ %s@]"
           (bold_red_bg Format.pp_print_string)

@@ -1381,71 +1381,74 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         in
         return (Synapx.Comp.Fun (location, branches''))
     | Synext.Comp.Expression.Let
-        { location; meta_context; pattern; scrutinee; body } -> (
+        { location; meta_context; pattern; scrutinee; body } ->
         let* scrutinee' = index_comp_expression scrutinee in
-        let* meta_context', pattern', body' =
-          with_free_variables_as_pattern_variables
-            ~pattern:
-              (with_indexed_meta_context_pattern meta_context
-                 (fun meta_context' ->
-                   let* pattern' = index_comp_pattern pattern in
-                   return (meta_context', pattern')))
-            ~expression:(fun (meta_context', pattern') ->
-              let* pattern'' = reindex_pattern pattern' in
-              let* body' = index_comp_expression body in
-              return (meta_context', pattern'', body'))
-        in
-        (* The approximate syntax does not support general patterns in
-           [let]-expressions, so only [let]-expressions with a variable
-           pattern are translated to [let]-expressions in the approximate
-           syntax. *)
-        match (meta_context', pattern') with
-        | Synapx.LF.Empty, Synapx.Comp.PatFVar (_location, name) ->
-            (* TODO: General [let] pattern expressions would render this case
-               obsolete *)
-            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
-        | Synapx.LF.Empty, Synapx.Comp.PatVar (_location, name, _offset) ->
-            (* TODO: General [let] pattern expressions would render this case
-               obsolete *)
-            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
-        | Synapx.LF.Empty, Synapx.Comp.PatTuple (_location, patterns') -> (
-            (* TODO: [LetTuple] expressions should be deprecated in favour of
-               general [let] pattern expressions *)
-            (* [LetTuple] expressions only support variable patterns *)
-            match
-              List2.traverse
-                (function
-                  | Synapx.Comp.PatFVar (_location, name) -> Option.some name
-                  | Synapx.Comp.PatVar (_location, name, _offset) ->
-                      Option.some name
-                  | _ -> Option.none)
-                patterns'
-            with
-            | Option.Some variables ->
+        with_free_variables_as_pattern_variables
+          ~pattern:
+            (with_indexed_meta_context_pattern meta_context
+               (fun meta_context' ->
+                 let* pattern' = index_comp_pattern pattern in
+                 return (meta_context', pattern')))
+          ~expression:(fun (meta_context', pattern') ->
+            let* pattern'' = reindex_pattern pattern' in
+            let* body' = index_comp_expression body in
+            (* The approximate syntax does not support general patterns in
+               [let]-expressions, so only [let]-expressions with a variable
+               pattern are translated to [let]-expressions in the approximate
+               syntax. *)
+            match (meta_context', pattern'') with
+            | Synapx.LF.Empty, Synapx.Comp.PatFVar (_location, name) ->
+                (* TODO: General [let] pattern expressions would render this
+                   case obsolete *)
                 return
-                  (Synapx.Comp.LetTuple
-                     (location, scrutinee', (variables, body')))
-            | Option.None ->
+                  (Synapx.Comp.Let (location, scrutinee', (name, body')))
+            | Synapx.LF.Empty, Synapx.Comp.PatVar (_location, name, _offset)
+              ->
+                (* TODO: General [let] pattern expressions would render this
+                   case obsolete *)
+                return
+                  (Synapx.Comp.Let (location, scrutinee', (name, body')))
+            | Synapx.LF.Empty, Synapx.Comp.PatTuple (_location, patterns')
+              -> (
+                (* TODO: [LetTuple] expressions should be deprecated in
+                   favour of general [let] pattern expressions *)
+                (* [LetTuple] expressions only support variable patterns *)
+                match
+                  List2.traverse
+                    (function
+                      | Synapx.Comp.PatFVar (_location, name) ->
+                          Option.some name
+                      | Synapx.Comp.PatVar (_location, name, _offset) ->
+                          Option.some name
+                      | _ -> Option.none)
+                    patterns'
+                with
+                | Option.Some variables ->
+                    return
+                      (Synapx.Comp.LetTuple
+                         (location, scrutinee', (variables, body')))
+                | Option.None ->
+                    return
+                      (Synapx.Comp.Case
+                         ( location
+                         , Synapx.Comp.PragmaCase
+                         , scrutinee'
+                         , [ Synapx.Comp.Branch
+                               (location, meta_context', pattern'', body')
+                           ] )))
+            | _ ->
+                (* TODO: General [let] pattern expressions should be
+                   supported *)
+                (* The pattern is not a variable pattern, so the
+                   [let]-expression is translated to a [case]-expression. *)
                 return
                   (Synapx.Comp.Case
                      ( location
                      , Synapx.Comp.PragmaCase
                      , scrutinee'
                      , [ Synapx.Comp.Branch
-                           (location, meta_context', pattern', body')
+                           (location, meta_context', pattern'', body')
                        ] )))
-        | _ ->
-            (* TODO: General [let] pattern expressions should be supported *)
-            (* The pattern is not a variable pattern, so the [let]-expression
-               is translated to a [case]-expression. *)
-            return
-              (Synapx.Comp.Case
-                 ( location
-                 , Synapx.Comp.PragmaCase
-                 , scrutinee'
-                 , [ Synapx.Comp.Branch
-                       (location, meta_context', pattern', body')
-                   ] )))
     | Synext.Comp.Expression.Box { location; meta_object } ->
         let* meta_object' = index_meta_object meta_object in
         return (Synapx.Comp.Box (location, meta_object'))
@@ -1593,19 +1596,16 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   and index_case_branch
       { Synext.Comp.Case_branch.location; meta_context; pattern; body } =
-    let* meta_context', pattern', body' =
-      with_free_variables_as_pattern_variables
-        ~pattern:
-          (with_indexed_meta_context_pattern meta_context
-             (fun meta_context' ->
-               let* pattern' = index_comp_pattern pattern in
-               return (meta_context', pattern')))
-        ~expression:(fun (meta_context', pattern') ->
-          let* pattern'' = reindex_pattern pattern' in
-          let* body' = index_comp_expression body in
-          return (meta_context', pattern'', body'))
-    in
-    return (Synapx.Comp.Branch (location, meta_context', pattern', body'))
+    with_free_variables_as_pattern_variables
+      ~pattern:
+        (with_indexed_meta_context_pattern meta_context (fun meta_context' ->
+             let* pattern' = index_comp_pattern pattern in
+             return (meta_context', pattern')))
+      ~expression:(fun (meta_context', pattern') ->
+        let* pattern'' = reindex_pattern pattern' in
+        let* body' = index_comp_expression body in
+        return
+          (Synapx.Comp.Branch (location, meta_context', pattern'', body')))
 
   and index_comp_pattern_with_location pattern =
     let location = Synext.location_of_comp_pattern pattern in
@@ -1649,15 +1649,12 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
       } =
     match meta_context.Synext.Meta.Context.bindings with
     | [] ->
-        let* pattern_spine', body' =
-          with_free_variables_as_pattern_variables
-            ~pattern:(index_comp_copattern copattern)
-            ~expression:(fun copattern' ->
-              let* copattern'' = reindex_pattern_spine copattern' in
-              let* body' = index_comp_expression body in
-              return (copattern'', body'))
-        in
-        return (location, pattern_spine', body')
+        with_free_variables_as_pattern_variables
+          ~pattern:(index_comp_copattern copattern)
+          ~expression:(fun copattern' ->
+            let* copattern'' = reindex_pattern_spine copattern' in
+            let* body' = index_comp_expression body in
+            return (location, copattern'', body'))
     | _ -> Error.raise_at1 location Unsupported_copattern_meta_context
 
   and with_indexed_comp_context_binding :

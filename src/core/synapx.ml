@@ -119,7 +119,9 @@ module Comp = struct
 
   type mfront =
     | ClObj of LF.dctx * LF.sub
-    | CObj of LF.dctx
+        (** Either a contextual term, plain substitution or renaming
+            substitution. *)
+    | CObj of LF.dctx  (** Context meta-object. *)
 
   type meta_obj = Location.t * mfront
 

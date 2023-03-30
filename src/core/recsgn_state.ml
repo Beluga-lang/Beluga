@@ -372,6 +372,12 @@ struct
     | Option.None -> get_default_associativity
     | Option.Some associativity -> return associativity
 
+  let with_index_state m =
+    let* state = get in
+    let index_state', x = Index.run m state.index_state in
+    let* () = set_index_state index_state' in
+    return x
+
   let lookup_operator_arity ?location constant =
     Obj.magic () (* TODO: Lookup constant ID, then lookup in the store *)
 
@@ -421,19 +427,17 @@ struct
             Associativity.left_associative;
           return ()
 
-  let add_module_abbreviation = Obj.magic () (* TODO: *)
+  let add_module_abbreviation ?location module_identifier ~abbreviation =
+    modify_index_state
+      Index_state.(
+        exec
+          (add_module_abbreviation ?location module_identifier abbreviation))
 
   let set_name_generation_bases = Obj.magic () (* TODO: *)
 
   let open_module ?location module_identifier =
     modify_index_state
       Index_state.(exec (open_module ?location module_identifier))
-
-  let with_index_state m =
-    let* state = get in
-    let index_state', x = Index.run m state.index_state in
-    let* () = set_index_state index_state' in
-    return x
 
   let index_lf_kind kind = with_index_state (Index.index_open_lf_kind kind)
 

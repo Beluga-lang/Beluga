@@ -1119,7 +1119,8 @@ module Persistent_disambiguation_state = struct
             match Identifier.Hamt.find_opt query inner_pattern_bindings with
             | Option.Some (List1.T (entry, _)) -> return entry
             | Option.None -> Error.raise (Unbound_identifier query)))
-    | _ ->
+    | Module_state _
+    | Scope_state _ ->
         let* bindings = get_bindings in
         let entry, _subtree = Binding_tree.lookup_toplevel query bindings in
         return entry

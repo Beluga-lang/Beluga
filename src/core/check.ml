@@ -351,7 +351,7 @@ module Comp = struct
   let () =
     Error.register_exception_printer (function
       | Error (location, error) ->
-          Error.located_exception_printer (Format.dprintf "Type-checking error.@,%t" (error_printer error))
+          Error.located_exception_printer (Format.dprintf "Type-checking error.@ %t" (error_printer error))
             (List1.singleton location)
       | exn -> Error.raise_unsupported_exception_printing exn)
 

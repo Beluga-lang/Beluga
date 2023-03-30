@@ -10,8 +10,6 @@ module OpPragmas : sig
     ; assoc : Associativity.t
     }
 
-  val default : Associativity.t ref
-
   val clear : unit -> unit
 
   val addPragma : Name.t -> Fixity.t -> int -> Associativity.t -> unit
@@ -19,8 +17,6 @@ module OpPragmas : sig
   val getPragma : Name.t -> fixPragma option
 
   val pragmaExists : Name.t -> bool
-
-  val pragmaCount : int ref
 end
 
 module type ENTRY = sig

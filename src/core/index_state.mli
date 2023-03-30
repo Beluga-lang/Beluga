@@ -74,17 +74,21 @@ module type INDEXING_STATE = sig
   (** [index_of_meta_variable identifier state] is [(state', offset)] where
       [offset] is the meta-level de Bruijn index of [identifier] in [state].
 
-      If [identifier] is unbound, then an exception is raised. *)
+      If [identifier] is unbound, bound to a different entry than a
+      meta-variable, or bound to a meta-variable of unknown de Bruijn level,
+      then an exception is raised. *)
   val index_of_meta_variable : Identifier.t -> Id.offset t
 
   (** [index_of_meta_variable_opt identifier state] is [(state', offset_opt)]
       where [offset_opt] is the meta-level de Bruijn index of [identifier] in
       [state].
 
-      If [identifier] is unbound, then [offset_opt = Option.None].
-
-      If [state] is a pattern state, then [offset_opt] is additionally
-      [Option.None] if it is not an inner bound variable. *)
+      - If [identifier] is unbound, then [offset_opt = Option.None].
+      - If [identifier] is a bound meta-variable whose de Bruijn level is
+        unknown (i.e. its binder is a meta-variable in a pattern), then
+        [offset_opt = Option.None].
+      - If [state] is a pattern state, then [offset_opt = Option.None] if it
+        is not an inner bound variable. *)
   val index_of_meta_variable_opt : Identifier.t -> Id.offset Option.t t
 
   val index_of_parameter_variable : Identifier.t -> Id.offset t

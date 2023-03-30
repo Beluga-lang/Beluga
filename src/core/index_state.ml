@@ -88,6 +88,18 @@ exception Illegal_free_context_variable
 
 exception Illegal_free_computation_variable
 
+exception Unknown_lf_variable_index
+
+exception Unknown_meta_variable_index
+
+exception Unknown_parameter_variable_index
+
+exception Unknown_substitution_variable_index
+
+exception Unknown_context_variable_index
+
+exception Unknown_computation_variable_index
+
 exception Duplicate_pattern_variables of Identifier.t List2.t
 
 let () =
@@ -193,6 +205,29 @@ let () =
         Format.dprintf "This free context variable is illegal."
     | Illegal_free_computation_variable ->
         Format.dprintf "This free computation-level variable is illegal."
+    | Unknown_lf_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this LF variable is unexpectedly unknown."
+    | Unknown_meta_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this meta-variable is unexpectedly \
+           unknown."
+    | Unknown_parameter_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this parameter variable is unexpectedly \
+           unknown."
+    | Unknown_substitution_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this substitution variable is \
+           unexpectedly unknown."
+    | Unknown_context_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this context variable is unexpectedly \
+           unknown."
+    | Unknown_computation_variable_index ->
+        Format.dprintf
+          "The de Bruijn index of this computation variable is unexpectedly \
+           unknown."
     | Duplicate_pattern_variables _ ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal duplicate pattern variables."
@@ -377,16 +412,51 @@ module Persistent_indexing_state = struct
       }
 
     and desc =
-      | Lf_variable of { lf_level : Lf_level.t }
-      | Meta_variable of { meta_level : Meta_level.t }
-      | Parameter_variable of { meta_level : Meta_level.t }
-      | Substitution_variable of { meta_level : Meta_level.t }
-      | Context_variable of { meta_level : Meta_level.t }
-      | Contextual_variable of { meta_level : Meta_level.t }
+      | Lf_variable of
+          { lf_level : Lf_level.t Option.t
+                (** The de Bruijn level of the LF variable. If it is
+                    [Option.None], then this is a free variable, whose level
+                    is unknown. *)
+          }
+      | Meta_variable of
+          { meta_level : Meta_level.t Option.t
+                (** The de Bruijn level of the meta-variable. If it is
+                    [Option.None], then this is a free variable, whose level
+                    is unknown. *)
+          }
+      | Parameter_variable of
+          { meta_level : Meta_level.t Option.t
+                (** The de Bruijn level of the parameter variable. If it is
+                    [Option.None], then this is a free variable, whose level
+                    is unknown. *)
+          }
+      | Substitution_variable of
+          { meta_level : Meta_level.t Option.t
+                (** The de Bruijn level of the substitution variable. If it
+                    is [Option.None], then this is a free variable, whose
+                    level is unknown. *)
+          }
+      | Context_variable of
+          { meta_level : Meta_level.t Option.t
+                (** The de Bruijn level of the context variable. If it is
+                    [Option.None], then this is a free variable, whose level
+                    is unknown. *)
+          }
+      | Contextual_variable of
+          { meta_level : Meta_level.t Option.t
+                (** The de Bruijn level of the contextual variable. If it is
+                    [Option.None], then this is a free variable, whose level
+                    is unknown. *)
+          }
           (** A contextual variable is either a meta, parameter,
               substitution, or context variable. Contextual variables are
               introduced ambiguously by [mlam]-expressions. *)
-      | Computation_variable of { comp_level : Comp_level.t }
+      | Computation_variable of
+          { comp_level : Comp_level.t Option.t
+                (** The de Bruijn level of the computation-level variable. If
+                    it is [Option.None], then this is a free variable, whose
+                    level is unknown. *)
+          }
       | Lf_type_constant of { cid : Id.cid_typ }
       | Lf_term_constant of { cid : Id.cid_term }
       | Schema_constant of { cid : Id.cid_schema }
@@ -505,6 +575,29 @@ module Persistent_indexing_state = struct
             Bound_computation_term_destructor identifier
         | Program_constant _ -> Bound_program_constant identifier
         | Module _ -> Bound_module identifier)
+
+    let is_variable entry =
+      match entry.desc with
+      | Lf_variable _
+      | Meta_variable _
+      | Parameter_variable _
+      | Substitution_variable _
+      | Context_variable _
+      | Contextual_variable _
+      | Computation_variable _ ->
+          true
+      | Lf_type_constant _
+      | Lf_term_constant _
+      | Schema_constant _
+      | Computation_inductive_type_constant _
+      | Computation_stratified_type_constant _
+      | Computation_coinductive_type_constant _
+      | Computation_abbreviation_type_constant _
+      | Computation_term_constructor _
+      | Computation_term_destructor _
+      | Program_constant _
+      | Module _ ->
+          false
   end
 
   type bindings_state =
@@ -650,21 +743,50 @@ module Persistent_indexing_state = struct
     let comp_context_size' = f comp_context_size in
     set_comp_context_size comp_context_size'
 
-  let[@inline] lookup qualified_identifier =
+  let lookup qualified_identifier =
     let* bindings = get_bindings in
-    let entry, _subtree =
-      Binding_tree.lookup qualified_identifier bindings
-    in
-    return entry
+    try
+      let entry, _subtree =
+        Binding_tree.lookup qualified_identifier bindings
+      in
+      return entry
+    with
+    | ( Binding_tree.Unbound_identifier _ | Binding_tree.Unbound_namespace _
+      | Binding_tree.Unbound_qualified_identifier _ ) as cause ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          cause
 
-  let[@inline] lookup_toplevel identifier =
-    let* bindings = get_bindings in
-    let entry, _subtree =
-      try Binding_tree.lookup_toplevel identifier bindings with
-      | Binding_tree.Unbound_identifier _ as cause ->
-          Error.raise_at1 (Identifier.location identifier) cause
-    in
-    return entry
+  let lookup_toplevel identifier =
+    get_substate >>= function
+    | Pattern_state { pattern_bindings; inner_pattern_bindings; _ } -> (
+        try
+          let entry, _subtree =
+            Binding_tree.lookup_toplevel_filter identifier
+              (fun entry -> Bool.not (Entry.is_variable entry))
+              pattern_bindings.bindings
+          in
+          return entry
+        with
+        | Binding_tree.Unbound_identifier _ as cause -> (
+            match
+              Identifier.Hamt.find_opt identifier inner_pattern_bindings
+            with
+            | Option.Some (List1.T (entry, _)) -> return entry
+            | Option.None ->
+                Error.raise_at1 (Identifier.location identifier) cause))
+    | Module_state _
+    | Scope_state _ ->
+        let* bindings = get_bindings in
+        let entry, _subtree =
+          Binding_tree.lookup_toplevel identifier bindings
+        in
+        return entry
+
+  let lookup_toplevel_opt identifier =
+    try_catch
+      (lazy (lookup_toplevel identifier $> Option.some))
+      ~on_exn:(fun _cause -> return Option.none)
 
   let actual_binding_exn = Entry.actual_binding_exn
 
@@ -790,8 +912,13 @@ module Persistent_indexing_state = struct
 
   let index_of_lf_variable identifier =
     lookup_toplevel identifier >>= function
-    | { Entry.desc = Entry.Lf_variable { lf_level }; _ } ->
-        index_of_lf_level lf_level
+    | { Entry.desc = Entry.Lf_variable { lf_level }; _ } -> (
+        match lf_level with
+        | Option.Some lf_level -> index_of_lf_level lf_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_lf_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -808,8 +935,13 @@ module Persistent_indexing_state = struct
           ( Entry.Meta_variable { meta_level }
           | Entry.Contextual_variable { meta_level } )
       ; _
-      } ->
-        index_of_meta_level meta_level
+      } -> (
+        match meta_level with
+        | Option.Some meta_level -> index_of_meta_level meta_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_meta_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -827,8 +959,13 @@ module Persistent_indexing_state = struct
           ( Entry.Parameter_variable { meta_level }
           | Entry.Contextual_variable { meta_level } )
       ; _
-      } ->
-        index_of_meta_level meta_level
+      } -> (
+        match meta_level with
+        | Option.Some meta_level -> index_of_meta_level meta_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_parameter_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -846,8 +983,13 @@ module Persistent_indexing_state = struct
           ( Entry.Substitution_variable { meta_level }
           | Entry.Contextual_variable { meta_level } )
       ; _
-      } ->
-        index_of_meta_level meta_level
+      } -> (
+        match meta_level with
+        | Option.Some meta_level -> index_of_meta_level meta_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_substitution_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -865,8 +1007,13 @@ module Persistent_indexing_state = struct
           ( Entry.Context_variable { meta_level }
           | Entry.Contextual_variable { meta_level } )
       ; _
-      } ->
-        index_of_meta_level meta_level
+      } -> (
+        match meta_level with
+        | Option.Some meta_level -> index_of_meta_level meta_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_context_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -880,8 +1027,13 @@ module Persistent_indexing_state = struct
 
   let index_of_comp_variable identifier =
     lookup_toplevel identifier >>= function
-    | { Entry.desc = Entry.Computation_variable { comp_level }; _ } ->
-        index_of_comp_level comp_level
+    | { Entry.desc = Entry.Computation_variable { comp_level }; _ } -> (
+        match comp_level with
+        | Option.Some comp_level -> index_of_comp_level comp_level
+        | Option.None ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Unknown_computation_variable_index)
     | entry ->
         Error.raise_at1
           (Identifier.location identifier)
@@ -930,7 +1082,9 @@ module Persistent_indexing_state = struct
 
   let add_lf_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
-        let entry = make_entry (Lf_level.of_int state.lf_context_size) in
+        let entry =
+          make_entry (Option.some (Lf_level.of_int state.lf_context_size))
+        in
         let lf_context_size' = state.lf_context_size + 1 in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
@@ -942,7 +1096,10 @@ module Persistent_indexing_state = struct
 
   let add_meta_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
-        let entry = make_entry (Meta_level.of_int state.meta_context_size) in
+        let entry =
+          make_entry
+            (Option.some (Meta_level.of_int state.meta_context_size))
+        in
         let meta_context_size' = state.meta_context_size + 1 in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
@@ -954,7 +1111,10 @@ module Persistent_indexing_state = struct
 
   let add_comp_level_variable identifier make_entry =
     modify_bindings_state (fun state ->
-        let entry = make_entry (Comp_level.of_int state.comp_context_size) in
+        let entry =
+          make_entry
+            (Option.some (Comp_level.of_int state.comp_context_size))
+        in
         let comp_context_size' = state.comp_context_size + 1 in
         let bindings' =
           Binding_tree.add_toplevel identifier entry state.bindings
@@ -1190,7 +1350,12 @@ module Persistent_indexing_state = struct
         { state with
           substate =
             Pattern_state
-              { pattern_bindings = bindings
+              { pattern_bindings =
+                  { bindings with
+                    lf_context_size = 0
+                  ; meta_context_size = 0
+                  ; comp_context_size = 0
+                  }
               ; inner_pattern_bindings = Identifier.Hamt.empty
               ; pattern_variables_rev = []
               ; expression_bindings = bindings
@@ -1229,7 +1394,7 @@ module Persistent_indexing_state = struct
             let lf_context_size =
               substate.expression_bindings.lf_context_size
             in
-            let entry = make_entry (Lf_level.of_int lf_context_size) in
+            let entry = make_entry Option.none in
             let lf_context_size' = lf_context_size + 1 in
             { state with
               substate =
@@ -1260,7 +1425,7 @@ module Persistent_indexing_state = struct
             let meta_context_size =
               substate.expression_bindings.meta_context_size
             in
-            let entry = make_entry (Meta_level.of_int meta_context_size) in
+            let entry = make_entry Option.none in
             let meta_context_size' = meta_context_size + 1 in
             { state with
               substate =
@@ -1291,7 +1456,9 @@ module Persistent_indexing_state = struct
             let comp_context_size =
               substate.expression_bindings.comp_context_size
             in
-            let entry = make_entry (Comp_level.of_int comp_context_size) in
+            let entry =
+              make_entry (Option.some (Comp_level.of_int comp_context_size))
+            in
             let comp_context_size' = comp_context_size + 1 in
             { state with
               substate =
@@ -1317,64 +1484,123 @@ module Persistent_indexing_state = struct
     return state.free_variables_allowed
 
   let add_free_lf_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_lf_level_variable identifier
-          (Entry.make_lf_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_lf_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc = Entry.Lf_variable { lf_level = Option.None }; _ } ->
+        (* [identifier] is known to be a free LF variable because its LF
+           level is unknown, so we do not signal it as an illegal free
+           variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_lf_level_variable identifier
+              (Entry.make_lf_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_lf_variable)
 
   let add_free_meta_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_meta_level_variable identifier
-          (Entry.make_meta_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_meta_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc = Entry.Meta_variable { meta_level = Option.None }; _ }
+      ->
+        (* [identifier] is known to be a free meta-variable because its meta
+           level is unknown, so we do not signal it as an illegal free
+           variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_meta_level_variable identifier
+              (Entry.make_meta_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_meta_variable)
 
   let add_free_parameter_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_meta_level_variable identifier
-          (Entry.make_parameter_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_parameter_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc = Entry.Parameter_variable { meta_level = Option.None }
+        ; _
+        } ->
+        (* [identifier] is known to be a free parameter variable because its
+           meta level is unknown, so we do not signal it as an illegal free
+           variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_meta_level_variable identifier
+              (Entry.make_parameter_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_parameter_variable)
 
   let add_free_substitution_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_meta_level_variable identifier
-          (Entry.make_parameter_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_substitution_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc =
+            Entry.Substitution_variable { meta_level = Option.None }
+        ; _
+        } ->
+        (* [identifier] is known to be a free substitution variable because
+           its meta level is unknown, so we do not signal it as an illegal
+           free variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_meta_level_variable identifier
+              (Entry.make_parameter_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_substitution_variable)
 
   let add_free_context_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_meta_level_variable identifier
-          (Entry.make_context_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_context_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc = Entry.Context_variable { meta_level = Option.None }
+        ; _
+        } ->
+        (* [identifier] is known to be a free context variable because its
+           meta level is unknown, so we do not signal it as an illegal free
+           variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_meta_level_variable identifier
+              (Entry.make_context_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_context_variable)
 
   let add_computation_pattern_variable ?location identifier =
-    are_free_variables_allowed >>= function
-    | true ->
-        add_free_comp_level_variable identifier
-          (Entry.make_computation_variable_entry ?location identifier)
-    | false ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          Illegal_free_computation_variable
+    lookup_toplevel_opt identifier >>= function
+    | Option.Some
+        { Entry.desc =
+            Entry.Computation_variable { comp_level = Option.None }
+        ; _
+        } ->
+        (* [identifier] is known to be a free computationn variable because
+           its computation level is unknown, so we do not signal it as an
+           illegal free variable. *)
+        return ()
+    | _ -> (
+        are_free_variables_allowed >>= function
+        | true ->
+            add_free_comp_level_variable identifier
+              (Entry.make_computation_variable_entry ?location identifier)
+        | false ->
+            Error.raise_at1
+              (Identifier.location identifier)
+              Illegal_free_computation_variable)
 
   let initial_state =
     { substate =

@@ -70,13 +70,13 @@ let mapi f (T (x, xs)) =
 
 let index l = mapi (fun i x -> (i, x)) l
 
-let fold_right f g l =
-  let rec fold_right (T (h, l)) return =
+let fold_right =
+  let rec fold_right f g (T (h, l)) return =
     match l with
     | [] -> return (f h)
-    | x :: xs -> fold_right (T (x, xs)) (fun a -> return (g h a))
+    | x :: xs -> fold_right f g (T (x, xs)) (fun a -> return (g h a))
   in
-  fold_right l Fun.id
+  fun f g l -> fold_right f g l Fun.id
 
 let fold_left sing cons (T (x, xs)) = List.fold_left cons (sing x) xs
 

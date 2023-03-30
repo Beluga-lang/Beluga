@@ -351,6 +351,12 @@ module type INDEXING_STATE = sig
   val open_module :
     ?location:Location.t -> Qualified_identifier.t -> Unit.t t
 
+  val add_module_abbreviation :
+       ?location:Location.t
+    -> Qualified_identifier.t
+    -> Identifier.t
+    -> Unit.t t
+
   val with_scope : 'a t -> 'a t
 
   val with_parent_scope : 'a t -> 'a t
@@ -751,6 +757,15 @@ module Persistent_indexing_state = struct
       in
       return entry
     with
+    | ( Binding_tree.Unbound_identifier _ | Binding_tree.Unbound_namespace _
+      | Binding_tree.Unbound_qualified_identifier _ ) as cause ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          cause
+
+  let lookup_with_subtree qualified_identifier =
+    let* bindings = get_bindings in
+    try return (Binding_tree.lookup qualified_identifier bindings) with
     | ( Binding_tree.Unbound_identifier _ | Binding_tree.Unbound_namespace _
       | Binding_tree.Unbound_qualified_identifier _ ) as cause ->
         Error.raise_at1
@@ -1278,6 +1293,13 @@ module Persistent_indexing_state = struct
   let open_module ?location identifier =
     lookup identifier >>= function
     | { Entry.desc = Entry.Module _; _ } -> open_namespace identifier
+    | _ -> Error.raise_at1_opt location Expected_module
+
+  let add_module_abbreviation ?location module_identifier abbreviation =
+    lookup_with_subtree module_identifier >>= function
+    | ({ Entry.desc = Entry.Module _; _ } as entry), subtree ->
+        modify_bindings
+          (Binding_tree.add_toplevel abbreviation ~subtree entry)
     | _ -> Error.raise_at1_opt location Expected_module
 
   let with_scope m =

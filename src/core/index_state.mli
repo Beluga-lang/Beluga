@@ -187,6 +187,12 @@ module type INDEXING_STATE = sig
   val open_module :
     ?location:Location.t -> Qualified_identifier.t -> Unit.t t
 
+  val add_module_abbreviation :
+       ?location:Location.t
+    -> Qualified_identifier.t
+    -> Identifier.t
+    -> Unit.t t
+
   val with_scope : 'a t -> 'a t
 
   val with_parent_scope : 'a t -> 'a t

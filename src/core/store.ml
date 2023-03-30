@@ -18,10 +18,6 @@ module OpPragmas = struct
     ; assoc : Associativity.t
     }
 
-  let default = ref Associativity.non_associative
-
-  let pragmaCount = ref 0
-
   let pragmas = ref []
 
   let clear () = pragmas := []
@@ -45,8 +41,7 @@ module OpPragmas = struct
           else x)
     else
       let new_entry = { name; fix; precedence; assoc } in
-      pragmas := new_entry :: !pragmas;
-      incr pragmaCount
+      pragmas := new_entry :: !pragmas
 end
 
 module type ENTRY = sig

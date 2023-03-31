@@ -164,6 +164,10 @@ let make_from_qualified_identifier qualified_identifier =
   let location = Qualified_identifier.location qualified_identifier in
   { modules; hint_name; hint_cnt; location }
 
+let to_identifier name =
+  assert (List.null name.modules);
+  Identifier.make ~location:(location name) (show name)
+
 let mk_blank = function
   | Some location -> mk_name ~location (SomeString "_")
   | None -> mk_name (SomeString "_")

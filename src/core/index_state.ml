@@ -384,6 +384,16 @@ module type INDEXING_STATE = sig
   val allow_free_variables : 'a t -> 'a t
 
   val disallow_free_variables : 'a t -> 'a t
+
+  val add_all_bvar_store : Store.BVar.t -> Unit.t t
+
+  val add_all_cvar_store : Store.CVar.t -> Unit.t t
+
+  val add_all_var_store : Store.Var.t -> Unit.t t
+
+  val add_all_mctx : Synint.LF.mctx -> Unit.t t
+
+  val add_all_gctx : Synint.Comp.gctx -> Unit.t t
 end
 
 module type LEVEL = sig
@@ -1639,4 +1649,41 @@ module Persistent_indexing_state = struct
     ; free_variables_allowed = false
     ; generated_fresh_variables_count = 0
     }
+
+  let add_all_bvar_store store =
+    (* [store] is a stack, so traverse it from tail to head *)
+    traverse_reverse_list_void
+      (fun { Store.BVar.name } -> add_lf_variable (Name.to_identifier name))
+      (Store.BVar.to_list store)
+
+  let add_all_cvar_store store =
+    (* [store] is a stack, so traverse it from tail to head *)
+    traverse_reverse_list_void
+      (fun { Store.CVar.name; _ } ->
+        add_context_variable (Name.to_identifier name))
+      (Store.CVar.to_list store)
+
+  let add_all_var_store store =
+    (* [store] is a stack, so traverse it from tail to head *)
+    traverse_reverse_list_void
+      (fun { Store.Var.name } -> add_comp_variable (Name.to_identifier name))
+      (Store.Var.to_list store)
+
+  let rec add_all_mctx cD =
+    (* [cD] is a stack, so traverse it from tail to head *)
+    match cD with
+    | Synint.LF.Dec (cD', Synint.LF.Decl (u, _, _, _))
+    | Synint.LF.Dec (cD', Synint.LF.DeclOpt (u, _)) ->
+        let* () = add_all_mctx cD' in
+        add_contextual_variable (Name.to_identifier u)
+    | Synint.LF.Empty -> return ()
+
+  let rec add_all_gctx cG =
+    (* [cG] is a stack, so traverse it from tail to head *)
+    match cG with
+    | Synint.LF.Dec (cG', Synint.Comp.CTypDecl (x, _, _))
+    | Synint.LF.Dec (cG', Synint.Comp.CTypDeclOpt x) ->
+        let* () = add_all_gctx cG' in
+        add_comp_variable (Name.to_identifier x)
+    | Synint.LF.Empty -> return ()
 end

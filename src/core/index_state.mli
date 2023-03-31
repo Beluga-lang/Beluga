@@ -238,7 +238,29 @@ module type INDEXING_STATE = sig
       adds a free variable to the state. *)
   val disallow_free_variables : 'a t -> 'a t
 
-  (* TODO: Interoperability with {!Store} *)
+  (** {1 Interoperability} *)
+
+  (** [add_all_bvar_store store] is [(state', ())] where [state'] is derived
+      from [state'] with the addition of all LF-bound variables in [store]. *)
+  val add_all_bvar_store : Store.BVar.t -> Unit.t t
+
+  (** [add_all_cvar_store store] is [(state', ())] where [state'] is derived
+      from [state'] with the addition of all contextual variables in [store]. *)
+  val add_all_cvar_store : Store.CVar.t -> Unit.t t
+
+  (** [add_all_var_store store] is [(state', ())] where [state'] is derived
+      from [state'] with the addition of all computation-level variables in
+      [store]. *)
+  val add_all_var_store : Store.Var.t -> Unit.t t
+
+  (** [add_all_mctx cD state] is [(state', ())] where [state'] is derived
+      from [state] with the addition of all contextual variables in [cD]. *)
+  val add_all_mctx : Synint.LF.mctx -> Unit.t t
+
+  (** [add_all_gctx cG state] is [(state', ())] where [state'] is derived
+      from [state] with the addition of all computation-level variables in
+      [cG]. *)
+  val add_all_gctx : Synint.Comp.gctx -> Unit.t t
 end
 
 module Persistent_indexing_state : sig

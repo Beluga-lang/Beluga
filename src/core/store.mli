@@ -356,9 +356,19 @@ end
 
 val clear : unit -> unit
 
-(** Persistent stack-based store for LF bound variables.
+module FVar : sig
+  val add : Name.t -> LF.typ -> unit
+  val get : Name.t -> LF.typ
+  val clear : unit -> unit
+end
 
-    Used for indexing. *)
+module FCVar : sig
+  val add : Name.t -> LF.mctx * LF.ctyp_decl -> unit
+  val get : Name.t -> LF.mctx * LF.ctyp_decl
+  val clear : unit -> unit
+end
+
+(** Persistent stack-based store for LF-bound variables. *)
 module BVar : sig
   type entry =
     private
@@ -372,47 +382,12 @@ module BVar : sig
   val get : t -> var -> entry
   val length : t -> int
   val index_of_name : t -> Name.t -> offset
-end
 
-
-module FVar : sig
-  val add : Name.t -> LF.typ -> unit
-  val get : Name.t -> LF.typ
-  val clear : unit -> unit
-end
-
-module FCVar : sig
-  val add : Name.t -> LF.mctx * LF.ctyp_decl -> unit
-  val get : Name.t -> LF.mctx * LF.ctyp_decl
-  val clear : unit -> unit
-end
-
-(** Persistent stack-based store for computational variables.
-
-    Used for indexing. *)
-module Var : sig
-  type entry =
-    { name : Name.t
-    }
-
-  val mk_entry : Name.t -> entry
-  type t (* NOTE: t is an ordered data structure *)
   val to_list : t -> entry list
-  val empty : t
-  val extend : t -> entry -> t
-  val get : t -> var -> entry
-  val append : t -> t -> t
-  val index_of_name : t -> Name.t -> offset
-  val size : t -> int
-
-  (** Erases the context down to a list of names. *)
-  val of_gctx : Comp.gctx -> t
-  val of_list : Name.t list -> t
 end
 
-(** Persistent stack-based store for contextual variables.
 
-    Used for indexing. *)
+(** Persistent stack-based store for contextual variables. *)
 module CVar : sig
   type cvar = Name.t
 
@@ -443,4 +418,27 @@ module CVar : sig
 
   val to_string : t -> string
   val of_list : (Name.t * Plicity.t) list -> t
+
+  val to_list : t -> entry list
+end
+
+(** Persistent stack-based store for computational variables. *)
+module Var : sig
+  type entry =
+    { name : Name.t
+    }
+
+  val mk_entry : Name.t -> entry
+  type t (* NOTE: t is an ordered data structure *)
+  val to_list : t -> entry list
+  val empty : t
+  val extend : t -> entry -> t
+  val get : t -> var -> entry
+  val append : t -> t -> t
+  val index_of_name : t -> Name.t -> offset
+  val size : t -> int
+
+  (** Erases the context down to a list of names. *)
+  val of_gctx : Comp.gctx -> t
+  val of_list : Name.t list -> t
 end

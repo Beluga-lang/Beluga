@@ -1513,9 +1513,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   and reindex_pattern = function
     | Synapx.Comp.PatFVar (location, name) ->
-        let identifier =
-          Identifier.make ~location:(Name.location name) (Name.show name)
-        in
+        let identifier = Name.to_identifier name in
         let* offset = index_of_comp_variable identifier in
         return (Synapx.Comp.PatVar (location, name, offset))
     | Synapx.Comp.PatTuple (location, patterns) ->

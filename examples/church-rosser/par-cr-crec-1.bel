@@ -113,10 +113,10 @@ rec strip_lemma: (g:ctx)[g |- pred M[..] M'[..]] -> [g |- pred* M[..] M''[..]]
 fn r => fn s =>      let [g |- R[..]] = r in case s of
  | [g |- id*] => [g |- strip_result id* R[..]]
 
- | [g |- next R1[..] (R2*[..])] =>
+ | [g |- next R1[..] R2*[..]] =>
    let [g |- dia_result _ S1[..] S1'[..]] = dia [g] [g |- R[..]] [g |- R1[..]] in
-   let [g |- strip_result (S2*[..]) S'[..]] = strip_lemma [g |- S1'[..]] [g |- R2*[..]] in
-     [g |- strip_result (next S1[..] (S2*[..])) S'[..]]
+   let [g |- strip_result S2*[..] S'[..]] = strip_lemma [g |- S1'[..]] [g |- R2*[..]] in
+     [g |- strip_result (next S1[..] S2*[..]) S'[..]]
 ;
 
 
@@ -128,12 +128,12 @@ conf_result: pred* M' N -> pred* M'' N
 rec conf : (g:ctx) [g |- pred* M[..] M'[..]] -> [g |- pred* M[..] M''[..]]
          -> [g |- conf_prop M'[..] M''[..]] =
 fn r => fn s => case r of
-| [g |- id*] => let [g |- R*[..]] = s in [g |- conf_result (R*[..]) id*]
-| [g |- next R1[..] (R2*[..])] =>
-  let [g |- strip_result (S1*[..]) S1[..]] = strip_lemma [g |- R1[..]] s in
+| [g |- id*] => let [g |- R*[..]] = s in [g |- conf_result R*[..] id*]
+| [g |- next R1[..] R2*[..]] =>
+  let [g |- strip_result S1*[..] S1[..]] = strip_lemma [g |- R1[..]] s in
 
-  let [g |- conf_result (S*[..]) (S2*[..])]  = conf [g |- R2*[..]] [g |- S1*[..]] in
-    [g |- conf_result (S*[..]) (next S1[..] (S2*[..]))]
+  let [g |- conf_result S*[..] S2*[..]]  = conf [g |- R2*[..]] [g |- S1*[..]] in
+    [g |- conf_result S*[..] (next S1[..] S2*[..])]
 
 ;
 
@@ -146,18 +146,18 @@ cr_result: pred* M N  ->  pred* M'  N
 
 rec cr: (g:ctx) [g |- pred= M[..]  M'[..]]  ->  [g |- cr_prop M[..] M'[..]] =
 fn e => case e of
-|[g |- reduce (R*[..])] => [g |- cr_result (R*[..]) id*]
-|[g |- expand (R*[..])] => [g |- cr_result id* (R*[..])]
+|[g |- reduce R*[..]] => [g |- cr_result R*[..] id*]
+|[g |- expand R*[..]] => [g |- cr_result id* R*[..]]
 |[g |- next= C1[..] C2[..]] =>
  % C1:pred= M M'
  % C2: pred M' M''   TO SHOW: pred* M N   and pred* M'' N
- let [g |- cr_result (S1*[..]) (R1*[..])] = cr [g |- C1[..]] in
+ let [g |- cr_result S1*[..] R1*[..]] = cr [g |- C1[..]] in
  % S1*: pred* M N1   and R1*: pred* M' N1
 
- let [g |- cr_result (S2*[..]) (R2*[..])] = cr [g |- C2[..]] in
+ let [g |- cr_result S2*[..] R2*[..]] = cr [g |- C2[..]] in
  % S2*: pred* M' N2   and R2*: pred* M'' N2
 
- let [g |- conf_result (T1*[..]) (T2*[..])] = conf [g |- R1*[..]] [g |- S2*[..]] in
+ let [g |- conf_result T1*[..] T2*[..]] = conf [g |- R1*[..]] [g |- S2*[..]] in
  % T1* : pred* N1 N and T2*: pred* N2 N
 
  let [g |- S*[..]] = append [g |- S1*[..]] [g |- T1*[..]] in
@@ -165,7 +165,7 @@ fn e => case e of
 
  let [g |- S*'[..]] = append [g |- R2*[..]] [g |- T2*[..]] in
      % S*' M' N
-   [g |- cr_result (S*[..]) (S*'[..])]
+   [g |- cr_result S*[..] (S*'[..])]
 
 ;
 %{

@@ -58,6 +58,11 @@ val make_from_identifier : Identifier.t -> t
     replaced with [Identifier] and [Qualified_identifier]. *)
 val make_from_qualified_identifier : Qualified_identifier.t -> t
 
+(** [to_identifier name] is [name] as an [Identifier.t].
+
+    It is assumed that [get_module name = \[\]]. *)
+val to_identifier : t -> Identifier.t
+
 val string_of_name : t -> string
 
 (** Prints a list of space-separated names. This printer does not open a box! *)

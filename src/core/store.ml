@@ -756,9 +756,25 @@ module Cid = struct
   end (* Int.DefaultRenderer *)
 end
 
+(* Free LF-bound variables *)
+module FVar = struct
+  let store = NameTable.create 0
+  let add = NameTable.add store
+  let get = NameTable.find store
+  let clear () = NameTable.clear store
+end
 
 
-(* LF Bound variables *)
+(* Free contextual variables *)
+module FCVar = struct
+
+  let store = NameTable.create 0
+  let add = NameTable.add store
+  let get = NameTable.find store
+  let clear () = NameTable.clear store
+end
+
+(** LF-bound variables *)
 module BVar = struct
 
   type entry = { name : Name.t }
@@ -782,73 +798,11 @@ module BVar = struct
   let extend ctx e = e :: ctx
   let length = List.length
   let get = List.nth
-end
-
-(* Free Bound Variables *)
-module FVar = struct
-  let store = NameTable.create 0
-  let add = NameTable.add store
-  let get = NameTable.find store
-  let clear () = NameTable.clear store
-end
-
-
-(* Free contextual variables *)
-module FCVar = struct
-
-  let store = NameTable.create 0
-  let add = NameTable.add store
-  let get = NameTable.find store
-  let clear () = NameTable.clear store
-end
-
-(* Computation-level variables *)
-module Var = struct
-
-  type entry =
-    { name : Name.t
-    }
-
-  let mk_entry name =
-    { name
-    }
-
-  type t = entry list
-
-  let index_of_name store n =
-    let rec loop i =
-      function
-      | [] -> raise Not_found
-      | (e :: es) ->
-         if Name.(e.name = n)
-         then i
-         else loop (i + 1) es
-    in
-    loop 1 store
 
   let to_list = Fun.id
-  let empty = []
-  let extend ctx e = e :: ctx
-  let append vars vars' = vars @ vars'
-  let get = List.nth
-  let size = List.length
-
-  (**
-   * Erases a context down to a mere list of variables.
-   * This is useful for indexing a term in the external syntax when the
-   * context it occurs in is know, e.g. as in Harpoon.
-   *)
-  let of_gctx (cG : Int.Comp.gctx) : t =
-    let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
-    List.fold_right f (Context.to_list_rev cG) empty
-
-  let of_list (l : Name.t list) : t =
-    List.map mk_entry l
 end
 
-
-
-(* Contextual variables *)
+(** Contextual variables *)
 module CVar = struct
 
   type cvar = Name.t
@@ -906,6 +860,52 @@ module CVar = struct
 
   let of_list (l : (Name.t * Plicity.t) list) : t =
     List.map (fun (u, p) -> mk_entry u p) l
+
+  let to_list = Fun.id
+end
+
+(** Computation-level variables *)
+module Var = struct
+
+  type entry =
+    { name : Name.t
+    }
+
+  let mk_entry name =
+    { name
+    }
+
+  type t = entry list
+
+  let index_of_name store n =
+    let rec loop i =
+      function
+      | [] -> raise Not_found
+      | (e :: es) ->
+         if Name.(e.name = n)
+         then i
+         else loop (i + 1) es
+    in
+    loop 1 store
+
+  let to_list = Fun.id
+  let empty = []
+  let extend ctx e = e :: ctx
+  let append vars vars' = vars @ vars'
+  let get = List.nth
+  let size = List.length
+
+  (**
+   * Erases a context down to a mere list of variables.
+   * This is useful for indexing a term in the external syntax when the
+   * context it occurs in is know, e.g. as in Harpoon.
+   *)
+  let of_gctx (cG : Int.Comp.gctx) : t =
+    let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
+    List.fold_right f (Context.to_list_rev cG) empty
+
+  let of_list (l : Name.t list) : t =
+    List.map mk_entry l
 end
 
 let clear () =

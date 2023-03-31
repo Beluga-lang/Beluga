@@ -167,6 +167,8 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
+
+  val freeze_all_unfrozen_declarations : Unit.t t
 end
 
 module Make_signature_reconstruction_state (Index_state : sig
@@ -181,10 +183,27 @@ end)
 struct
   type state =
     { leftover_vars : (Abstract.free_var Synint.LF.ctx * Location.t) List.t
+          (** The list of leftover variables from the abstraction phase. *)
     ; index_state : Index_state.state
+          (** The current state for replacing constants with IDs and
+              variables with de Bruijn indices. *)
     ; default_associativity : Associativity.t
+          (** The default associativity of user-defined infix operators. *)
     ; default_precedence : Int.t
+          (** The default precedence of user-defined operators. *)
     ; modules : Int.t
+          (** The number of reconstructed modules. Used for generating module
+              IDs. *)
+    ; unfrozen_declarations :
+        [ `Typ of Id.cid_typ
+        | `Comp_typ of Id.cid_comp_typ
+        | `Comp_cotyp of Id.cid_comp_cotyp
+        ]
+        List.t
+          (** The list of declarations that are not frozen, by ID.
+
+              For instance, unfrozen LF type declarations can have
+              constructors added to them. *)
     }
 
   let initial_state index_state =
@@ -193,6 +212,7 @@ struct
     ; default_associativity = Synext.default_associativity
     ; default_precedence = Synext.default_precedence
     ; modules = 0
+    ; unfrozen_declarations = []
     }
 
   include (
@@ -274,7 +294,15 @@ struct
     let index_state' = f index_state in
     set_index_state index_state'
 
+  let add_unfrozen_declaration entry =
+    let* state = get in
+    put
+      { state with
+        unfrozen_declarations = entry :: state.unfrozen_declarations
+      }
+
   let add_lf_type_constant ?location identifier cid =
+    let* () = add_unfrozen_declaration (`Typ cid) in
     modify_index_state
       Index_state.(exec (add_lf_type_constant ?location identifier cid))
 
@@ -302,18 +330,21 @@ struct
              cid))
 
   let add_comp_inductive_type_constant ?location identifier cid =
+    let* () = add_unfrozen_declaration (`Comp_typ cid) in
     modify_index_state
       Index_state.(
         exec
           (add_inductive_computation_type_constant ?location identifier cid))
 
   let add_comp_stratified_type_constant ?location identifier cid =
+    let* () = add_unfrozen_declaration (`Comp_typ cid) in
     modify_index_state
       Index_state.(
         exec
           (add_stratified_computation_type_constant ?location identifier cid))
 
   let add_comp_cotype_constant ?location identifier cid =
+    let* () = add_unfrozen_declaration (`Comp_cotyp cid) in
     modify_index_state
       Index_state.(
         exec
@@ -464,6 +495,16 @@ struct
 
   let index_lf_query meta_context typ =
     with_index_state (Index.index_lf_query meta_context typ)
+
+  let freeze_unfrozen_declaration = function
+    | `Typ id -> Store.Cid.Typ.freeze id
+    | `Comp_typ id -> Store.Cid.CompTyp.freeze id
+    | `Comp_cotyp id -> Store.Cid.CompCotyp.freeze id
+
+  let freeze_all_unfrozen_declarations =
+    let* state = get in
+    List.iter freeze_unfrozen_declaration state.unfrozen_declarations;
+    put { state with unfrozen_declarations = [] }
 end
 
 module Signature_reconstruction_state =

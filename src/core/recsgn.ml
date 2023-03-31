@@ -276,8 +276,12 @@ module Make
 
   and reconstruct_signature_file file =
     let { Synext.Signature.global_pragmas; entries; _ } = file in
-    with_applied_global_pragmas global_pragmas
-      (reconstruct_signature_entries entries)
+    let* declarations' =
+      with_applied_global_pragmas global_pragmas
+        (reconstruct_signature_entries entries)
+    in
+    let* () = freeze_all_unfrozen_declarations in
+    return declarations'
 
   and with_applied_global_pragmas global_pragmas f =
     match global_pragmas with

@@ -1592,12 +1592,6 @@ if the target type has not arguments, then check positvity
 otherwise check whether there is a position of arguments which makes stratification satisfied
 *)
 
-let stratNum = ref 0
-
-(* let rec calc_exp2 n = *)
-(* if (n <=1) then 1 *)
-(* else 2 * (calc_exp2 (n-1)) *)
-
 let stratifyAll a tau =
   let (cD, mS) = get_target LF.Empty tau in
   let mSize = mS_size mS in
@@ -1613,13 +1607,19 @@ let stratifyAll a tau =
         if stratify a tau n
         then stratAll (n - 1) * 2 + 1
         else stratAll (n - 1) * 2
-        (* let t = if (stratify a tau n) then calc_exp2 n else 0 *)
-        (* in t lor (stratAll (n-1)) *)
-        (* if (stratify a tau n) then ((calc_exp2 n) lor (stratAll (n-1) num))) *)
-        (* else stratAll (n-1) num *)
       else 0
     in
     stratAll mSize
+    (*= The current implementation is restricted to stratified datatype type
+        constants with at most [32] arguments. This can be fixed using lists:
+
+          let rec stratAll n =
+            if n <= mSize
+            then stratify a tau n :: stratAll (n + 1)
+            else []
+          in
+          stratAll 1
+    *)
 
 (** Decides whether a data object is something we're doing induction
     on, i.e. it's a computational variable whose type is TypInd or

@@ -584,7 +584,6 @@ module Make
       | `Stratified -> Synint.Sgn.StratifyAll location
       | `Inductive -> Synint.Sgn.Positivity
     in
-    Total.stratNum := -1;
     let name = Name.make_from_identifier identifier in
     let cid =
       Store.Cid.CompTyp.add (fun _cid ->
@@ -693,15 +692,19 @@ module Make
     (match flag with
     | Synint.Sgn.Nocheck -> ()
     | Synint.Sgn.Positivity ->
+        (* The constructor being reconstructed is that of an inductive
+           datatype. *)
         if Total.positive cid_ctypfamily tau' then ()
         else Error.raise_at1 location (No_positive identifier)
     | Synint.Sgn.Stratify (loc_s, n) ->
         if Total.stratify cid_ctypfamily tau' n then ()
         else Error.raise_at1 loc_s (No_stratify identifier)
     | Synint.Sgn.StratifyAll loc_s ->
+        (* The constructor being reconstructed is that of a stratified
+           datatype. *)
         let t = Total.stratifyAll cid_ctypfamily tau' in
-        let t' = t land !Total.stratNum in
-        if t' <> 0 then Total.stratNum := t'
+        let t' = t land !stratNum in
+        if t' <> 0 then stratNum := t'
         else
           Error.raise_at1 loc_s
             (No_stratify_or_positive (R.render_cid_comp_typ cid_ctypfamily)));
@@ -1235,6 +1238,14 @@ module Make
            (function
              | `Inductive_comp_typ (_typ_identifier, _kind, constructors)
              | `Stratified_comp_typ (_typ_identifier, _kind, constructors) ->
+                 let stratNum =
+                   ref (-1)
+                   (* This is inherited from the legacy system. This is an
+                      array with length equal to the number of explicit
+                      arguments in [_kind], and whose values are all [true].
+                      Reconstruction of constructors in the
+                      [`Stratified_comp_typ] case mutates this value. *)
+                 in
                  seq_list
                    (List.map
                       (fun (identifier, typ) ->
@@ -1243,7 +1254,8 @@ module Make
                             (Identifier.location identifier)
                             (Synext.location_of_comp_typ typ)
                         in
-                        reconstruct_comp_constructor location identifier typ)
+                        reconstruct_comp_constructor ~stratNum location
+                          identifier typ)
                       constructors)
              | `Coinductive_comp_typ (_typ_identifier, _kind, destructors) ->
                  seq_list

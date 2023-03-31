@@ -339,8 +339,8 @@ end) :
 
   exception Expected_end_of_input
 
-  (** [Parser_located_exception { cause; locations }] is the exception
-      [cause] annotated with source file [locations].
+  (** [Parser_located_exception { cause; location }] is the exception [cause]
+      annotated with source file [location].
 
       This exception is analogous to the [Located_exception] variant from the
       {!Error} module, but we need to rearrange the exceptions with
@@ -349,7 +349,7 @@ end) :
   exception
     Parser_located_exception of
       { cause : exn
-      ; locations : location List1.t
+      ; location : location
       }
 
   (** [flatten_exhausted_choices_exception_aux exceptions_rev acc] simplifies
@@ -362,7 +362,10 @@ end) :
     | e :: es -> (
         match discard_exception_locations e with
         | Labelled_exception { label; cause } ->
-            let cause' = discard_exception_locations cause in
+            let cause' =
+              flatten_exhausted_choices_exception
+                (discard_exception_locations cause)
+            in
             flatten_exhausted_choices_exception_aux es
               (Labelled_exception { label; cause = cause' } :: acc)
         | No_more_choices e ->
@@ -376,9 +379,9 @@ end) :
           flatten_exhausted_choices_exception_aux causes_rev []
         in
         No_more_choices causes'
-    | Parser_located_exception { cause; locations } ->
+    | Parser_located_exception { cause; location } ->
         let cause' = flatten_exhausted_choices_exception cause in
-        Parser_located_exception { cause = cause'; locations }
+        Parser_located_exception { cause = cause'; location }
     | Labelled_exception { label; cause } ->
         let cause' = flatten_exhausted_choices_exception cause in
         Labelled_exception { label; cause = cause' }
@@ -410,23 +413,23 @@ end) :
       {!Labelled_exception}, which would happen since labels are added as we
       exit the parser call stack. *)
   and bubble_up_exception_locations = function
-    | Parser_located_exception { cause; locations } ->
+    | Parser_located_exception { cause; location } ->
         let cause' = bubble_up_exception_locations cause in
-        Parser_located_exception { cause = cause'; locations }
+        Parser_located_exception { cause = cause'; location }
     | Labelled_exception
-        { label; cause = Parser_located_exception { cause; locations } } ->
+        { label; cause = Parser_located_exception { cause; location } } ->
         let cause' = bubble_up_exception_locations cause in
         Parser_located_exception
           { cause =
               bubble_up_exception_locations
                 (Labelled_exception { label; cause = cause' })
-          ; locations
+          ; location
           }
-    | Parser_error (Parser_located_exception { cause; locations }) ->
+    | Parser_error (Parser_located_exception { cause; location }) ->
         let cause' = bubble_up_exception_locations cause in
         Parser_located_exception
           { cause = bubble_up_exception_locations (Parser_error cause')
-          ; locations
+          ; location
           }
     | No_more_choices causes ->
         let causes' = List.map bubble_up_exception_locations causes in
@@ -437,18 +440,18 @@ end) :
       produced by the parser to specify that the exception is a parser
       exception. *)
   and annotate_parser_error = function
-    | Parser_located_exception { cause; locations } ->
+    | Parser_located_exception { cause; location } ->
         let cause' = annotate_parser_error cause in
-        Parser_located_exception { cause = cause'; locations }
+        Parser_located_exception { cause = cause'; location }
     | exn -> Parser_error exn
 
   (** [convert_located_exceptions exn] converts {!Parser_located_exception}
       in [exn] to located exceptions in the {!Error} module for
       error-reporting. *)
   and convert_located_exceptions = function
-    | Parser_located_exception { cause; locations } ->
+    | Parser_located_exception { cause; location } ->
         let cause' = convert_located_exceptions cause in
-        Error.located_exception locations cause'
+        Error.located_exception1 location cause'
     | Labelled_exception { label; cause } ->
         let cause' = convert_located_exceptions cause in
         Labelled_exception { label; cause = cause' }
@@ -480,13 +483,10 @@ end) :
 
   let fail e s = (s, Result.error e)
 
-  let located_exception locations cause =
-    Parser_located_exception { locations; cause }
+  let located_exception location cause =
+    Parser_located_exception { location; cause }
 
-  let located_exception1 location cause =
-    located_exception (List1.singleton location) cause
-
-  let fail_at_location location e = fail (located_exception1 location e)
+  let fail_at_location location e = fail (located_exception location e)
 
   let fail_at_previous_location e =
     let open State in

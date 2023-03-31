@@ -168,6 +168,11 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
       of the module's entries. *)
   val add_module :
     ?location:Location.t -> Identifier.t -> Id.module_id -> 'a t -> 'a t
+
+  (** [freeze_all_unfrozen_declarations state] is [(state', ())] where
+      [state'] is derived from [state] by freezing all the unfrozen
+      declarations. *)
+  val freeze_all_unfrozen_declarations : Unit.t t
 end
 
 module Make_signature_reconstruction_state (Index_state : sig

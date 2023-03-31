@@ -391,6 +391,7 @@ module Make
         return
           (Synint.LF.FixPrag (name, Fixity.postfix, precedence, associativity))
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
+        let* () = freeze_all_unfrozen_declarations in
         let* () = open_module ~location module_identifier in
         return (Synint.LF.OpenPrag module_identifier)
     | Synext.Signature.Pragma.Abbreviation
@@ -408,6 +409,7 @@ module Make
         ; expected_solutions
         ; maximum_tries
         } ->
+        let* () = freeze_all_unfrozen_declarations in
         reconstruct_query_pragma location identifier meta_context typ
           expected_solutions maximum_tries
 
@@ -428,18 +430,27 @@ module Make
     | Synext.Signature.Declaration.Const { location; identifier; typ } ->
         reconstruct_lf_const_declaration location identifier typ
     | Synext.Signature.Declaration.Schema { location; identifier; schema } ->
+        let* () = freeze_all_unfrozen_declarations in
         reconstruct_schema_declaration location identifier schema
     | Synext.Signature.Declaration.CompTypAbbrev
         { location; identifier; kind; typ } ->
+        let* () = freeze_all_unfrozen_declarations in
         reconstruct_comp_typ_abbrev_declaration location identifier kind typ
     | Synext.Signature.Declaration.Val
         { location; identifier; typ; expression } ->
+        let* () = freeze_all_unfrozen_declarations in
         reconstruct_val_declaration location identifier typ expression
     | Synext.Signature.Declaration.Recursive_declarations
         { location; declarations } ->
-        reconstruct_recursive_declarations location declarations
+        let* () = freeze_all_unfrozen_declarations in
+        let* declaration' =
+          reconstruct_recursive_declarations location declarations
+        in
+        let* () = freeze_all_unfrozen_declarations in
+        return declaration'
     | Synext.Signature.Declaration.Module { location; identifier; entries }
       ->
+        let* () = freeze_all_unfrozen_declarations in
         reconstruct_module_declaration location identifier entries
 
   and reconstruct_lf_typ_declaration location identifier extK =

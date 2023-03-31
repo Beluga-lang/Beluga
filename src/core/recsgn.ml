@@ -412,8 +412,6 @@ module Make
           expected_solutions maximum_tries
 
   and reconstruct_signature_declaration declaration =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     match declaration with
     | Synext.Signature.Declaration.CompTyp { location; _ }
     | Synext.Signature.Declaration.CompCotyp { location; _ }
@@ -445,6 +443,8 @@ module Make
         reconstruct_module_declaration location identifier entries
 
   and reconstruct_lf_typ_declaration location identifier extK =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Typ at: %a" Location.print_short location);
@@ -488,6 +488,8 @@ module Make
     return (Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' })
 
   and reconstruct_lf_const_declaration location identifier extT =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Const at: %a" Location.print_short location);
@@ -546,6 +548,8 @@ module Make
 
   and reconstruct_comp_typ_constant location identifier kind datatype_flavour
       =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "Indexing computation-level data-type constant %a"
           Identifier.pp identifier);
@@ -606,6 +610,8 @@ module Make
          })
 
   and reconstruct_comp_cotyp_constant location identifier kind =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompCotyp at: %a" Location.print location);
     dprintf (fun p ->
@@ -652,7 +658,9 @@ module Make
     return
       (Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' })
 
-  and reconstruct_comp_constructor location identifier typ =
+  and reconstruct_comp_constructor location ~stratNum identifier typ =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompConst at: %a" Location.print_short
           location);
@@ -720,6 +728,8 @@ module Make
 
   and reconstruct_comp_destructor location identifier observation_type
       return_type =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompDest at: %a" Location.print_short
           location);
@@ -786,6 +796,8 @@ module Make
          })
 
   and reconstruct_schema_declaration location identifier schema =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Schema at: %a@." Location.print_short
@@ -820,6 +832,8 @@ module Make
       (Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' })
 
   and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     (* index cT in a context which contains arguments to cK *)
     let* apx_tau, apxK = index_comp_typedef cT cK in
@@ -854,6 +868,8 @@ module Make
         reconstruct_typed_val_declaration location identifier typ expression
 
   and reconstruct_untyped_val_declaration location identifier expression =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at: %a" Location.print_short location);
@@ -912,6 +928,8 @@ module Make
          })
 
   and reconstruct_typed_val_declaration location identifier tau expression =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at %a" Location.print_short location);
@@ -984,6 +1002,8 @@ module Make
 
   and reconstruct_query_pragma location identifier_opt cD extT
       expected_solutions maximum_tries =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let name_opt = Option.map Name.make_from_identifier identifier_opt in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);

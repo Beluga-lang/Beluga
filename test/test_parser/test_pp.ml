@@ -77,7 +77,7 @@ let pp_and_parse_signature_files =
             Printer.(run (pp_signature_file x ++ pp_newline) printing_state)
           in
           let parser_state', () =
-            Parser.put_parser_state
+            Parser.set_parser_state
               (Parser.make_initial_parser_state_from_string
                  ~initial_location:Location.ghost (Buffer.contents buffer))
               parser_state
@@ -94,8 +94,8 @@ let pp_and_parse_signature_files =
 let assert_equal_as_json f ~expected ~actual =
   assert_json_equal ~expected:(f expected) ~actual:(f actual)
 
-let make_compiler_test ?(save_json_to_file = false)
-    ?(save_pp_to_file = false) compiler_test_file =
+let make_compiler_test ?(save_json_to_file = true) ?(save_pp_to_file = false)
+    compiler_test_file =
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =
@@ -107,8 +107,7 @@ let make_compiler_test ?(save_json_to_file = false)
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Simple.parse_multi_file_signature
-          signature_source_files
+        Beluga_parser.Simple.read_multi_file_signature signature_source_files
       in
       if save_json_to_file then save_signature_files_json signature;
       if save_pp_to_file then save_signature_files_pp signature;

@@ -137,10 +137,10 @@ end
 
 module Make
     (Parser : Parser_combinator.PARSER
-                with type token = Location.t * Token.t
+                with type token = Located_token.t
                  and type location = Location.t) :
   COMMON_PARSER
-    with type token = Location.t * Token.t
+    with type token = Located_token.t
      and type location = Location.t
      and type state = Parser.state
      and type input = Parser.input = struct
@@ -156,7 +156,7 @@ module Make
 
   let token expected =
     satisfy (function
-      | Option.Some (_location, actual) ->
+      | Option.Some { Located_token.token = actual; _ } ->
           if Token.equal expected actual then Result.ok ()
           else Result.error (Unexpected_token { expected; actual })
       | Option.None -> Result.error (Unexpected_end_of_input { expected }))
@@ -204,10 +204,10 @@ module Make
     | "toshow" -> token Token.KW_TOSHOW
     | kw ->
         satisfy (function
-          | Option.Some (_location, Token.IDENT kw') when String.equal kw kw'
-            ->
+          | Option.Some { Located_token.token = Token.IDENT kw'; _ }
+            when String.equal kw kw' ->
               Result.ok ()
-          | Option.Some (_location, token) ->
+          | Option.Some { Located_token.token; _ } ->
               Result.error
                 (Expected_keyword
                    { expected_keyword = kw; actual = Option.some token })
@@ -220,8 +220,9 @@ module Make
 
   let integer =
     satisfy (function
-      | Option.Some (_location, Token.INTLIT k) -> Result.ok k
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token = Token.INTLIT k; _ } ->
+          Result.ok k
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_integer_literal { actual = Option.some token })
       | Option.None ->
@@ -231,8 +232,9 @@ module Make
 
   let dot_integer =
     satisfy (function
-      | Option.Some (_location, Token.DOT_INTLIT k) -> Result.ok k
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token = Token.DOT_INTLIT k; _ } ->
+          Result.ok k
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_dot_integer_literal { actual = Option.some token })
       | Option.None ->
@@ -247,9 +249,10 @@ module Make
 
   let pragma s =
     satisfy (function
-      | Option.Some (_location, Token.PRAGMA s') when String.equal s s' ->
+      | Option.Some { Located_token.token = Token.PRAGMA s'; _ }
+        when String.equal s s' ->
           Result.ok ()
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_pragma
                { expected_pragma = s; actual = Option.some token })
@@ -261,8 +264,9 @@ module Make
 
   let string_literal =
     satisfy (function
-      | Option.Some (_location, Token.STRING s) -> Result.ok s
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token = Token.STRING s; _ } ->
+          Result.ok s
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_string_literal { actual = Option.some token })
       | Option.None ->
@@ -376,9 +380,10 @@ module Make
 
   let identifier =
     satisfy (function
-      | Option.Some (location, Token.IDENT identifier) ->
+      | Option.Some
+          { Located_token.token = Token.IDENT identifier; location } ->
           Result.ok (Identifier.make ~location identifier)
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error (Expected_identifier { actual = Option.some token })
       | Option.None ->
           Result.error (Expected_identifier { actual = Option.none }))
@@ -388,9 +393,10 @@ module Make
 
   let dot_identifier =
     satisfy (function
-      | Option.Some (location, Token.DOT_IDENT identifier) ->
+      | Option.Some
+          { Located_token.token = Token.DOT_IDENT identifier; location } ->
           Result.ok (Identifier.make ~location identifier)
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_dot_identifier { actual = Option.some token })
       | Option.None ->
@@ -416,12 +422,15 @@ module Make
     let dot_identifier_and_insert_ident =
       span dot_identifier >>= fun (location, identifier) ->
       let ident_token =
-        (location, Token.IDENT (Identifier.name identifier))
+        Located_token.make ~location
+          ~token:(Token.IDENT (Identifier.name identifier))
       in
       insert_token ident_token
     and dot_integer_and_insert_intlit =
       span dot_integer >>= fun (location, integer) ->
-      let intlit_token = (location, Token.INTLIT integer) in
+      let intlit_token =
+        Located_token.make ~location ~token:(Token.INTLIT integer)
+      in
       insert_token intlit_token
     in
     choice
@@ -434,9 +443,10 @@ module Make
 
   let hash_identifier =
     satisfy (function
-      | Option.Some (location, Token.HASH_IDENT identifier) ->
+      | Option.Some
+          { Located_token.token = Token.HASH_IDENT identifier; location } ->
           Result.ok (Identifier.make ~location identifier)
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_hash_identifier { actual = Option.some token })
       | Option.None ->
@@ -447,9 +457,10 @@ module Make
 
   let dollar_identifier =
     satisfy (function
-      | Option.Some (location, Token.DOLLAR_IDENT s) ->
+      | Option.Some { Located_token.token = Token.DOLLAR_IDENT s; location }
+        ->
           Result.ok (Identifier.make ~location s)
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_dollar_identifier { actual = Option.some token })
       | Option.None ->
@@ -536,11 +547,13 @@ module Make
 
   let hole =
     satisfy (function
-      | Option.Some (_location, Token.HOLE Option.None) ->
+      | Option.Some { Located_token.token = Token.HOLE Option.None; _ } ->
           Result.ok `Unlabelled
-      | Option.Some (location, Token.HOLE (Option.Some label)) ->
+      | Option.Some
+          { Located_token.token = Token.HOLE (Option.Some label); location }
+        ->
           Result.ok (`Labelled (Identifier.make ~location label))
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error (Expected_hole { actual = Option.some token })
       | Option.None -> Result.error (Expected_hole { actual = Option.none }))
 
@@ -548,9 +561,10 @@ module Make
 
   let block_comment =
     satisfy (function
-      | Option.Some (location, Token.BLOCK_COMMENT content) ->
+      | Option.Some
+          { Located_token.token = Token.BLOCK_COMMENT content; location } ->
           Result.ok (location, content)
-      | Option.Some (_location, token) ->
+      | Option.Some { Located_token.token; _ } ->
           Result.error
             (Expected_block_comment { actual = Option.some token })
       | Option.None ->

@@ -14,7 +14,7 @@ end
 
 module Make
     (Parser : COMMON_PARSER
-                with type token = Location.t * Token.t
+                with type token = Located_token.t
                  and type location = Location.t) :
   LF_PARSER
     with type token = Parser.token

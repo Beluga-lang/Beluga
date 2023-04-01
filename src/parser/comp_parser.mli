@@ -20,7 +20,7 @@ end
 
 module Make
     (Parser : COMMON_PARSER
-                with type token = Location.t * Token.t
+                with type token = Located_token.t
                  and type location = Location.t)
     (Meta_parser : Meta_parser.META_PARSER
                      with type token = Parser.token

@@ -164,7 +164,10 @@ let rec tokenize_documentation_comment start_delimiter_locations
       Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
 
 let rec tokenize lexbuf =
-  let[@inline] const t = Option.some (get_location lexbuf, t) in
+  let[@inline] const token =
+    let location = get_location lexbuf in
+    Option.some (Located_token.make ~location ~token)
+  in
   match%sedlex lexbuf with
   (* comments *)
   | eof -> Option.none
@@ -184,7 +187,9 @@ let rec tokenize lexbuf =
           start_delimiter_location
       in
       let contents = Buffer.contents documentation_comment_buffer in
-      Option.some (location, Token.BLOCK_COMMENT (String.trim contents))
+      Option.some
+        (Located_token.make ~location
+           ~token:(Token.BLOCK_COMMENT (String.trim contents)))
   | "}}%" ->
       Error.raise_at1 (get_location lexbuf) Mismatched_documentation_comment
   | "%{" ->
@@ -310,7 +315,7 @@ let rec tokenize lexbuf =
           ~start_position:(shift_position start_position 1)
           ~stop_position
       in
-      Option.some (location, Token.DOT_IDENT s)
+      Option.some (Located_token.make ~location ~token:(Token.DOT_IDENT s))
   | dot_intlit ->
       (* Adjust location to ignore the leading ['.'] *)
       let prefix_length = String.length "." in
@@ -328,7 +333,7 @@ let rec tokenize lexbuf =
           ~start_position:(shift_position start_position 1)
           ~stop_position
       in
-      Option.some (location, Token.DOT_INTLIT n)
+      Option.some (Located_token.make ~location ~token:(Token.DOT_INTLIT n))
   | hash_ident ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       const (Token.HASH_IDENT s)

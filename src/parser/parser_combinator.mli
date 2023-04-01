@@ -39,9 +39,9 @@
       type 'a parser = state -> state * ('a, exn) result
     ]}
 
-    where [state] contains a [(Location.t * Token.t) Seq.t] for the input as
-    well as extra stuff for handling backtracking. This is an instance of the
-    state monad as defined in {!Support.State.STATE}.
+    where [state] contains a [Located_token.t Seq.t] for the input as well as
+    extra stuff for handling backtracking. This is an instance of the state
+    monad as defined in {!Support.State.STATE}.
 
     {2 Backtracking}
 

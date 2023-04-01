@@ -11,6 +11,7 @@ module type PARSER_STATE = Common_parser.PARSER_STATE
 
 module Parser_combinator = Parser_combinator
 module Token = Token
+module Located_token = Located_token
 module Common_parser = Common_parser
 module Lf_parser = Lf_parser
 module Clf_parser = Clf_parser
@@ -35,7 +36,7 @@ module Signature_disambiguation = Signature_disambiguation
 
 module Make
     (Parser_state : PARSER_STATE
-                      with type token = Location.t * Token.t
+                      with type token = Located_token.t
                        and type location = Location.t)
     (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
@@ -102,24 +103,24 @@ struct
   let[@inline] make_state ~disambiguation_state ~parser_state =
     { parser_state; disambiguation_state }
 
-  let[@inline] put_parser_state parser_state =
-    modify (fun state -> { state with parser_state })
-
-  let[@inline] put_disambiguation_state disambiguation_state =
-    modify (fun state -> { state with disambiguation_state })
-
   let get_parser_state =
     let* state = get in
     return state.parser_state
+
+  let[@inline] set_parser_state parser_state =
+    modify (fun state -> { state with parser_state })
 
   let get_disambiguation_state =
     let* state = get in
     return state.disambiguation_state
 
+  let[@inline] set_disambiguation_state disambiguation_state =
+    modify (fun state -> { state with disambiguation_state })
+
   let parse parser =
     let* parser_state = get_parser_state in
     let parser_state', parsed = Parser_state.run parser parser_state in
-    let* () = put_parser_state parser_state' in
+    let* () = set_parser_state parser_state' in
     return parsed
 
   let disambiguate disambiguator =
@@ -127,7 +128,7 @@ struct
     let disambiguation_state', disambiguated =
       Disambiguation_state.run disambiguator disambiguation_state
     in
-    let* () = put_disambiguation_state disambiguation_state' in
+    let* () = set_disambiguation_state disambiguation_state' in
     return disambiguated
 
   let parse_and_disambiguate ~parser ~disambiguator =
@@ -188,14 +189,6 @@ struct
       ~disambiguator:disambiguate_signature_file
 end
 
-module Located_token = struct
-  type t = Location.t * Token.t
-
-  type location = Location.t
-
-  let location = Pair.fst
-end
-
 module Simple = struct
   module Parser_state =
     Parser_combinator.Make_persistent_state (Located_token)
@@ -227,7 +220,7 @@ module Simple = struct
     in
     make_state ~disambiguation_state ~parser_state
 
-  let read_signature filename =
+  let read_and_parse_signature filename =
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let _parser_state', signature =
@@ -237,11 +230,11 @@ module Simple = struct
         in
         signature)
 
-  let parse_multi_file_signature files =
+  let read_multi_file_signature files =
     let signature =
       (* For OCaml >= 5, spawn a parallel domain for each call to
          {!read_signature}] *)
-      List1.map read_signature files
+      List1.map read_and_parse_signature files
     in
     let _disambiguation_state', signature' =
       disambiguate_signature signature Disambiguation_state.initial_state

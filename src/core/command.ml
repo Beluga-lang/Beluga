@@ -7,7 +7,6 @@
 open Support.Equality
 open Support
 module P = Pretty.Int.DefaultPrinter
-open Format
 open Syntax.Int
 
 (* the type of commands *)
@@ -27,8 +26,8 @@ let command_with_arguments (n : int) f ppf arglist =
   let n' = List.length arglist in
   if n' = n then f ppf arglist
   else
-    fprintf ppf "- Command requires %d arguments, but %d were given;\n@?" n
-      n'
+    Format.fprintf ppf
+      "- Command requires %d arguments, but %d were given;\n@?" n n'
 
 let reg : command list ref = ref []
 
@@ -36,7 +35,7 @@ let countholes =
   { name = "countholes"
   ; run =
       command_with_arguments 0 (fun ppf _ ->
-          fprintf ppf "%d;\n@?" (Holes.count ()))
+          Format.fprintf ppf "%d;\n@?" (Holes.count ()))
   ; help = "Print the total number of holes"
   }
 
@@ -45,7 +44,7 @@ let chatteron =
   ; run =
       command_with_arguments 0 (fun ppf _ ->
           Chatter.level := 1;
-          fprintf ppf "The chatter is on now;\n@?")
+          Format.fprintf ppf "The chatter is on now;\n@?")
   ; help = "Turn on the chatter"
   }
 
@@ -54,7 +53,7 @@ let chatteroff =
   ; run =
       command_with_arguments 0 (fun ppf _ ->
           Chatter.level := 0;
-          fprintf ppf "The chatter is off now;\n@?")
+          Format.fprintf ppf "The chatter is off now;\n@?")
   ; help = "Turn off the chatter"
   }
 
@@ -66,9 +65,10 @@ let types =
             List.map Pair.snd (Store.Cid.Typ.current_entries ())
           in
           let dctx = Synint.LF.Null in
-          fprintf ppf "@[<v>%a@];\n@?"
-            (pp_print_list ~pp_sep:pp_print_cut (fun ppf x ->
-                 fprintf ppf "%a : %a" Name.pp x.Store.Cid.Typ.Entry.name
+          Format.fprintf ppf "@[<v>%a@];\n@?"
+            (Format.pp_print_list ~pp_sep:Format.pp_print_cut (fun ppf x ->
+                 Format.fprintf ppf "%a : %a" Name.pp
+                   x.Store.Cid.Typ.Entry.name
                    (P.fmt_ppr_lf_kind dctx P.l0)
                    x.Store.Cid.Typ.Entry.kind))
             entrylist)
@@ -82,7 +82,7 @@ let reset =
           Store.clear ();
           Typeinfo.clear_all ();
           Holes.clear ();
-          fprintf ppf "Reset successful;\n@?")
+          Format.fprintf ppf "Reset successful;\n@?")
   ; help = "Reset the store"
   }
 
@@ -95,14 +95,14 @@ let clearholes =
 let reload, load =
   let do_load ppf path =
     ignore (Load.load ppf path);
-    fprintf ppf "The file %s has been successfully loaded;\n@?" path
+    Format.fprintf ppf "The file %s has been successfully loaded;\n@?" path
   in
   let last_load : string option ref = ref Option.none in
   ( { name = "reload"
     ; run =
         command_with_arguments 0 (fun ppf arglist ->
             match !last_load with
-            | Option.None -> fprintf ppf "- No load to repeat;@?"
+            | Option.None -> Format.fprintf ppf "- No load to repeat;@?"
             | Option.Some path -> do_load ppf path)
     ; help = "Repeats the last load command."
     }
@@ -126,12 +126,12 @@ let with_hole_from_strategy_string ppf (strat : string)
     (f : HoleId.t * Holes.some_hole -> unit) : unit =
   match Holes.parse_lookup_strategy strat with
   | Option.None ->
-      fprintf ppf "- Failed to parse hole identifier `%s';\n@?" strat
+      Format.fprintf ppf "- Failed to parse hole identifier `%s';\n@?" strat
   | Option.Some s -> (
       match Holes.get s with
       | Option.Some id_and_hole -> f id_and_hole
       | Option.None ->
-          fprintf ppf "- No such hole %s;\n@?"
+          Format.fprintf ppf "- No such hole %s;\n@?"
             (Holes.string_of_lookup_strategy s))
 
 let requiring_hole_satisfies (check : Holes.some_hole -> bool)
@@ -158,7 +158,7 @@ let string_of_id_hole (i, h) = HoleId.string_of_name_or_id (h.Holes.name, i)
 let check_is_unsolved ppf =
   ( Holes.is_unsolved
   , fun (id, Holes.Exists (_, h)) ->
-      fprintf ppf "- Hole %s is already solved;\n@?"
+      Format.fprintf ppf "- Hole %s is already solved;\n@?"
         (string_of_id_hole (id, h)) )
 
 let requiring_computation_hole ppf
@@ -171,7 +171,7 @@ let requiring_computation_hole ppf
       match w with
       | CompInfo -> f (id, h)
       | _ ->
-          fprintf ppf "- Hole %s is not a computational hole;\n@?"
+          Format.fprintf ppf "- Hole %s is not a computational hole;\n@?"
             (string_of_id_hole (id, h)))
     p
 
@@ -185,7 +185,7 @@ let requiring_lf_hole ppf
       match w with
       | LFInfo -> f (id, h)
       | _ ->
-          fprintf ppf "- Hole %s is not an LF hole;\n@?"
+          Format.fprintf ppf "- Hole %s is not an LF hole;\n@?"
             (string_of_id_hole (id, h)))
     p
 
@@ -195,7 +195,7 @@ let printhole =
       command_with_arguments 1 (fun ppf arglist ->
           let s = List.hd arglist in
           with_hole_from_strategy_string ppf s
-            (fprintf ppf "%a;\n" Interactive.fmt_ppr_hole))
+            (Format.fprintf ppf "%a;\n" Interactive.fmt_ppr_hole))
   ; help =
       "Print out all the information of the i-th hole passed as a \
        parameter@?"
@@ -214,7 +214,7 @@ let lochole =
               let stop_line = Beluga_syntax.Location.stop_line location in
               let stop_bol = Beluga_syntax.Location.stop_bol location in
               let stop_off = Beluga_syntax.Location.stop_offset location in
-              fprintf ppf "(\"%s\" %d %d %d %d %d %d);\n@?" file_name
+              Format.fprintf ppf "(\"%s\" %d %d %d %d %d %d);\n@?" file_name
                 start_line start_bol start_off stop_line stop_bol stop_off))
   ; help =
       "Print out the location information of the i-th hole passed as a \
@@ -246,14 +246,14 @@ let solvelfhole =
                         Pretty.Int.DefaultPrinter.fmt_ppr_lf_normal cD ctx
                           P.l0 ppf norm;
 
-                        fprintf ppf "\n";
+                        Format.fprintf ppf "\n";
                         incr n;
                         if !n = 10 then raise Logic.Frontend.Done)
                       (Option.some 100)
                   with
                  | Logic.Frontend.Done -> ()
                  | e -> raise e);
-                 fprintf ppf ";\n@?")))
+                 Format.fprintf ppf ";\n@?")))
   ; help = "Use logic programming to solve an LF hole"
   }
 
@@ -269,9 +269,9 @@ let constructors =
             List.map Store.Cid.Term.get
               !(entry.Store.Cid.Typ.Entry.constructors)
           in
-          fprintf ppf "@[<v>%a@]@.;@."
-            (pp_print_list ~pp_sep:pp_print_cut (fun ppf x ->
-                 fprintf ppf "%a : [%d] %a" Name.pp
+          Format.fprintf ppf "@[<v>%a@]@.;@."
+            (Format.pp_print_list ~pp_sep:Format.pp_print_cut (fun ppf x ->
+                 Format.fprintf ppf "%a : [%d] %a" Name.pp
                    x.Store.Cid.Term.Entry.name
                    x.Store.Cid.Term.Entry.implicit_arguments
                    (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0)
@@ -285,7 +285,7 @@ let helpme =
   ; run =
       command_with_arguments 0 (fun ppf _ ->
           List.iter
-            (fun x -> fprintf ppf "%%:%20s\t %s\n@?" x.name x.help)
+            (fun x -> Format.fprintf ppf "%%:%20s\t %s\n@?" x.name x.help)
             !reg)
   ; help = "list all available commands with a short description"
   }
@@ -296,12 +296,12 @@ let helpme =
 let do_split ppf (hi : HoleId.t * Holes.comp_hole_info Holes.hole)
     (var : string) : unit =
   match Interactive.split var hi with
-  | Option.None -> fprintf ppf "- No variable %s found;\n@?" var
+  | Option.None -> Format.fprintf ppf "- No variable %s found;\n@?" var
   | Option.Some exp ->
       let _, h = hi in
       let { Holes.cG; _ } = h.Holes.info in
       Printer.Control.printNormal := true;
-      fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp;
+      Format.fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp;
       Printer.Control.printNormal := false
 
 let split =
@@ -324,7 +324,9 @@ let intro =
                  let exp = Interactive.intro h in
                  let Holes.{ cD; info = { Holes.cG; _ }; _ } = h in
                  Printer.Control.printNormal := true;
-                 fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp cD cG P.l0) exp;
+                 Format.fprintf ppf "%a;\n@?"
+                   (P.fmt_ppr_cmp_exp cD cG P.l0)
+                   exp;
                  Printer.Control.printNormal := false)))
   ; help = "- intro n tries to introduce variables in the nth hole"
   }
@@ -342,16 +344,17 @@ let compconst =
               List.map Store.Cid.CompConst.get
                 !(entry.Store.Cid.CompTyp.Entry.constructors)
             in
-            fprintf ppf "@[<v>%a@]@.;@."
-              (pp_print_list ~pp_sep:pp_print_cut (fun ppf x ->
-                   fprintf ppf "%s : [%d] %a"
+            Format.fprintf ppf "@[<v>%a@]@.;@."
+              (Format.pp_print_list ~pp_sep:Format.pp_print_cut (fun ppf x ->
+                   Format.fprintf ppf "%s : [%d] %a"
                      (Name.string_of_name x.Store.Cid.CompConst.Entry.name)
                      x.Store.Cid.CompConst.Entry.implicit_arguments
                      (P.fmt_ppr_cmp_typ LF.Empty P.l0)
                      x.Store.Cid.CompConst.Entry.typ))
               termlist
           with
-          | Not_found -> fprintf ppf "- The type %s does not exist;\n@?" arg)
+          | Not_found ->
+              Format.fprintf ppf "- The type %s does not exist;\n@?" arg)
   ; help =
       "Print all constructors of a given computational datatype passed as a \
        parameter"
@@ -366,11 +369,13 @@ let signature =
             let entry =
               Store.Cid.Comp.index_of_name name |> Store.Cid.Comp.get
             in
-            fprintf ppf "%a : %a;@." Name.pp entry.Store.Cid.Comp.Entry.name
+            Format.fprintf ppf "%a : %a;@." Name.pp
+              entry.Store.Cid.Comp.Entry.name
               (P.fmt_ppr_cmp_typ LF.Empty P.l0)
               entry.Store.Cid.Comp.Entry.typ
           with
-          | Not_found -> fprintf ppf "- The function does not exist;\n@?")
+          | Not_found ->
+              Format.fprintf ppf "- The function does not exist;\n@?")
   ; help =
       "fsig e : Prints the signature of the function e, if such function is \
        currently defined"
@@ -382,7 +387,9 @@ let printfun =
       command_with_arguments 1 (fun ppf [ arg ] ->
           try
             let name = Name.(mk_name (SomeString arg)) in
-            let entry = Store.Cid.Comp.get (Store.Cid.Comp.index_of_name name) in
+            let entry =
+              Store.Cid.Comp.get (Store.Cid.Comp.index_of_name name)
+            in
             match Store.Cid.Comp.Entry.(entry.prog) with
             | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
                 let d =
@@ -399,10 +406,10 @@ let printfun =
                      { location = Beluga_syntax.Location.ghost
                      ; theorems = List1.singleton d
                      })
-            | _ -> fprintf ppf "- %s is not a function.;\n@?" arg
+            | _ -> Format.fprintf ppf "- %s is not a function.;\n@?" arg
           with
           | Not_found ->
-              fprintf ppf "- The function %s does not exist;\n@?" arg)
+              Format.fprintf ppf "- The function %s does not exist;\n@?" arg)
   ; help = "Print all the type of the functions currently defined"
   }
 
@@ -410,7 +417,7 @@ let quit =
   { name = "quit"
   ; run =
       (fun ppf _ ->
-        fprintf ppf "Bye bye;@?";
+        Format.fprintf ppf "Bye bye;@?";
         exit 0)
   ; help = "Exit interactive mode"
   }
@@ -468,10 +475,11 @@ let query =
             (Option.map Name.make_from_identifier identifier)
             (tA', i) cD expected tries;
           Logic.runLogic ();
-          fprintf ppf ";\n@?"
+          Format.fprintf ppf ";\n@?"
         with
         | e ->
-            fprintf ppf "- Error in query : %s;\n@?" (Printexc.to_string e))
+            Format.fprintf ppf "- Error in query : %s;\n@?"
+              (Printexc.to_string e))
   ; help = "%:query EXPECTED TRIES TYP.\tQuery solutions to a given type"
   }
 
@@ -482,7 +490,7 @@ let get_type =
           let line = ExtString.String.to_int line in
           let col = ExtString.String.to_int col in
           let typ = Typeinfo.type_of_position line col in
-          fprintf ppf "%s;\n@?" typ)
+          Format.fprintf ppf "%s;\n@?" typ)
   ; help =
       "get-type [line] [column] Get the type at a location (for use in \
        emacs)"
@@ -493,7 +501,7 @@ let lookup_hole =
   ; run =
       command_with_arguments 1 (fun ppf [ strat ] ->
           with_hole_from_strategy_string ppf strat (fun (i, _) ->
-              fprintf ppf "%s;\n@?" (HoleId.string_of_hole_id i)))
+              Format.fprintf ppf "%s;\n@?" (HoleId.string_of_hole_id i)))
   ; help = "looks up a hole's number by its name"
   }
 
@@ -535,28 +543,18 @@ let is_command str =
   else `Input str
 
 let do_command ppf cmd =
-  let e =
-    let open Either in
-    Either.trap (fun () -> ExtString.String.nsplit cmd " ") >>= fun args ->
-    match args with
-    | [] -> Either.right ()
-    | cmd_name :: args -> (
-        match List.find_opt (fun x -> String.equal cmd_name x.name) !reg with
-        | Option.None ->
-            Either.right (fprintf ppf "- No such command %s;\n@?" cmd_name)
-        | Option.Some command -> Either.trap (fun () -> command.run ppf args)
-        )
-  in
-  Either.eliminate
-    (fun e ->
-      try raise e with
-      | ExtString.Invalid_string ->
-          fprintf ppf "- Failed to split command line by spaces;\n@?"
-      | e ->
-          fprintf ppf "- Unhandled exception: %s;\n@?" (Printexc.to_string e))
-    (fun () -> ())
-    e
+  match ExtString.String.nsplit cmd " " with
+  | [] -> ()
+  | cmd_name :: args -> (
+      match List.find_opt (fun x -> String.equal cmd_name x.name) !reg with
+      | Option.None ->
+          Format.fprintf ppf "- No such command %s;\n@?" cmd_name
+      | Option.Some command -> (
+          try command.run ppf args with
+          | e ->
+              Format.fprintf ppf "- Unhandled exception: %s;\n@?"
+                (Printexc.to_string e)))
 
 let print_usage ppf =
-  fprintf ppf "Usage: \n";
+  Format.fprintf ppf "Usage: \n";
   helpme.run ppf []

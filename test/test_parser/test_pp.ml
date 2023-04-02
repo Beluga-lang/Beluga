@@ -4,6 +4,12 @@ open Util
 open Base_json
 open Synext_json
 open Assert
+open Beluga_parser.Simple
+
+let parse_only_signature_file =
+  parse_and_disambiguate
+    ~parser:Parsing.(only signature_file)
+    ~disambiguator:Disambiguation.disambiguate_signature_file
 
 exception Empty_configuration_file
 
@@ -64,8 +70,8 @@ let pp_and_parse_signature_files =
       Printer.(run (pp_signature_file x ++ pp_newline) printing_state)
     in
     let parser_state, y =
-      Parser.run Parser.parse_only_signature_file
-        (Parser.make_initial_state_from_string
+      run parse_only_signature_file
+        (make_initial_state_from_string
            ~disambiguation_state:Disambiguation_state.initial_state
            ~initial_location:Location.ghost ~input:(Buffer.contents buffer))
     in
@@ -77,13 +83,13 @@ let pp_and_parse_signature_files =
             Printer.(run (pp_signature_file x ++ pp_newline) printing_state)
           in
           let parser_state', () =
-            Parser.set_parser_state
-              (Parser.make_initial_parser_state_from_string
+            set_parser_state
+              (make_initial_parser_state_from_string
                  ~initial_location:Location.ghost (Buffer.contents buffer))
               parser_state
           in
           let parser_state'', y =
-            Parser.run Parser.parse_only_signature_file parser_state'
+            run parse_only_signature_file parser_state'
           in
           (printing_state', parser_state'', y :: ys_rev))
         (printing_state', parser_state, [])
@@ -94,8 +100,8 @@ let pp_and_parse_signature_files =
 let assert_equal_as_json f ~expected ~actual =
   assert_json_equal ~expected:(f expected) ~actual:(f actual)
 
-let make_compiler_test ?(save_json_to_file = true) ?(save_pp_to_file = false)
-    compiler_test_file =
+let make_compiler_test ?(save_json_to_file = false)
+    ?(save_pp_to_file = false) compiler_test_file =
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =

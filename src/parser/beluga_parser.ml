@@ -40,54 +40,61 @@ module Make
                        and type location = Location.t)
     (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
-  module Parser_combinator = Parser_combinator.Make (Parser_state)
-  module Common_parser = Common_parser.Make (Parser_combinator)
-  module Lf_parser = Lf_parser.Make (Common_parser)
-  module Clf_parser = Clf_parser.Make (Common_parser)
-  module Meta_parser =
-    Meta_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
-  module Comp_parser = Comp_parser.Make (Common_parser) (Meta_parser)
-  module Harpoon_parser =
-    Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
-  module Signature_parser =
-    Signature_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
-      (Meta_parser)
-      (Comp_parser)
-      (Harpoon_parser)
-  module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
-  module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
-  module Meta_disambiguator =
-    Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
-      (Clf_disambiguator)
-  module Comp_disambiguator =
-    Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
-  module Harpoon_disambiguator =
-    Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
-      (Comp_disambiguator)
-  module Signature_disambiguator =
-    Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
-      (Clf_disambiguator)
-      (Meta_disambiguator)
-      (Comp_disambiguator)
-      (Harpoon_disambiguator)
-  include Parser_combinator
-  include Common_parser
-  include Lf_parser
-  include Clf_parser
-  include Meta_parser
-  include Comp_parser
-  include Harpoon_parser
-  include Signature_parser
-  include Lf_disambiguator
-  include Clf_disambiguator
-  include Meta_disambiguator
-  include Comp_disambiguator
-  include Harpoon_disambiguator
-  include Signature_disambiguator
+  module Parsing = struct
+    module Parser_combinator = Parser_combinator.Make (Parser_state)
+    module Common_parser = Common_parser.Make (Parser_combinator)
+    module Lf_parser = Lf_parser.Make (Common_parser)
+    module Clf_parser = Clf_parser.Make (Common_parser)
+    module Meta_parser =
+      Meta_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
+    module Comp_parser = Comp_parser.Make (Common_parser) (Meta_parser)
+    module Harpoon_parser =
+      Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
+    module Signature_parser =
+      Signature_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
+        (Meta_parser)
+        (Comp_parser)
+        (Harpoon_parser)
+    include Parser_state
+    include Parser_combinator
+    include Common_parser
+    include Lf_parser
+    include Clf_parser
+    include Meta_parser
+    include Comp_parser
+    include Harpoon_parser
+    include Signature_parser
+  end
 
-  type disambiguation_state = Disambiguation_state.state
+  module Disambiguation = struct
+    module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
+    module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
+    module Meta_disambiguator =
+      Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+        (Clf_disambiguator)
+    module Comp_disambiguator =
+      Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
+    module Harpoon_disambiguator =
+      Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
+        (Comp_disambiguator)
+    module Signature_disambiguator =
+      Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+        (Clf_disambiguator)
+        (Meta_disambiguator)
+        (Comp_disambiguator)
+        (Harpoon_disambiguator)
+    include Disambiguation_state
+    include Lf_disambiguator
+    include Clf_disambiguator
+    include Meta_disambiguator
+    include Comp_disambiguator
+    include Harpoon_disambiguator
+    include Signature_disambiguator
+  end
 
-  type parser_state = Common_parser.state
+  type parser_state = Parsing.state
+
+  type disambiguation_state = Disambiguation.state
 
   type state =
     { parser_state : parser_state
@@ -132,61 +139,9 @@ struct
     return disambiguated
 
   let parse_and_disambiguate ~parser ~disambiguator =
-    let* parsed = parse (run_exn parser) in
+    let* parsed = parse (Parsing.run_exn parser) in
     let* disambiguated = disambiguate (disambiguator parsed) in
     return disambiguated
-
-  let parse_only_lf_kind =
-    parse_and_disambiguate ~parser:(only lf_kind)
-      ~disambiguator:disambiguate_lf_kind
-
-  let parse_only_lf_typ =
-    parse_and_disambiguate ~parser:(only lf_typ)
-      ~disambiguator:disambiguate_lf_typ
-
-  let parse_only_lf_term =
-    parse_and_disambiguate ~parser:(only lf_term)
-      ~disambiguator:disambiguate_lf_term
-
-  let parse_only_clf_typ =
-    parse_and_disambiguate ~parser:(only clf_typ)
-      ~disambiguator:disambiguate_clf_typ
-
-  let parse_only_clf_term =
-    parse_and_disambiguate ~parser:(only clf_term)
-      ~disambiguator:disambiguate_clf_term
-
-  let parse_only_clf_substitution =
-    parse_and_disambiguate ~parser:(only clf_substitution)
-      ~disambiguator:disambiguate_clf_substitution
-
-  let parse_only_meta_typ =
-    parse_and_disambiguate ~parser:(only meta_type)
-      ~disambiguator:disambiguate_meta_typ
-
-  let parse_only_meta_object =
-    parse_and_disambiguate ~parser:(only meta_object)
-      ~disambiguator:disambiguate_meta_object
-
-  let parse_only_schema =
-    parse_and_disambiguate ~parser:(only schema)
-      ~disambiguator:disambiguate_schema
-
-  let parse_only_comp_kind =
-    parse_and_disambiguate ~parser:(only comp_kind)
-      ~disambiguator:disambiguate_comp_kind
-
-  let parse_only_comp_typ =
-    parse_and_disambiguate ~parser:(only comp_typ)
-      ~disambiguator:disambiguate_comp_typ
-
-  let parse_only_comp_expression =
-    parse_and_disambiguate ~parser:(only comp_expression)
-      ~disambiguator:disambiguate_comp_expression
-
-  let parse_only_signature_file =
-    parse_and_disambiguate ~parser:(only signature_file)
-      ~disambiguator:disambiguate_signature_file
 end
 
 module Simple = struct
@@ -224,7 +179,8 @@ module Simple = struct
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let _parser_state', signature =
-          run_exn (only signature_file)
+          Parsing.run_exn
+            (Parsing.only Parsing.signature_file)
             (make_initial_parser_state_from_channel ~initial_location
                in_channel)
         in
@@ -237,7 +193,8 @@ module Simple = struct
       List1.map read_and_parse_signature files
     in
     let _disambiguation_state', signature' =
-      disambiguate_signature signature Disambiguation_state.initial_state
+      Disambiguation.disambiguate_signature signature
+        Disambiguation_state.initial_state
     in
     signature'
 end

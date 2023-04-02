@@ -1,8 +1,62 @@
 open Test_beluga_parser_fixtures_lib
 open Beluga_syntax
-module Parser = Beluga_parser.Simple
-open Parser
 open Util.Synext_json
+open Beluga_parser.Simple
+
+let parse_only_lf_kind =
+  parse_and_disambiguate
+    ~parser:Parsing.(only lf_kind)
+    ~disambiguator:Disambiguation.disambiguate_lf_kind
+
+let parse_only_lf_typ =
+  parse_and_disambiguate
+    ~parser:Parsing.(only lf_typ)
+    ~disambiguator:Disambiguation.disambiguate_lf_typ
+
+let parse_only_lf_term =
+  parse_and_disambiguate
+    ~parser:Parsing.(only lf_term)
+    ~disambiguator:Disambiguation.disambiguate_lf_term
+
+let parse_only_clf_typ =
+  parse_and_disambiguate
+    ~parser:Parsing.(only clf_typ)
+    ~disambiguator:Disambiguation.disambiguate_clf_typ
+
+let parse_only_clf_term =
+  parse_and_disambiguate
+    ~parser:Parsing.(only clf_term)
+    ~disambiguator:Disambiguation.disambiguate_clf_term
+
+let parse_only_meta_typ =
+  parse_and_disambiguate
+    ~parser:Parsing.(only meta_type)
+    ~disambiguator:Disambiguation.disambiguate_meta_typ
+
+let parse_only_meta_object =
+  parse_and_disambiguate
+    ~parser:Parsing.(only meta_object)
+    ~disambiguator:Disambiguation.disambiguate_meta_object
+
+let parse_only_schema =
+  parse_and_disambiguate
+    ~parser:Parsing.(only schema)
+    ~disambiguator:Disambiguation.disambiguate_schema
+
+let parse_only_comp_kind =
+  parse_and_disambiguate
+    ~parser:Parsing.(only comp_kind)
+    ~disambiguator:Disambiguation.disambiguate_comp_kind
+
+let parse_only_comp_typ =
+  parse_and_disambiguate
+    ~parser:Parsing.(only comp_typ)
+    ~disambiguator:Disambiguation.disambiguate_comp_typ
+
+let parse_only_comp_expression =
+  parse_and_disambiguate
+    ~parser:Parsing.(only comp_expression)
+    ~disambiguator:Disambiguation.disambiguate_comp_expression
 
 let usage_message =
   {|
@@ -88,7 +142,7 @@ let generate_outputs ~state_filename ~input_filename ~output_filename
              |> Location.set_filename input_basename
            in
            let state =
-             Parser.make_initial_state_from_string ~disambiguation_state
+             make_initial_state_from_string ~disambiguation_state
                ~initial_location ~input
            in
            eval parse_test_case state)

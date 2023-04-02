@@ -97,7 +97,7 @@ let main () =
   Debug.init None;
   begin match files with
   | [file] ->
-     let _ = Load.load Format.std_formatter file in
+     let _ = Load.load file in
      ()
   | _ -> bailout "Wrong number of command line arguments."
   end;

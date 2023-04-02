@@ -94,7 +94,7 @@ let clearholes =
 
 let reload, load =
   let do_load ppf path =
-    ignore (Load.load ppf path);
+    ignore (Load.load path);
     Format.fprintf ppf "The file %s has been successfully loaded;\n@?" path
   in
   let last_load : string option ref = ref Option.none in

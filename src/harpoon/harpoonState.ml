@@ -211,7 +211,7 @@ let next_triple (s : t) =
     different subgoal, possibly in a different session/theorem.
     To preserve focus, combine this with `keeping_focus`. *)
 let reset s : unit =
-  let _ = Load.load (IO.formatter s.io) s.sig_path in
+  let _ = Load.load s.sig_path in
   let gs = Holes.get_harpoon_subgoals () |> List.map Pair.snd in
   let hooks = [run_automation s.automation_state] in
   let cs =

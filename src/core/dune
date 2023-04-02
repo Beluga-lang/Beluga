@@ -2,7 +2,7 @@
  (name beluga)
  (package beluga)
  (modules :standard)
- (libraries gen sedlex extlib support unix str beluga_syntax)
+ (libraries gen sedlex extlib support unix str beluga_syntax beluga_parser)
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))
 

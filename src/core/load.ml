@@ -2,131 +2,184 @@
 
 open Support
 open Beluga_syntax
+open Beluga_parser
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [ 11 ]))
 
 open Debug.Fmt
 
-let is_cfg filename = Filename.check_suffix filename ".cfg"
+module type LOAD_STATE = sig
+  include State.STATE
 
-(** Loads an entire input channel as a list of strings, each of which
-    representing one line. *)
-let rec accum_lines input =
-  try
-    let res = input_line input in
-    res :: accum_lines input
-  with
-  | End_of_file -> []
+  val read_signature_file : filename:String.t -> Synext.signature_file t
 
-let rec trim_comment str =
-  let len = String.length str in
-  match str with
-  | "" -> ""
-  | s when Char.equal s.[0] ' ' -> trim_comment (String.sub s 1 (len - 1))
-  | s when Char.equal s.[0] '\t' -> trim_comment (String.sub s 1 (len - 1))
-  | s when Char.equal s.[0] '%' -> ""
-  | s when Char.equal s.[len - 1] ' ' ->
-      trim_comment (String.sub s 0 (len - 1))
-  | s -> s
+  val reconstruct_signature_file : Synext.signature_file -> Synint.Sgn.sgn t
 
-let filter_lines files =
-  let files' = List.map trim_comment files in
-  List.filter (fun s -> String.length s != 0) files'
+  val get_leftover_vars :
+    (Abstract.free_var Synint.LF.ctx * Location.t) List.t t
+end
 
-(** Given a path to a cfg file and an open input channel to it, computes the
-    paths to all the referenced beluga files. *)
-let process_cfg_chan filename chan =
-  let lines = accum_lines chan in
-  close_in chan;
-  let dir = Filename.dirname filename ^ "/" in
-  List.map (fun x -> dir ^ x) (filter_lines lines)
+module Load_state = struct
+  open Beluga_parser.Simple
+  module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
+  module Index_state = Index_state.Persistent_indexing_state
+  module Signature_reconstruction_state =
+    Recsgn_state.Signature_reconstruction_state
 
-(** Given a path to a cfg file, computes the paths to all the references
-    beluga files. *)
-let resolve_cfg_paths filename =
-  let cfg = open_in filename in
-  process_cfg_chan filename cfg
+  type state =
+    { disambiguation_state : Disambiguation_state.state
+    ; signature_reconstruction_state : Signature_reconstruction_state.state
+    }
 
-(** Resolves a path specified to be loaded. If the path is a CFG file, it is
-    immediately loaded and the list of paths contained therein is returned.
-    If the path is not a CFG file, it is returned verbatim. *)
-let resolve_path f =
-  (* XXX should this recursively allow cfg paths within cfg files? -je *)
-  if is_cfg f then resolve_cfg_paths f else [ f ]
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
 
-let forbid_leftover_vars path = function
-  | Option.None -> ()
-  | Option.Some vars ->
-      Chatter.print 1 (fun ppf ->
-          Format.fprintf ppf
-            "@[<v>## Leftover variables: %s  ##@,  @[.a@]@]@." path);
-      raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
+  let initial_state =
+    { disambiguation_state = Disambiguation_state.initial_state
+    ; signature_reconstruction_state =
+        Signature_reconstruction_state.initial_state
+          Index_state.initial_state
+    }
 
-let load_file ppf file_name =
-  let[@warning "-26"] sgn = Obj.magic () in
+  let read_signature_file ~filename =
+    let* { disambiguation_state; _ } = get in
+    In_channel.with_open_bin filename (fun in_channel ->
+        let initial_location = Location.initial filename in
+        let initial_parser_state =
+          make_initial_state_from_channel ~initial_location
+            ~disambiguation_state ~channel:in_channel
+        in
+        let s, x =
+          Beluga_parser.Simple.run
+            (parse_and_disambiguate
+               ~parser:Parsing.(only signature_file)
+               ~disambiguator:Disambiguation.disambiguate_signature_file)
+            initial_parser_state
+        in
+        let _, disambiguation_state' =
+          Beluga_parser.Simple.get_disambiguation_state s
+        in
+        let* () =
+          modify (fun state ->
+              { state with disambiguation_state = disambiguation_state' })
+        in
+        return x)
 
-  Chatter.print 1 (fun ppf ->
-      Format.fprintf ppf "## Type Reconstruction begin: %s ##@." file_name);
+  let reconstruct_signature_file signature =
+    let* { signature_reconstruction_state; _ } = get in
+    let signature_reconstruction_state', signature' =
+      Signature_reconstruction_state.(
+        run
+          (Recsgn.Signature_reconstruction.reconstruct_signature_file
+             signature))
+        signature_reconstruction_state
+    in
+    let* () =
+      modify (fun state ->
+          { state with
+            signature_reconstruction_state = signature_reconstruction_state'
+          })
+    in
+    return signature'
 
-  let sgn', leftoverVars = Obj.magic () (* TODO: Recsgn.recSgnDecls sgn *) in
+  let get_leftover_vars =
+    let* { signature_reconstruction_state; _ } = get in
+    let _, leftover_vars =
+      Signature_reconstruction_state.get_leftover_vars
+        signature_reconstruction_state
+    in
+    return leftover_vars
+end
 
-  Chatter.print 2 (fun ppf ->
-      Format.fprintf ppf "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@."
-        file_name Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn');
+module Make_load (Load_state : LOAD_STATE) = struct
+  include Load_state
 
-  Chatter.print 1 (fun ppf ->
-      Format.fprintf ppf "## Type Reconstruction done:  %s ##@." file_name);
+  let forbid_leftover_vars path = function
+    | Option.None -> ()
+    | Option.Some vars ->
+        Chatter.print 1 (fun ppf ->
+            Format.fprintf ppf
+              "@[<v>## Leftover variables: %s  ##@,  @[.a@]@]@." path);
+        Error.raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
-  (*= XXX pretty sure the list of cov problems is never added to -je
-     So this call to Coverage.iter never does anything.
+  let load_file filename =
+    let* sgn = read_signature_file ~filename in
 
-     Coverage.iter
-     begin function
-     | Coverage.Success -> ()
-     | Coverage.Failure message ->
-     if !Coverage.warningOnly then
-     Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
-     else
-     raise (Coverage.Error (Location.ghost, Coverage.NoCover message))
-     end;
-   *)
-  if !Coverage.enableCoverage then
+    Chatter.print 1 (fun ppf ->
+        Format.fprintf ppf "## Type Reconstruction begin: %s ##@." filename);
+
+    let* sgn' = reconstruct_signature_file sgn in
+    let* leftoverVars = get_leftover_vars in
+
     Chatter.print 2 (fun ppf ->
-        Format.fprintf ppf "## Coverage checking done: %s  ##@." file_name);
+        Format.fprintf ppf
+          "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." filename
+          Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn');
 
-  Logic.runLogic ();
-  (* TODO Logic needs to accept a formatter -je *)
-  (if Bool.not (Holes.none ()) then
-     let open Format in
-     Chatter.print 1 (fun ppf ->
-         Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@." file_name
-           (pp_print_list Interactive.fmt_ppr_hole)
-           (Holes.list ())));
+    Chatter.print 1 (fun ppf ->
+        Format.fprintf ppf "## Type Reconstruction done:  %s ##@." filename);
 
-  forbid_leftover_vars file_name leftoverVars;
+    Coverage.iter (function
+      | Coverage.Success -> ()
+      | Coverage.Failure message ->
+          if !Coverage.warningOnly then
+            Coverage.add_information
+              (Format.asprintf "WARNING: Cases didn't cover: %s" message)
+          else
+            raise (Coverage.Error (Location.ghost, Coverage.NoCover message)));
 
-  if !Typeinfo.generate_annotations then Typeinfo.print_annot file_name;
-  if !Monitor.on || !Monitor.onf then Monitor.print_timers ()
+    if !Coverage.enableCoverage then
+      Chatter.print 2 (fun ppf ->
+          Format.fprintf ppf "## Coverage checking done: %s  ##@." filename);
 
-let load_one ppf path =
-  try load_file ppf path with
-  | e ->
-      dprintf (fun p ->
-          p.fmt "@[<v 2>[load_one] %s backtrace:@,@[%a@]@]" path
-            Format.pp_print_string
-            (Printexc.get_backtrace ()));
-      raise e
+    Logic.runLogic ();
+    (if Bool.not (Holes.none ()) then
+       let open Format in
+       Chatter.print 1 (fun ppf ->
+           Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@." filename
+             (pp_print_list Interactive.fmt_ppr_hole)
+             (Holes.list ())));
 
-let load ppf f =
-  let all_paths = resolve_path f in
-  dprintf (fun p ->
-      p.fmt "[load] @[<v>full load@,resolved %s =@,  @[<hv>%a@]@]" f
-        (Format.pp_print_list ~pp_sep:Format.comma (fun ppf x ->
-             Format.fprintf ppf "%s" x))
-        all_paths);
-  Gensym.reset ();
-  Store.clear ();
-  Typeinfo.clear_all ();
-  Holes.clear ();
-  List.iter (load_one ppf) all_paths;
-  all_paths
+    forbid_leftover_vars filename
+      (Option.from_predicate List.nonempty leftoverVars);
+
+    if !Typeinfo.generate_annotations then Typeinfo.print_annot filename;
+    if !Monitor.on || !Monitor.onf then Monitor.print_timers ();
+
+    return ()
+
+  let load_one path =
+    try_catch
+      (lazy (load_file path))
+      ~on_exn:(fun e ->
+        dprintf (fun p ->
+            p.fmt "@[<v 2>[load_one] %s backtrace:@,@[%a@]@]" path
+              Format.pp_print_string
+              (Printexc.get_backtrace ()));
+        Error.raise e)
+
+  let load configuration_filename =
+    let all_paths =
+      List.map Pair.snd
+        (Config_parser.read_configuration ~filename:configuration_filename)
+    in
+    dprintf (fun p ->
+        p.fmt "[load] @[<v>full load@,resolved %s =@,  @[<hv>%a@]@]"
+          configuration_filename
+          (Format.pp_print_list ~pp_sep:Format.comma (fun ppf x ->
+               Format.fprintf ppf "%s" x))
+          all_paths);
+    Gensym.reset ();
+    Store.clear ();
+    Typeinfo.clear_all ();
+    Holes.clear ();
+    let* () = traverse_list_void load_one all_paths in
+    return all_paths
+end
+
+include Make_load (Load_state)
+
+let load filename = eval (load filename) Load_state.initial_state

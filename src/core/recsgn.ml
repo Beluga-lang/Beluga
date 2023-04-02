@@ -173,6 +173,8 @@ module type SIGNATURE_RECONSTRUCTION = sig
   include State.STATE
 
   val reconstruct_signature : Synext.signature -> Synint.Sgn.sgn t
+
+  val reconstruct_signature_file : Synext.signature_file -> Synint.Sgn.sgn t
 end
 
 module Make

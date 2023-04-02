@@ -195,6 +195,5 @@ let parse_arguments args : parsed_t =
  *)
 let elaborate (o : parsed_t) : elaborated_t =
   let open B in
-  let ppf = Format.std_formatter in
-  let all_paths = Load.load ppf o.path in
+  let all_paths = Load.load o.path in
   { o with all_paths }

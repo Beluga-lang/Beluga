@@ -185,10 +185,9 @@ let options_spec : parsed_t Optparser.options_specification =
     returns parsed result and leftover arguments.
  *)
 let parse_arguments args : parsed_t =
-  Optparser.parse options_spec args
-  |> Result.fold
-    ~ok:Fun.id
-    ~error:(fun e -> Error.(throw (OptparserError e)))
+  match Optparser.parse options_spec args with
+  | Result.Ok x -> x
+  | Result.Error e -> Error.throw (Error.OptparserError e)
 
 (** Loads the specified signature and elaborates the theorem.
     Returns also the path of the last file loaded.

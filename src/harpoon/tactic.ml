@@ -85,13 +85,13 @@ let intros' : Theorem.t ->
     match tau with
     | Comp.TypArr (_, tau_1, tau_2) ->
        let (name, user_names) =
-         next_name
-         |> Option.eliminate
-              (fun _ -> gen_var_for_typ active_names tau_1 , None)
-              begin fun (name, user_names) ->
+         match next_name with
+         | Option.None ->
+              ( gen_var_for_typ active_names tau_1
+              , Option.none)
+         | Option.Some (name, user_names) ->
               ( B.Name.(mk_name (SomeString name))
-              , Some user_names )
-              end
+              , Option.some user_names )
        in
        let d = Comp.CTypDecl (name, tau_1, false) in
        begin match check_computational_variable_uniqueness cD cG d t with

@@ -1,12 +1,12 @@
 (** Harpoon
 
-@author Jacob Thomas Errington
-@author Clare Jang
-@author Marcel Goh
+    Harpoon is an interactive mode for Beluga that uses a small set of
+    tactics for elaborating proofs.
 
-Harpoon is an interactive mode for Beluga that uses a small set of
-tactics for elaborating proofs.
- *)
+    @author Jacob Thomas Errington
+    @author Clare Jang
+    @author Marcel Goh *)
+
 open Support
 module B = Beluga
 open Harpoon

@@ -169,6 +169,15 @@ let () =
           String.pp identifier
     | exn -> Error.raise_unsupported_exception_printing exn)
 
+let fmt_ppr_leftover_vars ppf =
+  Format.fprintf ppf "@[<v>%a@]"
+    (Format.pp_print_list ~pp_sep:Format.pp_print_cut
+       (fun ppf (cQ, location) ->
+         Format.fprintf ppf "@[<2>@[%a@] |-@ @[%a@]@]"
+           Abstract.fmt_ppr_collection cQ Location.pp location))
+
+let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
+
 module type SIGNATURE_RECONSTRUCTION = sig
   include State.STATE
 

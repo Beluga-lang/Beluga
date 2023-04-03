@@ -102,7 +102,8 @@ module Make_load (Load_state : LOAD_STATE) = struct
     | Option.Some vars ->
         Chatter.print 1 (fun ppf ->
             Format.fprintf ppf
-              "@[<v>## Leftover variables: %s  ##@,  @[.a@]@]@." path);
+              "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@." path
+              Recsgn.fmt_ppr_leftover_vars vars);
         Error.raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
   let load_file filename =

@@ -1734,3 +1734,6 @@ module Make
           (Synext.location_of_signature_declaration first_declaration)
           Unsupported_recursive_declaration
 end
+
+module Signature_reconstruction =
+  Make (Recsgn_state.Signature_reconstruction_state)

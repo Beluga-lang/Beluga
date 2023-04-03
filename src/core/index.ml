@@ -1835,7 +1835,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   let index_harpoon_proof proof =
     disallow_free_variables
-      (index_harpoon_proof proof $> fun proof' -> Synapx.Comp.Proof proof')
+      ( with_scope (index_harpoon_proof proof) $> fun proof' ->
+        Synapx.Comp.Proof proof' )
 
   let index_computation_typ_abbreviation typ kind =
     let* kind' = disallow_free_variables (index_comp_kind kind) in

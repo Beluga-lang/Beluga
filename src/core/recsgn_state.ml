@@ -226,10 +226,13 @@ struct
     return state.leftover_vars
 
   let add_leftover_vars vars location =
-    modify (fun state ->
-        { state with
-          leftover_vars = (vars, location) :: state.leftover_vars
-        })
+    match vars with
+    | Synint.LF.Empty -> return ()
+    | _ ->
+        modify (fun state ->
+            { state with
+              leftover_vars = (vars, location) :: state.leftover_vars
+            })
 
   let with_disabled_lf_strengthening ~location:_ m =
     let initial_strengthen = !Lfrecon.strengthen in

@@ -1219,7 +1219,7 @@ module Persistent_disambiguation_state = struct
     | Result.Error cause ->
         Error.raise_at1 (Qualified_identifier.location identifier) cause
 
-  let with_bindings_checkpoint m =
+  let[@inline] [@specialise] with_bindings_checkpoint m =
     let* bindings = get_bindings in
     let* x = m in
     let* () = set_bindings bindings in
@@ -1230,61 +1230,63 @@ module Persistent_disambiguation_state = struct
     &> m
     <& pop_inner_pattern_binding identifier
 
-  let with_inner_bound_lf_variable ?location identifier =
+  let[@specialise] with_inner_bound_lf_variable ?location identifier =
     with_inner_bound_entry identifier
       (Entry.make_lf_variable_entry ?location identifier)
 
-  let with_inner_bound_meta_variable ?location identifier =
+  let[@specialise] with_inner_bound_meta_variable ?location identifier =
     with_inner_bound_entry identifier
       (Entry.make_meta_variable_entry ?location identifier)
 
-  let with_inner_bound_parameter_variable ?location identifier =
+  let[@specialise] with_inner_bound_parameter_variable ?location identifier =
     with_inner_bound_entry identifier
       (Entry.make_parameter_variable_entry ?location identifier)
 
-  let with_inner_bound_substitution_variable ?location identifier =
+  let[@specialise] with_inner_bound_substitution_variable ?location
+      identifier =
     with_inner_bound_entry identifier
       (Entry.make_substitution_variable_entry ?location identifier)
 
-  let with_inner_bound_context_variable ?location identifier =
+  let[@specialise] with_inner_bound_context_variable ?location identifier =
     with_inner_bound_entry identifier
       (Entry.make_context_variable_entry ?location identifier)
 
-  let with_inner_bound_contextual_variable ?location identifier =
+  let[@specialise] with_inner_bound_contextual_variable ?location identifier
+      =
     with_inner_bound_entry identifier
       (Entry.make_contextual_variable_entry ?location identifier)
 
-  let with_lf_variable ?location identifier m =
+  let[@specialise] with_lf_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_lf_variable identifier
          (add_lf_variable ?location identifier &> m))
 
-  let with_meta_variable ?location identifier m =
+  let[@specialise] with_meta_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_meta_variable identifier
          (add_meta_variable ?location identifier &> m))
 
-  let with_parameter_variable ?location identifier m =
+  let[@specialise] with_parameter_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_parameter_variable identifier
          (add_parameter_variable ?location identifier &> m))
 
-  let with_substitution_variable ?location identifier m =
+  let[@specialise] with_substitution_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_substitution_variable identifier
          (add_substitution_variable ?location identifier &> m))
 
-  let with_context_variable ?location identifier m =
+  let[@specialise] with_context_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_context_variable identifier
          (add_context_variable ?location identifier &> m))
 
-  let with_contextual_variable ?location identifier m =
+  let[@specialise] with_contextual_variable ?location identifier m =
     with_bindings_checkpoint
       (with_inner_bound_contextual_variable identifier
          (add_contextual_variable ?location identifier &> m))
 
-  let with_comp_variable ?location identifier m =
+  let[@specialise] with_comp_variable ?location identifier m =
     with_bindings_checkpoint
       (add_computation_variable ?location identifier &> m)
 

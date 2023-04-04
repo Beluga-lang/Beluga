@@ -310,12 +310,12 @@ fun (Howe_nil (OSimC [_] f)) => (f $[|- ^]) .Sim_nil (Ev_val Val_nil)
 
 
 % Datatype to pack an existential
-inductive Howe_cons : [|- term T] -> [|- term (list T)] -> [|- term (list T)] -> ctype =
+inductive Howe_cons' : [|- term T] -> [|- term (list T)] -> [|- term (list T)] -> ctype =
   | Howe_consC : Eval [ |- N] [ |- cons H' L'] -> Howe [|- T] [|- H] [|- H']
-             -> Howe [|- list T] [|- L] [|- L'] -> Howe_cons [|- H] [|- L] [|- N]
+             -> Howe [|- list T] [|- L] [|- L'] -> Howe_cons' [|- H] [|- L] [|- N]
 ;
 
-rec howe_ev_cons : Howe [ |- list T] [ |- cons H L] [ |- N] -> Howe_cons [|- H] [|- L] [|- N] =
+rec howe_ev_cons : Howe [ |- list T] [ |- cons H L] [ |- N] -> Howe_cons' [|- H] [|- L] [|- N] =
 / total h (howe_ev_cons t a l n h) /
 fun (Howe_cons h1 h2 (OSimC [_] s)) =>
     let ESim_cons d s1 s2 = (s $[|- ^]) .Sim_cons (Ev_val Val_cons) in

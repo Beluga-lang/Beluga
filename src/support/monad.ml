@@ -26,15 +26,15 @@ end) =
 struct
   include Monad
 
-  let[@inline] ( >>= ) a f = bind f a
+  let[@inline] [@specialise] ( >>= ) a f = bind f a
 
-  let[@inline] compose g f x = f x >>= g
+  let[@inline] [@specialise] compose g f x = f x >>= g
 
-  let[@inline] ( >=> ) f g = compose g f
+  let[@inline] [@specialise] ( >=> ) f g = compose g f
 
-  let[@inline] ( let* ) ma f = bind f ma
+  let[@inline] [@specialise] ( let* ) ma f = bind f ma
 
-  let[@inline] ( and* ) ma mb =
+  let[@inline] [@specialise] ( and* ) ma mb =
     let* a = ma in
     let* b = mb in
     return (a, b)

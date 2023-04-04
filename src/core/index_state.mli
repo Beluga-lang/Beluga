@@ -24,6 +24,9 @@ module type INDEXING_STATE = sig
       syntaxes. *)
   val fresh_identifier : Identifier.t t
 
+  (** [fresh_identifier_opt identifier_opt state] is [fresh_identifier state]
+      if [identifier_opt = Option.None], and [(state, identifier)] if
+      [identifier_opt = Option.Some identifier]. *)
   val fresh_identifier_opt : Identifier.t Option.t -> Identifier.t t
 
   (** {1 Index of Constants} *)
@@ -229,6 +232,18 @@ module type INDEXING_STATE = sig
 
   val add_free_context_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
+
+  val with_bound_pattern_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   (** [allow_free_variables m] runs [m] and discards the tracked free
       variables therein. *)

@@ -128,7 +128,7 @@ let error_printer = function
 
   | ProjNotFound (cD, cPsi, k, sA) ->
      Format.dprintf
-       "There is no projection named %s in type %a."
+       "There is no projection named %s in type@ %a."
        (Name.string_of_name k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 

@@ -155,10 +155,10 @@ let error_printer = function
       "Given context" (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi)
       (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
   | TermWhenVar (cD, cPsi, tM) ->
-    Format.dprintf "A term was found when expecting a variable.@,Offending term: %a"
+    Format.dprintf "A term was found when expecting a variable.@ Offending term: %a"
       (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
   | SubWhenRen (cD, cPsi, sub) ->
-    Format.dprintf "A substitution was found when expecting a renaming.@,Offending substitution: %a"
+    Format.dprintf "A substitution was found when expecting a renaming.@ Offending substitution: %a"
       (P.fmt_ppr_lf_sub cD cPsi P.l0) sub
 
 let () =

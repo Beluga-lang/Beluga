@@ -3,6 +3,10 @@ open Support
 (** [raise exn] raises [exn]. *)
 val raise : exn -> 'a
 
+(** [raise_notrace exn] raises [exn] without producing a stack trace. This is
+    more efficient for exceptions used for control flow. *)
+val raise_notrace : exn -> 'a
+
 (** [Violation message] is the exception signalling a programmer error, like
     an unmet pre-condition. This exception variant should not be exported,
     but it is incorrectly being used for backtracking with exceptions in the

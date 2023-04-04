@@ -86,7 +86,7 @@ fn d => case d of
      dia [g, b:block y:term, _t:pred y y |- assume R1[.., b.1, b.2] R1'[.., b.1, b.2]] in
   [g |- dia_result _ (lm (\y.\v. S1[..,<y ; v>])) (lm (\y.\v. S1'[..,<y ; v>]))]
 
-| [g |- assume (#q.2) (#q.2)] => [g |- dia_result _ (#q.2) (#q.2)]
+| [g |- assume #q.2 #q.2] => [g |- dia_result _ #q.2 #q.2]
 
 ;
 

@@ -95,7 +95,7 @@ fn d => fn e => case d of
 
   [g |- dia_result _ (lm (\y.\v. S1[..,<y ; v>])) (lm (\y.\v. S1'[..,<y ; v>]))]
 
-| [g |- #p.2] => let [g |- #q.2] = e in [g |- dia_result _ (#q.2) (#q.2)]
+| [g |- #p.2] => let [g |- #q.2] = e in [g |- dia_result _ #q.2 #q.2]
 
 ;
 
@@ -162,7 +162,7 @@ fn d => fn e => case d of
 
 | [g] #p.2 =>
    let
-       [g] #q.2 = e in [g] dia_result _ (#q.2) (#q.2)
+       [g] #q.2 = e in [g] dia_result _ #q.2 #q.2
 
 ;
 }%

@@ -194,7 +194,7 @@ rec transV : Ctx_xaR [phi] [psi] $[psi |- $S] ->
 EqV [phi] [psi] $[psi |- $S] [phi |- M] [psi |- #p.1] ->
 EqV [phi] [psi] $[psi |- $S] [phi |- N] [psi |- #p.1] ->
 EqV [phi] [psi] $[psi |- $S] [phi |- L] [psi |- #p.1] ->
-        [psi |- aeq (#p.1) (#p.1)] =
+        [psi |- aeq #p.1 #p.1] =
 fn cr => fn m => fn n => fn l => case m of
 | EqV_v =>
   let EqV_v = n in

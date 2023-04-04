@@ -469,8 +469,6 @@ module Make
         reconstruct_module_declaration location identifier entries
 
   and reconstruct_lf_typ_declaration location identifier extK =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Typ at: %a" Location.print_short location);
@@ -479,6 +477,8 @@ module Make
     let* apxK = index_lf_kind extK in
     dprintf (fun p ->
         p.fmt "\nElaborating type constant %a" Identifier.pp identifier);
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     Store.FVar.clear ();
     let tK =
       Monitor.timer
@@ -514,12 +514,13 @@ module Make
     return (Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' })
 
   and reconstruct_lf_const_declaration location identifier extT =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
-        p.fmt "[RecSgn Checking] Const at: %a" Location.print_short location);
+        p.fmt "[RecSgn Checking] Const %a at: %a" Identifier.pp identifier
+          Location.print_short location);
     let* apxT = index_lf_typ extT in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let rec get_type_family = function
       | Synapx.LF.Atom (_loc, a, _spine) -> a
       | Synapx.LF.PiTyp ((_, _), t) -> get_type_family t
@@ -574,12 +575,12 @@ module Make
 
   and reconstruct_comp_typ_constant location identifier kind datatype_flavour
       =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "Indexing computation-level data-type constant %a"
           Identifier.pp identifier);
     let* apx_kind = index_comp_kind kind in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     Store.FVar.clear ();
     dprintf (fun p ->
         p.fmt "Elaborating data-type declaration %a" Identifier.pp identifier);
@@ -636,14 +637,15 @@ module Make
          })
 
   and reconstruct_comp_cotyp_constant location identifier kind =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     dprintf (fun p ->
-        p.fmt "[RecSgn Checking] CompCotyp at: %a" Location.print location);
+        p.fmt "[RecSgn Checking] CompCotyp at %a: %a" Identifier.pp
+          identifier Location.print location);
     dprintf (fun p ->
         p.fmt "Indexing computation-level codata-type constant %a"
           Identifier.pp identifier);
     let* apxK = index_comp_kind kind in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     Store.FVar.clear ();
     dprintf (fun p ->
         p.fmt "Elaborating codata-type declaration %a" Identifier.pp
@@ -685,15 +687,15 @@ module Make
       (Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' })
 
   and reconstruct_comp_constructor location ~stratNum identifier typ =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     dprintf (fun p ->
-        p.fmt "[RecSgn Checking] CompConst at: %a" Location.print_short
-          location);
+        p.fmt "[RecSgn Checking] CompConst at %a: %a" Identifier.pp
+          identifier Location.print_short location);
     dprintf (fun p ->
         p.fmt "Indexing computation-level data-type constructor %a"
           Identifier.pp identifier);
     let* apx_tau = index_comp_typ typ in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let cD = Synint.LF.Empty in
     dprintf (fun p ->
         p.fmt "Elaborating data-type constructor %a" Identifier.pp identifier);
@@ -754,8 +756,6 @@ module Make
 
   and reconstruct_comp_destructor location identifier observation_type
       return_type =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompDest at: %a" Location.print_short
           location);
@@ -768,6 +768,8 @@ module Make
     dprintf (fun p ->
         p.fmt "Elaborating codata-type destructor %a" Identifier.pp
           identifier);
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let observation_type' =
       Monitor.timer
         ( Monitor.codatatype_constant_type_elaboration
@@ -822,8 +824,6 @@ module Make
          })
 
   and reconstruct_schema_declaration location identifier schema =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Schema at: %a@." Location.print_short
@@ -831,6 +831,8 @@ module Make
     let* apx_schema = index_schema schema in
     dprintf (fun p ->
         p.fmt "Reconstructing schema %a@." Identifier.pp identifier);
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     Store.FVar.clear ();
     let sW = Reconstruct.schema apx_schema in
     dprintf (fun p ->
@@ -858,11 +860,11 @@ module Make
       (Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' })
 
   and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     (* index cT in a context which contains arguments to cK *)
     let* apx_tau, apxK = index_comp_typedef cT cK in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let (cD, cT), i, cK =
       Reconstruct.comptypdef location name (apx_tau, apxK)
     in
@@ -894,12 +896,12 @@ module Make
         reconstruct_typed_val_declaration location identifier typ expression
 
   and reconstruct_untyped_val_declaration location identifier expression =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at: %a" Location.print_short location);
     let* apx_i = index_comp_expression expression in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
     let i', (tau, theta) =
       Monitor.timer
@@ -954,12 +956,12 @@ module Make
          })
 
   and reconstruct_typed_val_declaration location identifier tau expression =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at %a" Location.print_short location);
     let* apx_tau = index_comp_typ tau in
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
     let tau' =
       Monitor.timer
@@ -1028,14 +1030,14 @@ module Make
 
   and reconstruct_query_pragma location identifier_opt cD extT
       expected_solutions maximum_tries =
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
     let name_opt = Option.map Name.make_from_identifier identifier_opt in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);
     let* cD, apxT = index_lf_query cD extT in
     dprint (fun () -> "Reconstructing query.");
 
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     Store.FVar.clear ();
     let tA =
       Monitor.timer
@@ -1428,6 +1430,8 @@ module Make
   and reconstruct_recursive_theorem_declarations location declarations =
     let reconstruct_program_typ typ =
       let* apx_tau = index_comp_typ typ in
+      Reconstruct.reset_fvarCnstr ();
+      Store.FCVar.clear ();
       let tau' =
         Monitor.timer
           ( Monitor.function_type_elaboration

@@ -1818,6 +1818,12 @@ type comp_typ = Comp.Typ.t
 (** @canonical Synext.comp_expression *)
 type comp_expression = Comp.Expression.t
 
+(** @canonical Synext.comp_case_branch *)
+type comp_case_branch = Comp.Case_branch.t
+
+(** @canonical Synext.comp_cofunction_branch *)
+type comp_cofunction_branch = Comp.Cofunction_branch.t
+
 (** @canonical Synext.comp_pattern *)
 type comp_pattern = Comp.Pattern.t
 

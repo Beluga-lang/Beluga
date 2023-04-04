@@ -46,6 +46,10 @@ val location_of_comp_typ : comp_typ -> Location.t
 
 val location_of_comp_expression : comp_expression -> Location.t
 
+val location_of_comp_case_branch : comp_case_branch -> Location.t
+
+val location_of_comp_cofunction_branch : comp_cofunction_branch -> Location.t
+
 val location_of_comp_pattern : comp_pattern -> Location.t
 
 val location_of_comp_copattern : comp_copattern -> Location.t

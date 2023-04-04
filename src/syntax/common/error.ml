@@ -3,6 +3,8 @@ open Debug.Fmt
 
 let raise = raise
 
+let raise_notrace = raise_notrace
+
 let printers : (exn -> Format.formatter -> unit) list Atomic.t =
   Atomic.make []
 

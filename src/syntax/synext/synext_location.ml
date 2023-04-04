@@ -182,6 +182,12 @@ let location_of_comp_expression expression =
   | Type_annotated { location; _ } ->
       location
 
+let location_of_comp_case_branch { Comp.Case_branch.location; _ } = location
+
+let location_of_comp_cofunction_branch { Comp.Cofunction_branch.location; _ }
+    =
+  location
+
 let location_of_comp_pattern pattern =
   let open Comp.Pattern in
   match pattern with

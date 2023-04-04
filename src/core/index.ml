@@ -155,9 +155,22 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let spine' = append_meta_spines sub_spine1 spine2 in
         Synapx.Comp.MetaApp (x, spine')
 
+  (* Not all values [h] of type {!type:Synapx.LF.head} are mapped to
+     [Synapx.LF.Head h] when the spine is [Synapx.LF.Nil] because only those
+     terms are in the pattern substitution.
+
+     This function was introduced in commit 95578f0e ("Improved parsing of
+     substitutions", 2015-05-25). *)
+  let to_head_or_obj = function
+    | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
+    | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
+    | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
+        Synapx.LF.Head h
+    | tM -> Synapx.LF.Obj tM
+
   let rec index_lf_kind = function
     | Synext.LF.Kind.Typ _ -> return Synapx.LF.Typ
-    | Synext.LF.Kind.Arrow { domain; range; _ } ->
+    | Synext.LF.Kind.Arrow { domain; range; location = _ } ->
         let* domain' = index_lf_typ domain in
         let* range' = with_shifted_lf_context (index_lf_kind range) in
         let* x = fresh_identifier in
@@ -184,7 +197,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
                  ((Synapx.LF.TypDecl (x', domain'), plicity), range')))
 
   and index_lf_typ = function
-    | Synext.LF.Typ.Constant { identifier; location; _ } ->
+    | Synext.LF.Typ.Constant { identifier; location } ->
         let* id = index_of_lf_typ_constant identifier in
         return (Synapx.LF.Atom (location, id, Synapx.LF.Nil))
     | Synext.LF.Typ.Application { applicand; arguments; location } -> (
@@ -207,7 +220,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             Error.raise_at1
               (Synext.location_of_lf_typ applicand)
               Unsupported_lf_typ_applicand)
-    | Synext.LF.Typ.Arrow { domain; range; _ } ->
+    | Synext.LF.Typ.Arrow { domain; range; location = _; orientation = _ } ->
         let* domain' = index_lf_typ domain in
         let* range' = with_shifted_lf_context (index_lf_typ range) in
         let* x = fresh_identifier in
@@ -246,7 +259,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let head = Synapx.LF.FVar name in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
-    | Synext.LF.Term.Constant { location; identifier; _ } ->
+    | Synext.LF.Term.Constant { location; identifier } ->
         let* id = index_of_lf_term_constant identifier in
         let head = Synapx.LF.Const id in
         let spine = Synapx.LF.Nil in
@@ -312,7 +325,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
       arguments
 
   let rec index_clf_typ = function
-    | Synext.CLF.Typ.Constant { identifier; location; _ } ->
+    | Synext.CLF.Typ.Constant { identifier; location } ->
         let* id = index_of_lf_typ_constant identifier in
         let spine = Synapx.LF.Nil in
         return (Synapx.LF.Atom (location, id, spine))
@@ -337,7 +350,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             Error.raise_at1
               (Synext.location_of_clf_typ applicand)
               Unsupported_lf_typ_applicand)
-    | Synext.CLF.Typ.Arrow { domain; range; _ } ->
+    | Synext.CLF.Typ.Arrow { domain; range; location = _; orientation = _ }
+      ->
         let* domain' = index_clf_typ domain in
         let* range' = with_shifted_lf_context (index_clf_typ range) in
         let* x = fresh_identifier in
@@ -345,7 +359,9 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         return
           (Synapx.LF.PiTyp
              ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
-    | Synext.CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+    | Synext.CLF.Typ.Pi
+        { parameter_identifier; parameter_type; body; plicity; location = _ }
+      ->
         let* domain' = index_clf_typ parameter_type in
         let* range' =
           (with_bound_omittable_lf_variable parameter_identifier)
@@ -355,8 +371,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiTyp
-             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
-    | Synext.CLF.Typ.Block { elements; _ } -> (
+             ((Synapx.LF.TypDecl (x', domain'), plicity), range'))
+    | Synext.CLF.Typ.Block { elements; location = _ } -> (
         match elements with
         | `Unnamed typ ->
             let* typ' = index_clf_typ typ in
@@ -399,7 +415,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let head = Synapx.LF.FMVar (name, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
-    | Synext.CLF.Term.Constant { location; identifier; _ } ->
+    | Synext.CLF.Term.Constant { location; identifier } ->
         let* id = index_of_lf_term_constant identifier in
         let head = Synapx.LF.Const id in
         let spine = Synapx.LF.Nil in
@@ -478,40 +494,87 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let head = Synapx.LF.FPVar (name, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Substitution
+        { location = location1
+        ; term =
+            Synext.CLF.Term.Projection
+              { location = _location2
+              ; term =
+                  Synext.CLF.Term.Parameter_variable
+                    { location = _location3; identifier }
+              ; projection
+              }
+        ; substitution
+        } -> (
+        (* The external syntax supports [#p.1[..]] as [(#p.1)[..]], but the
+           approximate syntax expects [(#p[..]).1]. *)
+        index_of_parameter_variable_opt identifier
+        >>= function
+        | Option.Some offset -> (
+            let* substitution' = index_clf_substitution substitution in
+            let head =
+              Synapx.LF.PVar
+                (Synapx.LF.Offset offset, Option.Some substitution')
+            in
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil)))
+        | Option.None -> (
+            let* () = add_free_parameter_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let* substitution' = index_clf_substitution substitution in
+            let head = Synapx.LF.FPVar (name, Option.Some substitution') in
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))))
     | Synext.CLF.Term.Substitution { location; term; substitution } -> (
         let* term' = index_clf_term term in
         (* Only [term'] that is a root with an empty spine and whose head can
            have a substitution can have [substitution] attached to it. *)
         match term' with
-        | Synapx.LF.Root (_, Synapx.LF.MVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.MVar (u, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.MVar (cv, Option.some substitution')
+              Synapx.LF.MVar (u, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.PVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.FMVar (u, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.PVar (cv, Option.some substitution')
+              Synapx.LF.FMVar (u, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.FMVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.PVar (p, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.FMVar (cv, Option.some substitution')
+              Synapx.LF.PVar (p, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.FPVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.FPVar (p, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.FPVar (cv, Option.some substitution')
+              Synapx.LF.FPVar (p, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
@@ -580,7 +643,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     | Synext.CLF.Term.Pattern.Meta_variable { location; identifier } -> (
         index_of_meta_variable_opt identifier >>= function
         | Option.Some offset ->
-            let head = Synapx.LF.BVar offset in
+            let closure = Option.none in
+            let head = Synapx.LF.MVar (Synapx.LF.Offset offset, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine))
         | Option.None ->
@@ -590,7 +654,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let head = Synapx.LF.FMVar (name, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
-    | Synext.CLF.Term.Pattern.Constant { location; identifier; _ } ->
+    | Synext.CLF.Term.Pattern.Constant { location; identifier } ->
         let* id = index_of_lf_term_constant identifier in
         let head = Synapx.LF.Const id in
         let spine = Synapx.LF.Nil in
@@ -640,7 +704,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             Error.raise_at1 location
               Unsupported_lf_annotated_term_abstraction)
     | Synext.CLF.Term.Pattern.Wildcard { location } ->
-        return (Synapx.LF.LFHole (location, Option.none))
+        return (Synapx.LF.Root (location, Synapx.LF.Hole, Synapx.LF.Nil))
     | Synext.CLF.Term.Pattern.Type_annotated { location; term; typ } ->
         let* term' = index_clf_term_pattern term in
         let* typ' = index_clf_typ typ in
@@ -660,41 +724,88 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let head = Synapx.LF.FPVar (name, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Pattern.Substitution
+        { location = location1
+        ; term =
+            Synext.CLF.Term.Pattern.Projection
+              { location = _location2
+              ; term =
+                  Synext.CLF.Term.Pattern.Parameter_variable
+                    { location = _location3; identifier }
+              ; projection
+              }
+        ; substitution
+        } -> (
+        (* The external syntax supports [#p.1[..]] as [(#p.1)[..]], but the
+           approximate syntax expects [(#p[..]).1]. *)
+        index_of_parameter_variable_opt identifier
+        >>= function
+        | Option.Some offset -> (
+            let* substitution' = index_clf_substitution substitution in
+            let head =
+              Synapx.LF.PVar
+                (Synapx.LF.Offset offset, Option.Some substitution')
+            in
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil)))
+        | Option.None -> (
+            let* () = add_free_parameter_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let* substitution' = index_clf_substitution substitution in
+            let head = Synapx.LF.FPVar (name, Option.Some substitution') in
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location1, head', Synapx.LF.Nil))))
     | Synext.CLF.Term.Pattern.Substitution { location; term; substitution }
       -> (
         let* term' = index_clf_term_pattern term in
         (* Only [term'] that is a root with an empty spine and whose head can
            have a substitution can have [substitution] attached to it. *)
         match term' with
-        | Synapx.LF.Root (_, Synapx.LF.MVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.MVar (u, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.MVar (cv, Option.some substitution')
+              Synapx.LF.MVar (u, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.PVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.FMVar (u, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.PVar (cv, Option.some substitution')
+              Synapx.LF.FMVar (u, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.FMVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.PVar (p, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.FMVar (cv, Option.some substitution')
+              Synapx.LF.PVar (p, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
-        | Synapx.LF.Root (_, Synapx.LF.FPVar (cv, Option.None), Synapx.LF.Nil)
+        | Synapx.LF.Root (_, Synapx.LF.FPVar (p, Option.None), Synapx.LF.Nil)
           ->
             let* substitution' = index_clf_substitution substitution in
             let head' =
-              Synapx.LF.FPVar (cv, Option.some substitution')
+              Synapx.LF.FPVar (p, Option.some substitution')
               (* Attach substitution *)
             in
             return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
@@ -754,32 +865,14 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         return (Synapx.LF.App (term', spine')))
       spine
 
-  and index_clf_substitution =
-    (* Not all values [h] of type {!type:Synapx.LF.head} are mapped to
-       [Synapx.LF.Head h] when the spine is [Synapx.LF.Nil] because only
-       those terms are in the pattern substitution.
-
-       This function was introduced in commit 95578f0e ("Improved parsing of
-       substitutions", 2015-05-25). *)
-    let to_head_or_obj = function
-      | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
-      | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
-      | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
-          Synapx.LF.Head h
-      | tM -> Synapx.LF.Obj tM
-    in
-    let rec index_clf_substitution' head terms =
-      match (head, terms) with
-      | start, h :: s ->
-          let* s' = index_clf_substitution' start s in
-          let* h' = index_clf_term h in
-          let h'' = to_head_or_obj h' in
-          return (Synapx.LF.Dot (h'', s'))
-      | Synext.CLF.Substitution.Head.None _, [] -> return Synapx.LF.EmptySub
-      | Synext.CLF.Substitution.Head.Identity _, [] -> return Synapx.LF.Id
-      | ( Synext.CLF.Substitution.Head.Substitution_variable
-            { identifier; closure; _ }
-        , [] ) -> (
+  and index_clf_substitution
+      { Synext.CLF.Substitution.head; terms; location = _ } =
+    let* head' =
+      match head with
+      | Synext.CLF.Substitution.Head.None _ -> return Synapx.LF.EmptySub
+      | Synext.CLF.Substitution.Head.Identity _ -> return Synapx.LF.Id
+      | Synext.CLF.Substitution.Head.Substitution_variable
+          { identifier; closure; location = _ } -> (
           index_of_substitution_variable_opt identifier >>= function
           | Option.Some offset ->
               let* closure' =
@@ -794,38 +887,27 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               in
               return (Synapx.LF.FSVar (name, closure')))
     in
-    fun substitution ->
-      let { Synext.CLF.Substitution.head; terms; _ } = substitution in
-      index_clf_substitution' head terms
+    index_clf_substitution_terms head' terms
 
-  and index_clf_substitution_pattern =
-    (* Not all values [h] of type {!type:Synapx.LF.head} are mapped to
-       [Synapx.LF.Head h] when the spine is [Synapx.LF.Nil] because only
-       those terms are in the pattern substitution.
+  and index_clf_substitution_terms substitution' terms =
+    match terms with
+    | [] -> return substitution'
+    | term :: rest ->
+        let* term' = index_clf_term term in
+        index_clf_substitution_terms
+          (Synapx.LF.Dot (to_head_or_obj term', substitution'))
+          rest
 
-       This function was introduced in commit 95578f0e ("Improved parsing of
-       substitutions", 2015-05-25). *)
-    let to_head_or_obj = function
-      | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
-      | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
-      | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
-          Synapx.LF.Head h
-      | tM -> Synapx.LF.Obj tM
-    in
-    let rec index_clf_substitution' head terms =
-      match (head, terms) with
-      | start, h :: s ->
-          let* s' = index_clf_substitution' start s in
-          let* h' = index_clf_term_pattern h in
-          let h'' = to_head_or_obj h' in
-          return (Synapx.LF.Dot (h'', s'))
-      | Synext.CLF.Substitution.Pattern.Head.None _, [] ->
+  and index_clf_substitution_pattern
+      { Synext.CLF.Substitution.Pattern.head; terms; location = _ } =
+    let* head' =
+      match head with
+      | Synext.CLF.Substitution.Pattern.Head.None _ ->
           return Synapx.LF.EmptySub
-      | Synext.CLF.Substitution.Pattern.Head.Identity _, [] ->
+      | Synext.CLF.Substitution.Pattern.Head.Identity _ ->
           return Synapx.LF.Id
-      | ( Synext.CLF.Substitution.Pattern.Head.Substitution_variable
-            { identifier; closure; _ }
-        , [] ) -> (
+      | Synext.CLF.Substitution.Pattern.Head.Substitution_variable
+          { identifier; closure; location = _ } -> (
           index_of_substitution_variable_opt identifier >>= function
           | Option.Some offset ->
               let* closure' =
@@ -840,11 +922,16 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               in
               return (Synapx.LF.FSVar (name, closure')))
     in
-    fun substitution ->
-      let { Synext.CLF.Substitution.Pattern.head; terms; _ } =
-        substitution
-      in
-      index_clf_substitution' head terms
+    index_clf_substitution_pattern_terms head' terms
+
+  and index_clf_substitution_pattern_terms substitution' terms =
+    match terms with
+    | [] -> return substitution'
+    | term :: rest ->
+        let* term' = index_clf_term_pattern term in
+        index_clf_substitution_pattern_terms
+          (Synapx.LF.Dot (to_head_or_obj term', substitution'))
+          rest
 
   and with_indexed_clf_context_bindings cPhi bindings f =
     match bindings with
@@ -869,18 +956,19 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     match context with
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
       ; bindings
-      ; _
+      ; location = _
       } ->
         with_indexed_clf_context_bindings Synapx.LF.Null bindings f
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.Hole _
       ; bindings
-      ; _
+      ; location = _
       } ->
         with_indexed_clf_context_bindings Synapx.LF.CtxHole bindings f
     | { Synext.CLF.Context.head =
-          Synext.CLF.Context.Head.Context_variable { identifier; _ }
+          Synext.CLF.Context.Head.Context_variable
+            { identifier; location = _ }
       ; bindings
-      ; _
+      ; location = _
       } -> (
         index_of_context_variable_opt identifier >>= function
         | Option.None ->
@@ -917,20 +1005,21 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     | { Synext.CLF.Context.Pattern.head =
           Synext.CLF.Context.Pattern.Head.None _
       ; bindings
-      ; _
+      ; location = _
       } ->
         with_indexed_clf_context_pattern_bindings Synapx.LF.Null bindings f
     | { Synext.CLF.Context.Pattern.head =
           Synext.CLF.Context.Pattern.Head.Hole _
       ; bindings
-      ; _
+      ; location = _
       } ->
         with_indexed_clf_context_pattern_bindings Synapx.LF.CtxHole bindings
           f
     | { Synext.CLF.Context.Pattern.head =
-          Synext.CLF.Context.Pattern.Head.Context_variable { identifier; _ }
+          Synext.CLF.Context.Pattern.Head.Context_variable
+            { identifier; location = _ }
       ; bindings
-      ; _
+      ; location = _
       } -> (
         index_of_context_variable_opt identifier >>= function
         | Option.None ->
@@ -961,7 +1050,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               ( location
               , Synapx.Comp.ClObj
                   ( context'
-                  , Synapx.LF.Dot (Synapx.LF.Obj term', Synapx.LF.EmptySub)
+                  , Synapx.LF.Dot (to_head_or_obj term', Synapx.LF.EmptySub)
                   ) ))
     | Synext.Meta.Object.Plain_substitution { location; domain; range } ->
         with_indexed_clf_context domain (fun domain' ->
@@ -973,24 +1062,26 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             return (location, Synapx.Comp.ClObj (domain', range')))
 
   and index_meta_type = function
-    | Synext.Meta.Typ.Context_schema { schema; _ } ->
+    | Synext.Meta.Typ.Context_schema { schema; location = _ } ->
         let* index = index_of_schema_constant schema in
         return (Synapx.LF.CTyp index)
-    | Synext.Meta.Typ.Contextual_typ { context; typ; _ } ->
+    | Synext.Meta.Typ.Contextual_typ { context; typ; location = _ } ->
         with_indexed_clf_context context (fun context' ->
             let* typ' = index_clf_typ typ in
             return (Synapx.LF.ClTyp (Synapx.LF.MTyp typ', context')))
-    | Synext.Meta.Typ.Parameter_typ { context; typ; _ } ->
+    | Synext.Meta.Typ.Parameter_typ { context; typ; location = _ } ->
         with_indexed_clf_context context (fun context' ->
             let* typ' = index_clf_typ typ in
             return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context')))
-    | Synext.Meta.Typ.Plain_substitution_typ { domain; range; _ } ->
+    | Synext.Meta.Typ.Plain_substitution_typ { domain; range; location = _ }
+      ->
         with_indexed_clf_context domain (fun domain' ->
             with_indexed_clf_context range (fun range' ->
                 return
                   (Synapx.LF.ClTyp
                      (Synapx.LF.STyp (Synapx.LF.Subst, range'), domain'))))
-    | Synext.Meta.Typ.Renaming_substitution_typ { domain; range; _ } ->
+    | Synext.Meta.Typ.Renaming_substitution_typ
+        { domain; range; location = _ } ->
         with_indexed_clf_context domain (fun domain' ->
             with_indexed_clf_context range (fun range' ->
                 return
@@ -1042,7 +1133,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         return (Synapx.LF.SigmaLast (Option.none, typ'))
 
   and index_schema = function
-    | Synext.Meta.Schema.Alternation { schemas; _ } ->
+    | Synext.Meta.Schema.Alternation { schemas; location = _ } ->
         let* schemas' = traverse_list2 index_schema_element schemas in
         let schemas'' = List2.to_list schemas' in
         return (Synapx.LF.Schema schemas'')
@@ -1075,7 +1166,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
              (List2.from x1 x2 xs))
 
   and index_schema_element = function
-    | Synext.Meta.Schema.Element { some; block; _ } -> (
+    | Synext.Meta.Schema.Element { some; block; location = _ } -> (
         match
           Identifier.find_duplicates (schema_some_clause_identifiers some)
         with
@@ -1116,7 +1207,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               ( location
               , Synapx.Comp.ClObj
                   ( context'
-                  , Synapx.LF.Dot (Synapx.LF.Obj term', Synapx.LF.EmptySub)
+                  , Synapx.LF.Dot (to_head_or_obj term', Synapx.LF.EmptySub)
                   ) ))
     | Synext.Meta.Pattern.Plain_substitution { location; domain; range } ->
         with_indexed_clf_context_pattern domain (fun domain' ->
@@ -1165,7 +1256,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   and with_indexed_meta_context :
         'a. Synext.meta_context -> (Synapx.LF.mctx -> 'a t) -> 'a t =
-   fun { Synext.Meta.Context.bindings; _ } f ->
+   fun { Synext.Meta.Context.bindings; location = _ } f ->
     with_indexed_meta_context_bindings bindings (fun bindings' ->
         f
           (List.fold_left
@@ -1180,24 +1271,20 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         -> 'a t =
    fun (identifier, typ) f ->
     let* typ' = index_meta_type typ in
-    let* with_bound_declaration =
+    let with_bound_pattern_declaration =
       match typ with
       | Synext.Meta.Typ.Context_schema _ ->
-          let* () = add_free_context_variable identifier in
-          return (with_bound_context_variable identifier)
+          with_bound_pattern_context_variable identifier
       | Synext.Meta.Typ.Contextual_typ _ ->
-          let* () = add_free_meta_variable identifier in
-          return (with_bound_meta_variable identifier)
+          with_bound_pattern_meta_variable identifier
       | Synext.Meta.Typ.Parameter_typ _ ->
-          let* () = add_free_parameter_variable identifier in
-          return (with_bound_parameter_variable identifier)
+          with_bound_pattern_parameter_variable identifier
       | Synext.Meta.Typ.Plain_substitution_typ _
       | Synext.Meta.Typ.Renaming_substitution_typ _ ->
-          let* () = add_free_substitution_variable identifier in
-          return (with_bound_substitution_variable identifier)
+          with_bound_pattern_substitution_variable identifier
     in
     let name = Name.make_from_identifier identifier in
-    with_bound_declaration
+    with_bound_pattern_declaration
       (f (Synapx.LF.Decl (name, typ', Plicity.explicit)))
 
   and with_indexed_meta_context_pattern_bindings :
@@ -1215,7 +1302,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   and with_indexed_meta_context_pattern :
         'a. Synext.meta_context -> (Synapx.LF.mctx -> 'a t) -> 'a t =
-   fun { Synext.Meta.Context.bindings; _ } f ->
+   fun { Synext.Meta.Context.bindings; location = _ } f ->
     with_indexed_meta_context_pattern_bindings bindings (fun bindings' ->
         f
           (List.fold_left
@@ -1254,17 +1341,16 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
              (location, Synapx.LF.Decl (x', parameter_type', plicity), body'))
 
   and index_comp_typ = function
-    | Synext.Comp.Typ.Inductive_typ_constant { location; identifier; _ } ->
+    | Synext.Comp.Typ.Inductive_typ_constant { location; identifier } ->
         let* index = index_of_inductive_comp_constant identifier in
         return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
-    | Synext.Comp.Typ.Stratified_typ_constant { location; identifier; _ } ->
+    | Synext.Comp.Typ.Stratified_typ_constant { location; identifier } ->
         let* index = index_of_stratified_comp_constant identifier in
         return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
-    | Synext.Comp.Typ.Coinductive_typ_constant { location; identifier; _ } ->
+    | Synext.Comp.Typ.Coinductive_typ_constant { location; identifier } ->
         let* index = index_of_coinductive_comp_constant identifier in
         return (Synapx.Comp.TypCobase (location, index, Synapx.Comp.MetaNil))
-    | Synext.Comp.Typ.Abbreviation_typ_constant { location; identifier; _ }
-      ->
+    | Synext.Comp.Typ.Abbreviation_typ_constant { location; identifier } ->
         let* index = index_of_abbreviation_comp_constant identifier in
         return (Synapx.Comp.TypDef (location, index, Synapx.Comp.MetaNil))
     | Synext.Comp.Typ.Pi
@@ -1280,7 +1366,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         return
           (Synapx.Comp.TypPiBox
              (location, Synapx.LF.Decl (x', parameter_type', plicity), body'))
-    | Synext.Comp.Typ.Arrow { location; domain; range; _ } ->
+    | Synext.Comp.Typ.Arrow { location; domain; range; orientation = _ } ->
         let* domain' = index_comp_typ domain in
         let* range' = index_comp_typ range in
         return (Synapx.Comp.TypArr (location, domain', range'))
@@ -1322,7 +1408,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     | Synext.Comp.Expression.Program { location; identifier } ->
         let* index = index_of_comp_program identifier in
         return (Synapx.Comp.Const (location, index))
-    | Synext.Comp.Expression.Fn { parameters; body; _ } ->
+    | Synext.Comp.Expression.Fn { parameters; body; location } ->
         let rec aux parameters =
           match parameters with
           | [] -> index_comp_expression body
@@ -1339,21 +1425,32 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               let name = Name.make_from_identifier parameter in
               return (Synapx.Comp.Fn (location, name, body'))
         in
-        aux (List1.to_list parameters)
-    | Synext.Comp.Expression.Mlam { parameters; body; _ } ->
+        let (List1.T ((_first_parameter_location, first_parameter), rest)) =
+          parameters
+        in
+        let* body' =
+          with_bound_omittable_comp_variable first_parameter (aux rest)
+        in
+        let* parameter = fresh_identifier_opt first_parameter in
+        let name = Name.make_from_identifier parameter in
+        return (Synapx.Comp.Fn (location, name, body'))
+    | Synext.Comp.Expression.Mlam { parameters; body; location } ->
+        let with_mlam_parameter parameter_opt modifier =
+          match parameter_opt with
+          | Option.None -> with_shifted_meta_context
+          | Option.Some parameter ->
+              (match modifier with
+              | `Plain -> with_bound_contextual_variable
+              | `Hash -> with_bound_parameter_variable
+              | `Dollar -> with_bound_substitution_variable)
+                parameter
+        in
         let rec aux parameters =
           match parameters with
           | [] -> index_comp_expression body
           | (parameter_location, (parameter_opt, modifier)) :: parameters ->
               let* body' =
-                match parameter_opt with
-                | Option.None -> with_shifted_meta_context (aux parameters)
-                | Option.Some parameter ->
-                    (match modifier with
-                    | `Plain -> with_bound_contextual_variable
-                    | `Hash -> with_bound_parameter_variable
-                    | `Dollar -> with_bound_substitution_variable)
-                      parameter (aux parameters)
+                with_mlam_parameter parameter_opt modifier (aux parameters)
               in
               let location =
                 Location.join parameter_location
@@ -1363,13 +1460,24 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               let name = Name.make_from_identifier parameter in
               return (Synapx.Comp.MLam (location, name, body'))
         in
-        aux (List1.to_list parameters)
+        let (List1.T
+              ( ( _first_parameter_location
+                , (first_parameter, first_parameter_modifier) )
+              , rest )) =
+          parameters
+        in
+        let* body' =
+          with_mlam_parameter first_parameter first_parameter_modifier
+            (aux rest)
+        in
+        let* parameter = fresh_identifier_opt first_parameter in
+        let name = Name.make_from_identifier parameter in
+        return (Synapx.Comp.MLam (location, name, body'))
     | Synext.Comp.Expression.Fun { location; branches } ->
         let* branches' = traverse_list1 index_cofunction_branch branches in
         let branches_location =
           Location.join_all1_contramap
-            (fun { Synext.Comp.Cofunction_branch.location; _ } -> location)
-            branches
+            Synext.location_of_comp_cofunction_branch branches
         in
         let branches'' =
           List.fold_right
@@ -1474,7 +1582,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         return (Synapx.Comp.Hole (location, name))
     | Synext.Comp.Expression.Box_hole { location } ->
         return (Synapx.Comp.BoxHole location)
-    | Synext.Comp.Expression.Application { applicand; arguments; _ } ->
+    | Synext.Comp.Expression.Application
+        { applicand; arguments; location = _ } ->
         let* applicand' = index_comp_expression applicand in
         let* arguments' = traverse_list1 index_comp_expression arguments in
         let application' =
@@ -1548,7 +1657,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let* () = add_computation_pattern_variable x in
         let x' = Name.make_from_identifier x in
         return (Synapx.Comp.PatFVar (location, x'))
-    | Synext.Comp.Pattern.Constructor { location; identifier; _ } ->
+    | Synext.Comp.Pattern.Constructor { location; identifier } ->
         let* id = index_of_comp_constructor identifier in
         let spine = Synapx.Comp.PatNil location in
         return (Synapx.Comp.PatConst (location, id, spine))
@@ -1562,7 +1671,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let* pattern' = index_comp_pattern pattern in
         let* typ' = index_comp_typ typ in
         return (Synapx.Comp.PatAnn (location, pattern', typ'))
-    | Synext.Comp.Pattern.Application { applicand; arguments; _ } -> (
+    | Synext.Comp.Pattern.Application { applicand; arguments; location = _ }
+      -> (
         index_comp_pattern applicand >>= function
         | Synapx.Comp.PatConst (applicand_location, id, Synapx.Comp.PatNil _)
           ->
@@ -1680,7 +1790,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   and with_indexed_comp_context :
         'a. Synext.comp_context -> (Synapx.Comp.gctx -> 'a t) -> 'a t =
-   fun { Synext.Comp.Context.bindings; _ } f ->
+   fun { Synext.Comp.Context.bindings; location = _ } f ->
     with_indexed_comp_context_bindings bindings (fun bindings' ->
         f
           (List.fold_left
@@ -1842,11 +1952,17 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     let* kind' = disallow_free_variables (index_comp_kind kind) in
     let rec with_unrolled_kind kind f =
       match kind with
-      | Synext.Comp.Kind.Pi { parameter_identifier; parameter_type; body; _ }
-        ->
+      | Synext.Comp.Kind.Pi
+          { parameter_identifier
+          ; parameter_type
+          ; body
+          ; plicity = _
+          ; location = _
+          } ->
           with_meta_level_binding_opt parameter_identifier parameter_type
             (with_unrolled_kind body f)
-      | Synext.Comp.Kind.Arrow { range; _ } -> with_unrolled_kind range f
+      | Synext.Comp.Kind.Arrow { range; domain = _; location = _ } ->
+          with_unrolled_kind range f
       | Synext.Comp.Kind.Ctype _ -> f
     in
     let* typ' =

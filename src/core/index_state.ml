@@ -381,6 +381,18 @@ module type INDEXING_STATE = sig
   val add_free_context_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
+  val with_bound_pattern_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
   val allow_free_variables : 'a t -> 'a t
 
   val disallow_free_variables : 'a t -> 'a t
@@ -1078,23 +1090,23 @@ module Persistent_indexing_state = struct
     in
     return x
 
-  let shift_lf_context = modify_lf_context_size (( + ) 1)
+  let shift_lf_context = modify_lf_context_size (fun size -> size + 1)
 
-  let unshift_lf_context = modify_lf_context_size (( - ) 1)
+  let unshift_lf_context = modify_lf_context_size (fun size -> size - 1)
 
   let[@inline] with_shifted_lf_context m =
     shift_lf_context &> m <& unshift_lf_context
 
-  let shift_meta_context = modify_meta_context_size (( + ) 1)
+  let shift_meta_context = modify_meta_context_size (fun size -> size + 1)
 
-  let unshift_meta_context = modify_meta_context_size (( - ) 1)
+  let unshift_meta_context = modify_meta_context_size (fun size -> size - 1)
 
   let[@inline] with_shifted_meta_context m =
     shift_meta_context &> m <& unshift_meta_context
 
-  let shift_comp_context = modify_comp_context_size (( + ) 1)
+  let shift_comp_context = modify_comp_context_size (fun size -> size + 1)
 
-  let unshift_comp_context = modify_comp_context_size (( - ) 1)
+  let unshift_comp_context = modify_comp_context_size (fun size -> size - 1)
 
   let[@inline] with_shifted_comp_context m =
     shift_comp_context &> m <& unshift_comp_context
@@ -1105,49 +1117,139 @@ module Persistent_indexing_state = struct
     let* () = set_bindings_state bindings_state in
     return x
 
+  let push_entry identifier entry bindings =
+    let entries' =
+      match Identifier.Hamt.find_opt identifier bindings with
+      | Option.None -> List1.singleton entry
+      | Option.Some entries -> List1.cons entry entries
+    in
+    Identifier.Hamt.add identifier entries' bindings
+
   let add_lf_level_variable identifier make_entry =
-    modify_bindings_state (fun state ->
+    get_substate >>= function
+    | Pattern_state substate ->
         let entry =
-          make_entry (Option.some (Lf_level.of_int state.lf_context_size))
+          make_entry
+            (Option.some
+               (Lf_level.of_int substate.pattern_bindings.lf_context_size))
         in
-        let lf_context_size' = state.lf_context_size + 1 in
+        let lf_context_size' =
+          substate.pattern_bindings.lf_context_size + 1
+        in
         let bindings' =
-          Binding_tree.add_toplevel identifier entry state.bindings
+          Binding_tree.add_toplevel identifier entry
+            substate.pattern_bindings.bindings
         in
-        { state with
-          bindings = bindings'
-        ; lf_context_size = lf_context_size'
-        })
+        set_substate
+          (Pattern_state
+             { substate with
+               pattern_bindings =
+                 { substate.pattern_bindings with
+                   bindings = bindings'
+                 ; lf_context_size = lf_context_size'
+                 }
+             ; inner_pattern_bindings =
+                 push_entry identifier entry substate.inner_pattern_bindings
+             })
+    | Scope_state _
+    | Module_state _ ->
+        modify_bindings_state (fun state ->
+            let entry =
+              make_entry
+                (Option.some (Lf_level.of_int state.lf_context_size))
+            in
+            let lf_context_size' = state.lf_context_size + 1 in
+            let bindings' =
+              Binding_tree.add_toplevel identifier entry state.bindings
+            in
+            { state with
+              bindings = bindings'
+            ; lf_context_size = lf_context_size'
+            })
 
   let add_meta_level_variable identifier make_entry =
-    modify_bindings_state (fun state ->
+    get_substate >>= function
+    | Pattern_state substate ->
         let entry =
           make_entry
-            (Option.some (Meta_level.of_int state.meta_context_size))
+            (Option.some
+               (Meta_level.of_int substate.pattern_bindings.meta_context_size))
         in
-        let meta_context_size' = state.meta_context_size + 1 in
+        let meta_context_size' =
+          substate.pattern_bindings.meta_context_size + 1
+        in
         let bindings' =
-          Binding_tree.add_toplevel identifier entry state.bindings
+          Binding_tree.add_toplevel identifier entry
+            substate.pattern_bindings.bindings
         in
-        { state with
-          bindings = bindings'
-        ; meta_context_size = meta_context_size'
-        })
+        set_substate
+          (Pattern_state
+             { substate with
+               pattern_bindings =
+                 { substate.pattern_bindings with
+                   bindings = bindings'
+                 ; meta_context_size = meta_context_size'
+                 }
+             ; inner_pattern_bindings =
+                 push_entry identifier entry substate.inner_pattern_bindings
+             })
+    | Scope_state _
+    | Module_state _ ->
+        modify_bindings_state (fun state ->
+            let entry =
+              make_entry
+                (Option.some (Meta_level.of_int state.meta_context_size))
+            in
+            let meta_context_size' = state.meta_context_size + 1 in
+            let bindings' =
+              Binding_tree.add_toplevel identifier entry state.bindings
+            in
+            { state with
+              bindings = bindings'
+            ; meta_context_size = meta_context_size'
+            })
 
   let add_comp_level_variable identifier make_entry =
-    modify_bindings_state (fun state ->
+    get_substate >>= function
+    | Pattern_state substate ->
         let entry =
           make_entry
-            (Option.some (Comp_level.of_int state.comp_context_size))
+            (Option.some
+               (Comp_level.of_int substate.pattern_bindings.comp_context_size))
         in
-        let comp_context_size' = state.comp_context_size + 1 in
+        let comp_context_size' =
+          substate.pattern_bindings.comp_context_size + 1
+        in
         let bindings' =
-          Binding_tree.add_toplevel identifier entry state.bindings
+          Binding_tree.add_toplevel identifier entry
+            substate.pattern_bindings.bindings
         in
-        { state with
-          bindings = bindings'
-        ; comp_context_size = comp_context_size'
-        })
+        set_substate
+          (Pattern_state
+             { substate with
+               pattern_bindings =
+                 { substate.pattern_bindings with
+                   bindings = bindings'
+                 ; comp_context_size = comp_context_size'
+                 }
+             ; inner_pattern_bindings =
+                 push_entry identifier entry substate.inner_pattern_bindings
+             })
+    | Scope_state _
+    | Module_state _ ->
+        modify_bindings_state (fun state ->
+            let entry =
+              make_entry
+                (Option.some (Comp_level.of_int state.comp_context_size))
+            in
+            let comp_context_size' = state.comp_context_size + 1 in
+            let bindings' =
+              Binding_tree.add_toplevel identifier entry state.bindings
+            in
+            { state with
+              bindings = bindings'
+            ; comp_context_size = comp_context_size'
+            })
 
   let add_lf_variable ?location identifier =
     add_lf_level_variable identifier
@@ -1159,7 +1261,7 @@ module Persistent_indexing_state = struct
 
   let add_parameter_variable ?location identifier =
     add_meta_level_variable identifier
-      (Entry.make_meta_variable_entry ?location identifier)
+      (Entry.make_parameter_variable_entry ?location identifier)
 
   let add_substitution_variable ?location identifier =
     add_meta_level_variable identifier
@@ -1408,36 +1510,20 @@ module Persistent_indexing_state = struct
         let* () = put state in
         return expression'
 
-  let push_entry identifier entry bindings =
-    let entries' =
-      match Identifier.Hamt.find_opt identifier bindings with
-      | Option.None -> List1.singleton entry
-      | Option.Some entries -> List1.cons entry entries
-    in
-    Identifier.Hamt.add identifier entries' bindings
-
   let add_free_lf_level_variable identifier make_entry =
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let lf_context_size =
-              substate.expression_bindings.lf_context_size
-            in
             let entry = make_entry Option.none in
-            let lf_context_size' = lf_context_size + 1 in
             { state with
               substate =
                 Pattern_state
                   { substate with
-                    inner_pattern_bindings =
-                      push_entry identifier entry
-                        substate.inner_pattern_bindings
-                  ; expression_bindings =
+                    expression_bindings =
                       { substate.expression_bindings with
                         bindings =
                           Binding_tree.add_toplevel identifier entry
                             substate.expression_bindings.bindings
-                      ; lf_context_size = lf_context_size'
                       }
                   ; pattern_variables_rev =
                       identifier :: substate.pattern_variables_rev
@@ -1451,11 +1537,7 @@ module Persistent_indexing_state = struct
     modify (fun state ->
         match state.substate with
         | Pattern_state substate ->
-            let meta_context_size =
-              substate.expression_bindings.meta_context_size
-            in
             let entry = make_entry Option.none in
-            let meta_context_size' = meta_context_size + 1 in
             { state with
               substate =
                 Pattern_state
@@ -1468,7 +1550,6 @@ module Persistent_indexing_state = struct
                         bindings =
                           Binding_tree.add_toplevel identifier entry
                             substate.expression_bindings.bindings
-                      ; meta_context_size = meta_context_size'
                       }
                   ; pattern_variables_rev =
                       identifier :: substate.pattern_variables_rev
@@ -1584,7 +1665,7 @@ module Persistent_indexing_state = struct
         are_free_variables_allowed >>= function
         | true ->
             add_free_meta_level_variable identifier
-              (Entry.make_parameter_variable_entry ?location identifier)
+              (Entry.make_substitution_variable_entry ?location identifier)
         | false ->
             Error.raise_at1
               (Identifier.location identifier)
@@ -1630,6 +1711,186 @@ module Persistent_indexing_state = struct
             Error.raise_at1
               (Identifier.location identifier)
               Illegal_free_computation_variable)
+
+  let with_bound_pattern_meta_variable ?location identifier m =
+    get_substate >>= function
+    | Pattern_state
+        { pattern_bindings
+        ; inner_pattern_bindings
+        ; pattern_variables_rev
+        ; expression_bindings
+        } ->
+        let entry =
+          Entry.make_meta_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int pattern_bindings.meta_context_size))
+        in
+        let entry' =
+          Entry.make_meta_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int expression_bindings.meta_context_size))
+        in
+        let* () =
+          set_substate
+            (Pattern_state
+               { pattern_bindings =
+                   { pattern_bindings with
+                     meta_context_size =
+                       pattern_bindings.meta_context_size + 1
+                   }
+               ; inner_pattern_bindings =
+                   push_entry identifier entry inner_pattern_bindings
+               ; pattern_variables_rev = identifier :: pattern_variables_rev
+               ; expression_bindings =
+                   { expression_bindings with
+                     bindings =
+                       Binding_tree.add_toplevel identifier entry'
+                         expression_bindings.bindings
+                   ; meta_context_size =
+                       expression_bindings.meta_context_size + 1
+                   }
+               })
+        in
+        m
+    | Scope_state _
+    | Module_state _ ->
+        Error.raise_violation
+          "[with_bound_pattern_meta_variable] invalid state"
+
+  let with_bound_pattern_parameter_variable ?location identifier m =
+    get_substate >>= function
+    | Pattern_state
+        { pattern_bindings
+        ; inner_pattern_bindings
+        ; pattern_variables_rev
+        ; expression_bindings
+        } ->
+        let entry =
+          Entry.make_parameter_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int pattern_bindings.meta_context_size))
+        in
+        let entry' =
+          Entry.make_parameter_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int expression_bindings.meta_context_size))
+        in
+        let* () =
+          set_substate
+            (Pattern_state
+               { pattern_bindings =
+                   { pattern_bindings with
+                     meta_context_size =
+                       pattern_bindings.meta_context_size + 1
+                   }
+               ; inner_pattern_bindings =
+                   push_entry identifier entry inner_pattern_bindings
+               ; pattern_variables_rev = identifier :: pattern_variables_rev
+               ; expression_bindings =
+                   { expression_bindings with
+                     bindings =
+                       Binding_tree.add_toplevel identifier entry'
+                         expression_bindings.bindings
+                   ; meta_context_size =
+                       expression_bindings.meta_context_size + 1
+                   }
+               })
+        in
+        m
+    | Scope_state _
+    | Module_state _ ->
+        Error.raise_violation
+          "[with_bound_pattern_parameter_variable] invalid state"
+
+  let with_bound_pattern_substitution_variable ?location identifier m =
+    get_substate >>= function
+    | Pattern_state
+        { pattern_bindings
+        ; inner_pattern_bindings
+        ; pattern_variables_rev
+        ; expression_bindings
+        } ->
+        let entry =
+          Entry.make_substitution_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int pattern_bindings.meta_context_size))
+        in
+        let entry' =
+          Entry.make_substitution_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int expression_bindings.meta_context_size))
+        in
+        let* () =
+          set_substate
+            (Pattern_state
+               { pattern_bindings =
+                   { pattern_bindings with
+                     meta_context_size =
+                       pattern_bindings.meta_context_size + 1
+                   }
+               ; inner_pattern_bindings =
+                   push_entry identifier entry inner_pattern_bindings
+               ; pattern_variables_rev = identifier :: pattern_variables_rev
+               ; expression_bindings =
+                   { expression_bindings with
+                     bindings =
+                       Binding_tree.add_toplevel identifier entry'
+                         expression_bindings.bindings
+                   ; meta_context_size =
+                       expression_bindings.meta_context_size + 1
+                   }
+               })
+        in
+        m
+    | Scope_state _
+    | Module_state _ ->
+        Error.raise_violation
+          "[with_bound_pattern_substitution_variable] invalid state"
+
+  let with_bound_pattern_context_variable ?location identifier m =
+    get_substate >>= function
+    | Pattern_state
+        { pattern_bindings
+        ; inner_pattern_bindings
+        ; pattern_variables_rev
+        ; expression_bindings
+        } ->
+        let entry =
+          Entry.make_context_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int pattern_bindings.meta_context_size))
+        in
+        let entry' =
+          Entry.make_context_variable_entry ?location identifier
+            (Option.some
+               (Meta_level.of_int expression_bindings.meta_context_size))
+        in
+        let* () =
+          set_substate
+            (Pattern_state
+               { pattern_bindings =
+                   { pattern_bindings with
+                     meta_context_size =
+                       pattern_bindings.meta_context_size + 1
+                   }
+               ; inner_pattern_bindings =
+                   push_entry identifier entry inner_pattern_bindings
+               ; pattern_variables_rev = identifier :: pattern_variables_rev
+               ; expression_bindings =
+                   { expression_bindings with
+                     bindings =
+                       Binding_tree.add_toplevel identifier entry'
+                         expression_bindings.bindings
+                   ; meta_context_size =
+                       expression_bindings.meta_context_size + 1
+                   }
+               })
+        in
+        m
+    | Scope_state _
+    | Module_state _ ->
+        Error.raise_violation
+          "[with_bound_pattern_context_variable] invalid state"
 
   let initial_state =
     { substate =

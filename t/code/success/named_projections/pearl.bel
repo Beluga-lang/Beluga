@@ -123,14 +123,14 @@ rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S[..] Q[..]] -> [g |- sub (Q..) T[..
 mlam Q => fn d1 => fn d2 => case d1 of
  | [g |- #p.w[..]] =>  % w: sub a Q
      let [g |- D2[..]] = d2 in
-     [g |- #p.tr[..] Q[..] _ D2[..] (#p.w[..])]
+     [g |- #p.tr[..] Q[..] _ D2[..] #p.w[..]]
  | [g |- #p.ref[..]] => % refl : sub a a
                  d2
 
 |
    {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
                            w: sub a U[..], ref: sub a a)]}
-   {D1:[g |- sub (#p.a[..]) U[..]]}
+   {D1:[g |- sub #p.a[..] U[..]]}
   [g |- #p.tr[..] U[..] Q[..] D2[..] D1[..]] =>
   let [g |- F'[..]] = trans [g |- Q[..]] [g |- D2[..]] d2 in
     [g |- #p.tr[..]  U[..] _  F'[..] D1[..]]
@@ -174,7 +174,7 @@ fn d => case d of
 % transitivity
 | {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
                     w: sub a U[..], ref: sub a a, w': subtype a U[..])]}
-   {D1:[g |- sub (#p.a[..]) U[..]]}
+   {D1:[g |- sub #p.a[..] U[..]]}
   [g |- #p.tr[..] U[..] Q[..] D2[..] D1[..]] =>
   let [g |- F2[..]] = sound [g |- D2[..]] in
   let [g |- F1[..]] = sound [g |- D1[..]] in

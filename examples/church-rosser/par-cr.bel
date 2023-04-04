@@ -94,7 +94,7 @@ fn d => fn e => case d of
 
 | [g |- #p.2] =>
    let
-       [g |- #q.2] = e in [g |- dia_result _ (#q.2) (#q.2)]
+       [g |- #q.2] = e in [g |- dia_result _ #q.2 #q.2]
 
 ;
 

@@ -638,7 +638,7 @@ and json_of_comp_branch = function
       json_of_variant ~name:"Synapx.Comp.Branch"
         ~data:
           [ ("location", json_of_location location)
-          ; ("comp_context", json_of_lf_mctx cD)
+          ; ("meta_context", json_of_lf_mctx cD)
           ; ("pattern", json_of_comp_pattern pat)
           ; ("body", json_of_comp_exp body)
           ]

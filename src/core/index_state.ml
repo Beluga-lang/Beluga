@@ -1285,11 +1285,8 @@ module Persistent_indexing_state = struct
             Error.raise_violation "[stop_module] no parent state"
         | Option.Some parent ->
             let* () = set_substate parent in
-            modify_bindings (fun bindings ->
-                Binding_tree.add_toplevel identifier
-                  ~subtree:substate.declarations
-                  (Entry.make_module_entry ?location identifier cid)
-                  bindings))
+            add_declaration identifier ~subtree:substate.declarations
+              (Entry.make_module_entry ?location identifier cid))
 
   let add_module ?location identifier cid m =
     let* () = start_module in

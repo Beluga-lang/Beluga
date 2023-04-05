@@ -82,14 +82,14 @@ struct
     match command with
     | Synprs.Harpoon.Command.By { location; expression; assignee } ->
         let* expression' = disambiguate_comp_expression expression in
-        with_comp_variable assignee
+        with_bound_computation_variable assignee
           (f
              (Synext.Harpoon.Command.By
                 { location; expression = expression'; assignee }))
     | Synprs.Harpoon.Command.Unbox
         { location; expression; assignee; modifier } ->
         let* expression' = disambiguate_comp_expression expression in
-        with_contextual_variable assignee
+        with_bound_contextual_variable assignee
           (f
              (Synext.Harpoon.Command.Unbox
                 { location; expression = expression'; assignee; modifier }))

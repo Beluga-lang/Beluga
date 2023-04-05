@@ -20,6 +20,36 @@ module Comp_parser = Comp_parser
 module Harpoon_parser = Harpoon_parser
 module Signature_parser = Signature_parser
 
+module Make_parser
+    (Parser_state : PARSER_STATE
+                      with type token = Located_token.t
+                       and type location = Location.t) =
+struct
+  module Parser_combinator = Parser_combinator.Make (Parser_state)
+  module Common_parser = Common_parser.Make (Parser_combinator)
+  module Lf_parser = Lf_parser.Make (Common_parser)
+  module Clf_parser = Clf_parser.Make (Common_parser)
+  module Meta_parser =
+    Meta_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
+  module Comp_parser = Comp_parser.Make (Common_parser) (Meta_parser)
+  module Harpoon_parser =
+    Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
+  module Signature_parser =
+    Signature_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
+      (Meta_parser)
+      (Comp_parser)
+      (Harpoon_parser)
+  include Parser_state
+  include Parser_combinator
+  include Common_parser
+  include Lf_parser
+  include Clf_parser
+  include Meta_parser
+  include Comp_parser
+  include Harpoon_parser
+  include Signature_parser
+end
+
 (** {1 Disambiguation} *)
 
 module type DISAMBIGUATION_STATE = Disambiguation_state.DISAMBIGUATION_STATE
@@ -32,6 +62,33 @@ module Comp_disambiguation = Comp_disambiguation
 module Harpoon_disambiguation = Harpoon_disambiguation
 module Signature_disambiguation = Signature_disambiguation
 
+module Make_disambiguation (Disambiguation_state : DISAMBIGUATION_STATE) =
+struct
+  module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
+  module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
+  module Meta_disambiguator =
+    Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+      (Clf_disambiguator)
+  module Comp_disambiguator =
+    Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
+  module Harpoon_disambiguator =
+    Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
+      (Comp_disambiguator)
+  module Signature_disambiguator =
+    Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+      (Clf_disambiguator)
+      (Meta_disambiguator)
+      (Comp_disambiguator)
+      (Harpoon_disambiguator)
+  include Disambiguation_state
+  include Lf_disambiguator
+  include Clf_disambiguator
+  include Meta_disambiguator
+  include Comp_disambiguator
+  include Harpoon_disambiguator
+  include Signature_disambiguator
+end
+
 (** {1 Constructors} *)
 
 module Make
@@ -40,57 +97,8 @@ module Make
                        and type location = Location.t)
     (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
-  module Parsing = struct
-    module Parser_combinator = Parser_combinator.Make (Parser_state)
-    module Common_parser = Common_parser.Make (Parser_combinator)
-    module Lf_parser = Lf_parser.Make (Common_parser)
-    module Clf_parser = Clf_parser.Make (Common_parser)
-    module Meta_parser =
-      Meta_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
-    module Comp_parser = Comp_parser.Make (Common_parser) (Meta_parser)
-    module Harpoon_parser =
-      Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
-    module Signature_parser =
-      Signature_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
-        (Meta_parser)
-        (Comp_parser)
-        (Harpoon_parser)
-    include Parser_state
-    include Parser_combinator
-    include Common_parser
-    include Lf_parser
-    include Clf_parser
-    include Meta_parser
-    include Comp_parser
-    include Harpoon_parser
-    include Signature_parser
-  end
-
-  module Disambiguation = struct
-    module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
-    module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
-    module Meta_disambiguator =
-      Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
-        (Clf_disambiguator)
-    module Comp_disambiguator =
-      Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
-    module Harpoon_disambiguator =
-      Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
-        (Comp_disambiguator)
-    module Signature_disambiguator =
-      Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
-        (Clf_disambiguator)
-        (Meta_disambiguator)
-        (Comp_disambiguator)
-        (Harpoon_disambiguator)
-    include Disambiguation_state
-    include Lf_disambiguator
-    include Clf_disambiguator
-    include Meta_disambiguator
-    include Comp_disambiguator
-    include Harpoon_disambiguator
-    include Signature_disambiguator
-  end
+  module Parsing = Make_parser (Parser_state)
+  module Disambiguation = Make_disambiguation (Disambiguation_state)
 
   type parser_state = Parsing.state
 

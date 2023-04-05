@@ -112,7 +112,7 @@ module type DISAMBIGUATION_STATE = sig
       [location = Option.None], then [identifier]'s location is used instead.
 
       This is mostly used for testing. For locally binding an LF variable,
-      see {!with_lf_variable}. *)
+      see {!with_bound_lf_variable}. *)
   val add_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   (** [add_meta_variable] is like {!add_lf_variable}, but the identifier is
@@ -183,8 +183,8 @@ module type DISAMBIGUATION_STATE = sig
   val add_free_computation_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
-  (** [with_lf_variable ?location identifier m state] is [(state', x)] where
-      [x] is the result of running [m] in the local state derived from
+  (** [with_bound_lf_variable ?location identifier m state] is [(state', x)]
+      where [x] is the result of running [m] in the local state derived from
       [state] having [identifier] as a bound LF variable.
 
       When disambiguating a pattern, [identifier] is additionally added as an
@@ -195,26 +195,27 @@ module type DISAMBIGUATION_STATE = sig
       disambiguating the body [m]. This is achieved like this:
 
       {[
-        with_lf_variable x (disambiguate_lf m)
+        with_bound_lf_variable x (disambiguate_lf_term m)
       ]} *)
-  val with_lf_variable : ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-
-  val with_meta_variable :
+  val with_bound_lf_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_parameter_variable :
+  val with_bound_meta_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_substitution_variable :
+  val with_bound_parameter_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_context_variable :
+  val with_bound_substitution_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_contextual_variable :
+  val with_bound_context_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val with_comp_variable :
+  val with_bound_contextual_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_computation_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
   (** [with_free_variables_as_pattern_variables ~pattern ~expression state]

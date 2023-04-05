@@ -171,12 +171,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Lf_application_disambiguation.make_expression expression)
 
-  (** [with_lf_variable_opt identifier_opt m state] is [m] run in the state
-      locally derived from [state] with the addition of [identifier] as a
-      bound LF variable if [identifier_opt = Option.Some identifier]. *)
-  let[@inline] with_lf_variable_opt = function
+  (** [with_bound_lf_variable_opt identifier_opt m state] is [m] run in the
+      state locally derived from [state] with the addition of [identifier] as
+      a bound LF variable if [identifier_opt = Option.Some identifier]. *)
+  let[@inline] with_bound_lf_variable_opt = function
     | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_variable identifier
+    | Option.Some identifier -> with_bound_lf_variable identifier
 
   (** [disambiguate_lf_kind object_ kind] is [(state', kind')] where [kind']
       is the LF kind disambiguated from [kind] in the disambiguation state
@@ -218,7 +218,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_variable_opt parameter_identifier
+          with_bound_lf_variable_opt parameter_identifier
             (disambiguate_lf_kind body)
         in
         return
@@ -302,7 +302,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_variable_opt parameter_identifier
+          with_bound_lf_variable_opt parameter_identifier
             (disambiguate_lf_typ body)
         in
         return
@@ -398,7 +398,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_variable_opt parameter_identifier
+          with_bound_lf_variable_opt parameter_identifier
             (disambiguate_lf_term body)
         in
         return

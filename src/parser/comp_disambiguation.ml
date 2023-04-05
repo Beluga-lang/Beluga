@@ -303,34 +303,34 @@ module Make
 
   (** {1 Disambiguation State Helpers} *)
 
-  let with_context_variable_opt = function
-    | Option.Some identifier -> with_context_variable identifier
+  let with_bound_context_variable_opt = function
+    | Option.Some identifier -> with_bound_context_variable identifier
     | Option.None -> Fun.id
 
-  let with_meta_variable_opt = function
-    | Option.Some identifier -> with_meta_variable identifier
+  let with_bound_meta_variable_opt = function
+    | Option.Some identifier -> with_bound_meta_variable identifier
     | Option.None -> Fun.id
 
-  let with_parameter_variable_opt = function
-    | Option.Some identifier -> with_parameter_variable identifier
+  let with_bound_parameter_variable_opt = function
+    | Option.Some identifier -> with_bound_parameter_variable identifier
     | Option.None -> Fun.id
 
-  let with_substitution_variable_opt = function
-    | Option.Some identifier -> with_substitution_variable identifier
+  let with_bound_substitution_variable_opt = function
+    | Option.Some identifier -> with_bound_substitution_variable identifier
     | Option.None -> Fun.id
 
   let with_parameter_binding_opt identifier_opt modifier typ =
     match (modifier, typ) with
     | `Plain, Synext.Meta.Typ.Context_schema _ ->
-        with_context_variable_opt identifier_opt
+        with_bound_context_variable_opt identifier_opt
     | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-        with_meta_variable_opt identifier_opt
+        with_bound_meta_variable_opt identifier_opt
     | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-        with_parameter_variable_opt identifier_opt
+        with_bound_parameter_variable_opt identifier_opt
     | ( `Dollar
       , ( Synext.Meta.Typ.Plain_substitution_typ _
         | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-        with_substitution_variable_opt identifier_opt
+        with_bound_substitution_variable_opt identifier_opt
     | `Plain, typ ->
         Error.raise_at1
           (Synext.location_of_meta_type typ)
@@ -345,7 +345,7 @@ module Make
           Dollar_modifier_typ_mismatch
 
   let with_computation_variable_opt = function
-    | Option.Some identifier -> with_comp_variable identifier
+    | Option.Some identifier -> with_bound_computation_variable identifier
     | Option.None -> Fun.id
 
   let rec with_function_parameters_list parameters f =
@@ -361,10 +361,12 @@ module Make
   let with_function_parameters = with_function_parameters_list1
 
   let with_meta_parameter = function
-    | Option.Some identifier, `Plain -> with_contextual_variable identifier
-    | Option.Some identifier, `Hash -> with_parameter_variable identifier
+    | Option.Some identifier, `Plain ->
+        with_bound_contextual_variable identifier
+    | Option.Some identifier, `Hash ->
+        with_bound_parameter_variable identifier
     | Option.Some identifier, `Dollar ->
-        with_substitution_variable identifier
+        with_bound_substitution_variable identifier
     | Option.None, _ -> Fun.id
 
   let rec with_meta_function_parameters_list parameters f =
@@ -1365,7 +1367,7 @@ module Make
           (Illegal_missing_comp_context_binding_type identifier)
     | identifier, Option.Some typ ->
         let* typ' = disambiguate_comp_typ typ in
-        with_comp_variable identifier (f (identifier, typ'))
+        with_bound_computation_variable identifier (f (identifier, typ'))
 
   and with_disambiguated_context_bindings_list bindings f =
     match bindings with

@@ -106,18 +106,18 @@ struct
 
   (** {1 Disambiguation Helpers} *)
 
-  let with_meta_level_binding = function
-    | Synext.Meta.Typ.Context_schema _ -> with_context_variable
-    | Synext.Meta.Typ.Contextual_typ _ -> with_meta_variable
-    | Synext.Meta.Typ.Parameter_typ _ -> with_parameter_variable
+  let with_bound_meta_level_variable = function
+    | Synext.Meta.Typ.Context_schema _ -> with_bound_context_variable
+    | Synext.Meta.Typ.Contextual_typ _ -> with_bound_meta_variable
+    | Synext.Meta.Typ.Parameter_typ _ -> with_bound_parameter_variable
     | Synext.Meta.Typ.Plain_substitution_typ _
     | Synext.Meta.Typ.Renaming_substitution_typ _ ->
-        with_substitution_variable
+        with_bound_substitution_variable
 
-  let with_meta_level_binding_opt identifier_opt typ =
+  let with_bound_meta_level_variable_opt identifier_opt typ =
     match identifier_opt with
     | Option.None -> Fun.id
-    | Option.Some identifier -> with_meta_level_binding typ identifier
+    | Option.Some identifier -> with_bound_meta_level_variable typ identifier
 
   let add_default_lf_type_constant ?location identifier kind =
     let arity = Synprs.explicit_arguments_lf_kind kind in
@@ -548,7 +548,8 @@ struct
           match kind with
           | Synext.Comp.Kind.Pi
               { parameter_identifier; parameter_type; body; _ } ->
-              with_meta_level_binding_opt parameter_identifier parameter_type
+              with_bound_meta_level_variable_opt parameter_identifier
+                parameter_type
                 (with_unrolled_kind body f)
           | Synext.Comp.Kind.Arrow { range; _ } -> with_unrolled_kind range f
           | Synext.Comp.Kind.Ctype _ -> f

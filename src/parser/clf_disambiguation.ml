@@ -317,9 +317,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Clf_application_disambiguation.make_expression expression)
 
-  let[@inline] with_lf_variable_opt = function
+  let[@inline] with_bound_lf_variable_opt = function
     | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_variable identifier
+    | Option.Some identifier -> with_bound_lf_variable identifier
 
   let rec disambiguate_clf_typ = function
     | Synprs.CLF.Object.Raw_hole { location; _ } ->
@@ -401,7 +401,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           match parameter_identifier with
           | Option.None -> disambiguate_clf_typ body
           | Option.Some parameter_identifier ->
-              with_lf_variable parameter_identifier
+              with_bound_lf_variable parameter_identifier
                 (disambiguate_clf_typ body)
         in
         return
@@ -450,7 +450,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     | (identifier, typ) :: xs ->
         let* typ' = disambiguate_clf_typ typ in
         let* ys =
-          (with_lf_variable identifier)
+          (with_bound_lf_variable identifier)
             (disambiguate_binding_list_as_clf_dependent_types xs)
         in
         return ((identifier, typ') :: ys)
@@ -459,7 +459,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     let (List1.T ((identifier, typ), xs)) = bindings in
     let* typ' = disambiguate_clf_typ typ in
     let* ys =
-      (with_lf_variable identifier)
+      (with_bound_lf_variable identifier)
         (disambiguate_binding_list_as_clf_dependent_types xs)
     in
     return (List1.from (identifier, typ') ys)
@@ -620,7 +620,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_clf_typ parameter_sort
         in
         let* body' =
-          with_lf_variable_opt parameter_identifier
+          with_bound_lf_variable_opt parameter_identifier
             (disambiguate_clf_term body)
         in
         return
@@ -772,12 +772,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     match binding with
     | Option.Some identifier, typ (* Typed binding *) ->
         let* typ' = disambiguate_clf_typ typ in
-        with_lf_variable identifier (f (identifier, Option.some typ'))
+        with_bound_lf_variable identifier (f (identifier, Option.some typ'))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
     (* Untyped contextual LF variable *) ->
-        with_lf_variable identifier (f (identifier, Option.none))
+        with_bound_lf_variable identifier (f (identifier, Option.none))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Hash; _ } )
@@ -1066,7 +1066,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  })
         | Option.Some parameter_identifier' ->
             let* body' =
-              with_lf_variable parameter_identifier'
+              with_bound_lf_variable parameter_identifier'
                 (disambiguate_clf_term_pattern body)
             in
             return
@@ -1241,7 +1241,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     match binding with
     | Option.Some identifier, typ ->
         let* typ' = disambiguate_clf_typ typ in
-        with_lf_variable identifier (f (identifier, typ'))
+        with_bound_lf_variable identifier (f (identifier, typ'))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } ) ->

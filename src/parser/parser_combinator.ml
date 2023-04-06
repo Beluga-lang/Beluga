@@ -153,7 +153,7 @@ end = struct
     match state.checkpoints with
     | [] ->
         Error.raise_violation
-          "[pop_checkpoint] no checkpoint to backtrack to"
+          (Format.asprintf "[%s] no checkpoint to backtrack to" __FUNCTION__)
     | checkpoint :: checkpoints ->
         let* () = put { state with checkpoints } in
         return checkpoint

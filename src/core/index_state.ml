@@ -1318,7 +1318,9 @@ module Persistent_indexing_state = struct
               state.declarations
           in
           Module_state { state with declarations = declarations' }
-      | _state -> Error.raise_violation "[add_declaration] invalid state")
+      | _state ->
+          Error.raise_violation
+            (Format.asprintf "[%s] invalid state" __FUNCTION__))
 
   let add_lf_type_constant ?location identifier cid =
     add_declaration identifier
@@ -1378,13 +1380,17 @@ module Persistent_indexing_state = struct
 
   let stop_module ?location identifier cid =
     get_substate >>= function
-    | Pattern_state _
+    | Pattern_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern state" __FUNCTION__)
     | Scope_state _ ->
-        Error.raise_violation "[stop_module] invalid state"
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
     | Module_state substate -> (
         match substate.parent with
         | Option.None ->
-            Error.raise_violation "[stop_module] no parent state"
+            Error.raise_violation
+              (Format.asprintf "[%s] no parent state" __FUNCTION__)
         | Option.Some parent ->
             let* () = set_substate parent in
             add_declaration identifier ~subtree:substate.declarations
@@ -1436,10 +1442,14 @@ module Persistent_indexing_state = struct
             let* () = put state in
             return x
         | Option.None ->
-            Error.raise_violation "[with_parent_scope] invalid state")
-    | Module_state _
+            Error.raise_violation
+              (Format.asprintf "[%s] no parent scope" __FUNCTION__))
+    | Module_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
     | Pattern_state _ ->
-        Error.raise_violation "[with_parent_scope] invalid state"
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern state" __FUNCTION__)
 
   let allow_free_variables m =
     with_free_variables_state ~free_variables_allowed:true m
@@ -1453,10 +1463,12 @@ module Persistent_indexing_state = struct
     | Pattern_state o ->
         let pattern_variables = List.rev o.pattern_variables_rev in
         return (pattern_variables, o.expression_bindings)
-    | Module_state _
+    | Module_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
     | Scope_state _ ->
         Error.raise_violation
-          "[get_pattern_variables_and_expression_state] invalid state"
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
 
   let raise_duplicate_identifiers_exception f duplicates =
     match duplicates with
@@ -1752,10 +1764,12 @@ module Persistent_indexing_state = struct
                })
         in
         m
-    | Scope_state _
+    | Scope_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
     | Module_state _ ->
         Error.raise_violation
-          "[with_bound_pattern_meta_variable] invalid state"
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
 
   let with_bound_pattern_parameter_variable ?location identifier m =
     get_substate >>= function
@@ -1797,10 +1811,12 @@ module Persistent_indexing_state = struct
                })
         in
         m
-    | Scope_state _
+    | Scope_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
     | Module_state _ ->
         Error.raise_violation
-          "[with_bound_pattern_parameter_variable] invalid state"
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
 
   let with_bound_pattern_substitution_variable ?location identifier m =
     get_substate >>= function
@@ -1842,10 +1858,12 @@ module Persistent_indexing_state = struct
                })
         in
         m
-    | Scope_state _
+    | Scope_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
     | Module_state _ ->
         Error.raise_violation
-          "[with_bound_pattern_substitution_variable] invalid state"
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
 
   let with_bound_pattern_context_variable ?location identifier m =
     get_substate >>= function
@@ -1887,10 +1905,12 @@ module Persistent_indexing_state = struct
                })
         in
         m
-    | Scope_state _
+    | Scope_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
     | Module_state _ ->
         Error.raise_violation
-          "[with_bound_pattern_context_variable] invalid state"
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
 
   let initial_state =
     { substate =

@@ -25,7 +25,8 @@ module type STATE = sig
   val exec : 'a t -> state -> state
 
   (** [try_catch m ~on_exn state] is [on_exn cause] if [run m state] raises
-      [cause], and [run m state] otherwise.
+      [cause], and [run m state] otherwise. Mutations to [state] performed in
+      [run m state] persist even if it raised an exception.
 
       Not tail-recursive. *)
   val try_catch : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t

@@ -465,16 +465,18 @@ struct
     (* Old style LF type or term constant declaration *) ->
         let disambiguate_as_lf_typ_declaration =
           lazy
-            (let* kind' = disambiguate_lf_kind typ_or_const in
-             return
-               (Synext.Signature.Declaration.Typ
-                  { location; identifier; kind = kind' }))
+            (with_bindings_checkpoint
+               (let* kind' = disambiguate_lf_kind typ_or_const in
+                return
+                  (Synext.Signature.Declaration.Typ
+                     { location; identifier; kind = kind' })))
         and disambiguate_as_lf_const_declaration =
           lazy
-            (let* typ' = disambiguate_lf_typ typ_or_const in
-             return
-               (Synext.Signature.Declaration.Const
-                  { location; identifier; typ = typ' }))
+            (with_bindings_checkpoint
+               (let* typ' = disambiguate_lf_typ typ_or_const in
+                return
+                  (Synext.Signature.Declaration.Const
+                     { location; identifier; typ = typ' })))
         in
         try_catch disambiguate_as_lf_typ_declaration ~on_exn:(fun typ_exn ->
             try_catch disambiguate_as_lf_const_declaration

@@ -640,6 +640,8 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_parent_scope : 'a t -> 'a t
 
+  val with_bindings_checkpoint : 'a t -> 'a t
+
   (** {1 Constants} *)
 
   val add_lf_type_constant :

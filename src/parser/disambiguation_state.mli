@@ -266,6 +266,10 @@ module type DISAMBIGUATION_STATE = sig
       in the meta-level and computation-level contexts of the proof. *)
   val with_parent_scope : 'a t -> 'a t
 
+  (** [with_bindings_checkpoint m] runs [m] with a checkpoint on the
+      bindings' state to backtrack to in case [m] raises an exception. *)
+  val with_bindings_checkpoint : 'a t -> 'a t
+
   (** {1 Constants} *)
 
   (** [add_lf_type_constant ?location ?arity identifier state] is

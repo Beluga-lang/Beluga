@@ -455,12 +455,11 @@ module Make
         let* meta_type' = disambiguate_meta_typ meta_type in
         match meta_type' with
         | Synext.Meta.Typ.Context_schema _ ->
-            let* () = add_free_context_variable identifier in
-            with_bound_context_variable identifier
+            with_bound_pattern_context_variable identifier
               (f (identifier, meta_type'))
         | Synext.Meta.Typ.Contextual_typ _ ->
-            let* () = add_free_meta_variable identifier in
-            with_bound_meta_variable identifier (f (identifier, meta_type'))
+            with_bound_pattern_meta_variable identifier
+              (f (identifier, meta_type'))
         | _ ->
             Error.raise_at1
               (Synext.location_of_meta_type meta_type')
@@ -470,8 +469,7 @@ module Make
         let* meta_type' = disambiguate_meta_typ meta_type in
         match meta_type' with
         | Synext.Meta.Typ.Parameter_typ _ ->
-            let* () = add_free_parameter_variable identifier in
-            with_bound_parameter_variable identifier
+            with_bound_pattern_parameter_variable identifier
               (f (identifier, meta_type'))
         | _ ->
             Error.raise_at1
@@ -483,8 +481,7 @@ module Make
         match meta_type' with
         | Synext.Meta.Typ.Plain_substitution_typ _
         | Synext.Meta.Typ.Renaming_substitution_typ _ ->
-            let* () = add_free_substitution_variable identifier in
-            with_bound_substitution_variable identifier
+            with_bound_pattern_substitution_variable identifier
               (f (identifier, meta_type'))
         | _ ->
             Error.raise_at1

@@ -60,6 +60,12 @@ val namespaces : t -> Identifier.t List.t
     For instance, if [qid = Util.Nat.z], then [name qid = "z"]. *)
 val name : t -> Identifier.t
 
+(** {1 Exceptions} *)
+
+exception Unbound_qualified_identifier of t
+
+exception Unbound_namespace of t
+
 (** {1 Interoperability} *)
 
 (** [from_list1 (x1, \[x2; x3; ...; xn\])] is the qualified identifier with

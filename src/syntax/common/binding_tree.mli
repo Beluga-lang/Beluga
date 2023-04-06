@@ -208,6 +208,8 @@ module Hashtbl : sig
       @raise Unbound_identifier *)
   val lookup_toplevel : Identifier.t -> 'a t -> 'a * 'a t
 
+  val lookup_toplevel_opt : Identifier.t -> 'a t -> ('a * 'a t) Option.t
+
   (** [lookup qualified_identifier tree] is [(value, subtree)] where [value]
       and [subtree] are as added with {!add}.
 
@@ -229,6 +231,9 @@ module Hashtbl : sig
         not satisfy [p]. *)
   val lookup_toplevel_filter :
     Identifier.t -> ('a -> Bool.t) -> 'a t -> 'a * 'a t
+
+  val lookup_toplevel_filter_opt :
+    Identifier.t -> ('a -> Bool.t) -> 'a t -> ('a * 'a t) Option.t
 
   (** [maximum_lookup identifiers tree] looks up as many bound identifiers in
       [identifiers] as possible against [tree] in sequence. This effectively

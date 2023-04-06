@@ -233,6 +233,256 @@ let () =
           "Illegal duplicate pattern variables."
     | exn -> Error.raise_unsupported_exception_printing exn)
 
+(** Abstract definition of de Bruijn levels.
+
+    A de Bruin level indexes a variable from the bottom of the context when
+    viewed as a stack. In other words, the de Bruin level of a variable in a
+    context represented as a list is the 0-based index of that variable in
+    the list.
+
+    If variable [x] has de Bruijn level [l] in a context [psi], then the de
+    Bruijn index of [x] is [length(psi) - l]. *)
+module type LEVEL = sig
+  type t
+
+  val of_int : Int.t -> t
+
+  val to_int : t -> Int.t
+end
+
+(** Concrete definition of de Bruijn levels. *)
+module Level = struct
+  type t = int
+
+  let of_int = Fun.id
+
+  let to_int = Fun.id
+end
+
+(** Concrete definition of de Bruijn levels for the context of LF-bound
+    variables.
+
+    The context of LF-bound variables is typically denoted [cPsi]. If
+    variable [x] is in [cPsi] with level [l], then the de Bruijn index of [x]
+    is [length(cPsi) - l]. *)
+module Lf_level : LEVEL = Level
+
+(** Concrete definition of de Bruijn levels for the context of meta-level
+    bound variables.
+
+    The context of meta-level bound variables is typically denoted [cD]. If
+    variable [x] is in [cD] with level [l], then the de Bruijn index of [x]
+    is [length(cD) - l]. *)
+module Meta_level : LEVEL = Level
+
+(** Concrete definition of de Bruijn levels for the context of
+    computation-level bound variables.
+
+    The context of computation-level bound variables is typically denoted
+    [cG]. If variable [x] is in [cG] with level [l], then the de Bruijn index
+    of [x] is [length(cG) - l]. *)
+module Comp_level : LEVEL = Level
+
+(** Concrete definition of entries in the store for indexing.
+
+    Variables are stored with their associated de Bruijn level because
+    variables in [cPsi], [cD] and [cG] share the same namespace. This avoids
+    explicitly representing those contexts as lists. Additionally, we do not
+    have to pollute the namespace with fresh variables generated for binders
+    that omit their identifier, like the LF term-level abstraction [\_. x]. *)
+module Entry = struct
+  type t =
+    { binding_location : Location.t
+    ; desc : desc
+    }
+
+  and desc =
+    | Lf_variable of
+        { lf_level : Lf_level.t Option.t
+              (** The de Bruijn level of the LF variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+    | Meta_variable of
+        { meta_level : Meta_level.t Option.t
+              (** The de Bruijn level of the meta-variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+    | Parameter_variable of
+        { meta_level : Meta_level.t Option.t
+              (** The de Bruijn level of the parameter variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+    | Substitution_variable of
+        { meta_level : Meta_level.t Option.t
+              (** The de Bruijn level of the substitution variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+    | Context_variable of
+        { meta_level : Meta_level.t Option.t
+              (** The de Bruijn level of the context variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+    | Contextual_variable of
+        { meta_level : Meta_level.t Option.t
+              (** The de Bruijn level of the contextual variable. If it is
+                  [Option.None], then this is a free variable, whose level is
+                  unknown. *)
+        }
+        (** A contextual variable is either a meta, parameter, substitution,
+            or context variable. Contextual variables are introduced
+            ambiguously by [mlam]-expressions. *)
+    | Computation_variable of
+        { comp_level : Comp_level.t Option.t
+              (** The de Bruijn level of the computation-level variable. If
+                  it is [Option.None], then this is a free variable, whose
+                  level is unknown. *)
+        }
+    | Lf_type_constant of { cid : Id.cid_typ }
+    | Lf_term_constant of { cid : Id.cid_term }
+    | Schema_constant of { cid : Id.cid_schema }
+    | Computation_inductive_type_constant of { cid : Id.cid_comp_typ }
+    | Computation_stratified_type_constant of { cid : Id.cid_comp_typ }
+    | Computation_coinductive_type_constant of { cid : Id.cid_comp_cotyp }
+    | Computation_abbreviation_type_constant of { cid : Id.cid_comp_typdef }
+    | Computation_term_constructor of { cid : Id.cid_comp_const }
+    | Computation_term_destructor of { cid : Id.cid_comp_dest }
+    | Program_constant of { cid : Id.cid_prog }
+    | Module of { cid : Id.module_id }
+
+  let[@inline] binding_location ?location identifier =
+    match location with
+    | Option.Some binding_location -> binding_location
+    | Option.None -> Identifier.location identifier
+
+  let[@inline] make_entry ?location identifier desc =
+    let binding_location = binding_location ?location identifier in
+    { binding_location; desc }
+
+  let[@inline] make_lf_variable_entry ?location identifier lf_level =
+    make_entry ?location identifier (Lf_variable { lf_level })
+
+  let[@inline] make_meta_variable_entry ?location identifier meta_level =
+    make_entry ?location identifier (Meta_variable { meta_level })
+
+  let[@inline] make_parameter_variable_entry ?location identifier meta_level
+      =
+    make_entry ?location identifier (Parameter_variable { meta_level })
+
+  let[@inline] make_substitution_variable_entry ?location identifier
+      meta_level =
+    make_entry ?location identifier (Substitution_variable { meta_level })
+
+  let[@inline] make_context_variable_entry ?location identifier meta_level =
+    make_entry ?location identifier (Context_variable { meta_level })
+
+  let[@inline] make_contextual_variable_entry ?location identifier meta_level
+      =
+    make_entry ?location identifier (Contextual_variable { meta_level })
+
+  let[@inline] make_computation_variable_entry ?location identifier
+      comp_level =
+    make_entry ?location identifier (Computation_variable { comp_level })
+
+  let[@inline] make_lf_type_constant_entry ?location identifier cid =
+    make_entry ?location identifier (Lf_type_constant { cid })
+
+  let[@inline] make_lf_term_constant_entry ?location identifier cid =
+    make_entry ?location identifier (Lf_term_constant { cid })
+
+  let[@inline] make_schema_constant_entry ?location identifier cid =
+    make_entry ?location identifier (Schema_constant { cid })
+
+  let[@inline] make_computation_inductive_type_constant_entry ?location
+      identifier cid =
+    make_entry ?location identifier
+      (Computation_inductive_type_constant { cid })
+
+  let[@inline] make_computation_stratified_type_constant_entry ?location
+      identifier cid =
+    make_entry ?location identifier
+      (Computation_stratified_type_constant { cid })
+
+  let[@inline] make_computation_coinductive_type_constant_entry ?location
+      identifier cid =
+    make_entry ?location identifier
+      (Computation_coinductive_type_constant { cid })
+
+  let[@inline] make_computation_abbreviation_type_constant_entry ?location
+      identifier cid =
+    make_entry ?location identifier
+      (Computation_abbreviation_type_constant { cid })
+
+  let[@inline] make_computation_term_constructor_entry ?location identifier
+      cid =
+    make_entry ?location identifier (Computation_term_constructor { cid })
+
+  let[@inline] make_computation_term_destructor_entry ?location identifier
+      cid =
+    make_entry ?location identifier (Computation_term_destructor { cid })
+
+  let[@inline] make_program_constant_entry ?location identifier cid =
+    make_entry ?location identifier (Program_constant { cid })
+
+  let[@inline] make_module_entry ?location identifier cid =
+    make_entry ?location identifier (Module { cid })
+
+  let actual_binding_exn identifier { binding_location; desc } =
+    Error.located_exception1 binding_location
+      (match desc with
+      | Lf_variable _ -> Bound_lf_variable identifier
+      | Meta_variable _ -> Bound_meta_variable identifier
+      | Parameter_variable _ -> Bound_parameter_variable identifier
+      | Substitution_variable _ -> Bound_substitution_variable identifier
+      | Context_variable _ -> Bound_context_variable identifier
+      | Contextual_variable _ -> Bound_contextual_variable identifier
+      | Computation_variable _ -> Bound_computation_variable identifier
+      | Lf_type_constant _ -> Bound_lf_type_constant identifier
+      | Lf_term_constant _ -> Bound_lf_term_constant identifier
+      | Schema_constant _ -> Bound_schema_constant identifier
+      | Computation_inductive_type_constant _ ->
+          Bound_computation_inductive_type_constant identifier
+      | Computation_stratified_type_constant _ ->
+          Bound_computation_stratified_type_constant identifier
+      | Computation_coinductive_type_constant _ ->
+          Bound_computation_coinductive_type_constant identifier
+      | Computation_abbreviation_type_constant _ ->
+          Bound_computation_abbreviation_type_constant identifier
+      | Computation_term_constructor _ ->
+          Bound_computation_term_constructor identifier
+      | Computation_term_destructor _ ->
+          Bound_computation_term_destructor identifier
+      | Program_constant _ -> Bound_program_constant identifier
+      | Module _ -> Bound_module identifier)
+
+  let is_variable entry =
+    match entry.desc with
+    | Lf_variable _
+    | Meta_variable _
+    | Parameter_variable _
+    | Substitution_variable _
+    | Context_variable _
+    | Contextual_variable _
+    | Computation_variable _ ->
+        true
+    | Lf_type_constant _
+    | Lf_term_constant _
+    | Schema_constant _
+    | Computation_inductive_type_constant _
+    | Computation_stratified_type_constant _
+    | Computation_coinductive_type_constant _
+    | Computation_abbreviation_type_constant _
+    | Computation_term_constructor _
+    | Computation_term_destructor _
+    | Program_constant _
+    | Module _ ->
+        false
+end
+
 module type INDEXING_STATE = sig
   include State.STATE
 
@@ -408,225 +658,8 @@ module type INDEXING_STATE = sig
   val add_all_gctx : Synint.Comp.gctx -> Unit.t t
 end
 
-module type LEVEL = sig
-  type t
-
-  val of_int : Int.t -> t
-
-  val to_int : t -> Int.t
-end
-
-module Level = struct
-  type t = int
-
-  let of_int = Fun.id
-
-  let to_int = Fun.id
-end
-
-module Lf_level : LEVEL = Level
-
-module Meta_level : LEVEL = Level
-
-module Comp_level : LEVEL = Level
-
 module Persistent_indexing_state = struct
   module Binding_tree = Binding_tree.Hamt
-
-  module Entry = struct
-    type t =
-      { binding_location : Location.t
-      ; desc : desc
-      }
-
-    and desc =
-      | Lf_variable of
-          { lf_level : Lf_level.t Option.t
-                (** The de Bruijn level of the LF variable. If it is
-                    [Option.None], then this is a free variable, whose level
-                    is unknown. *)
-          }
-      | Meta_variable of
-          { meta_level : Meta_level.t Option.t
-                (** The de Bruijn level of the meta-variable. If it is
-                    [Option.None], then this is a free variable, whose level
-                    is unknown. *)
-          }
-      | Parameter_variable of
-          { meta_level : Meta_level.t Option.t
-                (** The de Bruijn level of the parameter variable. If it is
-                    [Option.None], then this is a free variable, whose level
-                    is unknown. *)
-          }
-      | Substitution_variable of
-          { meta_level : Meta_level.t Option.t
-                (** The de Bruijn level of the substitution variable. If it
-                    is [Option.None], then this is a free variable, whose
-                    level is unknown. *)
-          }
-      | Context_variable of
-          { meta_level : Meta_level.t Option.t
-                (** The de Bruijn level of the context variable. If it is
-                    [Option.None], then this is a free variable, whose level
-                    is unknown. *)
-          }
-      | Contextual_variable of
-          { meta_level : Meta_level.t Option.t
-                (** The de Bruijn level of the contextual variable. If it is
-                    [Option.None], then this is a free variable, whose level
-                    is unknown. *)
-          }
-          (** A contextual variable is either a meta, parameter,
-              substitution, or context variable. Contextual variables are
-              introduced ambiguously by [mlam]-expressions. *)
-      | Computation_variable of
-          { comp_level : Comp_level.t Option.t
-                (** The de Bruijn level of the computation-level variable. If
-                    it is [Option.None], then this is a free variable, whose
-                    level is unknown. *)
-          }
-      | Lf_type_constant of { cid : Id.cid_typ }
-      | Lf_term_constant of { cid : Id.cid_term }
-      | Schema_constant of { cid : Id.cid_schema }
-      | Computation_inductive_type_constant of { cid : Id.cid_comp_typ }
-      | Computation_stratified_type_constant of { cid : Id.cid_comp_typ }
-      | Computation_coinductive_type_constant of { cid : Id.cid_comp_cotyp }
-      | Computation_abbreviation_type_constant of
-          { cid : Id.cid_comp_typdef }
-      | Computation_term_constructor of { cid : Id.cid_comp_const }
-      | Computation_term_destructor of { cid : Id.cid_comp_dest }
-      | Program_constant of { cid : Id.cid_prog }
-      | Module of { cid : Id.module_id }
-
-    let[@inline] binding_location ?location identifier =
-      match location with
-      | Option.Some binding_location -> binding_location
-      | Option.None -> Identifier.location identifier
-
-    let[@inline] make_entry ?location identifier desc =
-      let binding_location = binding_location ?location identifier in
-      { binding_location; desc }
-
-    let[@inline] make_lf_variable_entry ?location identifier lf_level =
-      make_entry ?location identifier (Lf_variable { lf_level })
-
-    let[@inline] make_meta_variable_entry ?location identifier meta_level =
-      make_entry ?location identifier (Meta_variable { meta_level })
-
-    let[@inline] make_parameter_variable_entry ?location identifier
-        meta_level =
-      make_entry ?location identifier (Parameter_variable { meta_level })
-
-    let[@inline] make_substitution_variable_entry ?location identifier
-        meta_level =
-      make_entry ?location identifier (Substitution_variable { meta_level })
-
-    let[@inline] make_context_variable_entry ?location identifier meta_level
-        =
-      make_entry ?location identifier (Context_variable { meta_level })
-
-    let[@inline] make_contextual_variable_entry ?location identifier
-        meta_level =
-      make_entry ?location identifier (Contextual_variable { meta_level })
-
-    let[@inline] make_computation_variable_entry ?location identifier
-        comp_level =
-      make_entry ?location identifier (Computation_variable { comp_level })
-
-    let[@inline] make_lf_type_constant_entry ?location identifier cid =
-      make_entry ?location identifier (Lf_type_constant { cid })
-
-    let[@inline] make_lf_term_constant_entry ?location identifier cid =
-      make_entry ?location identifier (Lf_term_constant { cid })
-
-    let[@inline] make_schema_constant_entry ?location identifier cid =
-      make_entry ?location identifier (Schema_constant { cid })
-
-    let[@inline] make_computation_inductive_type_constant_entry ?location
-        identifier cid =
-      make_entry ?location identifier
-        (Computation_inductive_type_constant { cid })
-
-    let[@inline] make_computation_stratified_type_constant_entry ?location
-        identifier cid =
-      make_entry ?location identifier
-        (Computation_stratified_type_constant { cid })
-
-    let[@inline] make_computation_coinductive_type_constant_entry ?location
-        identifier cid =
-      make_entry ?location identifier
-        (Computation_coinductive_type_constant { cid })
-
-    let[@inline] make_computation_abbreviation_type_constant_entry ?location
-        identifier cid =
-      make_entry ?location identifier
-        (Computation_abbreviation_type_constant { cid })
-
-    let[@inline] make_computation_term_constructor_entry ?location identifier
-        cid =
-      make_entry ?location identifier (Computation_term_constructor { cid })
-
-    let[@inline] make_computation_term_destructor_entry ?location identifier
-        cid =
-      make_entry ?location identifier (Computation_term_destructor { cid })
-
-    let[@inline] make_program_constant_entry ?location identifier cid =
-      make_entry ?location identifier (Program_constant { cid })
-
-    let[@inline] make_module_entry ?location identifier cid =
-      make_entry ?location identifier (Module { cid })
-
-    let actual_binding_exn identifier { binding_location; desc } =
-      Error.located_exception1 binding_location
-        (match desc with
-        | Lf_variable _ -> Bound_lf_variable identifier
-        | Meta_variable _ -> Bound_meta_variable identifier
-        | Parameter_variable _ -> Bound_parameter_variable identifier
-        | Substitution_variable _ -> Bound_substitution_variable identifier
-        | Context_variable _ -> Bound_context_variable identifier
-        | Contextual_variable _ -> Bound_contextual_variable identifier
-        | Computation_variable _ -> Bound_computation_variable identifier
-        | Lf_type_constant _ -> Bound_lf_type_constant identifier
-        | Lf_term_constant _ -> Bound_lf_term_constant identifier
-        | Schema_constant _ -> Bound_schema_constant identifier
-        | Computation_inductive_type_constant _ ->
-            Bound_computation_inductive_type_constant identifier
-        | Computation_stratified_type_constant _ ->
-            Bound_computation_stratified_type_constant identifier
-        | Computation_coinductive_type_constant _ ->
-            Bound_computation_coinductive_type_constant identifier
-        | Computation_abbreviation_type_constant _ ->
-            Bound_computation_abbreviation_type_constant identifier
-        | Computation_term_constructor _ ->
-            Bound_computation_term_constructor identifier
-        | Computation_term_destructor _ ->
-            Bound_computation_term_destructor identifier
-        | Program_constant _ -> Bound_program_constant identifier
-        | Module _ -> Bound_module identifier)
-
-    let is_variable entry =
-      match entry.desc with
-      | Lf_variable _
-      | Meta_variable _
-      | Parameter_variable _
-      | Substitution_variable _
-      | Context_variable _
-      | Contextual_variable _
-      | Computation_variable _ ->
-          true
-      | Lf_type_constant _
-      | Lf_term_constant _
-      | Schema_constant _
-      | Computation_inductive_type_constant _
-      | Computation_stratified_type_constant _
-      | Computation_coinductive_type_constant _
-      | Computation_abbreviation_type_constant _
-      | Computation_term_constructor _
-      | Computation_term_destructor _
-      | Program_constant _
-      | Module _ ->
-          false
-  end
 
   type bindings_state =
     { bindings : Entry.t Binding_tree.t
@@ -682,7 +715,7 @@ module Persistent_indexing_state = struct
   let fresh_identifier =
     let* i = get_and_increment_generated_fresh_variables_count in
     (* ['"'] is a reserved character, so ["\"i1"], ["\"i2"], ..., etc. are
-       syntactically invalid identifiers, which are guarenteed to not clash
+       syntactically invalid identifiers, which are guaranteed to not clash
        with free variables *)
     return (Identifier.make ("\"i" ^ string_of_int i))
 

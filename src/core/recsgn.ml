@@ -368,8 +368,10 @@ module Make
     match pragma with
     | Synext.Signature.Pragma.Not _ ->
         Error.raise_violation
-          "[reconstruct_signature_pragma] --not pragma must be \
-           reconstructed with [reconstruct_signature_entries]"
+          (Format.asprintf
+             "[%s] --not pragma must be reconstructed with \
+              [reconstruct_signature_entries]"
+             __FUNCTION__)
     | Synext.Signature.Pragma.Name
         { location; constant; meta_variable_base; computation_variable_base }
       ->
@@ -437,9 +439,10 @@ module Make
     | Synext.Signature.Declaration.Theorem { location; _ }
     | Synext.Signature.Declaration.Proof { location; _ } ->
         Error.raise_violation ~location
-          "[reconstruct_signature_declaration] this kind of signature \
-           declaration is only supported within a mutually recursive group \
-           of declarations."
+          (Format.asprintf
+             "[%s] this kind of signature declaration is only supported \
+              within a mutually recursive group of declarations."
+             __FUNCTION__)
     | Synext.Signature.Declaration.Typ { location; identifier; kind } ->
         reconstruct_lf_typ_declaration location identifier kind
     | Synext.Signature.Declaration.Const { location; identifier; typ } ->
@@ -526,8 +529,7 @@ module Make
       | Synapx.LF.PiTyp ((_, _), t) -> get_type_family t
       | Synapx.LF.Sigma _ ->
           Error.raise_violation ~location
-            "[reconstruct_oldstyle_lf_const_declaration] unsupported sigma \
-             type"
+            (Format.asprintf "[%s] unsupported sigma type" __FUNCTION__)
     in
     let constructedType = get_type_family apxT in
     dprintf (fun p ->

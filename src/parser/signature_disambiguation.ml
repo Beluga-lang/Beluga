@@ -201,8 +201,10 @@ struct
     (* The parser does not support nested recursive groups in mutually
        recursive declarations. *) ->
         Error.raise_violation
-          "[Signature.add_recursive_declaration] unsupported declaration in \
-           mutually recursive declarations group"
+          (Format.asprintf
+             "[%s] unsupported declaration in mutually recursive \
+              declarations group"
+             __FUNCTION__)
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { identifier; kind; _ } ->
         add_default_lf_type_constant identifier kind
@@ -266,10 +268,11 @@ struct
         add_default_program_constant' ?typ':typ identifier
     | Synext.Signature.Declaration.Recursive_declarations _ ->
         Error.raise_violation
-          "[add_declaration'] unsupported recursive declarations"
+          (Format.asprintf "[%s] unsupported recursive declarations"
+             __FUNCTION__)
     | Synext.Signature.Declaration.Module _ ->
         Error.raise_violation
-          "[add_declaration'] unsupported module declaration"
+          (Format.asprintf "[%s] unsupported module declaration" __FUNCTION__)
 
   let declaration_identifiers declarations =
     List.fold_right
@@ -298,10 +301,12 @@ struct
             identifier :: accumulator
         | Synprs.Signature.Declaration.Raw_recursive_declarations _ ->
             Error.raise_violation
-              "[declaration_identifiers] unsupported recursive declarations"
+              (Format.asprintf "[%s] unsupported recursive declarations"
+                 __FUNCTION__)
         | Synprs.Signature.Declaration.Raw_module _ ->
             Error.raise_violation
-              "[declaration_identifiers] unsupported module declaration")
+              (Format.asprintf "[%s] unsupported module declaration"
+                 __FUNCTION__))
       declarations []
 
   (** {1 Disambiguation} *)
@@ -603,12 +608,16 @@ struct
              { location; identifier; typ = typ'; expression = expression' })
     | Synprs.Signature.Declaration.Raw_recursive_declarations _ ->
         Error.raise_violation
-          "[disambiguate_declaration] can't disambiguate mutually recursive \
-           declarations without adding its entries to the state"
+          (Format.asprintf
+             "[%s] can't disambiguate mutually recursive declarations \
+              without adding its entries to the state"
+             __FUNCTION__)
     | Synprs.Signature.Declaration.Raw_module _ ->
         Error.raise_violation
-          "[disambiguate_declaration] can't disambiguate a module without \
-           adding its entries to the state"
+          (Format.asprintf
+             "[%s] can't disambiguate a module without adding its entries \
+              to the state"
+             __FUNCTION__)
 
   and disambiguate_and_add_declaration = function
     | ( Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant _

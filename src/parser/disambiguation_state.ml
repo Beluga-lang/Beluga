@@ -874,7 +874,7 @@ module Persistent_disambiguation_state = struct
               with
               | Option.None ->
                   Error.raise_violation
-                    "[pop_inner_pattern_binding] invalid state"
+                    (Format.asprintf "[%s] invalid state" __FUNCTION__)
               | Option.Some (List1.T (_entry, [])) ->
                   Identifier.Hamt.remove identifier
                     substate.inner_pattern_bindings
@@ -1002,10 +1002,12 @@ module Persistent_disambiguation_state = struct
           Module_state { state with declarations = declarations' }
       | Pattern_state _ ->
           Error.raise_violation
-            "[add_declaration] invalid pattern disambiguation state"
+            (Format.asprintf "[%s] invalid pattern disambiguation state"
+               __FUNCTION__)
       | Scope_state _ ->
           Error.raise_violation
-            "[add_declaration] invalid scope disambiguation state")
+            (Format.asprintf "[%s] invalid scope disambiguation state"
+               __FUNCTION__))
 
   let add_lf_variable ?location identifier =
     add_binding identifier
@@ -1100,9 +1102,12 @@ module Persistent_disambiguation_state = struct
           add_declaration identifier ~subtree:substate.declarations entry
         in
         return x
-    | Pattern_state _
+    | Pattern_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern state" __FUNCTION__)
     | Scope_state _ ->
-        Error.raise_violation "[add_module] invalid state"
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
 
   (** {1 Lookups} *)
 
@@ -1317,10 +1322,14 @@ module Persistent_disambiguation_state = struct
             let* () = put state in
             return x
         | Option.None ->
-            Error.raise_violation "[with_parent_scope] invalid state")
-    | Pattern_state _
+            Error.raise_violation
+              (Format.asprintf "[%s] no parent scope" __FUNCTION__))
+    | Pattern_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern state" __FUNCTION__)
     | Module_state _ ->
-        Error.raise_violation "[with_parent_scope] invalid state"
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
 
   let get_pattern_variables_and_expression_state =
     let* state = get in
@@ -1328,10 +1337,12 @@ module Persistent_disambiguation_state = struct
     | Pattern_state o ->
         let pattern_variables = List.rev o.pattern_variables_rev in
         return (pattern_variables, o.expression_bindings)
-    | Module_state _
+    | Module_state _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid module state" __FUNCTION__)
     | Scope_state _ ->
         Error.raise_violation
-          "[get_pattern_variables_and_expression_state] invalid state"
+          (Format.asprintf "[%s] invalid scope state" __FUNCTION__)
 
   let raise_duplicate_identifiers_exception f duplicates =
     match duplicates with

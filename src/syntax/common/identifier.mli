@@ -23,6 +23,10 @@ val location : t -> Location.t
 
 val name : t -> String.t
 
+(** {1 Exceptions} *)
+
+exception Unbound_identifier of t
+
 (** {1 Collections} *)
 
 module Set : Set.S with type elt = t

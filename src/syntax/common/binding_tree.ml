@@ -1,24 +1,5 @@
 open Support
 
-exception Unbound_identifier of Identifier.t
-
-exception Unbound_qualified_identifier of Qualified_identifier.t
-
-exception Unbound_namespace of Qualified_identifier.t
-
-let () =
-  Error.register_exception_printer (function
-    | Unbound_identifier identifier ->
-        Format.dprintf "Identifier@ %a@ is@ unbound." Identifier.pp
-          identifier
-    | Unbound_qualified_identifier qualified_identifier ->
-        Format.dprintf "Identifier@ %a@ is@ unbound." Qualified_identifier.pp
-          qualified_identifier
-    | Unbound_namespace qualified_identifier ->
-        Format.dprintf "Unbound@ namespace %a." Qualified_identifier.pp
-          qualified_identifier
-    | exn -> Error.raise_unsupported_exception_printing exn)
-
 module type S = sig
   exception Unbound_identifier of Identifier.t
 
@@ -88,11 +69,13 @@ let[@inline] with_namespaces_and_identifier qualified_identifier f =
   f namespaces identifier
 
 module Hamt = struct
-  exception Unbound_identifier = Unbound_identifier
+  exception Unbound_identifier = Identifier.Unbound_identifier
 
-  exception Unbound_qualified_identifier = Unbound_qualified_identifier
+  exception
+    Unbound_qualified_identifier = Qualified_identifier
+                                   .Unbound_qualified_identifier
 
-  exception Unbound_namespace = Unbound_namespace
+  exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
   type 'a node =
     { entry : 'a
@@ -317,11 +300,13 @@ module Hamt = struct
 end
 
 module Map = struct
-  exception Unbound_identifier = Unbound_identifier
+  exception Unbound_identifier = Identifier.Unbound_identifier
 
-  exception Unbound_qualified_identifier = Unbound_qualified_identifier
+  exception
+    Unbound_qualified_identifier = Qualified_identifier
+                                   .Unbound_qualified_identifier
 
-  exception Unbound_namespace = Unbound_namespace
+  exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
   type 'a node =
     { entry : 'a
@@ -534,24 +519,30 @@ module Map = struct
 end
 
 module Hashtbl = struct
-  exception Unbound_identifier = Unbound_identifier
+  exception Unbound_identifier = Identifier.Unbound_identifier
 
-  exception Unbound_qualified_identifier = Unbound_qualified_identifier
+  exception
+    Unbound_qualified_identifier = Qualified_identifier
+                                   .Unbound_qualified_identifier
 
-  exception Unbound_namespace = Unbound_namespace
+  exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
   type 'a node =
     { entry : 'a
-    ; subtree : 'a tree
+    ; subtree : 'a t
     }
 
-  and 'a tree = 'a node Identifier.Hashtbl.t
+  and 'a t = 'a node Identifier.Hashtbl.t
 
-  type 'a t = 'a tree
-
-  let create () = Identifier.Hashtbl.create 16
+  let create () = Identifier.Hashtbl.create 0
 
   let is_empty tree = Identifier.Hashtbl.length tree = 0
+
+  let[@inline] [@specialise] with_namespaces_and_identifier
+      qualified_identifier f =
+    let namespaces = Qualified_identifier.namespaces qualified_identifier in
+    let identifier = Qualified_identifier.name qualified_identifier in
+    f namespaces identifier
 
   let[@inline] add_toplevel identifier entry ?(subtree = create ()) tree =
     Identifier.Hashtbl.add tree identifier { entry; subtree }
@@ -591,6 +582,11 @@ module Hashtbl = struct
     | Option.None -> Error.raise (Unbound_identifier identifier)
     | Option.Some { entry; subtree } -> (entry, subtree)
 
+  let lookup_toplevel_opt identifier tree =
+    match Identifier.Hashtbl.find_opt tree identifier with
+    | Option.None -> Option.none
+    | Option.Some { entry; subtree } -> Option.some (entry, subtree)
+
   let rec lookup_nested namespaces identifier tree =
     match namespaces with
     | [] -> (
@@ -625,6 +621,12 @@ module Hashtbl = struct
     let value, subtree = lookup_toplevel identifier tree in
     if p value then (value, subtree)
     else Error.raise (Unbound_identifier identifier)
+
+  let lookup_toplevel_filter_opt identifier p tree =
+    match lookup_toplevel_opt identifier tree with
+    | Option.None -> Option.none
+    | Option.Some (value, subtree) ->
+        if p value then Option.some (value, subtree) else Option.none
 
   let rec maximum_lookup identifiers tree =
     match identifiers with

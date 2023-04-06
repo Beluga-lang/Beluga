@@ -5,12 +5,6 @@ exception Expected_module of Qualified_identifier.t
 
 exception Expected_operator of Qualified_identifier.t
 
-exception Unbound_identifier of Identifier.t
-
-exception Unbound_qualified_identifier of Qualified_identifier.t
-
-exception Unbound_namespace of Qualified_identifier.t
-
 exception Bound_lf_type_constant of Qualified_identifier.t
 
 exception Bound_lf_term_constant of Qualified_identifier.t
@@ -64,15 +58,6 @@ let () =
         Format.dprintf
           "Expected %a to be a constant that can be made into an operator."
           Qualified_identifier.pp qualified_identifier
-    | Unbound_identifier identifier ->
-        Format.dprintf "The identifier %a is unbound." Identifier.pp
-          identifier
-    | Unbound_qualified_identifier qualified_identifier ->
-        Format.dprintf "The qualified identifier %a is unbound."
-          Qualified_identifier.pp qualified_identifier
-    | Unbound_namespace qualified_identifier ->
-        Format.dprintf "Unbound namespace %a." Qualified_identifier.pp
-          qualified_identifier
     | Expected_module qualified_identifier ->
         Format.dprintf "Expected %a to be a module." Qualified_identifier.pp
           qualified_identifier
@@ -633,6 +618,18 @@ module type DISAMBIGUATION_STATE = sig
   val with_bound_computation_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
+  val with_bound_pattern_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
   val with_free_variables_as_pattern_variables :
     pattern:'a t -> expression:('a -> 'b t) -> 'b t
 
@@ -761,11 +758,13 @@ module Persistent_disambiguation_state = struct
     ; default_precedence : Int.t
     }
 
-  exception Unbound_identifier = Unbound_identifier
+  exception Unbound_identifier = Identifier.Unbound_identifier
 
-  exception Unbound_qualified_identifier = Unbound_qualified_identifier
+  exception
+    Unbound_qualified_identifier = Qualified_identifier
+                                   .Unbound_qualified_identifier
 
-  exception Unbound_namespace = Unbound_namespace
+  exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
   include (
     State.Make (struct
@@ -1146,14 +1145,7 @@ module Persistent_disambiguation_state = struct
 
   let lookup' query =
     let* bindings = get_bindings in
-    try return (Binding_tree.lookup query bindings) with
-    | Binding_tree.Unbound_identifier identifier ->
-        Error.raise (Unbound_identifier identifier)
-    | Binding_tree.Unbound_namespace identifier ->
-        Error.raise (Unbound_namespace identifier)
-    | Binding_tree.Unbound_qualified_identifier identifier ->
-        Error.raise (Unbound_qualified_identifier identifier)
-    | cause -> Error.raise cause
+    return (Binding_tree.lookup query bindings)
 
   let lookup query =
     try_catch
@@ -1298,6 +1290,25 @@ module Persistent_disambiguation_state = struct
   let[@specialise] with_bound_computation_variable ?location identifier m =
     with_bindings_checkpoint
       (add_computation_variable ?location identifier &> m)
+
+  let[@specialise] with_bound_pattern_meta_variable ?location identifier m =
+    let* () = add_free_meta_variable ?location identifier in
+    with_bound_meta_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_parameter_variable ?location identifier
+      m =
+    let* () = add_free_parameter_variable ?location identifier in
+    with_bound_parameter_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_substitution_variable ?location
+      identifier m =
+    let* () = add_free_substitution_variable ?location identifier in
+    with_bound_substitution_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_context_variable ?location identifier m
+      =
+    let* () = add_free_context_variable ?location identifier in
+    with_bound_context_variable ?location identifier m
 
   let with_scope m =
     let* state = get in

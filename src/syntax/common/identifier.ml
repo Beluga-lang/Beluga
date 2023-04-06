@@ -61,3 +61,11 @@ let find_duplicates identifiers =
   |> Map.filter_map (fun _identifier identifiers ->
          List2.of_list identifiers)
   |> Map.bindings |> List1.of_list
+
+exception Unbound_identifier of t
+
+let () =
+  Error.register_exception_printer (function
+    | Unbound_identifier identifier ->
+        Format.dprintf "Identifier %a is unbound." pp identifier
+    | exn -> Error.raise_unsupported_exception_printing exn)

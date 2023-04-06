@@ -218,6 +218,35 @@ module type DISAMBIGUATION_STATE = sig
   val with_bound_computation_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
+  (** [with_bound_pattern_meta_variable ?location identifier m] is like
+      [with_bound_meta_variable ?location identifier m] except that
+      [identifier] is also treated as a free variable so that in
+      {!with_free_variables_as_pattern_variables} it can be treated as a
+      pattern variable usable in the expression.
+
+      This is used for meta-variables introduced in the meta-context of a
+      pattern during case analysis. Those variables are considered bound in
+      both the pattern and expression.
+
+      For example, [B] as below is one such bound pattern meta-variable, and
+      appears in scope for [?].
+
+      {[
+        case x of
+        | { B : [g |- o] } [g |- impi \u. D] => ?
+      ]} *)
+  val with_bound_pattern_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_bound_pattern_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
   (** [with_free_variables_as_pattern_variables ~pattern ~expression state]
       is [(state', x')], where [x'] is the result of running [expression]
       with the free variables added in [pattern] as bound variables. This is

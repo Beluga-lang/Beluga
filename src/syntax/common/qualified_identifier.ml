@@ -81,3 +81,15 @@ include (
 
 module Map = Map.Make (Ord)
 module Set = Set.Make (Ord)
+
+exception Unbound_qualified_identifier of t
+
+exception Unbound_namespace of t
+
+let () =
+  Error.register_exception_printer (function
+    | Unbound_qualified_identifier qualified_identifier ->
+        Format.dprintf "Identifier %a is unbound." pp qualified_identifier
+    | Unbound_namespace qualified_identifier ->
+        Format.dprintf "Unbound namespace %a." pp qualified_identifier
+    | exn -> Error.raise_unsupported_exception_printing exn)

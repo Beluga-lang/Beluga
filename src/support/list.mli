@@ -145,6 +145,9 @@ val take_while : ('a -> bool) -> 'a t -> 'a t * 'a t
     first element such that [p xk = Option.None]. *)
 val take_while_map : ('a -> 'b option) -> 'a t -> 'b t * 'a t
 
+(** [iter_rev f \[x1; x2; ...; xn\]] is [f xn; ...; f x2; f x1]. *)
+val iter_rev : ('a -> unit) -> 'a t -> unit
+
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
     interface as {!Stdlib.compare}:

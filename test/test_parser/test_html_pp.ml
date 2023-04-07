@@ -23,7 +23,8 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Simple.read_multi_file_signature signature_source_files
+        Beluga_parser.Mutable.read_multi_file_signature
+          signature_source_files
       in
       if save_html_to_file then
         save_signature_html

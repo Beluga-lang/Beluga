@@ -206,3 +206,58 @@ module Simple = struct
     in
     signature'
 end
+
+module Mutable = struct
+  module Parser_state =
+    Parser_combinator.Make_persistent_state (Located_token)
+
+  module Disambiguation_state =
+    Disambiguation_state.Mutable_disambiguation_state_monad
+
+  include Make (Parser_state) (Disambiguation_state)
+
+  let make_initial_parser_state_from_channel ~initial_location input =
+    let token_sequence = Lexer.lex_input_channel ~initial_location input in
+    Parser_state.initial ~initial_location token_sequence
+
+  let make_initial_parser_state_from_string ~initial_location input =
+    let token_sequence = Lexer.lex_string ~initial_location input in
+    Parser_state.initial ~initial_location token_sequence
+
+  let make_initial_state_from_channel ~disambiguation_state ~initial_location
+      ~channel =
+    let parser_state =
+      make_initial_parser_state_from_channel ~initial_location channel
+    in
+    make_state ~disambiguation_state ~parser_state
+
+  let make_initial_state_from_string ~disambiguation_state ~initial_location
+      ~input =
+    let parser_state =
+      make_initial_parser_state_from_string ~initial_location input
+    in
+    make_state ~disambiguation_state ~parser_state
+
+  let read_and_parse_signature filename =
+    In_channel.with_open_bin filename (fun in_channel ->
+        let initial_location = Location.initial filename in
+        let _parser_state', signature =
+          Parsing.run_exn
+            (Parsing.only Parsing.signature_file)
+            (make_initial_parser_state_from_channel ~initial_location
+               in_channel)
+        in
+        signature)
+
+  let read_multi_file_signature files =
+    let signature =
+      (* For OCaml >= 5, spawn a parallel domain for each call to
+         {!read_signature}] *)
+      List1.map read_and_parse_signature files
+    in
+    let _disambiguation_state', signature' =
+      Disambiguation.disambiguate_signature signature
+        (Disambiguation_state.create_initial_state ())
+    in
+    signature'
+end

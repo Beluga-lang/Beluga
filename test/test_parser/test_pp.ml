@@ -4,7 +4,7 @@ open Util
 open Base_json
 open Synext_json
 open Assert
-open Beluga_parser.Simple
+open Beluga_parser.Mutable
 
 let parse_only_signature_file =
   parse_and_disambiguate
@@ -57,10 +57,11 @@ let save_signature_files_pp =
     eval (traverse_list_void save_signature_file_pp xs) state
 
 let pp_and_parse_signature_files =
-  let module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
+  let module Disambiguation_state =
+    Beluga_parser.Mutable.Disambiguation_state
   in
   let module Printer = Synext.Printer in
-  let module Parser = Beluga_parser.Simple in
+  let module Parser = Beluga_parser.Mutable in
   fun (List1.T (x, xs)) ->
     let buffer = Buffer.create 16 in
     let printing_state =
@@ -72,7 +73,8 @@ let pp_and_parse_signature_files =
     let parser_state, y =
       run parse_only_signature_file
         (make_initial_state_from_string
-           ~disambiguation_state:Disambiguation_state.initial_state
+           ~disambiguation_state:
+             (Disambiguation_state.create_initial_state ())
            ~initial_location:Location.ghost ~input:(Buffer.contents buffer))
     in
     let _printing_state'', _parser_state', ys_rev =
@@ -100,8 +102,8 @@ let pp_and_parse_signature_files =
 let assert_equal_as_json f ~expected ~actual =
   assert_json_equal ~expected:(f expected) ~actual:(f actual)
 
-let make_compiler_test ?(save_json_to_file = false)
-    ?(save_pp_to_file = false) compiler_test_file =
+let make_compiler_test ?(save_json_to_file = true) ?(save_pp_to_file = false)
+    compiler_test_file =
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =

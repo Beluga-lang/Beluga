@@ -487,3 +487,10 @@ module Persistent_disambiguation_state : sig
 
   val initial_state : state
 end
+
+module Mutable_disambiguation_state_monad : sig
+  (** @closed *)
+  include DISAMBIGUATION_STATE
+
+  val create_initial_state : Unit.t -> state
+end

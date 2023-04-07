@@ -298,6 +298,8 @@ module Hashtbl : sig
   val replace :
     Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> Unit.t
 
+  val mem : Qualified_identifier.t -> 'a t -> Bool.t
+
   (** [size tree] is the total number of key-value pairs in [tree]. *)
   val size : 'a t -> Int.t
 

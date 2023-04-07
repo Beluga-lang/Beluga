@@ -20,8 +20,10 @@ module type LOAD_STATE = sig
 end
 
 module Load_state = struct
-  open Beluga_parser.Simple
-  module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
+  module Beluga_parser = Beluga_parser.Mutable
+  module Parsing = Beluga_parser.Parsing
+  module Disambiguation = Beluga_parser.Disambiguation
+  module Disambiguation_state = Beluga_parser.Disambiguation_state
   module Index_state = Index_state.Persistent_indexing_state
   module Signature_reconstruction_state =
     Recsgn_state.Signature_reconstruction_state
@@ -38,7 +40,7 @@ module Load_state = struct
       State.STATE with type state := state)
 
   let initial_state =
-    { disambiguation_state = Disambiguation_state.initial_state
+    { disambiguation_state = Disambiguation_state.create_initial_state ()
     ; signature_reconstruction_state =
         Signature_reconstruction_state.initial_state
           Index_state.initial_state
@@ -49,18 +51,18 @@ module Load_state = struct
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let initial_parser_state =
-          make_initial_state_from_channel ~initial_location
+          Beluga_parser.make_initial_state_from_channel ~initial_location
             ~disambiguation_state ~channel:in_channel
         in
         let s, x =
-          Beluga_parser.Simple.run
-            (parse_and_disambiguate
+          Beluga_parser.run
+            (Beluga_parser.parse_and_disambiguate
                ~parser:Parsing.(only signature_file)
                ~disambiguator:Disambiguation.disambiguate_signature_file)
             initial_parser_state
         in
         let _, disambiguation_state' =
-          Beluga_parser.Simple.get_disambiguation_state s
+          Beluga_parser.get_disambiguation_state s
         in
         let* () =
           modify (fun state ->
@@ -71,10 +73,8 @@ module Load_state = struct
   let reconstruct_signature_file signature =
     let* { signature_reconstruction_state; _ } = get in
     let signature_reconstruction_state', signature' =
-      Signature_reconstruction_state.(
-        run
-          (Recsgn.Signature_reconstruction.reconstruct_signature_file
-             signature))
+      Signature_reconstruction_state.run
+        (Recsgn.Signature_reconstruction.reconstruct_signature_file signature)
         signature_reconstruction_state
     in
     let* () =

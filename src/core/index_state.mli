@@ -288,3 +288,14 @@ module Persistent_indexing_state : sig
 
   val initial_state : state
 end
+
+module Mutable_indexing_state_monad : sig
+  include INDEXING_STATE
+
+  val start_module : Unit.t t
+
+  val stop_module :
+    ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t t
+
+  val create_initial_state : Unit.t -> state
+end

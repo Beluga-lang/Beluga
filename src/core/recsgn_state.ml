@@ -512,5 +512,5 @@ end
 
 module Signature_reconstruction_state =
   Make_signature_reconstruction_state
-    (Index_state.Persistent_indexing_state)
+    (Index_state.Mutable_indexing_state_monad)
     (Index.Indexer)

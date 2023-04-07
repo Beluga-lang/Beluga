@@ -193,5 +193,5 @@ end
 module Signature_reconstruction_state :
     module type of
       Make_signature_reconstruction_state
-        (Index_state.Persistent_indexing_state)
+        (Index_state.Mutable_indexing_state_monad)
         (Index.Indexer)

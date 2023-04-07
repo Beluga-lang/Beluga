@@ -1,7 +1,7 @@
 open Support
 open Beluga_syntax
 open Beluga_parser
-module Disambiguation_state = Simple.Disambiguation_state
+module Disambiguation_state = Mutable.Disambiguation_state
 
 exception Unsupported_sort of string
 
@@ -135,4 +135,4 @@ and add_json_entry json =
 let read_disambiguation_state filename =
   let open Disambiguation_state in
   let json = Yojson.Safe.from_file filename in
-  exec (add_json_entries json) initial_state
+  exec (add_json_entries json) (create_initial_state ())

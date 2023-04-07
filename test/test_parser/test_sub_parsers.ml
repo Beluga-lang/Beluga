@@ -3,7 +3,7 @@ open Support
 open Beluga_syntax
 open Util
 open Assert
-open Beluga_parser.Simple
+open Beluga_parser.Mutable
 
 let parse_only_lf_kind =
   parse_and_disambiguate
@@ -70,8 +70,12 @@ let make_parser_state disambiguation_state location input =
   make_initial_state_from_string ~disambiguation_state ~initial_location
     ~input
 
-let parser_ok_tests ~disambiguation_state ~ok_inputs_filename
-    ~ok_outputs_filename parse json_of_parse =
+let parser_ok_tests ~disambiguation_state_configuration_filename
+    ~ok_inputs_filename ~ok_outputs_filename parse json_of_parse =
+  let disambiguation_state =
+    Disambiguation_state_deserialization.read_disambiguation_state
+      disambiguation_state_configuration_filename
+  in
   let ok_inputs_basename = Filename.basename ok_inputs_filename in
   let ok_inputs =
     Util.Files.read_test_case_inputs ~filename:ok_inputs_filename
@@ -92,7 +96,12 @@ let parser_ok_tests ~disambiguation_state ~ok_inputs_filename
          let open OUnit2 in
          input >:: test_success disambiguation_state location input expected)
 
-let parser_failure_tests ~disambiguation_state ~error_inputs_filename parse =
+let parser_failure_tests ~disambiguation_state_configuration_filename
+    ~error_inputs_filename parse =
+  let disambiguation_state =
+    Disambiguation_state_deserialization.read_disambiguation_state
+      disambiguation_state_configuration_filename
+  in
   let error_inputs_basename = Filename.basename error_inputs_filename in
   let error_inputs =
     Util.Files.read_test_case_inputs ~filename:error_inputs_filename
@@ -126,15 +135,12 @@ let test_parser ~fixtures_directory
   let error_inputs_filename =
     Filename.concat fixtures_directory error_inputs_basename
   in
-  let disambiguation_state =
-    Disambiguation_state_deserialization.read_disambiguation_state
-      disambiguation_state_configuration_filename
-  in
   let success_tests =
-    parser_ok_tests ~disambiguation_state ~ok_inputs_filename
-      ~ok_outputs_filename parse json_of_parse
+    parser_ok_tests ~disambiguation_state_configuration_filename
+      ~ok_inputs_filename ~ok_outputs_filename parse json_of_parse
   and failure_tests =
-    parser_failure_tests ~disambiguation_state ~error_inputs_filename parse
+    parser_failure_tests ~disambiguation_state_configuration_filename
+      ~error_inputs_filename parse
   in
   let open OUnit2 in
   [ "success" >::: success_tests ] @ [ "failure" >::: failure_tests ]

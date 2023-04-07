@@ -115,7 +115,8 @@ let make_compiler_test ?(save_json_to_file = true) ?(save_pp_to_file = false)
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Simple.read_multi_file_signature signature_source_files
+        Beluga_parser.Mutable.read_multi_file_signature
+          signature_source_files
       in
       if save_json_to_file then save_signature_files_json signature;
       if save_pp_to_file then save_signature_files_pp signature;

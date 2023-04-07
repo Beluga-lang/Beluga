@@ -8099,68 +8099,68 @@
               "LF.Term.Application",
               {
                 "applicand": [
-                  "LF.Term.Variable",
+                  "LF.Term.Constant",
                   {
                     "identifier": {
-                      "name": "T",
-                      "location": {
-                        "filename": "lf_types_ok.input.bel",
-                        "start_line": 109,
-                        "start_column": 54,
-                        "stop_line": 109,
-                        "stop_column": 55
-                      }
-                    },
-                    "location": {
-                      "filename": "lf_types_ok.input.bel",
-                      "start_line": 109,
-                      "start_column": 54,
-                      "stop_line": 109,
-                      "stop_column": 55
-                    }
-                  }
-                ],
-                "arguments": [
-                  [
-                    "LF.Term.Constant",
-                    {
-                      "identifier": {
-                        "name": {
-                          "name": "arrow",
-                          "location": {
-                            "filename": "lf_types_ok.input.bel",
-                            "start_line": 109,
-                            "start_column": 64,
-                            "stop_line": 109,
-                            "stop_column": 69
-                          }
-                        },
-                        "namespaces": [
-                          {
-                            "name": "Statics",
-                            "location": {
-                              "filename": "lf_types_ok.input.bel",
-                              "start_line": 109,
-                              "start_column": 56,
-                              "stop_line": 109,
-                              "stop_column": 63
-                            }
-                          }
-                        ],
+                      "name": {
+                        "name": "arrow",
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 109,
-                          "start_column": 56,
+                          "start_column": 64,
                           "stop_line": 109,
                           "stop_column": 69
                         }
                       },
+                      "namespaces": [
+                        {
+                          "name": "Statics",
+                          "location": {
+                            "filename": "lf_types_ok.input.bel",
+                            "start_line": 109,
+                            "start_column": 56,
+                            "stop_line": 109,
+                            "stop_column": 63
+                          }
+                        }
+                      ],
                       "location": {
                         "filename": "lf_types_ok.input.bel",
                         "start_line": 109,
                         "start_column": 56,
                         "stop_line": 109,
                         "stop_column": 69
+                      }
+                    },
+                    "location": {
+                      "filename": "lf_types_ok.input.bel",
+                      "start_line": 109,
+                      "start_column": 56,
+                      "stop_line": 109,
+                      "stop_column": 69
+                    }
+                  }
+                ],
+                "arguments": [
+                  [
+                    "LF.Term.Variable",
+                    {
+                      "identifier": {
+                        "name": "T",
+                        "location": {
+                          "filename": "lf_types_ok.input.bel",
+                          "start_line": 109,
+                          "start_column": 54,
+                          "stop_line": 109,
+                          "stop_column": 55
+                        }
+                      },
+                      "location": {
+                        "filename": "lf_types_ok.input.bel",
+                        "start_line": 109,
+                        "start_column": 54,
+                        "stop_line": 109,
+                        "stop_column": 55
                       }
                     }
                   ],

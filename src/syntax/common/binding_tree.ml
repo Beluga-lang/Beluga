@@ -99,13 +99,13 @@ module Hamt = struct
     | n :: ns -> (
         match Identifier.Hamt.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some ({ subtree; _ } as namespace) ->
             let subtree' =
               try add_nested ns identifier node subtree with
               | Unbound_namespace ns ->
-                  Error.raise
+                  Error.raise_notrace
                     (Unbound_namespace
                        (Qualified_identifier.prepend_module n ns))
             in
@@ -133,38 +133,38 @@ module Hamt = struct
 
   let remove identifier tree =
     match Identifier.Hamt.find_opt identifier tree with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some _ -> Identifier.Hamt.remove identifier tree
 
   let lookup_toplevel identifier tree =
     match Identifier.Hamt.find_opt identifier tree with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some { entry; subtree } -> (entry, subtree)
 
   let rec lookup_nested namespaces identifier tree =
     match namespaces with
     | [] -> (
         match Identifier.Hamt.find_opt identifier tree with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } -> (entry, subtree))
     | n :: ns -> (
         match Identifier.Hamt.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some { subtree; _ } -> (
             try lookup_nested ns identifier subtree with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -174,7 +174,7 @@ module Hamt = struct
   let lookup_toplevel_filter identifier p tree =
     let value, subtree = lookup_toplevel identifier tree in
     if p value then (value, subtree)
-    else Error.raise (Unbound_identifier identifier)
+    else Error.raise_notrace (Unbound_identifier identifier)
 
   let rec maximum_lookup identifiers tree =
     match identifiers with
@@ -240,7 +240,7 @@ module Hamt = struct
     match namespaces with
     | [] -> (
         match Identifier.Hamt.find_opt identifier tree with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } ->
             let entry', subtree' = f entry subtree in
             Identifier.Hamt.add identifier
@@ -249,7 +249,7 @@ module Hamt = struct
     | n :: ns -> (
         match Identifier.Hamt.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some ({ subtree; _ } as node) -> (
             try
@@ -257,16 +257,16 @@ module Hamt = struct
               Identifier.Hamt.add n { node with subtree = subtree' } tree
             with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -330,13 +330,13 @@ module Map = struct
     | n :: ns -> (
         match Identifier.Map.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some ({ subtree; _ } as namespace) ->
             let subtree' =
               try add_nested ns identifier node subtree with
               | Unbound_namespace ns ->
-                  Error.raise
+                  Error.raise_notrace
                     (Unbound_namespace
                        (Qualified_identifier.prepend_module n ns))
             in
@@ -352,38 +352,38 @@ module Map = struct
 
   let remove identifier tree =
     match Identifier.Map.find_opt identifier tree with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some _ -> Identifier.Map.remove identifier tree
 
   let lookup_toplevel identifier tree =
     match Identifier.Map.find_opt identifier tree with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some { entry; subtree } -> (entry, subtree)
 
   let rec lookup_nested namespaces identifier tree =
     match namespaces with
     | [] -> (
         match Identifier.Map.find_opt identifier tree with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } -> (entry, subtree))
     | n :: ns -> (
         match Identifier.Map.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some { subtree; _ } -> (
             try lookup_nested ns identifier subtree with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -393,7 +393,7 @@ module Map = struct
   let lookup_toplevel_filter identifier p tree =
     let value, subtree = lookup_toplevel identifier tree in
     if p value then (value, subtree)
-    else Error.raise (Unbound_identifier identifier)
+    else Error.raise_notrace (Unbound_identifier identifier)
 
   let rec maximum_lookup identifiers tree =
     match identifiers with
@@ -459,7 +459,7 @@ module Map = struct
     match namespaces with
     | [] -> (
         match Identifier.Map.find_opt identifier tree with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } ->
             let entry', subtree' = f entry subtree in
             Identifier.Map.add identifier
@@ -468,7 +468,7 @@ module Map = struct
     | n :: ns -> (
         match Identifier.Map.find_opt n tree with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some ({ subtree; _ } as node) -> (
             try
@@ -476,16 +476,16 @@ module Map = struct
               Identifier.Map.add n { node with subtree = subtree' } tree
             with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -553,12 +553,12 @@ module Hashtbl = struct
     | n :: ns -> (
         match Identifier.Hashtbl.find_opt tree n with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some { subtree; _ } -> (
             try add_nested ns identifier node subtree with
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -574,12 +574,12 @@ module Hashtbl = struct
 
   let remove identifier tree =
     match Identifier.Hashtbl.find_opt tree identifier with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some _ -> Identifier.Hashtbl.remove tree identifier
 
   let lookup_toplevel identifier tree =
     match Identifier.Hashtbl.find_opt tree identifier with
-    | Option.None -> Error.raise (Unbound_identifier identifier)
+    | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
     | Option.Some { entry; subtree } -> (entry, subtree)
 
   let lookup_toplevel_opt identifier tree =
@@ -591,26 +591,26 @@ module Hashtbl = struct
     match namespaces with
     | [] -> (
         match Identifier.Hashtbl.find_opt tree identifier with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } -> (entry, subtree))
     | n :: ns -> (
         match Identifier.Hashtbl.find_opt tree n with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some { subtree; _ } -> (
             try lookup_nested ns identifier subtree with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -620,7 +620,7 @@ module Hashtbl = struct
   let lookup_toplevel_filter identifier p tree =
     let value, subtree = lookup_toplevel identifier tree in
     if p value then (value, subtree)
-    else Error.raise (Unbound_identifier identifier)
+    else Error.raise_notrace (Unbound_identifier identifier)
 
   let lookup_toplevel_filter_opt identifier p tree =
     match lookup_toplevel_opt identifier tree with
@@ -692,7 +692,7 @@ module Hashtbl = struct
     match namespaces with
     | [] -> (
         match Identifier.Hashtbl.find_opt tree identifier with
-        | Option.None -> Error.raise (Unbound_identifier identifier)
+        | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
         | Option.Some { entry; subtree } ->
             let entry', subtree' = f entry subtree in
             Identifier.Hashtbl.add tree identifier
@@ -700,21 +700,21 @@ module Hashtbl = struct
     | n :: ns -> (
         match Identifier.Hashtbl.find_opt tree n with
         | Option.None ->
-            Error.raise
+            Error.raise_notrace
               (Unbound_namespace (Qualified_identifier.make_simple n))
         | Option.Some { subtree; _ } -> (
             try replace_nested ns identifier f subtree with
             | Unbound_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n
                         (Qualified_identifier.make_simple identifier)))
             | Unbound_qualified_identifier identifier ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_qualified_identifier
                      (Qualified_identifier.prepend_module n identifier))
             | Unbound_namespace ns ->
-                Error.raise
+                Error.raise_notrace
                   (Unbound_namespace
                      (Qualified_identifier.prepend_module n ns))))
 
@@ -722,6 +722,17 @@ module Hashtbl = struct
     with_namespaces_and_identifier qualified_identifier
       (fun namespaces identifier ->
         replace_nested namespaces identifier f tree)
+
+  let rec mem_nested namespaces identifier tree =
+    match namespaces with
+    | [] -> Identifier.Hashtbl.mem tree identifier
+    | n :: ns -> (
+        match Identifier.Hashtbl.find_opt tree n with
+        | Option.None -> false
+        | Option.Some { subtree; _ } -> mem_nested ns identifier subtree)
+
+  let mem qualified_identifier tree =
+    with_namespaces_and_identifier qualified_identifier mem_nested tree
 
   let size =
     let rec size_tl tree acc =

@@ -178,6 +178,13 @@ let take_while_map p =
   in
   fun l -> take_while_map_tl l []
 
+let rec iter_rev f l =
+  match l with
+  | [] -> ()
+  | x :: xs ->
+      iter_rev f xs;
+      f x
+
 let rec compare cmp l1 l2 =
   match (l1, l2) with
   | [], [] -> 0

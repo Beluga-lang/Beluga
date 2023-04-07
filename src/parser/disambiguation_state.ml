@@ -1499,3 +1499,906 @@ module Persistent_disambiguation_state = struct
           (Qualified_identifier.location module_identifier)
           cause
 end
+
+module Mutable_disambiguation_state = struct
+  module Binding_tree = Binding_tree.Hashtbl
+  module Entry = Entry
+
+  exception Unbound_identifier = Identifier.Unbound_identifier
+
+  exception
+    Unbound_qualified_identifier = Qualified_identifier
+                                   .Unbound_qualified_identifier
+
+  exception Unbound_namespace = Qualified_identifier.Unbound_namespace
+
+  type bindings = Entry.t Binding_tree.t
+
+  type scope =
+    | Plain_scope of { bindings : bindings }
+    | Pattern_scope of
+        { pattern_bindings : bindings
+        ; mutable pattern_variables_rev : Identifier.t List.t
+        ; expression_bindings : bindings
+        }
+    | Module_scope of
+        { bindings : bindings
+        ; declarations : bindings
+        ; default_associativity : Associativity.t
+        ; default_precedence : Int.t
+        }
+
+  type state =
+    { mutable scopes : scope List1.t
+    ; mutable default_associativity : Associativity.t
+    ; mutable default_precedence : Int.t
+    }
+
+  let create_empty_plain_scope () =
+    Plain_scope { bindings = Binding_tree.create () }
+
+  let create_plain_scope bindings = Plain_scope { bindings }
+
+  let create_pattern_scope () =
+    Pattern_scope
+      { pattern_bindings = Binding_tree.create ()
+      ; pattern_variables_rev = []
+      ; expression_bindings = Binding_tree.create ()
+      }
+
+  let create_module_scope ?(default_precedence = Synext.default_precedence)
+      ?(default_associativity = Synext.default_associativity) () =
+    Module_scope
+      { bindings = Binding_tree.create ()
+      ; declarations = Binding_tree.create ()
+      ; default_precedence
+      ; default_associativity
+      }
+
+  let create_initial_state () =
+    { scopes = List1.singleton (create_module_scope ())
+    ; default_precedence = Synext.default_precedence
+    ; default_associativity = Synext.default_associativity
+    }
+
+  let get_scope_bindings = function
+    | Plain_scope { bindings } -> bindings
+    | Module_scope { bindings; _ } -> bindings
+    | Pattern_scope { pattern_bindings; _ } -> pattern_bindings
+
+  let set_default_associativity state default_associativity =
+    state.default_associativity <- default_associativity
+
+  let get_default_associativity state = state.default_associativity
+
+  let get_default_associativity_opt state = function
+    | Option.None -> get_default_associativity state
+    | Option.Some associativity -> associativity
+
+  let set_default_precedence state default_precedence =
+    state.default_precedence <- default_precedence
+
+  let get_default_precedence state = state.default_precedence
+
+  let get_default_precedence_opt state = function
+    | Option.None -> get_default_precedence state
+    | Option.Some precedence -> precedence
+
+  let[@inline] push_scope state scope =
+    state.scopes <- List1.cons scope state.scopes
+
+  let pop_scope state =
+    match state.scopes with
+    | List1.T (x1, x2 :: xs) ->
+        state.scopes <- List1.from x2 xs;
+        x1
+    | List1.T (_x, []) ->
+        Error.raise_violation
+          (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
+
+  let merge_scope state =
+    match state.scopes with
+    | List1.T (x1, x2 :: xs) ->
+        state.scopes <- List1.from x2 xs;
+        Binding_tree.add_all (get_scope_bindings x2) (get_scope_bindings x1)
+    | List1.T (_x, []) ->
+        Error.raise_violation
+          (Format.asprintf "[%s] cannot merge the last scope" __FUNCTION__)
+
+  let[@inline] get_current_scope state =
+    let (List1.T (x, _xs)) = state.scopes in
+    x
+
+  let[@inline] get_current_scope_bindings state =
+    get_scope_bindings (get_current_scope state)
+
+  let add_binding state identifier ?subtree entry =
+    match get_current_scope state with
+    | Plain_scope { bindings }
+    | Pattern_scope { pattern_bindings = bindings; _ }
+    | Module_scope { bindings; _ } ->
+        Binding_tree.add_toplevel identifier entry ?subtree bindings
+
+  let remove_binding state identifier =
+    match get_current_scope state with
+    | Plain_scope { bindings }
+    | Pattern_scope { pattern_bindings = bindings; _ }
+    | Module_scope { bindings; _ } ->
+        Binding_tree.remove identifier bindings
+
+  let add_declaration state identifier ?subtree entry =
+    match get_current_scope state with
+    | Plain_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid plain scope disambiguation state"
+             __FUNCTION__)
+    | Pattern_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern scope disambiguation state"
+             __FUNCTION__)
+    | Module_scope
+        { bindings
+        ; declarations
+        ; default_associativity = _
+        ; default_precedence = _
+        } ->
+        Binding_tree.add_toplevel identifier entry ?subtree bindings;
+        Binding_tree.add_toplevel identifier entry ?subtree declarations
+
+  let add_lf_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_lf_variable_entry ?location identifier)
+
+  let add_meta_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_meta_variable_entry ?location identifier)
+
+  let add_parameter_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_parameter_variable_entry ?location identifier)
+
+  let add_substitution_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
+
+  let add_context_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_context_variable_entry ?location identifier)
+
+  let add_contextual_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_contextual_variable_entry ?location identifier)
+
+  let add_computation_variable state ?location identifier =
+    add_binding state identifier
+      (Entry.make_computation_variable_entry ?location identifier)
+
+  let add_lf_type_constant state ?location ?arity identifier =
+    add_declaration state identifier
+      (Entry.make_lf_type_constant_entry ?location ?arity identifier)
+
+  let add_lf_term_constant state ?location ?arity identifier =
+    add_declaration state identifier
+      (Entry.make_lf_term_constant_entry ?location ?arity identifier)
+
+  let add_schema_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_schema_constant_entry ?location identifier)
+
+  let add_inductive_computation_type_constant state ?location ?arity
+      identifier =
+    add_declaration state identifier
+      (Entry.make_inductive_computation_type_constant_entry ?location ?arity
+         identifier)
+
+  let add_stratified_computation_type_constant state ?location ?arity
+      identifier =
+    add_declaration state identifier
+      (Entry.make_stratified_computation_type_constant_entry ?location ?arity
+         identifier)
+
+  let add_coinductive_computation_type_constant state ?location ?arity
+      identifier =
+    add_declaration state identifier
+      (Entry.make_coinductive_computation_type_constant_entry ?location
+         ?arity identifier)
+
+  let add_abbreviation_computation_type_constant state ?location ?arity
+      identifier =
+    add_declaration state identifier
+      (Entry.make_abbreviation_computation_type_constant_entry ?location
+         ?arity identifier)
+
+  let add_computation_term_constructor state ?location ?arity identifier =
+    add_declaration state identifier
+      (Entry.make_computation_term_constructor_entry ?location ?arity
+         identifier)
+
+  let add_computation_term_destructor state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_computation_term_destructor_entry ?location identifier)
+
+  let add_program_constant state ?location ?arity identifier =
+    add_declaration state identifier
+      (Entry.make_program_constant_entry ?location ?arity identifier)
+
+  let start_module state =
+    let default_associativity = get_default_associativity state in
+    let default_precedence = get_default_precedence state in
+    let module_scope =
+      create_module_scope ~default_associativity ~default_precedence ()
+    in
+    push_scope state module_scope
+
+  let stop_module state ?location identifier =
+    match get_current_scope state with
+    | Plain_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
+    | Pattern_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern scope state" __FUNCTION__)
+    | Module_scope
+        { declarations; default_associativity; default_precedence; _ } ->
+        ignore (pop_scope state);
+        add_declaration state identifier ~subtree:declarations
+          (Entry.make_module_entry ?location identifier);
+        set_default_associativity state default_associativity;
+        set_default_precedence state default_precedence
+
+  let add_free_lf_level_variable _state _identifier _entry = ()
+
+  let add_free_meta_level_variable state identifier entry =
+    match get_current_scope state with
+    | Pattern_scope scope ->
+        Binding_tree.add_toplevel identifier entry scope.pattern_bindings;
+        Binding_tree.add_toplevel identifier entry scope.expression_bindings;
+        scope.pattern_variables_rev <-
+          identifier :: scope.pattern_variables_rev
+    | Module_scope _
+    | Plain_scope _ ->
+        ()
+
+  let add_free_comp_level_variable state identifier entry =
+    match get_current_scope state with
+    | Pattern_scope scope ->
+        Binding_tree.add_toplevel identifier entry scope.expression_bindings;
+        scope.pattern_variables_rev <-
+          identifier :: scope.pattern_variables_rev
+    | Module_scope _
+    | Plain_scope _ ->
+        ()
+
+  let add_free_lf_variable state ?location identifier =
+    add_free_lf_level_variable state identifier
+      (Entry.make_lf_variable_entry ?location identifier)
+
+  let add_free_meta_variable state ?location identifier =
+    add_free_meta_level_variable state identifier
+      (Entry.make_meta_variable_entry ?location identifier)
+
+  let add_free_parameter_variable state ?location identifier =
+    add_free_meta_level_variable state identifier
+      (Entry.make_parameter_variable_entry ?location identifier)
+
+  let add_free_substitution_variable state ?location identifier =
+    add_free_meta_level_variable state identifier
+      (Entry.make_substitution_variable_entry ?location identifier)
+
+  let add_free_context_variable state ?location identifier =
+    add_free_meta_level_variable state identifier
+      (Entry.make_context_variable_entry ?location identifier)
+
+  let add_free_computation_variable state ?location identifier =
+    add_free_comp_level_variable state identifier
+      (Entry.make_computation_variable_entry ?location identifier)
+
+  let entry_is_not_variable entry = Bool.not (Entry.is_variable entry)
+
+  let lookup_toplevel_in_scope scope query =
+    Binding_tree.lookup_toplevel_opt query (get_scope_bindings scope)
+
+  let lookup_toplevel_in_scopes scopes query =
+    List.find_map (fun scope -> lookup_toplevel_in_scope scope query) scopes
+
+  let lookup_toplevel_declaration_in_scope scope query =
+    Binding_tree.lookup_toplevel_filter_opt query entry_is_not_variable
+      (get_scope_bindings scope)
+
+  let lookup_toplevel_declaration_in_scopes scopes query =
+    List.find_map
+      (fun scope -> lookup_toplevel_declaration_in_scope scope query)
+      scopes
+
+  let lookup_toplevel_opt state query =
+    match state.scopes with
+    | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        match lookup_toplevel_in_scope scope query with
+        | Option.Some x -> Option.some x
+        | Option.None -> lookup_toplevel_declaration_in_scopes scopes query)
+    | List1.T (scope, scopes) ->
+        lookup_toplevel_in_scopes (scope :: scopes) query
+
+  let rec lookup_in_scopes scopes identifiers =
+    match scopes with
+    | [] ->
+        Error.raise
+          (Unbound_qualified_identifier
+             (Qualified_identifier.from_list1 identifiers))
+    | scope :: scopes -> (
+        match
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+        with
+        | `Bound result -> result
+        | `Partially_bound
+            ( bound_segments
+            , (identifier, _entry, _subtree)
+            , _unbound_segments ) ->
+            Error.raise
+              (Unbound_namespace
+                 (Qualified_identifier.make ~namespaces:bound_segments
+                    identifier))
+        | `Unbound _ -> lookup_in_scopes scopes identifiers)
+
+  let rec lookup_declaration_in_scopes scopes identifiers =
+    match scopes with
+    | [] ->
+        Error.raise
+          (Unbound_qualified_identifier
+             (Qualified_identifier.from_list1 identifiers))
+    | scope :: scopes -> (
+        match
+          Binding_tree.maximum_lookup_filter identifiers
+            entry_is_not_variable
+            (get_scope_bindings scope)
+        with
+        | `Bound result -> result
+        | `Partially_bound
+            ( bound_segments
+            , (identifier, _entry, _subtree)
+            , _unbound_segments ) ->
+            Error.raise
+              (Unbound_namespace
+                 (Qualified_identifier.make ~namespaces:bound_segments
+                    identifier))
+        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+
+  let lookup state query =
+    let identifiers = Qualified_identifier.to_list1 query in
+    match state.scopes with
+    | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        match
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+        with
+        | `Bound result -> result
+        | `Partially_bound
+            ( bound_segments
+            , (identifier, _entry, _subtree)
+            , _unbound_segments ) ->
+            Error.raise
+              (Unbound_namespace
+                 (Qualified_identifier.make ~namespaces:bound_segments
+                    identifier))
+        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+    | List1.T (scope, scopes) ->
+        lookup_in_scopes (scope :: scopes) identifiers
+
+  let rec maximum_lookup_in_scopes scopes identifiers =
+    match scopes with
+    | [] -> `Unbound identifiers
+    | scope :: scopes -> (
+        match
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+        with
+        | `Bound (entry, _subtree) ->
+            `Bound (Qualified_identifier.from_list1 identifiers, entry)
+        | `Partially_bound
+            (bound_segments, (identifier, entry, _subtree), unbound_segments)
+          ->
+            `Partially_bound
+              (bound_segments, (identifier, entry), unbound_segments)
+        | `Unbound _ -> maximum_lookup_in_scopes scopes identifiers)
+
+  let rec maximum_lookup_declaration_in_scopes scopes identifiers =
+    match scopes with
+    | [] -> `Unbound identifiers
+    | scope :: scopes -> (
+        match
+          Binding_tree.maximum_lookup_filter identifiers
+            entry_is_not_variable
+            (get_scope_bindings scope)
+        with
+        | `Bound (entry, _subtree) ->
+            `Bound (Qualified_identifier.from_list1 identifiers, entry)
+        | `Partially_bound
+            (bound_segments, (identifier, entry, _subtree), unbound_segments)
+          ->
+            `Partially_bound
+              (bound_segments, (identifier, entry), unbound_segments)
+        | `Unbound _ ->
+            maximum_lookup_declaration_in_scopes scopes identifiers)
+
+  let maximum_lookup state identifiers =
+    match state.scopes with
+    | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        match
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+        with
+        | `Bound (entry, _subtree) ->
+            `Bound (Qualified_identifier.from_list1 identifiers, entry)
+        | `Partially_bound
+            (bound_segments, (identifier, entry, _subtree), unbound_segments)
+          ->
+            `Partially_bound
+              (bound_segments, (identifier, entry), unbound_segments)
+        | `Unbound _ ->
+            maximum_lookup_declaration_in_scopes scopes identifiers)
+    | List1.T (scope, scopes) ->
+        maximum_lookup_in_scopes (scope :: scopes) identifiers
+
+  let start_pattern state =
+    let pattern_scope = create_pattern_scope () in
+    push_scope state pattern_scope
+
+  let raise_duplicate_identifiers_exception f duplicates =
+    match duplicates with
+    | List1.T ((_identifier, duplicates), []) ->
+        Error.raise_at
+          (List2.to_list1 (List2.map Identifier.location duplicates))
+          (f duplicates)
+    | List1.T (x1, x2 :: xs) ->
+        Error.raise_aggregate_exception
+          (List2.map
+             (fun (_identifier, duplicates) ->
+               Error.located_exception
+                 (List2.to_list1 (List2.map Identifier.location duplicates))
+                 (f duplicates))
+             (List2.from x1 x2 xs))
+
+  let stop_pattern state =
+    match get_current_scope state with
+    | Plain_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
+    | Module_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid module scope state" __FUNCTION__)
+    | Pattern_scope
+        { pattern_bindings = _; pattern_variables_rev; expression_bindings }
+      -> (
+        match
+          Identifier.find_duplicates (List.rev pattern_variables_rev)
+        with
+        | Option.Some duplicates ->
+            raise_duplicate_identifiers_exception
+              (fun identifiers -> Duplicate_pattern_variables identifiers)
+              duplicates
+        | Option.None ->
+            ignore (pop_scope state);
+            expression_bindings)
+
+  let actual_binding_exn identifier entry =
+    Error.located_exception1
+      (Entry.binding_location entry)
+      (Entry.actual_binding_exn identifier entry)
+
+  let modify_operator state identifier f =
+    let entry, subtree = lookup state identifier in
+    let entry' =
+      Entry.modify_operator
+        ~operator:(fun operator arity ->
+          let operator' = f operator ~arity in
+          (operator', arity))
+        ~not_an_operator:(fun () ->
+          Error.raise_at1
+            (Qualified_identifier.location identifier)
+            (Error.composite_exception2 (Expected_operator identifier)
+               (actual_binding_exn identifier entry)))
+        entry
+    in
+    let bindings = get_current_scope_bindings state in
+    if Binding_tree.mem identifier bindings then
+      Binding_tree.replace identifier
+        (fun _entry subtree -> (entry', subtree))
+        bindings
+    else Binding_tree.add identifier ~subtree entry' bindings;
+    match get_current_scope state with
+    | Plain_scope _ -> ()
+    | Pattern_scope _ -> ()
+    | Module_scope { declarations; _ } ->
+        if Binding_tree.mem identifier declarations then
+          Binding_tree.replace identifier
+            (fun _entry subtree -> (entry', subtree))
+            declarations
+        else ()
+
+  let add_prefix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    modify_operator state constant (fun _operator ~arity ->
+        match arity with
+        | Option.Some 1 -> Option.some (Operator.make_prefix ~precedence)
+        | Option.Some _
+        | Option.None ->
+            Error.raise_at1
+              (Qualified_identifier.location constant)
+              (Invalid_prefix_pragma { actual_arity = arity }))
+
+  let add_infix_notation state ?precedence ?associativity constant =
+    let precedence = get_default_precedence_opt state precedence in
+    let associativity = get_default_associativity_opt state associativity in
+    modify_operator state constant (fun _operator ~arity ->
+        match arity with
+        | Option.Some 2 ->
+            Option.some (Operator.make_infix ~associativity ~precedence)
+        | Option.Some _
+        | Option.None ->
+            Error.raise_at1
+              (Qualified_identifier.location constant)
+              (Invalid_infix_pragma { actual_arity = arity }))
+
+  let add_postfix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    modify_operator state constant (fun _operator ~arity ->
+        match arity with
+        | Option.Some 1 -> Option.some (Operator.make_postfix ~precedence)
+        | Option.Some _
+        | Option.None ->
+            Error.raise_at1
+              (Qualified_identifier.location constant)
+              (Invalid_postfix_pragma { actual_arity = arity }))
+
+  let open_namespace state identifier =
+    let _entry, subtree = lookup state identifier in
+    let bindings = get_current_scope_bindings state in
+    Binding_tree.add_all bindings subtree
+
+  let open_module state identifier =
+    match lookup state identifier with
+    | { Entry.desc = Entry.Module; _ }, _ -> open_namespace state identifier
+    | entry, _ ->
+        Error.raise_at1
+          (Qualified_identifier.location identifier)
+          (Error.composite_exception2 (Expected_module identifier)
+             (actual_binding_exn identifier entry))
+
+  let add_synonym state ?location qualified_identifier synonym =
+    let entry, subtree = lookup state qualified_identifier in
+    let binding_location' =
+      match location with
+      | Option.None -> Entry.binding_location entry
+      | Option.Some location -> location
+    in
+    let entry' = Entry.{ entry with binding_location = binding_location' } in
+    add_binding state synonym ~subtree entry'
+
+  let add_module_abbreviation state ?location module_identifier abbreviation
+      =
+    match lookup state module_identifier with
+    | { Entry.desc = Entry.Module; _ }, _ ->
+        add_synonym state ?location module_identifier abbreviation
+    | entry, _ ->
+        Error.raise_at1
+          (Qualified_identifier.location module_identifier)
+          (Error.composite_exception2 (Expected_module module_identifier)
+             (actual_binding_exn module_identifier entry))
+end
+
+module Mutable_disambiguation_state_monad : sig
+  include DISAMBIGUATION_STATE
+
+  val create_initial_state : Unit.t -> state
+end = struct
+  include Mutable_disambiguation_state
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
+  let[@specialise] with_bound_lf_variable ?location identifier m =
+    let* state = get in
+    add_lf_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_meta_variable ?location identifier m =
+    let* state = get in
+    add_meta_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_parameter_variable ?location identifier m =
+    let* state = get in
+    add_parameter_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_substitution_variable ?location identifier m =
+    let* state = get in
+    add_substitution_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_context_variable ?location identifier m =
+    let* state = get in
+    add_context_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_contextual_variable ?location identifier m =
+    let* state = get in
+    add_contextual_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] with_bound_computation_variable ?location identifier m =
+    let* state = get in
+    add_computation_variable state ?location identifier;
+    let* x = m in
+    remove_binding state identifier;
+    return x
+
+  let[@specialise] add_lf_variable ?location identifier =
+    let* state = get in
+    add_lf_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_meta_variable ?location identifier =
+    let* state = get in
+    add_meta_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_parameter_variable ?location identifier =
+    let* state = get in
+    add_parameter_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_substitution_variable ?location identifier =
+    let* state = get in
+    add_substitution_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_context_variable ?location identifier =
+    let* state = get in
+    add_context_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_computation_variable ?location identifier =
+    let* state = get in
+    add_computation_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_lf_type_constant ?location ?arity identifier =
+    let* state = get in
+    add_lf_type_constant state ?location ?arity identifier;
+    return ()
+
+  let[@specialise] add_lf_term_constant ?location ?arity identifier =
+    let* state = get in
+    add_lf_term_constant state ?location ?arity identifier;
+    return ()
+
+  let[@specialise] add_schema_constant ?location identifier =
+    let* state = get in
+    add_schema_constant state ?location identifier;
+    return ()
+
+  let[@specialise] add_inductive_computation_type_constant ?location ?arity
+      identifier =
+    let* state = get in
+    add_inductive_computation_type_constant state ?location ?arity identifier;
+    return ()
+
+  let[@specialise] add_stratified_computation_type_constant ?location ?arity
+      identifier =
+    let* state = get in
+    add_stratified_computation_type_constant state ?location ?arity
+      identifier;
+    return ()
+
+  let[@specialise] add_coinductive_computation_type_constant ?location ?arity
+      identifier =
+    let* state = get in
+    add_coinductive_computation_type_constant state ?location ?arity
+      identifier;
+    return ()
+
+  let[@specialise] add_abbreviation_computation_type_constant ?location
+      ?arity identifier =
+    let* state = get in
+    add_abbreviation_computation_type_constant state ?location ?arity
+      identifier;
+    return ()
+
+  let[@specialise] add_computation_term_constructor ?location ?arity
+      identifier =
+    let* state = get in
+    add_computation_term_constructor state ?location ?arity identifier;
+    return ()
+
+  let[@specialise] add_computation_term_destructor ?location identifier =
+    let* state = get in
+    add_computation_term_destructor state ?location identifier;
+    return ()
+
+  let[@specialise] add_program_constant ?location ?arity identifier =
+    let* state = get in
+    add_program_constant state ?location ?arity identifier;
+    return ()
+
+  let[@specialise] add_module ?location identifier m =
+    let* state = get in
+    start_module state;
+    let* x = m in
+    stop_module state ?location identifier;
+    return x
+
+  let[@specialise] get_default_associativity =
+    let* state = get in
+    return (get_default_associativity state)
+
+  let[@specialise] set_default_associativity default_associativity =
+    let* state = get in
+    set_default_associativity state default_associativity;
+    return ()
+
+  let[@specialise] get_default_precedence =
+    let* state = get in
+    return (get_default_precedence state)
+
+  let[@specialise] set_default_precedence default_precedence =
+    let* state = get in
+    set_default_precedence state default_precedence;
+    return ()
+
+  let[@specialise] with_scope m =
+    let* state = get in
+    let scope = create_empty_plain_scope () in
+    push_scope state scope;
+    let* x = m in
+    ignore (pop_scope state);
+    return x
+
+  let[@specialise] with_parent_scope m =
+    let* state = get in
+    let scope = pop_scope state in
+    let* x = with_scope m in
+    push_scope state scope;
+    return x
+
+  let[@specialise] with_bindings_checkpoint m =
+    let* state = get in
+    let scope = create_empty_plain_scope () in
+    push_scope state scope;
+    try_catch
+      (lazy
+        (let* x = m in
+         merge_scope state;
+         return x))
+      ~on_exn:(fun cause ->
+        ignore (pop_scope state);
+        Error.raise cause)
+
+  let actual_binding_exn identifier entry =
+    Error.located_exception1
+      (Entry.binding_location entry)
+      (Entry.actual_binding_exn identifier entry)
+
+  let[@specialise] add_free_lf_variable ?location identifier =
+    let* state = get in
+    add_free_lf_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_free_meta_variable ?location identifier =
+    let* state = get in
+    add_free_meta_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_free_parameter_variable ?location identifier =
+    let* state = get in
+    add_free_parameter_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_free_substitution_variable ?location identifier =
+    let* state = get in
+    add_free_substitution_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_free_context_variable ?location identifier =
+    let* state = get in
+    add_free_context_variable state ?location identifier;
+    return ()
+
+  let[@specialise] add_free_computation_variable ?location identifier =
+    let* state = get in
+    add_free_computation_variable state ?location identifier;
+    return ()
+
+  let[@specialise] with_bound_pattern_meta_variable ?location identifier m =
+    let* () = add_free_meta_variable ?location identifier in
+    with_bound_meta_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_parameter_variable ?location identifier
+      m =
+    let* () = add_free_parameter_variable ?location identifier in
+    with_bound_parameter_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_substitution_variable ?location
+      identifier m =
+    let* () = add_free_substitution_variable ?location identifier in
+    with_bound_substitution_variable ?location identifier m
+
+  let[@specialise] with_bound_pattern_context_variable ?location identifier m
+      =
+    let* () = add_free_context_variable ?location identifier in
+    with_bound_context_variable ?location identifier m
+
+  let[@specialise] with_free_variables_as_pattern_variables ~pattern
+      ~expression =
+    let* state = get in
+    start_pattern state;
+    let* pattern' = pattern in
+    let expression_bindings = stop_pattern state in
+    let expression_scope = create_plain_scope expression_bindings in
+    push_scope state expression_scope;
+    let* expression' = expression pattern' in
+    ignore (pop_scope state);
+    return expression'
+
+  let[@specialise] lookup_toplevel identifier =
+    let* state = get in
+    match lookup_toplevel_opt state identifier with
+    | Option.Some (entry, _subtree) -> return (Result.ok entry)
+    | Option.None -> return (Result.error (Unbound_identifier identifier))
+
+  let[@specialise] lookup qualified_identifier =
+    let* state = get in
+    try
+      let entry, _subtree = lookup state qualified_identifier in
+      return (Result.ok entry)
+    with
+    | cause -> return (Result.error cause)
+
+  let[@specialise] maximum_lookup identifiers =
+    let* state = get in
+    return (maximum_lookup state identifiers)
+
+  let[@specialise] open_module module_identifier =
+    let* state = get in
+    open_module state module_identifier;
+    return ()
+
+  let[@specialise] add_prefix_notation ?precedence constant_identifier =
+    let* state = get in
+    add_prefix_notation state ?precedence constant_identifier;
+    return ()
+
+  let[@specialise] add_infix_notation ?precedence ?associativity
+      constant_identifier =
+    let* state = get in
+    add_infix_notation state ?precedence ?associativity constant_identifier;
+    return ()
+
+  let[@specialise] add_postfix_notation ?precedence constant_identifier =
+    let* state = get in
+    add_postfix_notation state ?precedence constant_identifier;
+    return ()
+
+  let[@specialise] lookup_operator =
+    lookup >=> function
+    | Result.Ok entry -> return (Entry.operator entry)
+    | Result.Error _ -> return Option.none
+
+  let[@specialise] add_module_abbreviation ?location module_identifier
+      abbreviation =
+    let* state = get in
+    add_module_abbreviation state ?location module_identifier abbreviation;
+    return ()
+end

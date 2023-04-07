@@ -127,3 +127,33 @@ module Simple : sig
 
   val read_multi_file_signature : string List1.t -> Synext.signature
 end
+
+module Mutable : sig
+  module Parser_state :
+      module type of Parser_combinator.Make_persistent_state (Located_token)
+
+  module Disambiguation_state =
+    Disambiguation_state.Mutable_disambiguation_state_monad
+
+  include module type of Make (Parser_state) (Disambiguation_state)
+
+  val make_initial_parser_state_from_channel :
+    initial_location:Location.t -> in_channel -> Parser_state.state
+
+  val make_initial_parser_state_from_string :
+    initial_location:Location.t -> string -> Parser_state.state
+
+  val make_initial_state_from_channel :
+       disambiguation_state:Disambiguation_state.state
+    -> initial_location:Location.t
+    -> channel:in_channel
+    -> state
+
+  val make_initial_state_from_string :
+       disambiguation_state:Disambiguation_state.state
+    -> initial_location:Location.t
+    -> input:string
+    -> state
+
+  val read_multi_file_signature : string List1.t -> Synext.signature
+end

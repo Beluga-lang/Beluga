@@ -1978,6 +1978,6 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 end
 
 module Indexer = struct
-  include Index_state.Persistent_indexing_state
-  include Make_indexer (Index_state.Persistent_indexing_state)
+  include Index_state.Mutable_indexing_state_monad
+  include Make_indexer (Index_state.Mutable_indexing_state_monad)
 end

@@ -24,7 +24,7 @@ module Load_state = struct
   module Parsing = Beluga_parser.Parsing
   module Disambiguation = Beluga_parser.Disambiguation
   module Disambiguation_state = Beluga_parser.Disambiguation_state
-  module Index_state = Index_state.Persistent_indexing_state
+  module Index_state = Index_state.Mutable_indexing_state_monad
   module Signature_reconstruction_state =
     Recsgn_state.Signature_reconstruction_state
 
@@ -43,7 +43,7 @@ module Load_state = struct
     { disambiguation_state = Disambiguation_state.create_initial_state ()
     ; signature_reconstruction_state =
         Signature_reconstruction_state.initial_state
-          Index_state.initial_state
+          (Index_state.create_initial_state ())
     }
 
   let read_signature_file ~filename =

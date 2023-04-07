@@ -125,8 +125,9 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
 
 module Indexer : sig
   (** @closed *)
-  include module type of Make_indexer (Index_state.Persistent_indexing_state)
+  include module type of
+      Make_indexer (Index_state.Mutable_indexing_state_monad)
 
   (** @closed *)
-  include module type of Index_state.Persistent_indexing_state
+  include module type of Index_state.Mutable_indexing_state_monad
 end

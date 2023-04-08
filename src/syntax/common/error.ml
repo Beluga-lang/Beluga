@@ -126,6 +126,21 @@ let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
 
 (** {1 Printing Located Exceptions} *)
 
+(* See ANSI escape sequences:
+   https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 *)
+
+let bold ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1m" ppv x "\027[0m"
+
+let bold_red ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;31m" ppv x "\027[0m"
+
+let bold_red_bg ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;41m" ppv x "\027[0m"
+
+let red ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[31m" ppv x "\027[0m"
+
 (** [replace_tabs_with_spaces line] is [line] where each tab character ['\t']
     is replaced with a single space [' '].
 
@@ -268,8 +283,14 @@ let split_utf8_line s pos =
 let[@inline] make_caret_line ~start_column ~stop_column length =
   let caret_start_index = start_column - 1 in
   let caret_stop_index = stop_column - 1 in
-  String.init length (fun i ->
-      if caret_start_index <= i && i < caret_stop_index then '^' else ' ')
+  let left_margin = String.init caret_start_index (Fun.const ' ') in
+  let carets =
+    String.init (caret_stop_index - caret_start_index) (Fun.const '^')
+  in
+  let right_margin =
+    String.init (length - caret_stop_index) (Fun.const ' ')
+  in
+  (left_margin, carets, right_margin)
 
 (** [line_number_prefix line_number max_line_count_length] is a prefix like
     [123 |] for [line_number = 123] for displaying source file numbers in
@@ -284,13 +305,16 @@ let line_number_prefix line_number max_line_count_length =
   in
   String.init left_margin (Fun.const ' ') ^ line_number_string ^ " |"
 
-let add_line_number_prefix line_number max_line_count_length line carets =
+let add_line_number_prefix line_number max_line_count_length line
+    (left_margin_carets, carets, right_margin_carets) =
   let prefix = line_number_prefix line_number max_line_count_length in
   let line' = prefix ^ line in
   let carets_left_margin =
     String.init (String.length prefix) (Fun.const ' ')
   in
-  let carets' = carets_left_margin ^ carets in
+  let carets' =
+    (carets_left_margin ^ left_margin_carets, carets, right_margin_carets)
+  in
   (line', carets')
 
 (** [make_location_snippet location lines_by_number] is a list of pairs of
@@ -396,31 +420,17 @@ let make_location_snippets locations =
                 (location, snippet)))
   |> Seq.to_list
 
-(* See ANSI escape sequences:
-   https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 *)
-
-let bold ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1m" ppv x "\027[0m"
-
-let bold_red ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;31m" ppv x "\027[0m"
-
-let bold_red_bg ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;41m" ppv x "\027[0m"
-
-let red ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[31m" ppv x "\027[0m"
-
 let located_exception_printer cause_printer locations =
   try
     let snippets = make_location_snippets (List1.to_list locations) in
     if List.length snippets > 0 then
       let pp_snippet ppf (location, lines) =
         Format.fprintf ppf "@[<v 0>@[%a@]:@,%a@]" (bold Location.pp) location
-          (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->
-               Format.fprintf ppf "%s@,%a" line
+          (List.pp ~pp_sep:Format.pp_print_cut
+             (fun ppf (line, (left_margin, carets, right_margin)) ->
+               Format.fprintf ppf "%s@,%s%a%s" line left_margin
                  (red Format.pp_print_string)
-                 carets))
+                 carets right_margin))
           lines
       in
       Format.dprintf "@[<v 0>%a@,@[<hov 0>%a %t@]@]"

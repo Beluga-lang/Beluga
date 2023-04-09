@@ -133,7 +133,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
 
   let with_meta_level_binding_opt identifier_opt typ =
     match identifier_opt with
-    | Option.None -> Fun.id
+    | Option.None -> with_shifted_meta_context
     | Option.Some identifier -> with_bound_meta_variable' identifier typ
 
   let with_bound_omittable_meta_variable identifier_opt typ =

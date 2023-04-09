@@ -157,9 +157,12 @@ module Cid = struct
       | Int.LF.Typ -> 0
       | Int.LF.PiKind (_, k) -> 1 + args k
 
+    let explicit_arguments entry =
+      args entry.kind - entry.implicit_arguments
+
     let args_of_name n =
       let entry = get (index_of_name n) in
-      args entry.kind - entry.implicit_arguments
+      explicit_arguments entry
 
     let args_of_name_opt n =
       try
@@ -392,9 +395,12 @@ module Cid = struct
       Typ.addConstructor loc e_typ cid e.typ;
       cid
 
+    let explicit_arguments entry =
+      args entry.typ - entry.implicit_arguments
+
     let args_of_name n =
-      let e = get (index_of_name n) in
-      args e.typ - e.implicit_arguments
+      let entry = get (index_of_name n) in
+      explicit_arguments entry
 
     let args_of_name_opt n =
       try
@@ -482,6 +488,14 @@ module Cid = struct
       ; decl = Decl.next ()
       }
 
+    let rec args =
+      function
+      | Int.Comp.PiKind (_, _, tK) -> 1 + args tK
+      | Int.Comp.Ctype _ -> 0
+
+    let explicit_arguments entry =
+      args entry.kind - entry.implicit_arguments
+
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let freeze a = (get a).frozen <- true
@@ -524,6 +538,14 @@ module Cid = struct
     let addDestructor c typ =
       let entry = get typ in
       entry.destructors := c :: !(entry.destructors)
+
+    let rec args =
+      function
+      | Int.Comp.PiKind (_, _, tK) -> 1 + args tK
+      | Int.Comp.Ctype _ -> 0
+
+    let explicit_arguments entry =
+      args entry.kind - entry.implicit_arguments
   end
 
   module CompConst = struct
@@ -551,6 +573,15 @@ module Cid = struct
       let cid = add f in (* from CidStore *)
       CompTyp.addConstructor cid cid_ctyp;
       cid
+
+    let rec args =
+      function
+      | Int.Comp.TypArr (_, _, tA) -> 1 + args tA
+      | Int.Comp.TypPiBox (_, _, tA) -> 1 + args tA
+      | _ -> 0
+
+    let explicit_arguments entry =
+      args entry.typ - entry.implicit_arguments
 
     let get_implicit_arguments c = (get c).implicit_arguments
   end
@@ -612,6 +643,14 @@ module Cid = struct
       ; typ
       ; decl = Decl.next ()
       }
+
+    let rec args =
+      function
+      | Int.Comp.PiKind (_, _, tK) -> 1 + args tK
+      | Int.Comp.Ctype _ -> 0
+
+    let explicit_arguments entry =
+      args entry.kind - entry.implicit_arguments
 
     let get_implicit_arguments c = (get c).implicit_arguments
   end
@@ -682,6 +721,15 @@ module Cid = struct
 
     let set_decl cid f =
       set cid (fun e -> { e with decl = f e.decl })
+
+    let rec args =
+      function
+      | Int.Comp.TypArr (_, _, tA) -> 1 + args tA
+      | Int.Comp.TypPiBox (_, _, tA) -> 1 + args tA
+      | _ -> 0
+
+    let explicit_arguments entry =
+      args entry.typ - entry.implicit_arguments
   end
 
   module type RENDERER = sig

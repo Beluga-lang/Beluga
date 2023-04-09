@@ -3,6 +3,8 @@ open Beluga_syntax
 
 exception Unknown_constant_arity of Qualified_identifier.t
 
+exception Unsupported_constant_for_name_generation
+
 exception
   Invalid_prefix_arity of
     { constant : Qualified_identifier.t
@@ -26,6 +28,10 @@ let () =
     | Unknown_constant_arity constant ->
         Format.dprintf "Can't determine the arity of constant %a."
           Qualified_identifier.pp constant
+    | Unsupported_constant_for_name_generation ->
+        Format.dprintf
+          "Can't assign a variable name generation convention to this \
+           constant."
     | Invalid_prefix_arity { constant; actual } ->
         Format.dprintf
           "Invalid prefix pragma.@ Prefix operators must have arity 1, but \
@@ -215,7 +221,29 @@ module Make_signature_reconstruction_state
     | Option.Some associativity -> associativity
 
   let lookup_operator_arity state ?location constant =
-    Obj.magic () (* TODO: Lookup constant ID, then lookup in the store *)
+    let entry, _subtree = Index_state.lookup state.index_state constant in
+    match entry.Index_state_demonad.Entry.desc with
+    | Index_state_demonad.Entry.Lf_type_constant { cid } ->
+        Option.some Store.Cid.Typ.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Lf_term_constant { cid } ->
+        Option.some Store.Cid.Term.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Computation_inductive_type_constant { cid }
+      ->
+        Option.some Store.Cid.CompTyp.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Computation_stratified_type_constant { cid }
+      ->
+        Option.some Store.Cid.CompTyp.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Computation_abbreviation_type_constant
+        { cid } ->
+        Option.some Store.Cid.CompTypDef.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Computation_coinductive_type_constant { cid }
+      ->
+        Option.some Store.Cid.CompCotyp.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Computation_term_constructor { cid } ->
+        Option.some Store.Cid.CompConst.(explicit_arguments (get cid))
+    | Index_state_demonad.Entry.Program_constant { cid } ->
+        Option.some Store.Cid.Comp.(explicit_arguments (get cid))
+    | _ -> Option.none
 
   let set_operator_prefix state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
@@ -268,7 +296,18 @@ module Make_signature_reconstruction_state
 
   let set_name_generation_bases state ~location ~meta_variable_base
       ?computation_variable_base constant =
-    () (* TODO: *)
+    let entry, _subtree = Index_state.lookup state.index_state constant in
+    match entry with
+    | { Index_state_demonad.Entry.desc =
+          Index_state_demonad.Entry.Lf_type_constant { cid }
+      ; _
+      } ->
+        let m_name = Identifier.name meta_variable_base in
+        let m = Option.some (Gensym.MVarData.name_gensym m_name) in
+        let v_name = Option.map Identifier.name computation_variable_base in
+        let v = Option.map Gensym.VarData.name_gensym v_name in
+        Store.Cid.Typ.set_name_convention cid m v
+    | _ -> Error.raise_at1 location Unsupported_constant_for_name_generation
 
   let open_module state ?location module_identifier =
     Index_state.open_module state.index_state ?location module_identifier

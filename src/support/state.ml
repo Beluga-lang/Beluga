@@ -1,7 +1,7 @@
 module type STATE = sig
   type state
 
-  include Monad.MONAD with type 'a t = state -> state * 'a
+  type 'a t = state -> state * 'a
 
   val get : state t
 
@@ -60,6 +60,8 @@ module type STATE = sig
   val seq_list1 : 'a t List1.t -> 'a List1.t t
 
   val seq_list_void : unit t list -> unit t
+
+  include Monad.MONAD with type 'a t := 'a t
 
   include Functor.FUNCTOR with type 'a t := 'a t
 

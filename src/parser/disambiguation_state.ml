@@ -1605,9 +1605,7 @@ module Mutable_disambiguation_state = struct
         Error.raise_violation
           (Format.asprintf "[%s] cannot merge the last scope" __FUNCTION__)
 
-  let[@inline] get_current_scope state =
-    let (List1.T (x, _xs)) = state.scopes in
-    x
+  let[@inline] get_current_scope state = List1.head state.scopes
 
   let[@inline] get_current_scope_bindings state =
     get_scope_bindings (get_current_scope state)

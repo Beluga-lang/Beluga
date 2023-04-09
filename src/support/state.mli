@@ -3,7 +3,7 @@ module type STATE = sig
   (** The type of states inside the monad. *)
   type state
 
-  include Monad.MONAD with type 'a t = state -> state * 'a
+  type 'a t = state -> state * 'a
 
   (** Return the state from the internals of the monad. *)
   val get : state t
@@ -80,6 +80,8 @@ module type STATE = sig
   val seq_list_void : unit t list -> unit t
 
   (** {1 Instances} *)
+
+  include Monad.MONAD with type 'a t := 'a t
 
   include Functor.FUNCTOR with type 'a t := 'a t
 

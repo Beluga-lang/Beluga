@@ -2115,9 +2115,7 @@ module Mutable_indexing_state = struct
         Error.raise_violation
           (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
 
-  let[@inline] get_current_scope state =
-    let (List1.T (x, _xs)) = state.scopes in
-    x
+  let[@inline] get_current_scope state = List1.head state.scopes
 
   let[@inline] get_current_scope_bindings_state state =
     get_scope_bindings_state (get_current_scope state)

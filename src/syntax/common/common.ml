@@ -12,6 +12,7 @@ module Inductivity = Inductivity
 (** {1 Pretty-Printing} *)
 
 module Parenthesizer = Parenthesizer
+module Parenthesizer_demonad = Parenthesizer_demonad
 
 (** {1 Identifiers} *)
 

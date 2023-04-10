@@ -7,7 +7,9 @@ type fmt = { fmt : 'a. ('a, formatter, unit) format -> 'a }
 let stringify p x = asprintf "%a" p x
 
 (** Prints the given string followed by a space break hint. *)
-let punctuation s ppf () = fprintf ppf "%s@ " s
+let punctuation mark ppf () =
+  pp_print_string ppf mark;
+  pp_print_space ppf ()
 
 (** Prints a semicolon followed by a space break hint. *)
 let semicolon = punctuation ";"

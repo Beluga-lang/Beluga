@@ -9,14 +9,19 @@ let dprintf, _, _ = Debug.(makeFunctions' (toFlags [ 11 ]))
 open Debug.Fmt
 
 module type LOAD_STATE = sig
-  include State.STATE
+  type state
 
-  val read_signature_file : filename:String.t -> Synext.signature_file t
+  val read_signature_file :
+    state -> filename:String.t -> Synext.signature_file
 
-  val reconstruct_signature_file : Synext.signature_file -> Synint.Sgn.sgn t
+  val reconstruct_signature_file :
+    state -> Synext.signature_file -> Synint.Sgn.sgn
 
   val get_leftover_vars :
-    (Abstract.free_var Synint.LF.ctx * Location.t) List.t t
+    state -> (Abstract.free_var Synint.LF.ctx * Location.t) List.t
+
+  val traverse_list_void :
+    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 end
 
 module Load_state = struct
@@ -24,74 +29,51 @@ module Load_state = struct
   module Parsing = Beluga_parser.Parsing
   module Disambiguation = Beluga_parser.Disambiguation
   module Disambiguation_state = Beluga_parser.Disambiguation_state
-  module Index_state = Index_state.Mutable_indexing_state_monad
+  module Index_state = Index_state_demonad.Mutable_indexing_state
   module Signature_reconstruction_state =
-    Recsgn_state.Signature_reconstruction_state
+    Recsgn_state_demonad.Signature_reconstruction_state
+  module Signature_reconstruction = Recsgn_demonad.Signature_reconstruction
 
   type state =
     { disambiguation_state : Disambiguation_state.state
     ; signature_reconstruction_state : Signature_reconstruction_state.state
     }
 
-  include (
-    State.Make (struct
-      type t = state
-    end) :
-      State.STATE with type state := state)
-
-  let initial_state =
+  let create_initial_state () =
     { disambiguation_state = Disambiguation_state.create_initial_state ()
     ; signature_reconstruction_state =
         Signature_reconstruction_state.initial_state
           (Index_state.create_initial_state ())
     }
 
-  let read_signature_file ~filename =
-    let* { disambiguation_state; _ } = get in
+  let read_signature_file state ~filename =
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let initial_parser_state =
           Beluga_parser.make_initial_state_from_channel ~initial_location
-            ~disambiguation_state ~channel:in_channel
+            ~disambiguation_state:state.disambiguation_state
+            ~channel:in_channel
         in
-        let s, x =
-          Beluga_parser.run
-            (Beluga_parser.parse_and_disambiguate
-               ~parser:Parsing.(only signature_file)
-               ~disambiguator:Disambiguation.disambiguate_signature_file)
-            initial_parser_state
-        in
-        let _, disambiguation_state' =
-          Beluga_parser.get_disambiguation_state s
-        in
-        let* () =
-          modify (fun state ->
-              { state with disambiguation_state = disambiguation_state' })
-        in
-        return x)
+        Beluga_parser.eval
+          (Beluga_parser.parse_and_disambiguate
+             ~parser:Parsing.(only signature_file)
+             ~disambiguator:Disambiguation.disambiguate_signature_file)
+          initial_parser_state)
 
-  let reconstruct_signature_file signature =
-    let* { signature_reconstruction_state; _ } = get in
-    let signature_reconstruction_state', signature' =
-      Signature_reconstruction_state.run
-        (Recsgn.Signature_reconstruction.reconstruct_signature_file signature)
-        signature_reconstruction_state
-    in
-    let* () =
-      modify (fun state ->
-          { state with
-            signature_reconstruction_state = signature_reconstruction_state'
-          })
-    in
-    return signature'
+  let reconstruct_signature_file state signature =
+    Signature_reconstruction.reconstruct_signature_file
+      state.signature_reconstruction_state signature
 
-  let get_leftover_vars =
-    let* { signature_reconstruction_state; _ } = get in
-    let _, leftover_vars =
-      Signature_reconstruction_state.get_leftover_vars
-        signature_reconstruction_state
-    in
-    return leftover_vars
+  let get_leftover_vars state =
+    Signature_reconstruction_state.get_leftover_vars
+      state.signature_reconstruction_state
+
+  let rec traverse_list_void state f l =
+    match l with
+    | [] -> ()
+    | x :: xs ->
+        f state x;
+        traverse_list_void state f xs
 end
 
 module Make_load (Load_state : LOAD_STATE) = struct
@@ -106,14 +88,14 @@ module Make_load (Load_state : LOAD_STATE) = struct
               Recsgn.fmt_ppr_leftover_vars vars);
         Error.raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
-  let load_file filename =
-    let* sgn = read_signature_file ~filename in
+  let load_file state filename =
+    let sgn = read_signature_file state ~filename in
 
     Chatter.print 1 (fun ppf ->
         Format.fprintf ppf "## Type Reconstruction begin: %s ##@." filename);
 
-    let* sgn' = reconstruct_signature_file sgn in
-    let* leftoverVars = get_leftover_vars in
+    let sgn' = reconstruct_signature_file state sgn in
+    let leftoverVars = get_leftover_vars state in
 
     Chatter.print 2 (fun ppf ->
         Format.fprintf ppf
@@ -148,21 +130,18 @@ module Make_load (Load_state : LOAD_STATE) = struct
       (Option.from_predicate List.nonempty leftoverVars);
 
     if !Typeinfo.generate_annotations then Typeinfo.print_annot filename;
-    if !Monitor.on || !Monitor.onf then Monitor.print_timers ();
+    if !Monitor.on || !Monitor.onf then Monitor.print_timers ()
 
-    return ()
-
-  let load_one path =
-    try_catch
-      (lazy (load_file path))
-      ~on_exn:(fun e ->
+  let load_one state path =
+    try load_file state path with
+    | e ->
         dprintf (fun p ->
             p.fmt "@[<v 2>[load_one] %s backtrace:@,@[%a@]@]" path
               Format.pp_print_string
               (Printexc.get_backtrace ()));
-        Error.raise e)
+        Error.raise e
 
-  let load configuration_filename =
+  let load state configuration_filename =
     let all_paths =
       List.map Pair.snd
         (Config_parser.read_configuration ~filename:configuration_filename)
@@ -177,10 +156,12 @@ module Make_load (Load_state : LOAD_STATE) = struct
     Store.clear ();
     Typeinfo.clear_all ();
     Holes.clear ();
-    let* () = traverse_list_void load_one all_paths in
-    return all_paths
+    traverse_list_void state load_one all_paths;
+    all_paths
 end
 
 include Make_load (Load_state)
 
-let load filename = eval (load filename) Load_state.initial_state
+let load filename =
+  let state = Load_state.create_initial_state () in
+  load state filename

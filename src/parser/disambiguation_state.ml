@@ -1997,7 +1997,7 @@ module Mutable_disambiguation_state = struct
     let bindings = get_current_scope_bindings state in
     if Binding_tree.mem identifier bindings then
       Binding_tree.replace identifier
-        (fun _entry subtree -> (entry', subtree))
+        (fun _entry _subtree -> (entry', subtree))
         bindings
     else Binding_tree.add identifier ~subtree entry' bindings;
     match get_current_scope state with

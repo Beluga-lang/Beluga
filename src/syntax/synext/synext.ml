@@ -13,6 +13,7 @@ include Synext_location
 (** {1 Precedences} *)
 
 include Synext_precedence
+include Synext_precedence_demonad
 
 (** {1 Explicit Arguments} *)
 
@@ -22,3 +23,5 @@ include Synext_arguments
 
 include Synext_pp_state
 include Synext_pp
+include Synext_pp_state_demonad
+include Synext_pp_demonad

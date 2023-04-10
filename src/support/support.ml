@@ -12,6 +12,7 @@ module Eq = Eq
 module Ord = Ord
 module Hash = Hash
 module Format_state = Format_state
+module Format_state_demonad = Format_state_demonad
 
 (** {1 Extensions to Imported Libraries} *)
 

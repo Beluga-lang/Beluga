@@ -25,7 +25,7 @@ module type LOAD_STATE = sig
 end
 
 module Load_state = struct
-  module Beluga_parser = Beluga_parser.Mutable
+  module Beluga_parser = Demonad
   module Parsing = Beluga_parser.Parsing
   module Disambiguation = Beluga_parser.Disambiguation
   module Disambiguation_state = Beluga_parser.Disambiguation_state
@@ -57,7 +57,10 @@ module Load_state = struct
         Beluga_parser.eval
           (Beluga_parser.parse_and_disambiguate
              ~parser:Parsing.(only signature_file)
-             ~disambiguator:Disambiguation.disambiguate_signature_file)
+             ~disambiguator:(fun signature_file state ->
+               ( state
+               , Disambiguation.disambiguate_signature_file state
+                   signature_file )))
           initial_parser_state)
 
   let reconstruct_signature_file state signature =

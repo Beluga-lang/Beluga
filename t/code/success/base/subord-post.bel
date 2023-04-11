@@ -1,6 +1,5 @@
 % coverage/subordination example;
-%   same as subord.bel but includes a post-case-expression LF declaration,
-%   demonstrating the need to postpone coverage to the end of a session.
+%   same as subord.bel but includes a post-case-expression LF declaration.
 
 bool : type.
 
@@ -9,17 +8,17 @@ z    : term.
 suc  : term -> term.
 eq : term -> term -> bool.
 
+after : term -> bool -> bool.
+
 schema termCtx = term;
 schema boolCtx = bool;
 
 rec fff : {g:boolCtx} [g, xx : bool |- bool] -> [ |- term] =
 mlam g => fn e =>
-  case e of --not        % Shouldn't cover, due to "after" term constructor declared later
+  case e of --not        % Shouldn't cover, due to "after" term constructor
   | [g, xx : bool |- eq U V]    => [ |- z]
   | [g, xx : bool |- #px]       => [ |- z]
 ;
-
-after : term -> bool -> bool.
 
 rec fff2 : {g:boolCtx} [g, xx : bool |- bool] -> [ |- term] =
 mlam g => fn e =>

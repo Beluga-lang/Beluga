@@ -206,15 +206,15 @@ let error_printer = function
        "Expected schema for context variable" (Format.pp_print_string) (RR.render_cid_schema w)
        "Actual type" (Format.pp_print_string) (RR.render_cid_schema w')
   | TermWhenVar _ ->
-     Format.dprintf "A term was found when expecting a variable.@.";
+     Format.dprintf "A term was found when expecting a variable.";
 
   | SubWhenRen _ ->
-     Format.dprintf "A substitution was found when expecting a renaming.@."
+     Format.dprintf "A substitution was found when expecting a renaming."
   | HOMVarNotSupported ->
      Format.dprintf "Higher-order meta-variables not (currently) supported"
   | SubstVarConflict x ->
      Format.dprintf
-       "The variable %a was expected to be a substitution variable.@.@.\
+       "The variable %a was expected to be a substitution variable.@\n@\n\
        Please note that $%a and %a both denote the same variable and so the use of both concurrently to denote different things is disallowed."
        Name.pp x
        Name.pp x
@@ -617,7 +617,7 @@ let flattenProjPatHead loc cD h conv_list cPsi =
        | _ -> raise Not_found
      in
      let j = getProjIndexFromType loc cD cPsi tp p in
-     dprintf (fun p -> p.fmt "flattenProjPat Proj Case: k = %d    j = %d@." k j);
+     dprintf (fun p -> p.fmt "flattenProjPat Proj Case: k = %d    j = %d@\n" k j);
      let k' = ConvSigma.map conv_list k - j + 1 in
      Apx.LF.BVar k'
 
@@ -1936,7 +1936,7 @@ and elTerm' recT cD cPsi r sP =
      throw_hint loc HOMVarNotSupported [`accidental_free_variable x; `maybe_eta_expand x]
 
   | Apx.LF.Root (loc, h, _) ->
-     dprintf (fun p -> p.fmt "[elTerm' **] h = %s@." (what_head h));
+     dprintf (fun p -> p.fmt "[elTerm' **] h = %s@\n" (what_head h));
      throw loc CompTypAnn
 
 and instanceOfSchElem loc cD cPsi (tA, s) (some_part, sB) =

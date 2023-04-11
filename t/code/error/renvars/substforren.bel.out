@@ -1,2 +1,4 @@
-./t/code/error/renvars/substforren.bel, line 11, column 50:
-A substitution was found when expecting a renaming.
+File "./t/code/error/renvars/substforren.bel", line 11, column 52:
+11 |mlam g => mlam h => mlam $S => mlam M => f [g] [h] $[h |- $S[..]] [g |- M]
+                                                       ^^^^^^^^^^^^^^         
+Error: A substitution was found when expecting a renaming.

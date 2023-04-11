@@ -1,3 +1,5 @@
-./t/code/error/regressions/77.bel, line 13, column 29:
-Type-checking error.
-Recursive call not structurally smaller.
+File "./t/code/error/regressions/77.bel", line 11, column 30:
+11 |fn x, y ⇒ let [⊢ c Y] = y in foo ? [⊢ ?]
+                                 ^^^^^^^^^^^
+Error: Type-checking error.
+       Recursive call not structurally smaller.

@@ -1,2 +1,16 @@
-./t/code/error/nonexhaustivecase.bel, line 10, column 16:
-Missing branch -- non-exhaustive pattern match.
+File "./t/code/error/nonexhaustivecase.bel", line 10, column 17:
+10 |fn x => fn y => case x of
+                    ^^^^^^^^^
+11 || [ |- z] => case y of
+    ^^^^^^^^^^^^^^^^^^^^^^
+12 |    | [ |- z] => [ |- eq]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |    | [ |- _] => [ |- lt]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+14 || [ |- s N] => case y of
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+15 |    | [ |- z] => [ |- gt]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+16 |    | [ |- s M] => compare [ |- N] [ |- M]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Missing branch -- non-exhaustive pattern match.

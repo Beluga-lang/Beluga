@@ -1,6 +1,8 @@
-./t/code/error/infix/same_precedence_invalid.bel, line 12, column 7:
-Ill-typed expression.
-    Expected type:
-      nat
-    Actual type:
-      t
+File "./t/code/error/infix/same_precedence_invalid.bel", line 12, column 8:
+12 |[ |- s N test N];
+           ^^^^^^^^  
+Error: Ill-typed expression.
+       Expected type:
+         nat
+       Actual type:
+         t

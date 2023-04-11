@@ -209,7 +209,7 @@ module Comp = struct
 
     | MismatchChk (cD, cG, e, theta_tau (* expected *), theta_tau' (* inferred *)) ->
        Format.dprintf
-         "%t@,In expression: %a@."
+         "%t@,In expression: %a@\n"
          (Error.mismatch_reporter
          "Ill-typed expression."
          "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
@@ -218,7 +218,7 @@ module Comp = struct
 
     | MismatchSyn (cD, cG, i, variant, theta_tau) ->
        Format.dprintf
-         "%t@,In expression: %a@."
+         "%t@,In expression: %a@\n"
          (Error.mismatch_reporter
          "Ill-typed expression."
          "Expected" Format.pp_print_string (string_of_typeVariant variant)
@@ -227,7 +227,7 @@ module Comp = struct
 
     | PatIllTyped (cD, cG, pat, theta_tau (* expected *), theta_tau' (* inferred *)) ->
        Format.dprintf
-         "%t@,In pattern: %a@."
+         "%t@,In pattern: %a@\n"
          (Error.mismatch_reporter
          "Ill-typed pattern."
          "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
@@ -351,7 +351,7 @@ module Comp = struct
   let () =
     Error.register_exception_printer (function
       | Error (location, error) ->
-          Error.located_exception_printer (Format.dprintf "Type-checking error.@ %t" (error_printer error))
+          Error.located_exception_printer (Format.dprintf "Type-checking error.@\n%t" (error_printer error))
             (List1.singleton location)
       | exn -> Error.raise_unsupported_exception_printing exn)
 

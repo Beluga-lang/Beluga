@@ -1,6 +1,8 @@
-./t/code/error/precise_error_loc.bel, line 9, column 10:
-Ill-typed expression.
-    Expected type:
-      cat
-    Actual type:
-      cat -> cat
+File "./t/code/error/precise_error_loc.bel", line 9, column 11:
+9 |    | [ ⊢ tail                  % missing argument to tail constructor here
+             ^^^^                                                             
+Error: Ill-typed expression.
+       Expected type:
+         cat
+       Actual type:
+         cat -> cat

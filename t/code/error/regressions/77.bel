@@ -1,7 +1,5 @@
-
-
 LF unit : type =
-| unit : unit
+| unit/c : unit
 ;
 
 LF t : type =

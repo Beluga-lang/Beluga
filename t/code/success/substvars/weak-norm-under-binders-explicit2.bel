@@ -19,7 +19,7 @@ refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 inductive IsVar : (g:ctx){M:[g |- tm A]} ctype =
-| IsVar : {#p:#[g |- tm A[]]} IsVar [g |- #p[..]];
+| IsVar' : {#p:#[g |- tm A[]]} IsVar [g |- #p[..]];
 
 inductive IsVarSub : {g:ctx} (h:ctx) {$S:$[h |- g]}ctype =
 | Nil : IsVarSub [] $[h |- ^]
@@ -36,25 +36,25 @@ inductive IsNormal : (g:ctx) {M:[g |- tm A]} ctype =
 | Lam : IsNormal [g, x:tm A[] |- M]
      -> IsNormal [g |- lam (\x. M)]
 and inductive IsNeutral : (g:ctx) {M:[g |- tm A]} ctype =
-| Var : {#p:[g |- tm A[]]} IsNeutral [g |- #p[..]]
+| Var : {#p:#[g |- tm A[]]} IsNeutral [g |- #p[..]]
 | App : IsNeutral [g |- M[..]]
      -> IsNormal  [g |- N[..]]
      -> IsNeutral [g |- app M[..] N[..]]
 ;
 
 inductive Halts : (g:ctx) {M:[g |- tm A]} ctype =
-| Halts : [g |- mstep M[..] V[..]] -> IsNormal [g |- V[..]] ->
+| Halts/c : [g |- mstep M[..] V[..]] -> IsNormal [g |- V[..]] ->
           Halts [g |- M[..]]
 ;
 
-rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A[]]}{$W:$[h |- g]}
-     IsVarSub [g] [h |- $W]
+rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:#[g |- tm A[]]}{$W:$[h |- g]}
+     IsVarSub [g] $[h |- $W]
    -> IsVar [h |- #p[$W]] =
  mlam g => mlam A => mlam #p => mlam $W => fn ivs =>
 case [g |- #p[..]] of
 | [g', x:tm B[] |- x] =>
   let  {$R:$[h |- g']} Cons [g'] [h] [ |- B] $[h |- $R[..]] [h |- M[..]] ivs' iv = ivs in iv
-| {#q : [g' |- tm T[]]} [g', x:tm B[] |- #q[..]] =>
+| {#q : #[g' |- tm T[]]} [g', x:tm B[] |- #q[..]] =>
    let  Cons [g'] [h] [ |- B] $[h |- $R[..]] [h |- M[..]] ivs' iv = ivs in
    wknVar [g'] [ |- T] [g' |- #q[..]] $[h |- $R[..]] ivs'
 % let  Cons  ivs' iv = ivs in
@@ -71,7 +71,7 @@ case r1 of
 | Nil => Nil
 | Cons [g'] [h] [ |- B] $[h |- $R[..]] [h |- M[..]] ivs' iv =>
   let q0 = varSubCompose' [g'] [h] [h'] $[h |- $R[..]] $[h' |- $W2[..]] ivs' r2 in
-  let IsVar [h |- #p[..]] = iv in
+  let IsVar' [h |- #p[..]] = iv in
   let q1 = wknVar [h] [ |- B] [h |- #p[..]] $[h' |- $W2[..]] r2 in
   Cons [g'] [h'] [ |- B] $[h' |- $R[$W2[..]]] [h' |- _] q0 q1
 ;

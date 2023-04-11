@@ -1,5 +1,9 @@
-./t/code/error/coverage/cov-unsound.bel, line 10, column 9:
-
+File "./t/code/error/coverage/cov-unsound.bel", line 10, column 10:
+10 | fn e => case e of
+             ^^^^^^^^^
+11 |   | [h, y:target |- U[..]] => e ;
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+Error: 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1)  ;  |- [_, x1 |- Y]

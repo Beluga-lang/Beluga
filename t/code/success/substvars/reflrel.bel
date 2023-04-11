@@ -235,7 +235,7 @@ inductive Equal_xG : (psi:xG) [psi |- tm] -> [psi |- tm] -> ctype =
 % for all Ld given  Ctx_xdR [gamma] [phi] $[phi |- $T..[]],
 % there exists an L s.t. Eq' [gamma] [phi] $[phi |- $T[..]] [gamma |- L] [phi |- Ld[..]]
 inductive ExistsEq' : {gamma:xG}{phi: xdG}{$S: $[phi |- gamma]} {L: [phi |- tm]} ctype  =
-ExistsEq' :
+ExistsEq/c' :
     {L:[gamma |- tm]} Eq' [gamma] [phi] $[phi |- $T[..]] [gamma |- L[..]] [phi |- Ld[..]]
 -> ExistsEq' [gamma] [phi] $[phi |- $T[..]] [phi |- Ld[..]]
 ;
@@ -248,22 +248,22 @@ case [phi |- Ld[..]] of
 | [phi, b:block (x:tm, u:deq x x) |- b.1] =>
   let Cons_xd cr'_xd = cr_xd in
   let (cr'_xd : Ctx_xdR [gamma] [phi] $[phi |- $T[..]]) = cr'_xd in
-  ExistsEq' [gamma, x:tm |- x] Eq'_v
+  ExistsEq/c' [gamma, x:tm |- x] Eq'_v
 
 | [phi, b:block (x:tm, u:deq x x) |- #p.1[..]] =>
   let Cons_xd cr'_xd = cr_xd in
-  let ExistsEq' [gamma |- #r[..]] eq = existsEq' cr'_xd [phi |- #p.1[..]] in
-  ExistsEq' [gamma, x:tm |- #r[..]] (Eq'_p eq)
+  let ExistsEq/c' [gamma |- #r[..]] eq = existsEq' cr'_xd [phi |- #p.1[..]] in
+  ExistsEq/c' [gamma, x:tm |- #r[..]] (Eq'_p eq)
 
 | [phi |- app M[..] N[..]] =>
-  let ExistsEq' [gamma |- L1[..]] eq1 = existsEq' cr_xd [phi |- M[..]] in
-  let ExistsEq' [gamma |- L2[..]] eq2 = existsEq' cr_xd [phi |- N[..]] in
-  ExistsEq' [gamma |- app L1[..] L2[..]]  (Eq'_a eq1 eq2)
+  let ExistsEq/c' [gamma |- L1[..]] eq1 = existsEq' cr_xd [phi |- M[..]] in
+  let ExistsEq/c' [gamma |- L2[..]] eq2 = existsEq' cr_xd [phi |- N[..]] in
+  ExistsEq/c' [gamma |- app L1[..] L2[..]]  (Eq'_a eq1 eq2)
 
 | [phi |- lam \x. M] =>
-  let ExistsEq' [gamma, x:tm |- L] eq =
+  let ExistsEq/c' [gamma, x:tm |- L] eq =
       existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[.., b.1]] in
-  ExistsEq' [gamma |- lam \x. L] (Eq'_l eq)
+  ExistsEq/c' [gamma |- lam \x. L] (Eq'_l eq)
  ;
 
 
@@ -271,7 +271,7 @@ case [phi |- Ld[..]] of
 % there exists an La s.t. Eq [gamma] [psi] $[psi |- $S..[]] [gamma |- L[..]] [psi |- La[..]]
 
 inductive ExistsEq : {gamma:xG}{psi: xaG}{$S: $[psi |- gamma]} {L: [gamma |- tm]} ctype  =
-ExistsEq :
+ExistsEq/c :
     {La:[psi |- tm]} Eq [gamma] [psi] $[psi |- $S[..]] [gamma |- L] [psi |- La[..]]
 -> ExistsEq [gamma] [psi] $[psi |- $S[..]] [gamma |- L[..]]
 ;
@@ -284,27 +284,24 @@ case [gamma |- L[..]] of
 | [gamma, x:tm |- x] =>
   let Cons_xa cr'_xa = cr_xa in
   let (cr'_xa : Ctx_xaR [gamma] [psi] $[psi |- $S[..]]) = cr'_xa in
-  ExistsEq [psi, b:block (x:tm, u:aeq x x) |- b.1] Eq_v
+  ExistsEq/c [psi, b:block (x:tm, u:aeq x x) |- b.1] Eq_v
 
 | [gamma, x:tm |- #p[..]] =>
   let Cons_xa cr'_xa = cr_xa in
-  let ExistsEq [psi |- #q.1[..]] eq = existsEq cr'_xa [gamma |- #p[..]] in
+  let ExistsEq/c [psi |- #q.1[..]] eq = existsEq cr'_xa [gamma |- #p[..]] in
   let (eq : Eq [gamma] [psi] $[psi |- $S[..]] [gamma |- #p[..]][psi |- #q.1[..]]) = eq in
-
- ExistsEq [psi, b:block (x:tm, u:aeq x x) |- _] (Eq_p eq)
+  ExistsEq/c [psi, b:block (x:tm, u:aeq x x) |- _] (Eq_p eq)
 
 | [gamma |- app M[..] N[..]] =>
-  let ExistsEq [psi |- La1[..]] eq1 = existsEq cr_xa [gamma |- M[..]] in
-  let ExistsEq [psi |- La2[..]] eq2 = existsEq cr_xa [gamma |- N[..]] in
-  ExistsEq [psi |- app La1[..] La2[..]]  (Eq_a eq1 eq2)
+  let ExistsEq/c [psi |- La1[..]] eq1 = existsEq cr_xa [gamma |- M[..]] in
+  let ExistsEq/c [psi |- La2[..]] eq2 = existsEq cr_xa [gamma |- N[..]] in
+  ExistsEq/c [psi |- app La1[..] La2[..]]  (Eq_a eq1 eq2)
 
 | [gamma |- lam \x. M] =>
-  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |- La[.., b.1]] eq =
+  let ExistsEq/c [psi, b:block (x:tm, u:aeq x x) |- La[.., b.1]] eq =
       existsEq (Cons_xa cr_xa) [gamma, x:tm |- M] in
-  ExistsEq [psi |- lam \x. La] (Eq_l eq)
-
- ;
-
+  ExistsEq/c [psi |- lam \x. La] (Eq_l eq)
+;
 
 rec det_eq :
         Eq  [gamma] [psi] $[psi |- $S[..]] [gamma |- M[..]] [psi |- N[..]] ->
@@ -325,8 +322,7 @@ fn m => fn m' => case m of
   let Eq_l n = m' in
   let Refl_xaG = det_eq m n in
   Refl_xaG
-
- ;
+;
 
 rec det_eq' :
         Eq' [gamma] [psi] $[psi |- $S[..]] [gamma |- M[..]] [psi |- N[..]] ->
@@ -375,8 +371,8 @@ case d of
 | [phi |- de_t D1[..] D2[..]] =>
   let ([phi |- D1[..]] : [phi |- deq Md[..] Ld[..]]) = [phi |- D1[..]] in
   let ([phi |- D2[..]] : [phi |- deq Ld[..] Nd[..]]) = [phi |- D2[..]] in
-  let ExistsEq' [gamma |- L[..]] ld = existsEq' cr_d [phi |- Ld[..]] in
-  let ExistsEq  [psi |- La[..]]  la = existsEq cr_a [gamma |- L[..]] in
+  let ExistsEq/c' [gamma |- L[..]] ld = existsEq' cr_d [phi |- Ld[..]] in
+  let ExistsEq/c  [psi |- La[..]]  la = existsEq cr_a [gamma |- L[..]] in
   let [psi |- E1[..]] = ceq cr_a cr_d cr_da ma la md ld [phi |- D1[..]] in
   let [psi |- E2[..]] = ceq cr_a cr_d cr_da la na ld nd [phi |- D2[..]] in
   transR cr_a ma la na [psi |- E1[..]] [psi |- E2[..]]

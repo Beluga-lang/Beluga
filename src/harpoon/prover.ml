@@ -462,7 +462,7 @@ let process_command
        Elab.exp (Some cid) cIH cD cG (Lazy.force mfs) e g.goal
      in
      dprnt "[harpoon] [solve] elaboration finished";
-     (* State.printf s "Found %d hole(s) in solution@." (List.length hs); *)
+     (* State.printf s "Found %d hole(s) in solution@\n" (List.length hs); *)
      List.iter solve_hole hs;
      dprnt "[harpoon] [solve] double-check!";
      Check.Comp.check (Some cid) cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;

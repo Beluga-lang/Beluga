@@ -1,3 +1,5 @@
-./t/code/error/MetaForParam.bel, line 11, column 28:
-A term was found when expecting a variable.
-Offending term: M 
+File "./t/code/error/MetaForParam.bel", line 11, column 28:
+11 |mlam g => mlam M =>  f [g] [g |- M]
+                               ^^^^^^^^
+Error: A term was found when expecting a variable.
+       Offending term: M

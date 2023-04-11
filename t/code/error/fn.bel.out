@@ -1,7 +1,9 @@
-./t/code/error/fn.bel, line 28, column 19:
-Type-checking error.
-Ill-typed expression.
-    Expected type:
-      [g |- opt] -> [g |- exp T[]]
-    Inferred type:
-      [g |- exp T[]]
+File "./t/code/error/fn.bel", line 28, column 20:
+28 | mlam g => fn e => e
+                       ^
+Error: Type-checking error.
+       Ill-typed expression.
+       Expected type:
+         [g |- opt] -> [g |- exp T[]]
+       Inferred type:
+         [g |- exp T[]]

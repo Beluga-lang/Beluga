@@ -121,8 +121,8 @@ let raise_violation ?location msg =
   | Option.Some location -> raise_at1 location (Violation msg)
 
 let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
-  Format.dprintf "@[<v>%s@,    @[<v>%s:@,  %a@,%s:@,  %a@]@,@]" title
-    title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2
+  Format.dprintf "@[<v>%s@,%s:@,  %a@,%s:@,  %a@]" title title_obj1 pp_obj1
+    obj1 title_obj2 pp_obj2 obj2
 
 (** {1 Printing Located Exceptions} *)
 
@@ -433,7 +433,7 @@ let located_exception_printer cause_printer locations =
                  carets right_margin))
           lines
       in
-      Format.dprintf "@[<v 0>%a@,@[<hov 0>%a %t@]@]"
+      Format.dprintf "@[<v 0>%a@,@[<hov 0>%a @[%t@]@]@]"
         (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
         snippets
         (bold_red Format.pp_print_string)

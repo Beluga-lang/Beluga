@@ -10,14 +10,9 @@ schema ctx = tm T;
 
 inductive IsInstantiation : {g:ctx}{M:[g |- tm A[]]}{N:[ |- tm A]} ctype =
 ;
-inductive IsInst : {g:ctx}{M:[g |- tm A[]]} ctype =
-;
-
-inductive Unit : ctype =
-| Unit : Unit;
 
 inductive IsLam : {g:ctx}{M:[g, x:tm A[] |- tm B[]]}{N:[ |- tm (arr A[] B[])]} ctype =
-| IsLam : % {M:[g, x:tm A |- tm B]}
+| IsLam' : % {M:[g, x:tm A |- tm B]}
    ({U:[ |- tm A]} IsInstantiation [g, x:tm A[]] [g, x:tm A[] |- M] [ |- N1[U]]) ->
   IsLam [g] [g, x:tm A[] |- M] [ |- lam (\x. N1)]
 ;

@@ -4,13 +4,13 @@ LF bool : type =
 ;
 
 LF is_true : bool → type =
-| is_true : is_true true
+| is_true/c : is_true true
 ;
 
 rec f : {B : [⊢ bool]} [⊢ is_true B] → [⊢ is_true B] =
 / total b (f b) /
 mlam B ⇒ fn p ⇒ case p of
-| [⊢ is_true] ⇒ case [⊢ B] of
+| [⊢ is_true/c] ⇒ case [⊢ B] of
   | [⊢ true]  ⇒ ?
   | [⊢ false] ⇒ ?
 ;

@@ -1,2 +1,4 @@
-./t/code/error/stratify/test.bel, line 5, column 0:
-Stratification or positivity checking of datatype Foo fails.
+File "./t/code/error/stratify/test.bel", line 5, column 12:
+5 |stratified Foo : [|- tp] -> ctype =
+              ^^^^^^^^^^^^^^^^^^^^^^  
+Error: Stratification or positivity checking of datatype Foo fails.

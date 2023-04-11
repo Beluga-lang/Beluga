@@ -79,7 +79,7 @@ exception
 let () =
   Error.register_exception_printer (function
     | Dangling_not_pragma ->
-        Format.dprintf "%a" Format.pp_print_text
+        Format.dprintf
           "This `--not' pragma must precede some signature entry."
     | Unexpected_entry_reconstruction_success ->
         Format.dprintf "%a" Format.pp_print_text
@@ -140,23 +140,23 @@ let () =
     | Lf_typ_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for LF constructor %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | Comp_typ_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for computation-level \
            constructor %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | Comp_cotyp_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for computation-level destructor \
            %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | No_positive identifier ->
         Format.dprintf "Positivity checking of constructor %a fails."
           Identifier.pp identifier
@@ -337,7 +337,7 @@ struct
             | Result.Error _ ->
                 Chatter.print 1 (fun ppf ->
                     Format.fprintf ppf
-                      "Reconstruction fails for --not'd declaration@.");
+                      "Reconstruction fails for --not'd declaration@\n");
                 reconstruct_signature_entries state entries))
     | entry :: entries ->
         let entry' = reconstruct_signature_entry state entry in
@@ -484,7 +484,7 @@ struct
     Reconstruct.reset_fvarCnstr ();
     Unify.resetGlobalCnstrs ();
     dprintf (fun p ->
-        p.fmt "%a : %a@." Identifier.pp identifier
+        p.fmt "%a : %a@\n" Identifier.pp identifier
           (P.fmt_ppr_lf_kind Synint.LF.Null P.l0)
           tK');
     Monitor.timer
@@ -588,7 +588,7 @@ struct
     Reconstruct.reset_fvarCnstr ();
     Unify.resetGlobalCnstrs ();
     dprintf (fun p ->
-        p.fmt "%a : %a@." Identifier.pp identifier
+        p.fmt "%a : %a@\n" Identifier.pp identifier
           (P.fmt_ppr_cmp_kind Synint.LF.Empty P.l0)
           cK');
     Monitor.timer
@@ -803,11 +803,11 @@ struct
   and reconstruct_schema_declaration state location identifier schema =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
-        p.fmt "[RecSgn Checking] Schema at: %a@." Location.print_short
+        p.fmt "[RecSgn Checking] Schema at: %a@\n" Location.print_short
           location);
     let apx_schema = index_schema state schema in
     dprintf (fun p ->
-        p.fmt "Reconstructing schema %a@." Identifier.pp identifier);
+        p.fmt "Reconstructing schema %a@\n" Identifier.pp identifier);
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     Store.FVar.clear ();
@@ -822,12 +822,12 @@ struct
     Unify.resetGlobalCnstrs ();
     let sW' = Abstract.schema sW in
     dprintf (fun p ->
-        p.fmt "Schema %a : %a after abstraction@." Identifier.pp identifier
+        p.fmt "Schema %a : %a after abstraction@\n" Identifier.pp identifier
           (P.fmt_ppr_lf_schema P.l0)
           sW');
     Check.LF.checkSchemaWf sW';
     dprintf (fun p ->
-        p.fmt "TYPE CHECK for schema %a successful@." Identifier.pp
+        p.fmt "TYPE CHECK for schema %a successful@\n" Identifier.pp
           identifier);
     let cid =
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')

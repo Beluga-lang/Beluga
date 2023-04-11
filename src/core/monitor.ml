@@ -226,9 +226,9 @@ let pp_timers ppf timers =
     data'
 
 let print_timers () =
-  if !on then Format.fprintf Format.std_formatter "@[%a@]@." pp_timers timers
+  if !on then Format.fprintf Format.std_formatter "@[%a@]@\n" pp_timers timers
   else if !onf then
     Out_channel.with_open_bin output_file (fun out_channel ->
         Format.fprintf
           (Format.formatter_of_out_channel out_channel)
-          "@[%a@]@." pp_timers timers)
+          "@[%a@]@\n" pp_timers timers)

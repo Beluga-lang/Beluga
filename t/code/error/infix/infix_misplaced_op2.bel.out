@@ -1,2 +1,5 @@
-./t/code/error/infix/infix_misplaced_op2.bel, line 54, column 18:
-Illegal use of operator is_app.
+File "./t/code/error/infix/infix_misplaced_op2.bel", line 54, column 12:
+54 |      [ |- is_app D1 D2']
+               ^^^^^^        
+Error: Failed to parse application.
+       This operator is missing its left argument.

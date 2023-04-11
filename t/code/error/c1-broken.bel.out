@@ -1,5 +1,17 @@
-./t/code/error/c1-broken.bel, line 11, column 2:
-
+File "./t/code/error/c1-broken.bel", line 11, column 2:
+11 | (case e of
+     ^^^^^^^^^^
+12 |%  | [g |- z]     => [g |- z]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |%  | [g |- suc U[..]] => let [g |- V[..]] = copy [g] [g |- U[..]] in [g |- suc V[..]]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |  | [g |- #p[..]] => [g |- #p[..]]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 |  | [g |- app U[..] U[..]]  =>  [g |- U[..]]   % Doesn't cover because only matches app U U, not app U V
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+16 |);
+    ^ 
+Error: 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1) g : termCtx, X : (g |- term), X1 : (g |- term) ;  |- [g |- app X X1]

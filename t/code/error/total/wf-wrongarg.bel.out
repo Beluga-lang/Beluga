@@ -1,3 +1,5 @@
-./t/code/error/total/wf-wrongarg.bel, line 22, column 21:
-Type-checking error.
-Recursive call not structurally smaller.
+File "./t/code/error/total/wf-wrongarg.bel", line 22, column 22:
+22 || [|- s X'] => Swap (test [|- Y] [|- s X'])
+                         ^^^^^^^^^^^           
+Error: Type-checking error.
+       Recursive call not structurally smaller.

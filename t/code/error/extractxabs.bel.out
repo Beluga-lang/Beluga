@@ -1,6 +1,10 @@
-./t/code/error/extractxabs.bel, line 22, column 6:
-Type-checking error.
-Found
-  meta abstraction (mlam)
-but expected expression of type
-  Nlist [_] [ |- succ M] -> Nlist [_] [ |- M]
+File "./t/code/error/extractxabs.bel", line 22, column 2:
+22 | mlam g => fn l => case l of
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+23 |    | Ncons t l' => l'
+    ^^^^^^^^^^^^^^^^^^^^^^
+Error: Type-checking error.
+       Found
+         meta abstraction (mlam)
+       but expected expression of type
+         Nlist [_] [ |- succ M] -> Nlist [_] [ |- M]

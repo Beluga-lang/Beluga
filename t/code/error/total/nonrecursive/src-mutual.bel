@@ -1,7 +1,7 @@
 % Making a mutual recursive call from a nonrecursive function is
 % forbidden.
 
-LF u : type = u : u;
+LF u : type = u/c : u;
 
 rec bad1 : [⊢ u] → [⊢ u] =
 / total /

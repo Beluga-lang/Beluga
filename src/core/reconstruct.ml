@@ -119,7 +119,7 @@ let error_printer = function
 
   | PatternContextClash (cD, cPsi, cD', cPsi') ->
       Format.dprintf
-        "%t@,Note that we do not allow the context in the pattern@ \
+        "%t@\nNote that we do not allow the context in the pattern@ \
         to be more general than the context in the scrutinee."
       (Error.mismatch_reporter
         "Context clash in pattern."
@@ -128,7 +128,7 @@ let error_printer = function
 
   | MetaObjectClash (cD, mC) ->
       Format.dprintf
-        "Meta-object type clash.@ \
+        "Meta-object type clash.@\n\
         Expected meta-object of type: %a"
         (P.fmt_ppr_cmp_meta_typ cD) mC;
 
@@ -1607,7 +1607,7 @@ and elPatSyn (cD : Int.LF.mctx) (cG : Int.Comp.gctx) =
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
      let { Store.Cid.CompConst.Entry.typ = tau; _ } = Store.Cid.CompConst.get c in
-     dprintf (fun p -> p.fmt "[elPat] PatConst = %s@." (R.render_cid_comp_const c));
+     dprintf (fun p -> p.fmt "[elPat] PatConst = %s@\n" (R.render_cid_comp_const c));
      let (cG1, pat_spine', ttau') = elPatSpine cD cG pat_spine (tau, Whnf.m_id) in
      (cG1, Int.Comp.PatConst (loc, c, pat_spine'), ttau')
 

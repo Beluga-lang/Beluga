@@ -1,3 +1,4 @@
-./t/code/error/badconstructortype2.bel, line 4, column 9:
-Type reconstruction error.
-Too many meta-objects supplied to data-constructor
+File "./t/code/error/badconstructortype2.bel", line 5, column 10:
+5 || Blue : Colour [ |- z]
+            ^^^^^^^^^^^^^^
+Error: Too many meta-objects supplied to data-constructor

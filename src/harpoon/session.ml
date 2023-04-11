@@ -229,7 +229,7 @@ let check_translated_proofs c : translation_check_result =
  *)
 let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t list =
   let rec do_prompts i : Theorem.Conf.t list =
-    IO.printf io "Configuring theorem #%d@." i;
+    IO.printf io "Configuring theorem #%d@\n" i;
     (* prompt for name, and allow using empty to signal we're done. *)
     match
       IO.parsed_prompt io "  Name of theorem (:quit or empty to finish): "

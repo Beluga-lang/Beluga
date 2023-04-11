@@ -1,4 +1,5 @@
-./t/code/error/badconstructortype5.bel, line 9, column 28:
-Type reconstruction error.
-Meta-object type clash.
-Expected meta-object of type: ctx
+File "./t/code/error/badconstructortype5.bel", line 9, column 28:
+9 || Ret: {h:ctx} HoistReturn [h |- base]
+                              ^^^^^^^^^^^
+Error: Meta-object type clash.
+       Expected meta-object of type: ctx

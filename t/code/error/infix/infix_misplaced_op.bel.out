@@ -1,2 +1,20 @@
-./t/code/error/infix/infix_misplaced_op.bel, line 18, column 31:
-Illegal use of operator app.
+File "./t/code/error/infix/infix_misplaced_op.bel", line 17, column 1:
+17 |s_app1 : (E1 step E1') ->
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |         (E1 app E2) step (app E1' E2).
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Failed to disambiguate old-style LF type-level or term-level constant
+       declaration.
+       - As an LF type:
+         File "./t/code/error/infix/infix_misplaced_op.bel", line 18,
+         column 10:
+         18 |         (E1 app E2) step (app E1' E2).
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+         Error: Term applications may not appear as LF kinds.
+       - As an LF term:
+         File "./t/code/error/infix/infix_misplaced_op.bel", line 18,
+         column 28:
+         18 |         (E1 app E2) step (app E1' E2).
+                                        ^^^         
+         Error: Failed to parse application.
+                This operator is missing its left argument.

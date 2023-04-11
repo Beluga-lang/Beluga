@@ -126,7 +126,7 @@ let append_sessions target_file_name new_mutual_rec_thmss =
   new_mutual_rec_thmss
   |> List.iter
        begin fun thms ->
-       printf_out "@.";
+       printf_out "@\n";
        printf_out "@[<v>";
        thms
        |> List.iteri
@@ -135,6 +135,6 @@ let append_sessions target_file_name new_mutual_rec_thmss =
             then printf_out "and@,";
             Format.fprintf out_ppf "%a" Theorem.serialize thm
             end;
-       printf_out ";@]@."
+       printf_out ";@]@\n"
        end;
   close_out out_ch

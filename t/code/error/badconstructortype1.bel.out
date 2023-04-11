@@ -1,5 +1,6 @@
-./t/code/error/badconstructortype1.bel, line 4, column 0:
-Parse error.
-Wrong datatype for constructor Blue.
-  Expected type Colour
-  Actual type t
+File "./t/code/error/badconstructortype1.bel", line 4, column 10:
+4 || Blue : t
+            ^
+Error: Wrong target data type for computation-level constructor Blue.
+         Expected type Colour
+         Actual type t

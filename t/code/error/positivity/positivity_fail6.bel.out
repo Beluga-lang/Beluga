@@ -1,2 +1,4 @@
-./t/code/error/positivity/positivity_fail6.bel, line 6, column 3:
-Positivity checking of constructor T1 fails.
+File "./t/code/error/positivity/positivity_fail6.bel", line 6, column 4:
+6 | | T1 : ((Test -> Person)  *  (Person -> Test)  -> Person) -> Test
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Positivity checking of constructor T1 fails.

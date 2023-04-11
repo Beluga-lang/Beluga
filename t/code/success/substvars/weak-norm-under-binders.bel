@@ -19,7 +19,7 @@ refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 inductive IsVar : (g:ctx){M:[g |- tm A[]]} ctype =
-| IsVar : {#p:#[g |- tm A[]]} IsVar [g |- #p];
+| IsVar' : {#p:#[g |- tm A[]]} IsVar [g |- #p];
 
 inductive IsVarSub : {g:ctx} (h:ctx) {$S : $[h |- g]} ctype =
 | Nil : IsVarSub [] $[h |- ^]
@@ -38,7 +38,7 @@ and inductive IsNeutral : (g:ctx) {M:[g |- tm A[]]} ctype =
      -> IsNeutral [g |- app M[..] N[..]];
 
 inductive Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
-| Halts : [g |- mstep M[..] V[..]] -> IsNormal [g |- V[..]] -> Halts [ |- A] [g |- M[..]];
+| Halts/c : [g |- mstep M[..] V[..]] -> IsNormal [g |- V[..]] -> Halts [ |- A] [g |- M[..]];
 
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
@@ -52,8 +52,8 @@ stratified Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 
 rec wknVar' : IsVar [g |- M[..]] -> IsVarSub [g] $[h |- $W[..]] -> IsVar [h |- M[$W]] =
 fn iv => fn ivs => case iv of
-| IsVar [g', x:tm B[] |- x] =>    let Cons ivs' iv = ivs in iv
-| IsVar [g', x:tm B[] |- #q[..]] => let Cons ivs' iv = ivs in wknVar' (IsVar [g' |- #q[..]]) ivs';
+| IsVar' [g', x:tm B[] |- x] =>    let Cons ivs' iv = ivs in iv
+| IsVar' [g', x:tm B[] |- #q[..]] => let Cons ivs' iv = ivs in wknVar' (IsVar' [g' |- #q[..]]) ivs';
 
 rec varSubCompose' : IsVarSub [g] $[h |- $W[..]] -> IsVarSub [h] $[h' |- $W2[..]] -> IsVarSub [g] $[h' |- $W[$W2[..]]] =
 fn r1 => fn r2 => case r1 of
@@ -62,7 +62,7 @@ fn r1 => fn r2 => case r1 of
 
 rec haltsMstep2 : {S:[g |- mstep M[..] M'[..]]} Halts [ |- A] [g |- M'[..]] -> Halts [ |- A] [g |- M[..]] =
  mlam S => fn h => let (h : Halts [ |- A] [g |- M'[..]]) = h in
-let Halts [g |- R[..]] v = h in Halts [g |- trans S[..] R[..]] v;
+let Halts/c [g |- R[..]] v = h in Halts/c [g |- trans S[..] R[..]] v;
 
 rec closed2 : {S:[g |- mstep M[..] M'[..]]} Reduce [ |- A] [g |- M'[..]] -> Reduce [ |- A] [g |- M[..]] =
 mlam S => fn r => let (r : Reduce [ |- A] [g |- M'[..]]) = r in  case r of
@@ -74,17 +74,17 @@ mlam S => fn r => let (r : Reduce [ |- A] [g |- M'[..]]) = r in  case r of
 rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h, x:tm A[] |- $S[..]] =
 fn r => case r of
 | Nil => Nil
-| Cons r' (IsVar [h |- #p[..]]) => Cons (wknVarSub r') (IsVar [h, x:tm _ |- #p[..]]);
+| Cons r' (IsVar' [h |- #p[..]]) => Cons (wknVarSub r') (IsVar' [h, x:tm _ |- #p[..]]);
 
 rec extVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g, x:tm A[]] $[h, x:tm A[] |- $S[..], x] =
-fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar [h, x:tm _ |- x]);
+fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar' [h, x:tm _ |- x]);
 
-rec idIsVarSub : {g:ctx} IsVarSub [g] [g |- ..] =
+rec idIsVarSub : {g:ctx} IsVarSub [g] $[g |- ..] =
 mlam g => case [g |- i] of % pattern match on context
 | [ |- i] => Nil
 | [g, x:tm T[] |- i] => extVarSub (idIsVarSub [g]);
 
-rec shiftIsVarSub :  {g:ctx} IsVarSub [g] [g, x:tm A[] |- ..] =
+rec shiftIsVarSub :  {g:ctx} IsVarSub [g] $[g, x:tm A[] |- ..] =
 mlam g => wknVarSub (idIsVarSub [g]);
 
 rec rwkn : IsNeutral [g |- R[..]] -> IsVarSub [g] $[h |- $W] -> IsNeutral $[h |- R[$W]] =
@@ -99,35 +99,35 @@ fn r => fn iv => case r of
 rec reflect : IsNeutral [g |- R[..]] -> Reduce [ |- A] [g |- R[..]] =
 fn r => let r : IsNeutral [g |- R[..]] = r in let [g |- R] : [g |- tm A[]] = [g |- R[..]] in
 case [ |- A] of
-| [ |- i] => Base (Halts [g |- refl] (Neut r))
+| [ |- i] => Base (Halts/c [g |- refl] (Neut r))
 | [ |- arr A B] =>
   Arr [g |- R[..]]
   (mlam h => mlam $W => mlam M2 => fn iv => fn rm2 =>
-    let Halts [h |- MS[..]] n = reify rm2 in
+    let Halts/c [h |- MS[..]] n = reify rm2 in
     closed2 [h |- stepapp refl MS[..]] (reflect (App (rwkn r iv) n)))
 
 and rec reify : Reduce [ |- A] [g |- M[..]] -> Halts [ |- A] [g |- M[..]] =
 fn r => case r of
 | Base h => h
 | Arr [g |- M[..]] f =>
-  let q1 = f [g, x:tm _] [g, x |- ..] [g, x |- x] (shiftIsVarSub [g]) (reflect (Var (IsVar [g, x:tm _ |- x]))) in
-  let Halts [g, x:tm _ |- MS] q2 = reify q1 in
-  Halts [g |- trans (eta _) (steplam (\x. MS))] (Lam q2);
+  let q1 = f [g, x:tm _] $[g, x |- ..] [g, x |- x] (shiftIsVarSub [g]) (reflect (Var (IsVar' [g, x:tm _ |- x]))) in
+  let Halts/c [g, x:tm _ |- MS] q2 = reify q1 in
+  Halts/c [g |- trans (eta _) (steplam (\x. MS))] (Lam q2);
 
 rec wknRed : Reduce  [ |- A] [g |- M[..]] -> IsVarSub [g] $[h |- $W[..]] -> Reduce [ |- A] [h |- M[$W]] =
 fn r => fn iv => let (iv : IsVarSub [g] $[h |- $W[..]]) = iv in
 case r of
-| Base (Halts [g |- S[..]] q2) => Base (Halts [h |- S[$W]] (nwkn q2 iv))
+| Base (Halts/c [g |- S[..]] q2) => Base (Halts/c [h |- S[$W]] (nwkn q2 iv))
 | Arr [g |- M] f =>
   Arr [h |- M[$W]]
    (mlam h' => mlam $W2 => mlam N => fn iv2 => fn rn =>
-    f [h'] [h' |- $W[$W2[..]]] [h' |- N[..]] (varSubCompose' iv iv2) rn);
+    f [h'] $[h' |- $W[$W2[..]]] [h' |- N[..]] (varSubCompose' iv iv2) rn);
 
 inductive RedSub : {g:ctx}(h:ctx){$S:$[h |- g]} ctype =
 | Nil : RedSub [] $[h |- ^]
 | Dot : RedSub [g] $[h |- $S[..]] -> Reduce [ |- A] [h |- M[..]] -> RedSub [g, x:tm A[]] $[h |- $S, M];
 
-rec wknRedSub : RedSub [g] $[h |- $S[..]] -> IsVarSub [h] $[h' |- $W[..]] -> RedSub [g] [h' |- $S[$W[..]]] =
+rec wknRedSub : RedSub [g] $[h |- $S[..]] -> IsVarSub [h] $[h' |- $W[..]] -> RedSub [g] $[h' |- $S[$W[..]]] =
 fn rs => fn iv => case rs of
 | Nil => Nil
 | Dot rs' rN => Dot (wknRedSub rs' iv) (wknRed rN iv);
@@ -143,18 +143,18 @@ mlam M => fn rs => let (rs : RedSub [g] $[h |- $S[..]]) = rs in
 | [g' |- #p[..]] => redVar [g'] [g' |- #p[..]] rs
 | [g' |- app M1[..] M2[..]]  =>
   let Arr [h0 |- N1[..]] f = eval [g' |- M1[..]]  rs in
-   f [h] [h |- ..] [h |- _] (idIsVarSub [h]) (eval [g' |- M2[..]] rs)
+   f [h] $[h |- ..] [h |- _] (idIsVarSub [h]) (eval [g' |- M2[..]] rs)
 | [g' |- lam (\x. M1)] =>
    Arr [h |- lam (\x. M1[$S[..], x])]
    (mlam h' => mlam $W => mlam N => fn isVS => fn rN =>
      closed2 [h' |- beta] (eval [g', x:tm _ |- M1] (Dot (wknRedSub rs isVS) rN)));
 
-rec idRedSub : {g:ctx} RedSub [g] [g |- ..] =
+rec idRedSub : {g:ctx} RedSub [g] $[g |- ..] =
 mlam g => case [g |- i] of % Can't pattern match directly on g
 | [ |- i] => Nil
 | [g', x:tm A[] |- i] =>
   Dot (wknRedSub (idRedSub [g']) (shiftIsVarSub [g']))
-      (reflect (Var (IsVar [g', x:tm A[] |- x])));
+      (reflect (Var (IsVar' [g', x:tm A[] |- x])));
 
 rec weakNorm : {g:ctx}{M:[g |- tm A[]]} Halts  [ |- A] [g |- M] =
 mlam g => mlam M => reify (eval [g |- M] (idRedSub [g]));

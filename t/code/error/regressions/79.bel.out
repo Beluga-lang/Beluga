@@ -1,4 +1,6 @@
-./t/code/error/regressions/79.bel, line 13, column 22:
-The projection `.non-existing-projection' is not valid for the type
-  t 
-Only sigma-types (blocks) can be projected.
+File "./t/code/error/regressions/79.bel", line 13, column 23:
+13 |  foo [_] [γ, x : t ⊢ X[.., x.non-existing-projection]]
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+Error: The projection `.non-existing-projection' is not valid for the type
+         t 
+       Only sigma-types (blocks) can be projected.

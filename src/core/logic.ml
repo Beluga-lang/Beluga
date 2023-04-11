@@ -1168,28 +1168,28 @@ module Printer = struct
          xs
 
   let printQuery q =
-    fprintf std_formatter "%a.@.@."
+    fprintf std_formatter "%a.@\n@\n"
       fmt_ppr_sgn_query q
 
   (* Prints all LF signatures *)
   let printSignature () =
     iterAllSClauses
       (fun w ->
-        fprintf std_formatter "%a@."
+        fprintf std_formatter "%a@\n"
           fmt_ppr_sgn_clause w)
 
   (* Prints all the computation theorems *)
   let printCompSignature () =
     iterAllTSClauses
       (fun w ->
-        fprintf std_formatter "%a@."
+        fprintf std_formatter "%a@\n"
           fmt_ppr_sgn_cclause w)
 
   (* Prints all Inductive type signatures *)
   let printCompConstSignature () =
     iterAllISClauses
       (fun w ->
-        fprintf std_formatter "%a@."
+        fprintf std_formatter "%a@\n"
           fmt_ppr_sgn_compclause w)
 
 
@@ -2297,8 +2297,8 @@ module CSolver = struct
     | LF.Empty ->
        fprintf ppf
          "Current State: @;\
-          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.\
-          @[<h 2> ms = %a@]  @."
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @\n\
+          @[<h 2> ms = %a@]  @\n"
          (P.fmt_ppr_mctx) cD
          (printCPool cD cG) cPool
          (P.fmt_ppr_cmp_goal cD) (cg', S.id)
@@ -2306,9 +2306,9 @@ module CSolver = struct
     | _ ->
        fprintf ppf
          "Current State WITH IH: \n\
-          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.\
-          @[<h 2> cIH = %a@] @.\
-          @[<h 2> ms = %a@] @."
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @\n\
+          @[<h 2> cIH = %a@] @\n\
+          @[<h 2> ms = %a@] @\n"
          (P.fmt_ppr_mctx) cD
          (printCPool cD cG) cPool
          (P.fmt_ppr_cmp_goal cD) (cg', S.id)
@@ -5708,11 +5708,11 @@ module Frontend = struct
           (* Print proof term. *)
           begin match sgnQuery.optName with
           | Some n ->
-             fprintf std_formatter "%a@."
+             fprintf std_formatter "%a@\n"
                P.fmt_ppr_inst [(n, tM)]
           | None -> ()
           end;
-          fprintf std_formatter "@."
+          fprintf std_formatter "@\n"
         end;
       (* Interactive. *)
       if !Options.askSolution && not (moreSolutions ())
@@ -5743,7 +5743,7 @@ module Frontend = struct
               begin
                printf
                "Query error: Wrong number of solutions -- \
-                expected %a in %a tries, but found %d. @. \n"
+                expected %a in %a tries, but found %d. @\n \n"
                P.fmt_ppr_bound sgnQuery.expected
                P.fmt_ppr_bound sgnQuery.tries
                !solutions
@@ -5751,7 +5751,7 @@ module Frontend = struct
         | _ -> ()
       end
     else if !Options.chatter >= 2
-    then printf "Skipping query -- bound for tries = 0. @."
+    then printf "Skipping query -- bound for tries = 0. @\n"
 
   (* Used when the auto-invert-solve and inductive-auto-solve tactics are
      called from Harpoon *)

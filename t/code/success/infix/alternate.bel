@@ -10,7 +10,7 @@ eq : exp -> exp -> type. --infix eq 5.
 refl : M eq M.
 
 notLam : exp -> type.
-notLam : notLam (M app N).
+notLam/c : notLam (M app N).
 
 eval : exp -> exp -> type. --infix eval 4.
 eval_lam : ({x:exp} x eval x -> notLam x -> (M x) eval (N x))

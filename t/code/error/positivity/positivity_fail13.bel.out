@@ -1,2 +1,4 @@
-./t/code/error/positivity/positivity_fail13.bel, line 19, column 3:
-Positivity checking of constructor C7 fails.
+File "./t/code/error/positivity/positivity_fail13.bel", line 19, column 4:
+19 | | C7: (B * A) -> ((A * C) -> (A -> B -> C)) -> C  % fail
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^        
+Error: Positivity checking of constructor C7 fails.

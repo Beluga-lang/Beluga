@@ -1,5 +1,9 @@
-./t/code/error/coverage/unsound-param.bel, line 8, column 21:
-
+File "./t/code/error/coverage/unsound-param.bel", line 8, column 22:
+8 |mlam g => mlam #p => case [g |- #p[..]] of
+                        ^^^^^^^^^^^^^^^^^^^^^
+9 || [h, x:term |- #q[..]] => [h, x:term |- #q[..]]
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1) g : ctx, #p : #(g, x : term |- term) ;  |- [g, x1 |- x1]

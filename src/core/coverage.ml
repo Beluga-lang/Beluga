@@ -605,8 +605,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
           dprintf
             begin fun p ->
             p.fmt
-              "[pre_match_head] pvar - SplitCand due to exception\
-               @.%s"
+              "[pre_match_head] pvar - SplitCand due to exception@\n%s"
               (Printexc.to_string e)
             end;
           SplitCand
@@ -1596,7 +1595,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
              then
                begin
                  dprintf (fun p ->
-                   p.fmt " UNIFY FAILURE %s@. MOVED BACK TO SPLIT CANDIDATE" msg
+                   p.fmt " UNIFY FAILURE %s@\n MOVED BACK TO SPLIT CANDIDATE" msg
                  );
                  let sc = Split (CovSub (cPsi, s, sT), MetaSub (cPsi_p, s_p, sT_p)) in
                  solve' cD (mCands, ms) cD_p mCands' (sc :: sCands')
@@ -1614,7 +1613,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
                | _ ->
                   (* we are not trying to be clever and see if a context split would lead to progress *)
                   dprintf (fun p ->
-                    p.fmt "004 UNIFY FAILURE %s@. NOT SOLVABLE@." msg
+                    p.fmt "004 UNIFY FAILURE %s@\n NOT SOLVABLE@\n" msg
                   );
                   NotSolvable
                end
@@ -1674,7 +1673,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
              then
                begin
                  dprintf (fun p ->
-                   p.fmt " UNIFY FAILURE %s@. MOVED BACK TO SPLIT CANDIDATE" msg
+                   p.fmt " UNIFY FAILURE %s@\n MOVED BACK TO SPLIT CANDIDATE" msg
                  );
                  let sc = Split (CovGoal (cPsi, tR, sA), MetaPatt (cPsi_p, tR_p, sA_p)) in
                  solve' cD (mCands, ms) cD_p mCands' (sc :: sCands')
@@ -1687,7 +1686,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
                   solve' cD (mCands, ms) cD_p (mCands') (sc :: sCands')
                | _ ->
                   dprintf (fun p ->
-                    p.fmt "006 UNIFY FAILURE %s@. NOT SOLVABLE@." msg
+                    p.fmt "006 UNIFY FAILURE %s@\n NOT SOLVABLE@\n" msg
                   );
                   NotSolvable
                end
@@ -3320,7 +3319,7 @@ let rec check_emptiness =
        | Abstract.Error (_, msg) ->
           let open Format in
           fprintf std_formatter
-            "@[<v>Unable to prove %a to be empty@,Trying next metavariable.@]@."
+            "@[<v>Unable to prove %a to be empty@,Trying next metavariable.@]@\n"
             (P.fmt_ppr_lf_typ cD' cPsi P.l0) tA;
           check_emptiness cD'
      end

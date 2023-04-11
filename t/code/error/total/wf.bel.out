@@ -1,3 +1,5 @@
-./t/code/error/total/wf.bel, line 26, column 15:
-Type-checking error.
-Recursive call not structurally smaller.
+File "./t/code/error/total/wf.bel", line 26, column 16:
+26 |  let [|- R] = half-wf' [|- s (s N)] p in %% Should fail here
+                   ^^^^^^^^^^^^^^^^^^^^^^^                       
+Error: Type-checking error.
+       Recursive call not structurally smaller.

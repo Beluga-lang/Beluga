@@ -369,24 +369,15 @@ struct
         Synext.Signature.Pragma.Abbreviation
           { location; module_identifier; abbreviation }
     | Synprs.Signature.Pragma.Raw_query
-        { location
-        ; identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        } ->
-        with_disambiguated_meta_context state meta_context
-          (fun state meta_context' ->
-            let typ' = disambiguate_clf_typ state typ in
-            Synext.Signature.Pragma.Query
-              { location
-              ; identifier
-              ; meta_context = meta_context'
-              ; typ = typ'
-              ; expected_solutions
-              ; maximum_tries
-              })
+        { location; identifier; typ; expected_solutions; maximum_tries } ->
+        let typ' = disambiguate_lf_typ state typ in
+        Synext.Signature.Pragma.Query
+          { location
+          ; identifier
+          ; typ = typ'
+          ; expected_solutions
+          ; maximum_tries
+          }
 
   and disambiguate_global_pragma _state = function
     | Synprs.Signature.Global_pragma.No_strengthening { location } ->

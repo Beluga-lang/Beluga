@@ -781,8 +781,7 @@ module Signature = struct
       | Raw_query of
           { location : Location.t
           ; identifier : Identifier.t Option.t
-          ; meta_context : Meta.Context_object.t
-          ; typ : CLF.Object.t
+          ; typ : LF.Object.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }

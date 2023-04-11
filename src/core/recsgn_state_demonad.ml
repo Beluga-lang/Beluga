@@ -337,9 +337,6 @@ module Make_signature_reconstruction_state
   let index_harpoon_proof state proof =
     Index.index_harpoon_proof state.index_state proof
 
-  let index_lf_query state meta_context typ =
-    Index.index_lf_query state.index_state meta_context typ
-
   let freeze_unfrozen_declaration = function
     | `Typ id -> Store.Cid.Typ.freeze id
     | `Comp_typ id -> Store.Cid.CompTyp.freeze id

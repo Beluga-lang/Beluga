@@ -430,7 +430,6 @@ let query =
           let [ Synext.Signature.Pragma.Query
                   { identifier
                   ; typ = extT
-                  ; meta_context = cD
                   ; expected_solutions = expected
                   ; maximum_tries = tries
                   ; _
@@ -457,8 +456,6 @@ let query =
                   Reconstruct.solve_fvarCnstr Lfrecon.Pi;
                   tA )
           in
-          let cD = Obj.magic () (* TODO: Index.mctx cD *) in
-          let cD = Reconstruct.mctx cD in
           Unify.StdTrail.forceGlobalCnstr ();
           let tA', i =
             Monitor.timer
@@ -473,7 +470,7 @@ let query =
                   (tA', Substitution.LF.id) );
           Logic.storeQuery
             (Option.map Name.make_from_identifier identifier)
-            (tA', i) cD expected tries;
+            (tA', i) Synint.LF.Empty expected tries;
           Logic.runLogic ();
           Format.fprintf ppf ";\n@?"
         with

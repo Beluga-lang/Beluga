@@ -107,17 +107,6 @@ module type INDEXER = sig
        Synext.comp_typ
     -> Synext.comp_kind
     -> (Synapx.Comp.typ * Synapx.Comp.kind) t
-
-  (** [index_lf_query meta_context typ state] is
-      [(state', (meta_context', typ'))] where [meta_context'] is
-      [meta_context] and [typ'] is [typ], both with bound variables and
-      constants replaced with de Bruijn indices and IDs respectively.
-      Overall, free variables are allowed with respect to [state]. Variables
-      bound in [meta_context] count as bound in [typ]. *)
-  val index_lf_query :
-       Synext.meta_context
-    -> Synext.clf_typ
-    -> (Synapx.LF.mctx * Synapx.LF.typ) t
 end
 
 module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :

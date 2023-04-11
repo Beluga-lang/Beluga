@@ -1949,11 +1949,4 @@ struct
               index_comp_typ state typ))
     in
     (typ', kind')
-
-  let index_lf_query state meta_context typ =
-    allow_free_variables state (fun state ->
-        with_indexed_meta_context state meta_context
-          (fun state meta_context' ->
-            let typ' = index_clf_typ state typ in
-            (meta_context', typ')))
 end

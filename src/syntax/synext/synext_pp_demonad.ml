@@ -2124,29 +2124,7 @@ struct
             pp_dot state);
         add_abbreviation state module_identifier abbreviation
     | Signature.Pragma.Query
-        { identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        ; _
-        } ->
-        let pp_binding state identifier typ =
-          pp_identifier state identifier;
-          pp_non_breaking_space state;
-          pp_colon state;
-          pp_space state;
-          pp_meta_typ state typ
-        in
-        let pp_declaration state (identifier, typ) =
-          pp_hovbox state ~indent (fun state ->
-              pp_in_braces state (fun state ->
-                  pp_binding state identifier typ))
-        in
-        let pp_meta_context state meta_context =
-          let { Meta.Context.bindings; _ } = meta_context in
-          pp_list state ~sep:pp_space pp_declaration bindings
-        in
+        { identifier; typ; expected_solutions; maximum_tries; _ } ->
         let pp_query_argument state =
           pp_option state ~none:pp_star (fun state argument ->
               pp_int state argument)
@@ -2157,8 +2135,6 @@ struct
             pp_query_argument state expected_solutions;
             pp_space state;
             pp_query_argument state maximum_tries;
-            pp_space state;
-            pp_meta_context state meta_context;
             pp_option state
               (fun state identifier ->
                 pp_space state;
@@ -2166,7 +2142,7 @@ struct
               identifier;
             pp_non_breaking_space state;
             pp_colon state;
-            pp_clf_typ state typ;
+            pp_lf_typ state typ;
             pp_dot state)
 
   and pp_signature_global_pragma state global_pragma =

@@ -367,32 +367,15 @@ module Make
       let bound =
         alt (star $> fun () -> Option.none) (integer $> Option.some)
         |> labelled "search bound"
-      and meta_context =
-        many
-          (braces (seq2 meta_object_identifier (maybe (colon &> meta_type))))
-        |> span
-        $> fun (location, bindings) ->
-        { Synprs.Meta.Context_object.location; bindings }
       in
       pragma "query"
-      &> seq4 (seq2 bound bound) meta_context
-           (maybe (identifier <& colon))
-           clf_typ
+      &> seq3 (seq2 bound bound) (maybe (identifier <& colon)) lf_typ
       <& dot |> span
       |> labelled "logic programming engine query pragma"
       $> fun ( location
-             , ( (expected_solutions, maximum_tries)
-               , meta_context
-               , identifier
-               , typ ) ) ->
+             , ((expected_solutions, maximum_tries), identifier, typ) ) ->
       Synprs.Signature.Pragma.Raw_query
-        { location
-        ; identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        }
+        { location; identifier; typ; expected_solutions; maximum_tries }
 
     let signature_oldstyle_lf_decl =
       seq2 (identifier <& colon) (alt (trying lf_kind) lf_typ)

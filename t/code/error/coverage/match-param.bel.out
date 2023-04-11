@@ -1,9 +1,17 @@
-./t/code/error/coverage/match-param.bel, line 16, column 8:
-
+File "./t/code/error/coverage/match-param.bel", line 16, column 9:
+16 |fn l => case l of
+            ^^^^^^^^^
+17 || [g, y:term |- nil] => [g |- nil]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 || [g, y:term |- cons y L[.., y]] => remove [g, y:term |- L[.., y]]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 || [g, y:term |- cons #p[..] L[.., y]] => remove [g, y:term |- L[.., y]]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1)
-M : (g, y : term, x : term |- term), L : (g, y : term |- fvlist) ;  |-
-  [_, x1 |- cons (elam (\x. M)) L]
+M : (g, y : term, "i : term |- term), L : (g, y : term |- fvlist) ;  |-
+  [_, x1 |- cons (elam (\"i. M)) L]
 
 ##

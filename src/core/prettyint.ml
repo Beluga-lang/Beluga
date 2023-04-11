@@ -8,6 +8,15 @@ let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
 
 module PC = Printer.Control
 
+let ident_regexp = Str.regexp {|[^"].*|}
+
+(** [is_name_syntactically_valid name] is a heuristic for determining whether
+    [name] is syntactically valid. If that is not the case, then the name
+    must not have been user-defined, so it was generated during signature
+    reconstruction. *)
+let is_name_syntactically_valid name =
+  Str.string_match ident_regexp (Name.string_of_name name) 0
+
 (* Internal Syntax Pretty Printer Functor *)
 module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   include Prettycom
@@ -81,17 +90,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_spine cD cPsi 2) ms
          (r_paren_if cond)
 
-    | LF.PiTyp ((LF.TypDecl (x, a), Plicity.Implicit), b) ->
+    | LF.PiTyp ((LF.TypDecl (x, a), Plicity.Explicit), b) when is_name_syntactically_valid x ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
-       fprintf ppf "@[<1>%s{%a : %a} @ %a%s@]"
+       fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
          (l_paren_if cond)
          Name.pp x
          (fmt_ppr_lf_typ cD cPsi 0) a
          (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
          (r_paren_if cond)
 
-    | LF.PiTyp ((LF.TypDecl (x, a), Plicity.Explicit), b) ->
+    | LF.PiTyp ((LF.TypDecl (x, a), _), b) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
        fprintf ppf "@[<1>%s%a -> %a%s@]"

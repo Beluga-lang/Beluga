@@ -630,7 +630,6 @@ end) :
     satisfy (function
       | Option.None -> Result.ok ()
       | Option.Some _ -> Result.error Expected_end_of_input)
-    |> labelled "end of input"
 
   let only p = p <& eoi
 

@@ -1,6 +1,8 @@
 open Support
 open Beluga_syntax
 
+(* TODO: Deprecated *)
+
 (* Extension to the {!module:Stdlib.List} module. *)
 module List : sig
   include module type of List
@@ -210,22 +212,30 @@ struct
       @raise Ambiguous_operator_placement *)
   let[@inline] rec pop y output stack =
     match stack with
-    | (index, x) :: xs ->
+    | (index, x) :: xs -> (
         (* In the original input list to {!shunting_yard}, [x] is an operator
            on the left, and [y] is an operator on the right. *)
         let px = Operator.precedence x.operator in
         let py = Operator.precedence y.operator in
-        (match Operator.associativity y.operator with
+        match Operator.associativity y.operator with
         | Associativity.Left_associative ->
-            validate_left_associative_operator_placement ~x ~px ~y ~py
+            validate_left_associative_operator_placement ~x ~px ~y ~py;
+            if px >= py then
+              let output' = write (index, x) output in
+              pop y output' xs
+            else (output, stack)
         | Associativity.Right_associative ->
-            validate_right_associative_operator_placement ~x ~px ~y ~py
+            validate_right_associative_operator_placement ~x ~px ~y ~py;
+            if px > py then
+              let output' = write (index, x) output in
+              pop y output' xs
+            else (output, stack)
         | Associativity.Non_associative ->
-            validate_non_associative_operator_placement ~x ~y);
-        if px > py then
-          let output' = write (index, x) output in
-          pop y output' xs
-        else (output, stack)
+            validate_non_associative_operator_placement ~x ~y;
+            if px > py then
+              let output' = write (index, x) output in
+              pop y output' xs
+            else (output, stack))
     | [] -> (output, stack)
 
   let[@inline] rec pop_all output operators =

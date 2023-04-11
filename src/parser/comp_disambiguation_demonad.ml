@@ -456,28 +456,43 @@ module Make
     | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; _ } -> (
         (* As a computation-level type, plain identifiers are necessarily
            computation-level type constants *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_computation_inductive_type_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Typ.Inductive_typ_constant
               { location; identifier = qualified_identifier }
         | entry when Entry.is_computation_stratified_type_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Typ.Stratified_typ_constant
               { location; identifier = qualified_identifier }
         | entry when Entry.is_computation_abbreviation_type_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Typ.Abbreviation_typ_constant
               { location; identifier = qualified_identifier }
         | entry when Entry.is_computation_coinductive_type_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Typ.Coinductive_typ_constant
               { location; identifier = qualified_identifier }
         | entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Error.composite_exception2
                  (Expected_comp_type_constant qualified_identifier)
                  (actual_binding_exn qualified_identifier entry))
         | exception Unbound_identifier _ ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Unbound_comp_type_constant qualified_identifier)
         | exception cause -> Error.raise_at1 location cause)
@@ -569,17 +584,20 @@ module Make
   and disambiguate_comp_expression state = function
     | Synprs.Comp.Expression_object.Raw_identifier
         { location; identifier; _ } -> (
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_computation_term_constructor entry ->
             (* [identifier] appears as a bound computation-level
                constructor *)
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Expression.Constructor
               { location; identifier = qualified_identifier }
         | entry when Entry.is_program_constant entry ->
             (* [identifier] appears as a bound computation-level program *)
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Expression.Program
               { location; identifier = qualified_identifier }
         | entry when Entry.is_computation_variable entry ->
@@ -588,6 +606,9 @@ module Make
         | entry ->
             (* [identifier] appears as a bound entry that is not a
                computation-level variable, constructor or program constant *)
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Error.composite_exception2
                  (Expected_program_or_constructor_constant
@@ -907,13 +928,13 @@ module Make
   and disambiguate_comp_pattern state = function
     | Synprs.Comp.Pattern_object.Raw_identifier { location; identifier; _ }
       -> (
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_computation_term_constructor entry ->
             (* [identifier] appears as a bound computation-level
                constructor *)
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.Comp.Pattern.Constructor
               { location; identifier = qualified_identifier }
         | _entry ->

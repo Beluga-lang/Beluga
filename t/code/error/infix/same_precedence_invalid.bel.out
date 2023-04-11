@@ -1,8 +1,5 @@
-File "./t/code/error/infix/same_precedence_invalid.bel", line 12, column 8:
+File "./t/code/error/infix/same_precedence_invalid.bel", line 12, column 10:
 12 |[ |- s N test N];
-           ^^^^^^^^  
-Error: Ill-typed expression.
-       Expected type:
-         nat
-       Actual type:
-         t
+             ^^^^
+Error: Failed to parse application. This operator's placement is ambiguous.
+       Add parentheses around its arguments.

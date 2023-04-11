@@ -340,18 +340,24 @@ module Make
         { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF type, plain identifiers are necessarily type-level
            constants. *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_lf_type_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.CLF.Typ.Constant
               { location; identifier = qualified_identifier }
         | entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
                  (actual_binding_exn qualified_identifier entry))
         | exception Unbound_identifier _ ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Unbound_clf_type_constant qualified_identifier)
         | exception cause -> Error.raise_at1 location cause)
@@ -468,13 +474,13 @@ module Make
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } -> (
         (* A possibly free parameter variable. *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_parameter_variable entry ->
             Synext.CLF.Term.Parameter_variable { location; identifier }
         | entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Error.composite_exception2 Expected_parameter_variable
                  (actual_binding_exn qualified_identifier entry))
@@ -490,11 +496,11 @@ module Make
         { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_lf_term_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.CLF.Term.Constant
               { location; identifier = qualified_identifier }
         | entry when Entry.is_lf_variable entry ->
@@ -504,6 +510,9 @@ module Make
             (* Bound meta-variable *)
             Synext.CLF.Term.Meta_variable { location; identifier }
         | entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
@@ -905,11 +914,11 @@ module Make
         (* As an LF term pattern, plain identifiers are either term-level
            constants, variables bound in the pattern, or new pattern
            variables. *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
         match lookup_toplevel state identifier with
         | entry when Entry.is_lf_term_constant entry ->
+            let qualified_identifier =
+              Qualified_identifier.make_simple identifier
+            in
             Synext.CLF.Term.Pattern.Constant
               { location; identifier = qualified_identifier }
         | entry when Entry.is_lf_variable entry ->

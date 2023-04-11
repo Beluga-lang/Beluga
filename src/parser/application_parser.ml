@@ -152,6 +152,12 @@ struct
     let* x = p in
     fail_at_previous_location (Ambiguous_operator_placement x)
 
+  exception Unexpected_operator of Expression.t
+
+  let unexpected p =
+    let* x = p in
+    fail_at_previous_location (Unexpected_operator x)
+
   exception Missing_left_argument of Expression.t
 
   let missing_left_argument p =
@@ -304,7 +310,8 @@ struct
       ambiguous infix_right_associative_operator
     and ambiguous_infix_non_associative_operator =
       ambiguous infix_non_associative_operator
-    in
+    and ambiguous_postfix_operator = ambiguous postfix_operator
+    and unexpected_prefix_operator = unexpected prefix_operator in
     let prefix_application =
       let* prefix_operators = some prefix_operator in
       let* argument = fallback in
@@ -339,9 +346,24 @@ struct
     in
     choice
       [ prefix_application
+        <& choice
+             [ unexpected_prefix_operator
+             ; ambiguous_postfix_operator
+             ; ambiguous_infix_left_associative_operator
+             ; ambiguous_infix_right_associative_operator
+             ; ambiguous_infix_non_associative_operator
+             ; return ()
+             ]
       ; (let* left_argument = fallback in
          choice
            [ postfix_application left_argument
+             <& choice
+                  [ unexpected_prefix_operator
+                  ; ambiguous_infix_left_associative_operator
+                  ; ambiguous_infix_right_associative_operator
+                  ; ambiguous_infix_non_associative_operator
+                  ; return ()
+                  ]
            ; infix_left_associative_application left_argument
              <& choice
                   [ ambiguous_infix_right_associative_operator
@@ -401,7 +423,10 @@ struct
     Error.register_exception_printer (function
       | Parser_error cause ->
           let cause_printer = Error.find_printer cause in
-          Format.dprintf "@[Failed to parse application.@,%t@]" cause_printer
+          Format.dprintf "@[Failed to parse application.@;%t@]" cause_printer
+      | Labelled_exception { label; cause } ->
+          let cause_printer = Error.find_printer cause in
+          Format.dprintf "%s.@;@[%t@]" label cause_printer
       | No_more_choices exceptions ->
           let exception_printers = List.map Error.find_printer exceptions in
           Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
@@ -409,7 +434,8 @@ struct
                (fun ppf exception_printer ->
                  Format.fprintf ppf "- @[%t@]" exception_printer))
             exception_printers
-      | Expected_end_of_input -> Format.dprintf "Expected_end_of_input"
+      | Expected_end_of_input ->
+          Format.dprintf "Expected the parser input to end here."
       | Expected_expression _ ->
           Format.dprintf
             "Expected an expression, but got an operator.@ If you intended \
@@ -423,5 +449,8 @@ struct
           Format.dprintf
             "This operator's placement is ambiguous.@ Add parentheses \
              around its arguments."
+      | Unexpected_operator _ ->
+          Format.dprintf
+            "This operator is unexpected.@ Add parentheses to its operands."
       | cause -> Error.raise_unsupported_exception_printing cause)
 end

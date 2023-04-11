@@ -108,8 +108,8 @@ end
 module Make_rewrite_parse_application_disambiguation
     (Expression : EXPRESSION with type location = Location.t) :
   APPLICATION_DISAMBIGUATION with type expression = Expression.t = struct
-  module Disambiguation = Make_application_rewriter (Expression)
-  module Error_disambiguation = Make_application_parser (Expression)
+  module Disambiguation = Make_application_parser (Expression)
+  module Error_disambiguation = Make_application_rewriter (Expression)
   include
     Make_fallback_application_disambiguation
       (Disambiguation)
@@ -118,5 +118,4 @@ end
 
 (* Choose one of [Make_application_parser], [Make_application_rewriter] or
    [Make_rewrite_parse_application_disambiguation]. *)
-module Make_application_disambiguation =
-  Make_rewrite_parse_application_disambiguation
+module Make_application_disambiguation = Make_application_parser

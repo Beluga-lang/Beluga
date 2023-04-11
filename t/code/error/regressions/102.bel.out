@@ -1,3 +1,5 @@
-./t/code/error/regressions/102.bel, line 8, column 0:
-Type-checking error.
-Recursive call not structurally smaller.
+File "./t/code/error/regressions/102.bel", line 8, column 1:
+8 |test
+   ^^^^
+Error: Type-checking error.
+       Recursive call not structurally smaller.

@@ -1,6 +1,8 @@
-./t/code/error/ctx_shift.bel, line 14, column 32:
-Ill-typed expression.
-    Expected type:
-      pred ?M_6[^0][]
-    Actual type:
-      pred N
+File "./t/code/error/ctx_shift.bel", line 14, column 32:
+14 | mlam g => mlam N => foo [g |- yep N[..]];
+                                   ^^^^^^^^^  
+Error: Ill-typed expression.
+       Expected type:
+         pred ?M_6[^0][]
+       Actual type:
+         pred N

@@ -92,7 +92,7 @@ let rec ctxToSub_mclosed cD psi =
 
   | DDec (cPsi', TypDecl (_, (Atom _ as tA))) ->
      let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in (* cD' ; psi |- s : cPsi' *)
-     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
+     dprintf (fun p -> p.fmt "s = %a@\n" pp_sub s);
 
      let u =
        Root
@@ -128,7 +128,7 @@ let rec ctxToSub_mclosed cD psi =
 
   | DDec (cPsi', TypDecl (_, (PiTyp _ as tA))) ->
      let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in (* cD' ; psi |- s : cPsi' *)
-     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
+     dprintf (fun p -> p.fmt "s = %a@\n" pp_sub s);
 
      (* cD' ; psi |- s : cPsi' *)
      (* cD' ; psi |- u[id] : [s]tA *)
@@ -181,7 +181,7 @@ let rec ctxToSub' cD cPhi =
      let s = (ctxToSub' cD cPhi cPsi' : sub) in
      (* cD ; cPhi |- s : cPsi' *)
      dprintf (fun p -> p.fmt "@]");
-     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
+     dprintf (fun p -> p.fmt "s = %a@\n" pp_sub s);
      (* For the moment, assume tA atomic. *)
      (* lower tA? *)
      (* A = A_1 -> ... -> A_n -> P
@@ -212,7 +212,7 @@ let rec ctxToSub' cD cPhi =
      (* let shifted = Substitution.LF.comp s Substitution.LF.shift in*)
      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
      let result = Dot (front, s) in
-     dprintf (fun p -> p.fmt "result = %a@." pp_sub result);
+     dprintf (fun p -> p.fmt "result = %a@\n" pp_sub result);
      result
 
 

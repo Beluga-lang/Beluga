@@ -41,7 +41,7 @@ module Error = struct
           "--stop can only be specified with --test and without --incomplete"
     | DanglingArguments args ->
         Format.dprintf
-          "Unexpected remaining command-line arguments:@,  @[%a@]@."
+          "Unexpected remaining command-line arguments:@,  @[%a@]@\n"
           (Format.pp_print_list ~pp_sep:Format.comma Format.pp_print_string)
          args
 end

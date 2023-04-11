@@ -1,4 +1,8 @@
-./t/code/error/unboundconstructor.bel, line 13, column 21:
-Higher-order meta-variables not (currently) supported
-  - The variable plus is free; is this intentional?
-  - Maybe you want to eta-expand plus?
+File "./t/code/error/unboundconstructor.bel", line 13, column 22:
+13 || AddSuc: Addup [ |- plus N Y Q]
+                         ^^^^       
+Error: Expected an LF term-level constant.
+       File "./t/code/error/unboundconstructor.bel", line 6, column 4:
+       6 |LF plus: nat -> nat -> nat -> type =
+             ^^^^                             
+       Error: plus is a bound LF type constant.

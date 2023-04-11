@@ -13,16 +13,16 @@ module Common = struct
   tt  : exp bool.
   ff  : exp bool.
 
+  arr : tp -> tp -> tp.
+  app:  exp (arr T T') -> exp T -> exp T'.
+  lam : (exp T -> exp T') -> exp (arr T T').
+
 
   schema w = some [t:tp] exp t;
 end;
 
 module FVNat = struct
   --open Common.
-
-  arr : tp -> tp -> tp.
-  app:  exp (arr T T') -> exp T -> exp T'.
-  lam : (exp T -> exp T') -> exp (arr T T').
 
   opt: type.
   nothing: opt.
@@ -43,14 +43,12 @@ module FVNat = struct
   | [g |- andalso U[..] V[..]]  =>
     (case free_var [g] [g |- U[..]] of
        [g |- nothing]   => free_var [g] [g |- V[..]]
-  %   | [g] something  #p[..]  => [g] something  #p[..]
       | [g |- something U[..]]     => [g |- something U[..]]
     )
 
   | [g |- app U[..] V[..]]  =>
       (case free_var [g] [g |- U[..]] of
          [g |- nothing]   => free_var [g] [g |- V[..]]
-  %     | [g] something  #p[..]  => [g] something  #p[..]
        | [g |- something U[..]]     => [g |- something U[..]])
 
   | [g |- lam (\x. U)] =>
@@ -58,8 +56,6 @@ module FVNat = struct
      (case (free_var [g, x:exp _] [g, x |- U]) of
         [g, x: exp _ |- nothing]       => [g |- nothing]
       | [g, x: exp _ |- something x]   => [g |- nothing]
-             % technically we need to initiate backtracking
-   %   | [g, x: exp _] something #p[..] => [g] something #p[..]
       | [g, x: exp _ |- something U[..]]  => [g |- something U[..]]
       | [g, x: exp _ |- something U]  => [g |- nothing]
      )
@@ -69,10 +65,6 @@ end;
 
 module FVNatCrec = struct
   --open Common.
-
-  arr : tp -> tp -> tp.
-  app:  exp (arr T T') -> exp T -> exp T'.
-  lam : (exp T -> exp T') -> exp (arr T T').
 
   opt: type.
   nothing: opt.
@@ -103,8 +95,6 @@ module FVNatCrec = struct
      (case (free_var [g, x:exp _ |- U]) of
         [g, x: exp _ |- nothing]       => [g |- nothing]
       | [g, x: exp _ |- something x]   => [g |- nothing]
-             % technically we need to initiate backtracking
-  %    | [g, x: exp _] something #p[..] => [g] something #p[..]
       | [g, x: exp _ |- something U[..]]  => [g |- something U[..]]
       | [g, x: exp _ |- something U]  => [g |- nothing]
 

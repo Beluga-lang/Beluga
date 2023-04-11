@@ -229,8 +229,7 @@ let () =
           "The de Bruijn index of this computation variable is unexpectedly \
            unknown."
     | Duplicate_pattern_variables _ ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Illegal duplicate pattern variables."
+        Format.dprintf "Illegal duplicate pattern variables."
     | exn -> Error.raise_unsupported_exception_printing exn)
 
 (** Abstract definition of de Bruijn levels.

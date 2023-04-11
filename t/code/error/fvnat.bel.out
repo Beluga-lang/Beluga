@@ -1,7 +1,9 @@
-./t/code/error/fvnat.bel, line 55, column 7:
-Type-checking error.
-Ill-typed expression.
-    Expected type:
-      [g |- opt]
-    Inferred type:
-      [g, x : exp _ |- opt]
+File "./t/code/error/fvnat.bel", line 55, column 8:
+55 |       free_var [g, x:exp _] [g, x |- U]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Type-checking error.
+       Ill-typed expression.
+       Expected type:
+         [g |- opt]
+       Inferred type:
+         [g, x : exp _ |- opt]

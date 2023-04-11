@@ -1,2 +1,4 @@
-./t/code/error/positivity/positivity_fail10.bel, line 9, column 3:
-Positivity checking of constructor B5 fails.
+File "./t/code/error/positivity/positivity_fail10.bel", line 9, column 4:
+9 | | B5: (A -> B) -> (B -> A) -> B % fail
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^       
+Error: Positivity checking of constructor B5 fails.

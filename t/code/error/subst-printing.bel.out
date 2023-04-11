@@ -1,5 +1,7 @@
-./t/code/error/subst-printing.bel, line 10, column 11:
-Type
-  block (x : tm, v : oft x A)
-doesn't check against schema
-  xtG = 
+File "./t/code/error/subst-printing.bel", line 10, column 11:
+10 |     Rxrt [h, b:block(x:tm, v:oft x A)];
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+Error: Type
+         block (x : tm, v : oft x A)
+       doesn't check against schema
+         xtG = 

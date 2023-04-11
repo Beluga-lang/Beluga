@@ -269,7 +269,7 @@ let constructors =
             List.map Store.Cid.Term.get
               !(entry.Store.Cid.Typ.Entry.constructors)
           in
-          Format.fprintf ppf "@[<v>%a@]@.;@."
+          Format.fprintf ppf "@[<v>%a@]@\n;@\n"
             (Format.pp_print_list ~pp_sep:Format.pp_print_cut (fun ppf x ->
                  Format.fprintf ppf "%a : [%d] %a" Name.pp
                    x.Store.Cid.Term.Entry.name
@@ -344,7 +344,7 @@ let compconst =
               List.map Store.Cid.CompConst.get
                 !(entry.Store.Cid.CompTyp.Entry.constructors)
             in
-            Format.fprintf ppf "@[<v>%a@]@.;@."
+            Format.fprintf ppf "@[<v>%a@]@\n;@\n"
               (Format.pp_print_list ~pp_sep:Format.pp_print_cut (fun ppf x ->
                    Format.fprintf ppf "%s : [%d] %a"
                      (Name.string_of_name x.Store.Cid.CompConst.Entry.name)
@@ -369,7 +369,7 @@ let signature =
             let entry =
               Store.Cid.Comp.index_of_name name |> Store.Cid.Comp.get
             in
-            Format.fprintf ppf "%a : %a;@." Name.pp
+            Format.fprintf ppf "%a : %a;@\n" Name.pp
               entry.Store.Cid.Comp.Entry.name
               (P.fmt_ppr_cmp_typ LF.Empty P.l0)
               entry.Store.Cid.Comp.Entry.typ

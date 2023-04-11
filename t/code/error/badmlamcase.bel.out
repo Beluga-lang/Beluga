@@ -1,2 +1,8 @@
-./t/code/error/badmlamcase.bel, line 6, column 17:
-Unbound computation-level identifier: N.
+File "./t/code/error/badmlamcase.bel", line 6, column 18:
+6 |  mlam N => case N of
+                    ^   
+Error: Expected N to be a program constant or computation-level constructor.
+       File "./t/code/error/badmlamcase.bel", line 6, column 8:
+       6 |  mlam N => case N of
+                 ^             
+       Error: N is a bound contextual variable.

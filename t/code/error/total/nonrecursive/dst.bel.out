@@ -1,3 +1,5 @@
-./t/code/error/total/nonrecursive/dst.bel, line 7, column 7:
-Type-checking error.
-A recursive call to nonrecursive function bad2 is forbidden.
+File "./t/code/error/total/nonrecursive/dst.bel", line 7, column 8:
+7 |fn x ⇒ bad2 x
+          ^^^^  
+Error: Type-checking error.
+       A recursive call to nonrecursive function bad2 is forbidden.

@@ -21,13 +21,13 @@ let run_safe (f : unit -> 'a) : 'a e =
   | IO.Error.E e ->
      Either.left
        begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%t@]@."
+       Format.fprintf ppf "@[<v>%t@]@\n"
          (IO.Error.error_printer e)
        end
   | Prover.Error.E e ->
      Either.left
        begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%t@]@."
+       Format.fprintf ppf "@[<v>%t@]@\n"
          (Prover.Error.error_printer e)
        end
   | e ->

@@ -84,7 +84,7 @@ module Make_load (Load_state : LOAD_STATE) = struct
     | Option.Some vars ->
         Chatter.print 1 (fun ppf ->
             Format.fprintf ppf
-              "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@." path
+              "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@\n" path
               Recsgn.fmt_ppr_leftover_vars vars);
         Error.raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
@@ -92,18 +92,18 @@ module Make_load (Load_state : LOAD_STATE) = struct
     let sgn = read_signature_file state ~filename in
 
     Chatter.print 1 (fun ppf ->
-        Format.fprintf ppf "## Type Reconstruction begin: %s ##@." filename);
+        Format.fprintf ppf "## Type Reconstruction begin: %s ##@\n" filename);
 
     let sgn' = reconstruct_signature_file state sgn in
     let leftoverVars = get_leftover_vars state in
 
     Chatter.print 2 (fun ppf ->
         Format.fprintf ppf
-          "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." filename
+          "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@\n" filename
           Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn');
 
     Chatter.print 1 (fun ppf ->
-        Format.fprintf ppf "## Type Reconstruction done:  %s ##@." filename);
+        Format.fprintf ppf "## Type Reconstruction done:  %s ##@\n" filename);
 
     Coverage.iter (function
       | Coverage.Success -> ()
@@ -116,13 +116,13 @@ module Make_load (Load_state : LOAD_STATE) = struct
 
     if !Coverage.enableCoverage then
       Chatter.print 2 (fun ppf ->
-          Format.fprintf ppf "## Coverage checking done: %s  ##@." filename);
+          Format.fprintf ppf "## Coverage checking done: %s  ##@\n" filename);
 
     Logic.runLogic ();
     (if Bool.not (Holes.none ()) then
        let open Format in
        Chatter.print 1 (fun ppf ->
-           Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@." filename
+           Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@\n" filename
              (pp_print_list Interactive.fmt_ppr_hole)
              (Holes.list ())));
 

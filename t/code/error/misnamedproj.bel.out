@@ -1,2 +1,5 @@
-./t/code/error/misnamedproj.bel, line 35, column 46:
-There is no projection named y in type block (x : term, _t : value FMV A[]).
+File "./t/code/error/misnamedproj.bel", line 35, column 45:
+35 |    let [g, b:block x:term, _t:value A[] |- T[.., b.y]] = conv [g, b:block (x:term , _t:value A[]) |- E[.., b._t]] in
+                                                ^^^^^^^^^^                                                               
+Error: There is no projection named y in type
+       block (x : term, _t : value FMV A[]).

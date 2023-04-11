@@ -1,6 +1,6 @@
 % Making a recursive call from a nonrecursive function is forbidden.
 
-LF u : type = u : u;
+LF u : type = u/c : u;
 
 rec bad : [⊢ u] → [⊢ u] =
 / total /

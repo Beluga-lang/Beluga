@@ -2961,7 +2961,7 @@ let rec blockdeclInDctx =
     | [] -> ()
     | cs ->
        let error_message =
-         Format.asprintf "Unresolved constraints@;<1 2>@[<v 2>%a@]@."
+         Format.asprintf "Unresolved constraints@;<1 2>@[<v 2>%a@]@\n"
            P.fmt_ppr_lf_constraints cs
        in
        raise (Failure error_message)

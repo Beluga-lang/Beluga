@@ -27,7 +27,7 @@ let throw loc e = raise (E (loc, e))
 
 let error_printer = function
   | TooManyArg ->
-      Format.dprintf "Totality declaration for has too many arguments.@."
+      Format.dprintf "Totality declaration for has too many arguments.@\n"
   | RecCallIncompatible (cD, x, Comp.WfRec (f, args, _)) ->
       begin match (x, args) with
       | (_, []) ->
@@ -708,7 +708,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
              a given schema *)
           mk_all (cIH', j) mf_list
      in
-     dprintf (fun p -> p.fmt "[gen_rec_calls] for j = %d@." j);
+     dprintf (fun p -> p.fmt "[gen_rec_calls] for j = %d@\n" j);
      let cIH' = mk_all (cIH, j) mf_list in
      dprintf (fun p -> p.fmt "[gen_rec_calls] for j = %d" (j + 1));
      gen_rec_calls cD cIH' (cD', j + 1) mfs
@@ -805,7 +805,7 @@ let wf_rec_calls cD cG mfs =
       dprintf
         begin fun p ->
         p.fmt
-          "Generate recursive calls from@.cD = %a@.cG = %a"
+          "Generate recursive calls from@\ncD = %a@\ncG = %a"
           (P.fmt_ppr_lf_mctx P.l0) cD
           (P.fmt_ppr_cmp_gctx cD P.l0) cG
         end;

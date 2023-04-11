@@ -344,7 +344,7 @@ module Make
             | Result.Error _ ->
                 Chatter.print 1 (fun ppf ->
                     Format.fprintf ppf
-                      "Reconstruction fails for --not'd declaration@.");
+                      "Reconstruction fails for --not'd declaration@\n");
                 reconstruct_signature_entries entries))
     | entry :: entries ->
         let* entry' = reconstruct_signature_entry entry in
@@ -498,7 +498,7 @@ module Make
     Reconstruct.reset_fvarCnstr ();
     Unify.resetGlobalCnstrs ();
     dprintf (fun p ->
-        p.fmt "%a : %a@." Identifier.pp identifier
+        p.fmt "%a : %a@\n" Identifier.pp identifier
           (P.fmt_ppr_lf_kind Synint.LF.Null P.l0)
           tK');
     Monitor.timer
@@ -602,7 +602,7 @@ module Make
     Reconstruct.reset_fvarCnstr ();
     Unify.resetGlobalCnstrs ();
     dprintf (fun p ->
-        p.fmt "%a : %a@." Identifier.pp identifier
+        p.fmt "%a : %a@\n" Identifier.pp identifier
           (P.fmt_ppr_cmp_kind Synint.LF.Empty P.l0)
           cK');
     Monitor.timer
@@ -828,11 +828,11 @@ module Make
   and reconstruct_schema_declaration location identifier schema =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
-        p.fmt "[RecSgn Checking] Schema at: %a@." Location.print_short
+        p.fmt "[RecSgn Checking] Schema at: %a@\n" Location.print_short
           location);
     let* apx_schema = index_schema schema in
     dprintf (fun p ->
-        p.fmt "Reconstructing schema %a@." Identifier.pp identifier);
+        p.fmt "Reconstructing schema %a@\n" Identifier.pp identifier);
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     Store.FVar.clear ();
@@ -847,12 +847,12 @@ module Make
     Unify.resetGlobalCnstrs ();
     let sW' = Abstract.schema sW in
     dprintf (fun p ->
-        p.fmt "Schema %a : %a after abstraction@." Identifier.pp identifier
+        p.fmt "Schema %a : %a after abstraction@\n" Identifier.pp identifier
           (P.fmt_ppr_lf_schema P.l0)
           sW');
     Check.LF.checkSchemaWf sW';
     dprintf (fun p ->
-        p.fmt "TYPE CHECK for schema %a successful@." Identifier.pp
+        p.fmt "TYPE CHECK for schema %a successful@\n" Identifier.pp
           identifier);
     let cid =
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')

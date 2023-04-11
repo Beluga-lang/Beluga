@@ -59,11 +59,11 @@ let rec loop ppf =
   | End_of_file -> exit 0
   | Sys.Break ->
       if !Options.interrupt_count = 2 then (
-        Format.fprintf ppf "@\n@.";
+        Format.fprintf ppf "@\n@\n";
         exit 0)
       else (
         incr Options.interrupt_count;
-        Format.fprintf ppf "Interrupted (press %d more times to quit).@."
+        Format.fprintf ppf "Interrupted (press %d more times to quit).@\n"
           (3 - !Options.interrupt_count)));
   loop ppf
 

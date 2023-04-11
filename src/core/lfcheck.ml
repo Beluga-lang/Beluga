@@ -106,7 +106,7 @@ let error_printer = function
 
   | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
     Format.dprintf
-      "%t@,In expression: %a@."
+      "%t@,In expression: %a@\n"
       (Error.mismatch_reporter
       "Ill-typed term."
       "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
@@ -148,17 +148,17 @@ let error_printer = function
   | CtxHatMismatch (cD, cPsi, phat, cM) ->
     let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
     Format.dprintf
-      "%t@,In expression: %a@."
+      "%t@,In expression: %a@\n"
       (Error.mismatch_reporter
       "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
       "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
       "Given context" (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi)
       (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
   | TermWhenVar (cD, cPsi, tM) ->
-    Format.dprintf "A term was found when expecting a variable.@ Offending term: %a"
+    Format.dprintf "A term was found when expecting a variable.@\nOffending term: %a"
       (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
   | SubWhenRen (cD, cPsi, sub) ->
-    Format.dprintf "A substitution was found when expecting a renaming.@ Offending substitution: %a"
+    Format.dprintf "A substitution was found when expecting a renaming.@\nOffending substitution: %a"
       (P.fmt_ppr_lf_sub cD cPsi P.l0) sub
 
 let () =

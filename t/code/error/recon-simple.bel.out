@@ -1,2 +1,8 @@
-./t/code/error/recon-simple.bel, line 96, column 5:
-Unbound data-level variable (ordinary or meta-variable) or constructor: SN.
+File "./t/code/error/recon-simple.bel", line 96, column 11:
+96 |    [g |- SN N] ->
+              ^^      
+Error: Expected a LF type-level constant.
+       File "./t/code/error/recon-simple.bel", line 25, column 11:
+       25 |inductive SN : (g : cxt) {M : [g |- tm A[]]} ctype =
+                     ^^                                        
+       Error: SN is a bound computation-level inductive type constant.

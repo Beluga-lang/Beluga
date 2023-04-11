@@ -1,4 +1,6 @@
-./t/code/error/higher-order-mvar.bel, line 6, column 10:
-Higher-order meta-variables not (currently) supported
-  - The variable M is free; is this intentional?
-  - Maybe you want to eta-expand M?
+File "./t/code/error/higher-order-mvar.bel", line 6, column 11:
+6 || [|- lam M] => e % Not supported now. Maybe later?
+             ^                                        
+Error: Higher-order meta-variables not (currently) supported
+         - The variable M is free; is this intentional?
+         - Maybe you want to eta-expand M?

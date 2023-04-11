@@ -18,7 +18,7 @@ embed : neut (atomic P) -> norm (atomic P).
 schema ctx = neut T;
 
 inductive TmVar : {g:tctx} [ |- tp] -> ctype =
-| TmVar : {#p:#[g |- tm T[]]} TmVar [g] [ |- T]
+| TmVar/c : {#p:#[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
@@ -38,8 +38,8 @@ case e of
 rec extend : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |- S]
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g, x:tm S[] |- x] => e
-| TmVar [g, x:tm S[] |- #q[..]] => s [ |- T] (TmVar [g |- #q[..]])
+| TmVar/c [g, x:tm S[] |- x] => e
+| TmVar/c [g, x:tm S[] |- #q[..]] => s [ |- T] (TmVar/c [g |- #q[..]])
 ;
 
 rec eval : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
@@ -47,7 +47,7 @@ rec eval : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
 fn s => fn t =>
 let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
 case t of
-| [g |- #p[..]]           : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p[..]])
+| [g |- #p[..]]           : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p[..]])
 | [g |- lam (\x. E)] : [g |- tm (arr A[] B[])] =>
   Slam [h] [ |- A] [ |- B] (mlam h' => mlam $W => fn e =>
          eval (extend (mlam T => fn x => sem_wkn [h] [h'] $[h' |- $W[..]] (s [ |- T] x))  e)
@@ -56,7 +56,7 @@ case t of
 
 | [g |- app E1[..] E2[..]] =>
   let (Slam [h] [ |- A] [ |- B] f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1[..]] in
-    f [h] [h |- ..] (eval s [g |- E2[..]])
+    f [h] $[h |- ..] (eval s [g |- E2[..]])
 ;
 
 
@@ -74,13 +74,13 @@ fn e => let (e : Sem [g] [ |- A]) = e in
 case e of
 | Syn [g |- R[..]] => [g |- embed R[..]]
 | Slam [g] [ |- A] [ |- B] f =>
-     let s = (f [g, x:neut _] [g, x |- ..] (reflect [g, x:neut _ |- x])) in
+     let s = (f [g, x:neut _] $[g, x |- ..] (reflect [g, x:neut _ |- x])) in
      let [g, x:neut _ |- E] = reify s
      in [g |- nlam (\x. E)]
 ;
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p];
+mlam T => fn y => let TmVar/c [ |- #p] = y in impossible [ |- #p];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)

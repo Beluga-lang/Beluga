@@ -3353,5 +3353,341 @@
         "stop_column": 5
       }
     }
+  ],
+  [
+    "LF.Term.Application",
+    {
+      "applicand": [
+        "LF.Term.Constant",
+        {
+          "identifier": {
+            "name": {
+              "name": "⊂",
+              "location": {
+                "filename": "lf_terms_ok.input.bel",
+                "start_line": 94,
+                "start_column": 7,
+                "stop_line": 94,
+                "stop_column": 8
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 94,
+              "start_column": 7,
+              "stop_line": 94,
+              "stop_column": 8
+            }
+          },
+          "location": {
+            "filename": "lf_terms_ok.input.bel",
+            "start_line": 94,
+            "start_column": 7,
+            "stop_line": 94,
+            "stop_column": 8
+          }
+        }
+      ],
+      "arguments": [
+        [
+          "LF.Term.Application",
+          {
+            "applicand": [
+              "LF.Term.Constant",
+              {
+                "identifier": {
+                  "name": {
+                    "name": "⊂",
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 94,
+                      "start_column": 3,
+                      "stop_line": 94,
+                      "stop_column": 4
+                    }
+                  },
+                  "namespaces": [],
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 3,
+                    "stop_line": 94,
+                    "stop_column": 4
+                  }
+                },
+                "location": {
+                  "filename": "lf_terms_ok.input.bel",
+                  "start_line": 94,
+                  "start_column": 3,
+                  "stop_line": 94,
+                  "stop_column": 4
+                }
+              }
+            ],
+            "arguments": [
+              [
+                "LF.Term.Variable",
+                {
+                  "identifier": {
+                    "name": "x",
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 94,
+                      "start_column": 1,
+                      "stop_line": 94,
+                      "stop_column": 2
+                    }
+                  },
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 1,
+                    "stop_line": 94,
+                    "stop_column": 2
+                  }
+                }
+              ],
+              [
+                "LF.Term.Variable",
+                {
+                  "identifier": {
+                    "name": "y",
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 94,
+                      "start_column": 5,
+                      "stop_line": 94,
+                      "stop_column": 6
+                    }
+                  },
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 5,
+                    "stop_line": 94,
+                    "stop_column": 6
+                  }
+                }
+              ]
+            ],
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 94,
+              "start_column": 1,
+              "stop_line": 94,
+              "stop_column": 6
+            }
+          }
+        ],
+        [
+          "LF.Term.Constant",
+          {
+            "identifier": {
+              "name": {
+                "name": "z",
+                "location": {
+                  "filename": "lf_terms_ok.input.bel",
+                  "start_line": 94,
+                  "start_column": 9,
+                  "stop_line": 94,
+                  "stop_column": 10
+                }
+              },
+              "namespaces": [],
+              "location": {
+                "filename": "lf_terms_ok.input.bel",
+                "start_line": 94,
+                "start_column": 9,
+                "stop_line": 94,
+                "stop_column": 10
+              }
+            },
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 94,
+              "start_column": 9,
+              "stop_line": 94,
+              "stop_column": 10
+            }
+          }
+        ]
+      ],
+      "location": {
+        "filename": "lf_terms_ok.input.bel",
+        "start_line": 94,
+        "start_column": 1,
+        "stop_line": 94,
+        "stop_column": 10
+      }
+    }
+  ],
+  [
+    "LF.Term.Application",
+    {
+      "applicand": [
+        "LF.Term.Constant",
+        {
+          "identifier": {
+            "name": {
+              "name": "⊃",
+              "location": {
+                "filename": "lf_terms_ok.input.bel",
+                "start_line": 97,
+                "start_column": 3,
+                "stop_line": 97,
+                "stop_column": 4
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 97,
+              "start_column": 3,
+              "stop_line": 97,
+              "stop_column": 4
+            }
+          },
+          "location": {
+            "filename": "lf_terms_ok.input.bel",
+            "start_line": 97,
+            "start_column": 3,
+            "stop_line": 97,
+            "stop_column": 4
+          }
+        }
+      ],
+      "arguments": [
+        [
+          "LF.Term.Variable",
+          {
+            "identifier": {
+              "name": "x",
+              "location": {
+                "filename": "lf_terms_ok.input.bel",
+                "start_line": 97,
+                "start_column": 1,
+                "stop_line": 97,
+                "stop_column": 2
+              }
+            },
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 97,
+              "start_column": 1,
+              "stop_line": 97,
+              "stop_column": 2
+            }
+          }
+        ],
+        [
+          "LF.Term.Application",
+          {
+            "applicand": [
+              "LF.Term.Constant",
+              {
+                "identifier": {
+                  "name": {
+                    "name": "⊃",
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 97,
+                      "start_column": 7,
+                      "stop_line": 97,
+                      "stop_column": 8
+                    }
+                  },
+                  "namespaces": [],
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 97,
+                    "start_column": 7,
+                    "stop_line": 97,
+                    "stop_column": 8
+                  }
+                },
+                "location": {
+                  "filename": "lf_terms_ok.input.bel",
+                  "start_line": 97,
+                  "start_column": 7,
+                  "stop_line": 97,
+                  "stop_column": 8
+                }
+              }
+            ],
+            "arguments": [
+              [
+                "LF.Term.Variable",
+                {
+                  "identifier": {
+                    "name": "y",
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 97,
+                      "start_column": 5,
+                      "stop_line": 97,
+                      "stop_column": 6
+                    }
+                  },
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 97,
+                    "start_column": 5,
+                    "stop_line": 97,
+                    "stop_column": 6
+                  }
+                }
+              ],
+              [
+                "LF.Term.Constant",
+                {
+                  "identifier": {
+                    "name": {
+                      "name": "z",
+                      "location": {
+                        "filename": "lf_terms_ok.input.bel",
+                        "start_line": 97,
+                        "start_column": 9,
+                        "stop_line": 97,
+                        "stop_column": 10
+                      }
+                    },
+                    "namespaces": [],
+                    "location": {
+                      "filename": "lf_terms_ok.input.bel",
+                      "start_line": 97,
+                      "start_column": 9,
+                      "stop_line": 97,
+                      "stop_column": 10
+                    }
+                  },
+                  "location": {
+                    "filename": "lf_terms_ok.input.bel",
+                    "start_line": 97,
+                    "start_column": 9,
+                    "stop_line": 97,
+                    "stop_column": 10
+                  }
+                }
+              ]
+            ],
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 97,
+              "start_column": 5,
+              "stop_line": 97,
+              "stop_column": 10
+            }
+          }
+        ]
+      ],
+      "location": {
+        "filename": "lf_terms_ok.input.bel",
+        "start_line": 97,
+        "start_column": 1,
+        "stop_line": 97,
+        "stop_column": 10
+      }
+    }
   ]
 ]

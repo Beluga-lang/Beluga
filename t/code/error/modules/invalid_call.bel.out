@@ -1,2 +1,4 @@
-./t/code/error/modules/invalid_call.bel, line 32, column 16:
-Unbound computation-level identifier: Nats.suc.
+File "./t/code/error/modules/invalid_call.bel", line 32, column 22:
+32 |let will_fail = Nats.suc x;
+                         ^^^   
+Error: Computation-level destructor constant suc is unbound.

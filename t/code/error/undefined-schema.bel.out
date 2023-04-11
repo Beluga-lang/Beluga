@@ -1,2 +1,4 @@
-./t/code/error/undefined-schema.bel, line 16, column 17:
-Unbound context schema: xrG.
+File "./t/code/error/undefined-schema.bel", line 16, column 20:
+16 |inductive Rxrt: {g:xrG} {h:xtG} ctype =
+                       ^^^                 
+Error: The schema constant xrG is unbound.

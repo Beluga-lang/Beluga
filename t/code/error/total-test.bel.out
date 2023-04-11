@@ -1,3 +1,5 @@
-./t/code/error/total-test.bel, line 11, column 57:
-Type-checking error.
-Recursive call not structurally smaller.
+File "./t/code/error/total-test.bel", line 11, column 58:
+11 |fn n => case (id n) of [ |- z] => [ |- z] | [ |- s X] => foo [ |- X] ;
+                                                             ^^^^^^^^^^^  
+Error: Type-checking error.
+       Recursive call not structurally smaller.

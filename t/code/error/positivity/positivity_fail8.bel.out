@@ -1,2 +1,4 @@
-./t/code/error/positivity/positivity_fail8.bel, line 3, column 3:
-Positivity checking of constructor A3 fails.
+File "./t/code/error/positivity/positivity_fail8.bel", line 3, column 4:
+3 | | A3: (A -> (A * A)) -> A % fail
+      ^^^^^^^^^^^^^^^^^^^^^^^       
+Error: Positivity checking of constructor A3 fails.

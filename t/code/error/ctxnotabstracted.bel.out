@@ -1,2 +1,4 @@
-./t/code/error/ctxnotabstracted.bel, line 9, column 12:
-Unable to infer type for variable g
+File "./t/code/error/ctxnotabstracted.bel", line 9, column 12:
+9 |rec tail : [g |- tm] -> [g |- tm] =
+              ^^^^^^^^^               
+Error: Unable to infer type for variable g.

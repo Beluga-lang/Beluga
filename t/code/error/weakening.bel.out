@@ -1,9 +1,10 @@
-./t/code/error/weakening.bel, line 9, column 2:
-Type reconstruction error.
-Context clash in pattern.
-    Pattern's context:
-      h
-    Scrutinee's context:
-      
-Note that we do not allow the context in the pattern
-to be more general than the context in the scrutinee.
+File "./t/code/error/weakening.bel", line 9, column 3:
+9 || [h, x:term |- U] => [x:term |- x]
+     ^^^^^^^^^^^^^^^^                 
+Error: Context clash in pattern.
+       Pattern's context:
+         h
+       Scrutinee's context:
+         
+       Note that we do not allow the context in the pattern
+       to be more general than the context in the scrutinee.

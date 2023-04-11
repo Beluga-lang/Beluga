@@ -1,3 +1,5 @@
-./t/code/error/renvars/reconren.bel, line 12, column 55:
-A substitution was found when expecting a renaming.
-Offending substitution: $W[..] 
+File "./t/code/error/renvars/reconren.bel", line 12, column 56:
+12 |rec f : Foo $[g |- $W[..]] -> Bar [g |- #p[..]] -> Bar [g |- #p[$W[..]]] =
+                                                           ^^^^^^^^^^^^^^^^^  
+Error: A substitution was found when expecting a renaming.
+       Offending substitution: $W[..]

@@ -1,2 +1,4 @@
-./t/code/error/renvars/terminren2.bel, line 11, column 29:
-A term was found when expecting a variable.
+File "./t/code/error/renvars/terminren2.bel", line 11, column 29:
+11 |mlam g => f [x:tm, y:tm] [] $[ |- i, i] [x:tm, y:tm |- x] % also not a renaming
+                                ^^^^^^^^^^^                                        
+Error: A term was found when expecting a variable.

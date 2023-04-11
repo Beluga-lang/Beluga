@@ -1,6 +1,8 @@
-./t/code/error/defaultAssocError.bel, line 17, column 19:
-Ill-typed expression.
-    Expected type:
-      list ?N_3[^0][]
-    Actual type:
-      bool
+File "./t/code/error/defaultAssocError.bel", line 17, column 20:
+17 |let l1 = [ |- t ap t ap t ap nil];
+                       ^              
+Error: Ill-typed expression.
+       Expected type:
+         list ?N_3[^0][]
+       Actual type:
+         bool

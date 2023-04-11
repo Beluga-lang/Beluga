@@ -95,11 +95,6 @@ module type INDEXER = sig
        Synext.comp_typ
     -> Synext.comp_kind
     -> (Synapx.Comp.typ * Synapx.Comp.kind) t
-
-  val index_lf_query :
-       Synext.meta_context
-    -> Synext.clf_typ
-    -> (Synapx.LF.mctx * Synapx.LF.typ) t
 end
 
 module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
@@ -1969,12 +1964,6 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
       disallow_free_variables (with_unrolled_kind kind (index_comp_typ typ))
     in
     return (typ', kind')
-
-  let index_lf_query meta_context typ =
-    allow_free_variables
-      (with_indexed_meta_context meta_context (fun meta_context' ->
-           let* typ' = index_clf_typ typ in
-           return (meta_context', typ')))
 end
 
 module Indexer = struct

@@ -1906,24 +1906,7 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
         pp_pragma "abbrev" pp_abbrev_pragma
         <& add_abbreviation module_identifier abbreviation
     | Signature.Pragma.Query
-        { identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        ; _
-        } ->
-        let pp_binding identifier typ =
-          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
-          ++ pp_space ++ pp_meta_typ typ
-        in
-        let pp_declaration (identifier, typ) =
-          pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ))
-        in
-        let pp_meta_context meta_context =
-          let { Meta.Context.bindings; _ } = meta_context in
-          pp_list ~sep:pp_space pp_declaration bindings
-        in
+        { identifier; typ; expected_solutions; maximum_tries; _ } ->
         let pp_query_argument =
           pp_option ~none:pp_star (fun argument -> pp_int argument)
         in
@@ -1933,13 +1916,10 @@ module Make_html_printer (Html_state : HTML_PRINTING_STATE) = struct
             ++ pp_query_argument expected_solutions
             ++ pp_space
             ++ pp_query_argument maximum_tries
-            ++ pp_space
-            ++ pp_meta_context meta_context
             ++ pp_option
                  (fun identifier -> pp_space ++ pp_identifier identifier)
                  identifier
-            ++ pp_non_breaking_space ++ pp_colon ++ pp_clf_typ typ ++ pp_dot
-            )
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot)
         in
         pp_pragma "query" pp_query_pragma
 

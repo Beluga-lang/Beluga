@@ -360,24 +360,16 @@ struct
           (Synext.Signature.Pragma.Abbreviation
              { location; module_identifier; abbreviation })
     | Synprs.Signature.Pragma.Raw_query
-        { location
-        ; identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        } ->
-        with_disambiguated_meta_context meta_context (fun meta_context' ->
-            let* typ' = disambiguate_clf_typ typ in
-            return
-              (Synext.Signature.Pragma.Query
-                 { location
-                 ; identifier
-                 ; meta_context = meta_context'
-                 ; typ = typ'
-                 ; expected_solutions
-                 ; maximum_tries
-                 }))
+        { location; identifier; typ; expected_solutions; maximum_tries } ->
+        let* typ' = disambiguate_lf_typ typ in
+        return
+          (Synext.Signature.Pragma.Query
+             { location
+             ; identifier
+             ; typ = typ'
+             ; expected_solutions
+             ; maximum_tries
+             })
 
   and disambiguate_global_pragma = function
     | Synprs.Signature.Global_pragma.No_strengthening { location } ->

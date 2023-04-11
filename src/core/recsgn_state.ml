@@ -127,11 +127,6 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 
-  val index_lf_query :
-       Synext.meta_context
-    -> Synext.clf_typ
-    -> (Synapx.LF.mctx * Synapx.LF.typ) t
-
   val add_lf_type_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_typ -> Unit.t t
 
@@ -495,9 +490,6 @@ struct
 
   let index_harpoon_proof proof =
     with_index_state (Index.index_harpoon_proof proof)
-
-  let index_lf_query meta_context typ =
-    with_index_state (Index.index_lf_query meta_context typ)
 
   let freeze_unfrozen_declaration = function
     | `Typ id -> Store.Cid.Typ.freeze id

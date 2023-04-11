@@ -1329,18 +1329,11 @@ let rec json_of_signature_pragma pragma =
           ; ("location", json_of_location location)
           ]
   | Signature.Pragma.Query
-      { identifier
-      ; meta_context
-      ; typ
-      ; expected_solutions
-      ; maximum_tries
-      ; location
-      } ->
+      { identifier; typ; expected_solutions; maximum_tries; location } ->
       json_of_variant ~name:"Signature.Pragma.Query"
         ~data:
           [ ("identifier", json_of_option json_of_identifier identifier)
-          ; ("meta_context", json_of_meta_context meta_context)
-          ; ("typ", json_of_clf_typ typ)
+          ; ("typ", json_of_lf_typ typ)
           ; ( "expected_solutions"
             , json_of_option json_of_int expected_solutions )
           ; ("maximum_tries", json_of_option json_of_int maximum_tries)

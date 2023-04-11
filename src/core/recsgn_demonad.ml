@@ -406,13 +406,12 @@ struct
     | Synext.Signature.Pragma.Query
         { location
         ; identifier
-        ; meta_context
         ; typ
         ; expected_solutions
         ; maximum_tries
         } ->
         freeze_all_unfrozen_declarations state;
-        reconstruct_query_pragma state location identifier meta_context typ
+        reconstruct_query_pragma state location identifier typ
           expected_solutions maximum_tries
 
   and reconstruct_signature_declaration state declaration =
@@ -1007,12 +1006,12 @@ struct
       ; expression_value = value_opt
       }
 
-  and reconstruct_query_pragma state location identifier_opt cD extT
+  and reconstruct_query_pragma state location identifier_opt extT
       expected_solutions maximum_tries =
     let name_opt = Option.map Name.make_from_identifier identifier_opt in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);
-    let cD, apxT = index_lf_query state cD extT in
+    let apxT = index_lf_typ state extT in
     dprint (fun () -> "Reconstructing query.");
 
     Reconstruct.reset_fvarCnstr ();
@@ -1026,10 +1025,9 @@ struct
             Reconstruct.solve_fvarCnstr Lfrecon.Pi;
             tA )
     in
-    let cD = Reconstruct.mctx cD in
     dprintf (fun p ->
         p.fmt "Elaboration of query : %a"
-          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          (P.fmt_ppr_lf_typ Synint.LF.Empty Synint.LF.Null P.l0)
           tA);
     Unify.forceGlobalCnstr ();
     let tA', i =
@@ -1041,17 +1039,17 @@ struct
         p.fmt
           "Reconstruction (with abstraction) of query: %a with %s \
            abstracted variables"
-          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          (P.fmt_ppr_lf_typ Synint.LF.Empty Synint.LF.Null P.l0)
           tA' (string_of_int i));
     Monitor.timer
       ( Monitor.type_check
       , fun () ->
           Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', S.LF.id) );
-    Logic.storeQuery name_opt (tA', i) cD expected_solutions maximum_tries;
+    Logic.storeQuery name_opt (tA', i) Synint.LF.Empty expected_solutions maximum_tries;
     Synint.LF.Query
       { location
       ; name = name_opt
-      ; mctx = cD
+      ; mctx = Synint.LF.Empty
       ; typ = (tA', i)
       ; expected_solutions
       ; maximum_tries

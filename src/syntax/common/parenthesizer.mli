@@ -14,7 +14,7 @@ open Support
 (** Module type for stateful helper printers for parenthesizing applications
     with user-defined operators. *)
 module type PARENTHESIZER = sig
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   type precedence
 
@@ -22,93 +22,102 @@ module type PARENTHESIZER = sig
       that adds parentheses to the term if it has a strictly lesser
       precedence than that of its parent node in the AST. *)
   val parenthesize_term_of_lesser_precedence :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_term_of_lesser_than_or_equal_precedence] is a
       parenthesizing formatter that adds parentheses to the term if it has a
       lesser than or equal precedence with the precedence of its parent node
       in the AST. *)
   val parenthesize_term_of_lesser_than_or_equal_precedence :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_left_argument_left_associative_operator] is a
       parenthesizing formatter for a term appearing as a left argument to an
       infix left-associative operator. *)
   val parenthesize_left_argument_left_associative_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_right_argument_left_associative_operator] is a
       parenthesizing formatter for a term appearing as a right argument to an
       infix left-associative operator. *)
   val parenthesize_right_argument_left_associative_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_left_argument_right_associative_operator] is a
       parenthesizing formatter for a term appearing as a left argument to an
       infix right-associative operator. *)
   val parenthesize_left_argument_right_associative_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_right_argument_right_associative_operator] is a
       parenthesizing formatter for a term appearing as a right argument to an
       infix right-associative operator. *)
   val parenthesize_right_argument_right_associative_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_argument_non_associative_operator] is a parenthesizing
       formatter for a term appearing as an argument to an infix
       non-associative operator. *)
   val parenthesize_argument_non_associative_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_argument_prefix_operator] is a parenthesizing formatter
       for a term appearing as an argument to a prefix operator. *)
   val parenthesize_argument_prefix_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** [parenthesize_argument_postfix_operator] is a parenthesizing formatter
       for a term appearing as an argument to a postifx operator. *)
   val parenthesize_argument_postfix_operator :
-       ('a -> precedence t)
+       state
+    -> (state -> 'a -> precedence)
     -> parent_precedence:precedence
-    -> ('a -> unit t)
+    -> (state -> 'a -> Unit.t)
     -> 'a
-    -> unit t
+    -> Unit.t
 
   (** {[
-        pp_application ~guard_operator ~guard_operator_application
+        pp_application state ~guard_operator ~guard_operator_application
           ~precedence_of_applicand ~precedence_of_argument ~pp_applicand
           ~pp_argument ~parent_precedence applicand arguments
       ]}
@@ -122,41 +131,43 @@ module type PARENTHESIZER = sig
       applications, which have LF types as applicands and LF terms as
       arguments.
 
-      - [~guard_operator applicand] is [`Operator operator] if [applicand] is
-        a prefixed operator, and [`Operand] otherwise.
-      - [~guard_operator_application argument] is
+      - [~guard_operator state applicand] is [`Operator operator] if
+        [applicand] is a prefixed operator, and [`Operand] otherwise.
+      - [~guard_operator_application state argument] is
         [`Operator_application operator] if [argument] is the application of
         a prefixed operator, [`Operator operator] if [operator] is an
         operator in prefix notation (which requires parentheses), and
         [`Operand] otherwise.
-      - [~precedence_of_applicand applicand] is the precedence of
+      - [~precedence_of_applicand state applicand] is the precedence of
         [applicand].
-      - [~precedence_of_argument argument] is the precedence of [argument].
-      - [~pp_applicand] is a pretty-printer for the applicand.
-      - [~pp_argument] is a pretty-printer for an argument in the
+      - [~precedence_of_argument state argument] is the precedence of
+        [argument].
+      - [~pp_applicand state] is a pretty-printer for the applicand.
+      - [~pp_argument state] is a pretty-printer for an argument in the
         application.
       - [~parent_precedence] is the precedence of the AST node parent to
         [applicand] and [arguments], meaning that it is the precedence of the
         application. *)
   val pp_application :
-       indent:Int.t
+       state
+    -> indent:Int.t
     -> guard_operator:
-         ('applicand -> [ `Operator of Operator.t | `Operand ] t)
+         (state -> 'applicand -> [ `Operator of Operator.t | `Operand ])
     -> guard_operator_application:
-         (   'argument
+         (   state
+          -> 'argument
           -> [ `Operator_application of Operator.t
              | `Operator of Operator.t
              | `Operand
-             ]
-             t)
-    -> precedence_of_applicand:('applicand -> precedence t)
-    -> precedence_of_argument:('argument -> precedence t)
-    -> pp_applicand:('applicand -> unit t)
-    -> pp_argument:('argument -> unit t)
+             ])
+    -> precedence_of_applicand:(state -> 'applicand -> precedence)
+    -> precedence_of_argument:(state -> 'argument -> precedence)
+    -> pp_applicand:(state -> 'applicand -> Unit.t)
+    -> pp_argument:(state -> 'argument -> Unit.t)
     -> parent_precedence:precedence
     -> 'applicand
     -> 'argument List1.t
-    -> unit t
+    -> Unit.t
 end
 
 module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :

@@ -3,25 +3,30 @@ open Disambiguation_state
 
 module type COMP_DISAMBIGUATION = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   (** {1 Disambiguation} *)
 
-  val disambiguate_comp_kind : Synprs.comp_sort_object -> Synext.comp_kind t
+  val disambiguate_comp_kind :
+    state -> Synprs.comp_sort_object -> Synext.comp_kind
 
-  val disambiguate_comp_typ : Synprs.comp_sort_object -> Synext.comp_typ t
+  val disambiguate_comp_typ :
+    state -> Synprs.comp_sort_object -> Synext.comp_typ
 
   val disambiguate_comp_expression :
-    Synprs.comp_expression_object -> Synext.comp_expression t
+    state -> Synprs.comp_expression_object -> Synext.comp_expression
 
   val disambiguate_comp_pattern :
-    Synprs.comp_pattern_object -> Synext.comp_pattern t
+    state -> Synprs.comp_pattern_object -> Synext.comp_pattern
 
   val disambiguate_comp_copattern :
-    Synprs.comp_copattern_object List1.t -> Synext.comp_copattern t
+    state -> Synprs.comp_copattern_object List1.t -> Synext.comp_copattern
 
   val with_disambiguated_comp_context :
-    Synprs.comp_context_object -> (Synext.comp_context -> 'a t) -> 'a t
+       state
+    -> Synprs.comp_context_object
+    -> (state -> Synext.comp_context -> 'a)
+    -> 'a
 end
 
 module Make

@@ -4,30 +4,33 @@ open Disambiguation_state
 
 module type HARPOON_DISAMBIGUATION = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   (** {1 Disambiguation} *)
 
   val disambiguate_harpoon_proof :
-    Synprs.harpoon_proof -> Synext.harpoon_proof t
+    state -> Synprs.harpoon_proof -> Synext.harpoon_proof
 
   val with_disambiguated_harpoon_command :
-    Synprs.harpoon_command -> (Synext.harpoon_command -> 'a t) -> 'a t
+       state
+    -> Synprs.harpoon_command
+    -> (state -> Synext.harpoon_command -> 'a)
+    -> 'a
 
   val disambiguate_harpoon_directive :
-    Synprs.harpoon_directive -> Synext.harpoon_directive t
+    state -> Synprs.harpoon_directive -> Synext.harpoon_directive
 
   val disambiguate_harpoon_split_branch :
-    Synprs.harpoon_split_branch -> Synext.harpoon_split_branch t
+    state -> Synprs.harpoon_split_branch -> Synext.harpoon_split_branch
 
   val disambiguate_harpoon_suffices_branch :
-    Synprs.harpoon_suffices_branch -> Synext.harpoon_suffices_branch t
+    state -> Synprs.harpoon_suffices_branch -> Synext.harpoon_suffices_branch
 
   val disambiguate_harpoon_hypothetical :
-    Synprs.harpoon_hypothetical -> Synext.harpoon_hypothetical t
+    state -> Synprs.harpoon_hypothetical -> Synext.harpoon_hypothetical
 
   val disambiguate_harpoon_repl_command :
-    Synprs.harpoon_repl_command -> Synext.harpoon_repl_command t
+    state -> Synprs.harpoon_repl_command -> Synext.harpoon_repl_command
 end
 
 module Make

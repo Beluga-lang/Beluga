@@ -1,3 +1,5 @@
+(** State monad definition. *)
+
 (** The type of state monads. *)
 module type STATE = sig
   (** The type of states inside the monad. *)

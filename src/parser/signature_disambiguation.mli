@@ -4,35 +4,38 @@ open Disambiguation_state
 
 module type SIGNATURE_DISAMBIGUATION = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   (** {1 Disambiguation} *)
 
   val disambiguate_pragma :
-    Synprs.signature_pragma -> Synext.signature_pragma t
+    state -> Synprs.signature_pragma -> Synext.signature_pragma
 
   val disambiguate_global_pragma :
-    Synprs.signature_global_pragma -> Synext.signature_global_pragma t
+    state -> Synprs.signature_global_pragma -> Synext.signature_global_pragma
 
   val disambiguate_totality_declaration :
-       Synprs.signature_totality_declaration
-    -> Synext.signature_totality_declaration t
+       state
+    -> Synprs.signature_totality_declaration
+    -> Synext.signature_totality_declaration
 
   val disambiguate_numeric_totality_order :
-       Int.t Synprs.signature_totality_order
-    -> Int.t Synext.signature_totality_order t
+       state
+    -> Int.t Synprs.signature_totality_order
+    -> Int.t Synext.signature_totality_order
 
   val disambiguate_named_totality_order :
-       Identifier.t Synprs.signature_totality_order
-    -> Identifier.t Synext.signature_totality_order t
+       state
+    -> Identifier.t Synprs.signature_totality_order
+    -> Identifier.t Synext.signature_totality_order
 
   val disambiguate_declaration :
-    Synprs.signature_declaration -> Synext.signature_declaration t
+    state -> Synprs.signature_declaration -> Synext.signature_declaration
 
   val disambiguate_signature_file :
-    Synprs.signature_file -> Synext.signature_file t
+    state -> Synprs.signature_file -> Synext.signature_file
 
-  val disambiguate_signature : Synprs.signature -> Synext.signature t
+  val disambiguate_signature : state -> Synprs.signature -> Synext.signature
 end
 
 module Make

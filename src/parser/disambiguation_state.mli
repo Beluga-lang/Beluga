@@ -100,50 +100,52 @@ end
     signatures. *)
 module type DISAMBIGUATION_STATE = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   module Entry : ENTRY
 
   (** {1 Variables} *)
 
-  (** [add_lf_variable ?location identifier state] is [(state', ())] where
-      [state'] is derived from [state] by the addition of [identifier] as a
+  (** [add_lf_variable state ?location identifier] adds [identifier] as a
       bound LF variable, with binding site [location]. If
       [location = Option.None], then [identifier]'s location is used instead.
 
       This is mostly used for testing. For locally binding an LF variable,
       see {!with_bound_lf_variable}. *)
-  val add_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_lf_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_meta_variable] is like {!add_lf_variable}, but the identifier is
       added as a bound meta-variable. *)
-  val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_meta_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_parameter_variable] is like {!add_lf_variable}, but the identifier
       is added as a bound parameter variable (those variables prefixed by
       ['#'] like ["#p"]). *)
   val add_parameter_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_substitution_variable] is like {!add_lf_variable}, but the
       identifier is added as a bound substitution variable (those variables
       prefixed by ['$'] like ["$S"]). *)
   val add_substitution_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_context_variable] is like {!add_lf_variable}, but the identifier
       is added as a bound context variable. *)
-  val add_context_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_context_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_computation_variable] is like {!add_lf_variable}, but the
       identifier is added as a bound computation-level variable. *)
   val add_computation_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
-  (** [add_free_lf_variable ?location identifier] is
-      [add_lf_variable ?location identifier], with the additional behaviour
-      of adding [identifier] as an inner pattern bound identifier and as a
-      free variable during pattern disambiguation. This means that
+  (** [add_free_lf_variable state ?location identifier] is
+      [add_lf_variable state ?location identifier], with the additional
+      behaviour of adding [identifier] as an inner pattern bound identifier
+      and as a free variable during pattern disambiguation. This means that
       [identifier] can subsequently be looked up as a bound LF variable
       during pattern disambiguation. This effectively allows free LF
       variables to appear multiple times (non-linearly) in patterns.
@@ -151,41 +153,41 @@ module type DISAMBIGUATION_STATE = sig
       See {!with_free_variables_as_pattern_variables} for the handler for
       converting free variables in patterns to binders for use as bound
       variables in expressions. *)
-  val add_free_lf_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_free_lf_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_free_meta_variable] is like {!add_free_lf_variable}, but the
       identifier is added as a free meta-variable. *)
   val add_free_meta_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_free_meta_variable] is like {!add_free_lf_variable}, but the
       identifier is added as a free parameter variable. *)
   val add_free_parameter_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_free_meta_variable] is like {!add_free_lf_variable}, but the
       identifier is added as a free substitution variable. *)
   val add_free_substitution_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   (** [add_free_meta_variable] is like {!add_free_lf_variable}, but the
       identifier is added as a free context variable. *)
   val add_free_context_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
-  (** [add_free_computation_variable ?location identifier state] is
-      [(state', ())] where [state'] is derived from [state] with the addition
-      of [identifier] as a free variable during pattern disambiguation. This
-      differs from {!add_free_lf_variable} in that free computation-level
-      variables in patterns do not have implicit binders (because they are
-      not part of the meta-context), and hence must appear only once
-      (linearly) in the overall pattern. *)
+  (** [add_free_computation_variable state ?location identifier] adds
+      [identifier] to [state] as a free variable during pattern
+      disambiguation. This differs from {!add_free_lf_variable} in that free
+      computation-level variables in patterns do not have implicit binders
+      (because they are not part of the meta-context), and hence must appear
+      only once (linearly) in the overall pattern. *)
   val add_free_computation_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
-  (** [with_bound_lf_variable ?location identifier m state] is [(state', x)]
-      where [x] is the result of running [m] in the local state derived from
-      [state] having [identifier] as a bound LF variable.
+  (** [with_bound_lf_variable state ?location identifier m] is the result of
+      running [m] in the local state derived from [state] having [identifier]
+      as a bound LF variable.
 
       When disambiguating a pattern, [identifier] is additionally added as an
       inner pattern binding.
@@ -198,28 +200,28 @@ module type DISAMBIGUATION_STATE = sig
         with_bound_lf_variable x (disambiguate_lf_term m)
       ]} *)
   val with_bound_lf_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_meta_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_parameter_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_substitution_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_context_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_contextual_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_computation_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
-  (** [with_bound_pattern_meta_variable ?location identifier m] is like
-      [with_bound_meta_variable ?location identifier m] except that
+  (** [with_bound_pattern_meta_variable state ?location identifier m] is like
+      [with_bound_meta_variable state ?location identifier m] except that
       [identifier] is also treated as a free variable so that in
       {!with_free_variables_as_pattern_variables} it can be treated as a
       pattern variable usable in the expression.
@@ -236,22 +238,21 @@ module type DISAMBIGUATION_STATE = sig
         | { B : [g |- o] } [g |- impi \u. D] => ?
       ]} *)
   val with_bound_pattern_meta_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_pattern_parameter_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_pattern_substitution_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   val with_bound_pattern_context_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
-  (** [with_free_variables_as_pattern_variables ~pattern ~expression state]
-      is [(state', x')], where [x'] is the result of running [expression]
-      with the free variables added in [pattern] as bound variables. This is
-      used to disambiguate [expression] with bound variables arising from
-      free variables in [pattern].
+  (** [with_free_variables_as_pattern_variables state ~pattern ~expression state]
+      is the result of running [expression] with the free variables added in
+      [pattern] as bound variables. This is used to disambiguate [expression]
+      with bound variables arising from free variables in [pattern].
 
       + [pattern] is run with respect to [state] while keeping track of free
         variables. Variables bound outside the pattern are ignored in
@@ -281,66 +282,65 @@ module type DISAMBIGUATION_STATE = sig
         This is because the pattern is reconstructed as
         [{g : ctx} {M : \[g |- nat\]} (\[g |- s M\], \[g |- s M\])]. *)
   val with_free_variables_as_pattern_variables :
-    pattern:'a t -> expression:('a -> 'b t) -> 'b t
+    state -> pattern:(state -> 'a) -> expression:(state -> 'a -> 'b) -> 'b
 
-  (** [with_scope m] runs [m] in a nested bindings scope that is discarded
-      afterwards. *)
-  val with_scope : 'a t -> 'a t
+  (** [with_scope state m] runs [m] in a nested bindings scope that is
+      discarded afterwards. *)
+  val with_scope : state -> (state -> 'a) -> 'a
 
-  (** [with_parent_scope m] runs [m] in the bindings scope parent to the
-      current bindings scope.
+  (** [with_parent_scope state m] runs [m] while ignoring the topmost scope.
 
       This is used for the disambiguation of Harpoon proof scripts because
       Harpoon hypotheticals are already serialized with all the identifiers
       in the meta-level and computation-level contexts of the proof. *)
-  val with_parent_scope : 'a t -> 'a t
+  val with_parent_scope : state -> (state -> 'a) -> 'a
 
-  (** [with_bindings_checkpoint m] runs [m] with a checkpoint on the
+  (** [with_bindings_checkpoint state m] runs [m] with a checkpoint on the
       bindings' state to backtrack to in case [m] raises an exception. *)
-  val with_bindings_checkpoint : 'a t -> 'a t
+  val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
   (** {1 Constants} *)
 
-  (** [add_lf_type_constant ?location ?arity identifier state] is
-      [(state', ())] where [state'] is derived from [state] by the addition
-      of [identifier] as a bound LF type-level constant.
+  (** [add_lf_type_constant state ?location ?arity identifier] adds
+      [identifier] as a bound LF type-level constant.
 
       In the disambiguation of a module's declaration, this also adds the
       constant as one of the module's declarations. *)
   val add_lf_type_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_lf_term_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
-  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_schema_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   val add_inductive_computation_type_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_stratified_computation_type_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_coinductive_computation_type_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_abbreviation_computation_type_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_computation_term_constructor :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
   val add_program_constant :
-    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+    state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
-  (** [add_module ?location identifier m state] is [(state', x)] where [x] is
-      the result of running [m] in a module disambiguation state, whereby
-      added constants are kept track of as declarations in the module having
-      [identifier]. *)
-  val add_module : ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+  (** [add_module state ?location identifier m] is the result of running [m]
+      in a module disambiguation state, whereby added constants are kept
+      track of as declarations in the module having [identifier]. *)
+  val add_module :
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
   (** {1 Lookups} *)
 
@@ -350,24 +350,23 @@ module type DISAMBIGUATION_STATE = sig
 
   exception Unbound_namespace of Qualified_identifier.t
 
-  (** [lookup_toplevel identifier state] is [(state', Result.Ok entry)] if
-      [identifier] resolves to [entry] in [state], and
-      [(state', Result.Error (Unbound_identifier identifier))] otherwise. *)
-  val lookup_toplevel : Identifier.t -> (Entry.t, exn) Result.t t
+  (** [lookup_toplevel state identifier] is [entry] if [identifier] resolves
+      to [entry] in [state]. If [identifier] is unbound in [state], then
+      [Unbound_identifier identifier] is raised. *)
+  val lookup_toplevel : state -> Identifier.t -> Entry.t
 
-  (** [lookup identifier state] is [(state', Result.Ok entry)] if
-      [identifier] resolves to [entry] in [state]. Otherwise, it is:
+  (** [lookup state identifier] is [entry] if [identifier] resolves to
+      [entry] in [state]. Otherwise:
 
-      - [(state', Result.Error (Unbound_identifier ident))] if the first
-        segment [ident] in [identifier] is unbound.
-      - [(state', Result.Error (Unbound_namespace namespace_identifier))] if
-        a segment in [identifier] other than the first or last is unbound.
-      - [(state', Result.Error (Unbound_qualified_identifier identifier))] if
-        the last segment in [identifier] is unbound. *)
-  val lookup : Qualified_identifier.t -> (Entry.t, exn) Result.t t
+      - [Unbound_identifier ident)] is raised if the first segment [ident] in
+        [identifier] is unbound.
+      - [Unbound_namespace namespace_identifier] is raised if a segment in
+        [identifier] other than the first or last is unbound.
+      - [Unbound_qualified_identifier identifier] is raised if the last
+        segment in [identifier] is unbound. *)
+  val lookup : state -> Qualified_identifier.t -> Entry.t
 
-  (** [maximum_lookup segments state] is [(state', result)] where [result] is
-      either:
+  (** [maximum_lookup state segments] is either:
 
       - [`Unbound segments] if the first segment in [segments] is unbound in
         [state].
@@ -377,7 +376,8 @@ module type DISAMBIGUATION_STATE = sig
       - [`Bound (identifier, entry)] if [segments] form a qualified
         identifier bound to [entry] in [state]. *)
   val maximum_lookup :
-       Identifier.t List1.t
+       state
+    -> Identifier.t List1.t
     -> [ `Unbound of Identifier.t List1.t
        | `Partially_bound of
          Identifier.t List.t
@@ -385,7 +385,6 @@ module type DISAMBIGUATION_STATE = sig
          * Identifier.t List1.t
        | `Bound of Qualified_identifier.t * Entry.t
        ]
-       t
 
   (** [actual_binding_exn identifier entry] is an exception reporting what
       sort of [entry] is bound at [identifier]. The exception is annotated
@@ -394,101 +393,89 @@ module type DISAMBIGUATION_STATE = sig
 
   (** {1 Signature Operations} *)
 
-  (** [open_module module_identifier state] is [(state', ())] where [state']
-      is derived from [state] with the addition of the exported constants
-      from the module bound to [module_identifier] as toplevel entries. If
-      [module_identifier] is unbound in [state], then an exception is raised. *)
-  val open_module : Qualified_identifier.t -> Unit.t t
+  (** [open_module state module_identifier] adds the exported constants from
+      the module bound to [module_identifier] as toplevel entries in [state].
+      If [module_identifier] is unbound in [state], then an exception is
+      raised. *)
+  val open_module : state -> Qualified_identifier.t -> Unit.t
 
-  (** [get_default_associativity state] is [(state', default_associativity)]
-      where [default_associativity] is the associativity to use for infix
+  (** [get_default_associativity state] is the associativity to use for infix
       operators defined by the user using a pragma, without specifying the
       infix operator's associativity. *)
-  val get_default_associativity : Associativity.t t
+  val get_default_associativity : state -> Associativity.t
 
-  (** [set_default_associativity default_associativity state] is
-      [(state', ())] where [state'] is derived from [state] with
+  (** [set_default_associativity state default_associativity] sets
       [default_associativity] as the associativity to return from
       {!get_default_associativity}. *)
-  val set_default_associativity : Associativity.t -> Unit.t t
+  val set_default_associativity : state -> Associativity.t -> Unit.t
 
-  (** [get_default_precedence state] is [(state', default_precedence)] where
-      [default_precedence] is the precedence to use for operators defined by
-      the user using a pragma, without specifying the operator's precedence. *)
-  val get_default_precedence : Int.t t
+  (** [get_default_precedence state] is the precedence to use for operators
+      defined by the user using a pragma, without specifying the operator's
+      precedence. *)
+  val get_default_precedence : state -> Int.t
 
-  (** [set_default_precedence default_precedence state] is [(state', ())]
-      where [state'] is derived from [state] with [default_precedence] as the
-      precedence to return from {!get_default_precedence}. *)
-  val set_default_precedence : Int.t -> Unit.t t
+  (** [set_default_precedence state default_precedence] sets
+      [default_precedence] as the precedence to return from
+      {!get_default_precedence}. *)
+  val set_default_precedence : state -> Int.t -> Unit.t
 
-  (** [add_prefix_notation ?precedence identifier state] is [(state', ())]
-      where [state'] is derived from [state] by the addition of a prefix
+  (** [add_prefix_notation state ?precedence identifier] adds a prefix
       notation for [identifier]. If [precedence = Option.None], then
       {!get_default_precedence} is used instead.
 
       An exception is raised if [identifier] is unbound in [state], not bound
       to a constant, or bound to a constant of an unknown or invalid arity. *)
   val add_prefix_notation :
-    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  (** [add_infix_notation ?precedence ?associativity identifier state] is
-      [(state', ())] where [state'] is derived from [state] by the addition
-      of an infix notation for [identifier]. If [precedence = Option.None],
-      then {!get_default_precedence} is used instead. Likewise, if
+  (** [add_infix_notation state ?precedence ?associativity identifier] adds
+      an infix notation for [identifier]. If [precedence = Option.None], then
+      {!get_default_precedence} is used instead. Likewise, if
       [associativity = Option.None], then {!get_default_associativity} is
       used instead.
 
       An exception is raised if [identifier] is unbound in [state], not bound
       to a constant, or bound to a constant of an unknown or invalid arity. *)
   val add_infix_notation :
-       ?precedence:Int.t
+       state
+    -> ?precedence:Int.t
     -> ?associativity:Associativity.t
     -> Qualified_identifier.t
-    -> Unit.t t
+    -> Unit.t
 
-  (** [add_postfix_notation ?precedence identifier state] is [(state', ())]
-      where [state'] is derived from [state] by the addition of a postfix
+  (** [add_postfix_notation state ?precedence identifier] adds a postfix
       notation for [identifier]. If [precedence = Option.None], then
       {!get_default_precedence} is used instead.
 
       An exception is raised if [identifier] is unbound in [state], not bound
       to a constant, or bound to a constant of an unknown or invalid arity. *)
   val add_postfix_notation :
-    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  (** [lookup_operator identifier state] is [(state', Option.Some operator)]
-      if [identifier] is bound to an operator with descriptor [operator] in
-      [state], and [(state', Option.None)] otherwise.
+  (** [lookup_operator state identifier] is [Option.Some operator] if
+      [identifier] is bound to an operator with descriptor [operator] in
+      [state], and [Option.None] otherwise.
 
       This is used to resolve operators in the disambiguation of
       applications, which are parsed as lists of expressions. *)
-  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
+  val lookup_operator :
+    state -> Qualified_identifier.t -> Operator.t Option.t
 
-  (** [add_module_abbreviation ?location module_identifier abbreviation state]
-      is [(state', ())] where [state'] is derived from [state] by the
-      addition of the synonym [abbreviation] for the module bound to
-      [identifier] in [state].
+  (** [add_module_abbreviation state ?location module_identifier abbreviation]
+      adds the synonym [abbreviation] for the module bound to [identifier] in
+      [state].
 
       An exception is raised if [module_identifier] is unbound in [state], or
       if [module_identifier] is not bound to a module in [state]. *)
   val add_module_abbreviation :
-       ?location:Location.t
+       state
+    -> ?location:Location.t
     -> Qualified_identifier.t
     -> Identifier.t
-    -> Unit.t t
+    -> Unit.t
 end
 
-(** Concrete implementation of {!DISAMBIGUATION_STATE} using a persistent
-    (immutable) datastructure. *)
-module Persistent_disambiguation_state : sig
-  (** @closed *)
-  include DISAMBIGUATION_STATE
-
-  val initial_state : state
-end
-
-module Mutable_disambiguation_state_monad : sig
+module Disambiguation_state : sig
   (** @closed *)
   include DISAMBIGUATION_STATE
 

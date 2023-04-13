@@ -9,57 +9,59 @@ module type BASE_PRECEDENCE = sig
 end
 
 module type PRECEDENCE_STATE = sig
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
-  val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
+  val lookup_operator_precedence :
+    state -> Qualified_identifier.t -> Int.t Option.t
 end
 
 module Make_precedences (S : PRECEDENCE_STATE) : sig
-  include State.STATE with type state = S.state
+  include Imperative_state.IMPERATIVE_STATE with type state = S.state
 
   (** {1 Precedence of LF Syntax} *)
 
   module Lf_precedence : BASE_PRECEDENCE
 
-  val precedence_of_lf_kind : lf_kind -> Lf_precedence.precedence t
+  val precedence_of_lf_kind : state -> lf_kind -> Lf_precedence.precedence
 
-  val precedence_of_lf_typ : lf_typ -> Lf_precedence.precedence t
+  val precedence_of_lf_typ : state -> lf_typ -> Lf_precedence.precedence
 
-  val precedence_of_lf_term : lf_term -> Lf_precedence.precedence t
+  val precedence_of_lf_term : state -> lf_term -> Lf_precedence.precedence
 
   (** {1 Precedence of Contextual LF Syntax} *)
 
   module Clf_precedence : BASE_PRECEDENCE
 
-  val precedence_of_clf_typ : clf_typ -> Clf_precedence.precedence t
+  val precedence_of_clf_typ : state -> clf_typ -> Clf_precedence.precedence
 
-  val precedence_of_clf_term : clf_term -> Clf_precedence.precedence t
+  val precedence_of_clf_term : state -> clf_term -> Clf_precedence.precedence
 
   val precedence_of_clf_term_pattern :
-    clf_term_pattern -> Clf_precedence.precedence t
+    state -> clf_term_pattern -> Clf_precedence.precedence
 
   (** {1 Precedence of Meta-Level Syntax} *)
 
   module Schema_precedence : BASE_PRECEDENCE
 
-  val precedence_of_schema : schema -> Schema_precedence.precedence t
+  val precedence_of_schema : state -> schema -> Schema_precedence.precedence
 
   (** {1 Precedence of Computation-Level Syntax} *)
 
   module Comp_sort_precedence : BASE_PRECEDENCE
 
   val precedence_of_comp_kind :
-    comp_kind -> Comp_sort_precedence.precedence t
+    state -> comp_kind -> Comp_sort_precedence.precedence
 
-  val precedence_of_comp_typ : comp_typ -> Comp_sort_precedence.precedence t
+  val precedence_of_comp_typ :
+    state -> comp_typ -> Comp_sort_precedence.precedence
 
   module Comp_expression_precedence : BASE_PRECEDENCE
 
   val precedence_of_comp_expression :
-    comp_expression -> Comp_expression_precedence.precedence t
+    state -> comp_expression -> Comp_expression_precedence.precedence
 
   module Comp_pattern_precedence : BASE_PRECEDENCE
 
   val precedence_of_comp_pattern :
-    comp_pattern -> Comp_pattern_precedence.precedence t
+    state -> comp_pattern -> Comp_pattern_precedence.precedence
 end

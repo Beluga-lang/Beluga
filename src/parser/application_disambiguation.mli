@@ -39,14 +39,6 @@ module type APPLICATION_DISAMBIGUATION = sig
     source List2.t -> expression * target List1.t
 end
 
-module Make_application_parser
-    (Expression : EXPRESSION with type location = Location.t) :
-  APPLICATION_DISAMBIGUATION with type expression = Expression.t
-
-module Make_application_rewriter
-    (Expression : EXPRESSION with type location = Location.t) :
-  APPLICATION_DISAMBIGUATION with type expression = Expression.t
-
 module Make_application_disambiguation
     (Expression : EXPRESSION with type location = Location.t) :
   APPLICATION_DISAMBIGUATION with type expression = Expression.t

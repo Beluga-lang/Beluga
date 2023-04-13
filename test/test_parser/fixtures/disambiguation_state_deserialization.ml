@@ -1,7 +1,6 @@
 open Support
 open Beluga_syntax
-open Beluga_parser
-module Disambiguation_state = Mutable.Disambiguation_state
+open Beluga_parser.Beluga_parser
 
 exception Unsupported_sort of string
 
@@ -47,34 +46,34 @@ let operator_opt_of_json json =
       in
       Option.some operator
 
-let set_operator identifier operator_opt =
+let set_operator state identifier operator_opt =
   let open Disambiguation_state in
   let qualified_identifier = Qualified_identifier.make_simple identifier in
   match operator_opt with
-  | Option.None -> return ()
+  | Option.None -> ()
   | Option.Some operator -> (
       match Operator.fixity operator with
       | Fixity.Prefix ->
-          add_prefix_notation
+          add_prefix_notation state
             ~precedence:(Operator.precedence operator)
             qualified_identifier
       | Fixity.Infix ->
-          add_infix_notation
+          add_infix_notation state
             ~precedence:(Operator.precedence operator)
             ~associativity:(Operator.associativity operator)
             qualified_identifier
       | Fixity.Postfix ->
-          add_postfix_notation
+          add_postfix_notation state
             ~precedence:(Operator.precedence operator)
             qualified_identifier)
 
-let rec add_json_entries json =
+let rec add_json_entries state json =
   let open Disambiguation_state in
   let open Yojson.Safe.Util in
   let entries = json |> member "entries" |> to_list in
-  traverse_list_void add_json_entry entries
+  traverse_list_void state add_json_entry entries
 
-and add_json_entry json =
+and add_json_entry state json =
   let open Disambiguation_state in
   let open Yojson.Safe.Util in
   let sort = json |> member "sort" |> to_string in
@@ -83,56 +82,58 @@ and add_json_entry json =
       let identifier = json |> member "identifier" |> identifier_of_json in
       let arity = json |> member "arity" |> to_int_option in
       let operator_opt = operator_opt_of_json json in
-      add_lf_type_constant ?arity identifier
-      <& set_operator identifier operator_opt
+      add_lf_type_constant state ?arity identifier;
+      set_operator state identifier operator_opt
   | "lf_term_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let arity = json |> member "arity" |> to_int_option in
       let operator_opt = operator_opt_of_json json in
-      add_lf_term_constant ?arity identifier
-      <& set_operator identifier operator_opt
+      add_lf_term_constant state ?arity identifier;
+      set_operator state identifier operator_opt
   | "module" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_module identifier (add_json_entries json)
+      add_module state identifier (fun state -> add_json_entries state json)
   | "parameter_variable" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_parameter_variable identifier
+      add_parameter_variable state identifier
   | "context_variable" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_context_variable identifier
+      add_context_variable state identifier
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_schema_constant identifier
+      add_schema_constant state identifier
   | "comp_inductive_type_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let arity = json |> member "arity" |> to_int_option in
       let operator_opt = operator_opt_of_json json in
-      add_inductive_computation_type_constant ?arity identifier
-      <& set_operator identifier operator_opt
+      add_inductive_computation_type_constant state ?arity identifier;
+      set_operator state identifier operator_opt
   | "comp_constructor" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let arity = json |> member "arity" |> to_int_option in
       let operator_opt = operator_opt_of_json json in
-      add_computation_term_constructor ?arity identifier
-      <& set_operator identifier operator_opt
+      add_computation_term_constructor state ?arity identifier;
+      set_operator state identifier operator_opt
   | "comp_destructor" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_computation_term_destructor identifier
+      add_computation_term_destructor state identifier
   | "program_constant" -> (
       let identifier = json |> member "identifier" |> identifier_of_json in
       match (member "fixity" json, member "precedence" json) with
-      | `Null, `Null -> add_program_constant identifier
+      | `Null, `Null -> add_program_constant state identifier
       | `Null, _
       | _, `Null ->
           Error.raise Missing_fixity_or_precedence
       | _ ->
           let arity = json |> member "arity" |> to_int_option in
           let operator_opt = operator_opt_of_json json in
-          add_program_constant ?arity identifier
-          <& set_operator identifier operator_opt)
+          add_program_constant state ?arity identifier;
+          set_operator state identifier operator_opt)
   | sort -> Error.raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =
   let open Disambiguation_state in
   let json = Yojson.Safe.from_file filename in
-  exec (add_json_entries json) (create_initial_state ())
+  let state = create_initial_state () in
+  add_json_entries state json;
+  state

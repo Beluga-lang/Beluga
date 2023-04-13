@@ -1,5 +1,10 @@
 open Support
 
+let[@inline] with_namespaces_and_identifier qualified_identifier f =
+  let namespaces = Qualified_identifier.namespaces qualified_identifier in
+  let identifier = Qualified_identifier.name qualified_identifier in
+  f namespaces identifier
+
 exception Unbound_identifier = Identifier.Unbound_identifier
 
 exception
@@ -10,72 +15,64 @@ exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
 type 'a node =
   { entry : 'a
-  ; subtree : 'a t
+  ; subtree : 'a tree
   }
 
-and 'a t = 'a node Identifier.Hashtbl.t
+and 'a tree = 'a node Identifier.Map.t
 
-let create () = Identifier.Hashtbl.create 0
+type 'a t = 'a tree
 
-let is_empty tree = Identifier.Hashtbl.length tree = 0
+let empty = Identifier.Map.empty
 
-let[@inline] [@specialise] with_namespaces_and_identifier
-    qualified_identifier f =
-  let namespaces = Qualified_identifier.namespaces qualified_identifier in
-  let identifier = Qualified_identifier.name qualified_identifier in
-  f namespaces identifier
+let is_empty = Identifier.Map.is_empty
 
-let[@inline] add_toplevel identifier entry ?(subtree = create ()) tree =
-  Identifier.Hashtbl.add tree identifier { entry; subtree }
+let[@inline] add_toplevel identifier entry ?(subtree = empty) tree =
+  Identifier.Map.add identifier { entry; subtree } tree
 
 let rec add_nested namespaces identifier node tree =
   match namespaces with
-  | [] -> Identifier.Hashtbl.add tree identifier node
+  | [] -> Identifier.Map.add identifier node tree
   | n :: ns -> (
-      match Identifier.Hashtbl.find_opt tree n with
+      match Identifier.Map.find_opt n tree with
       | Option.None ->
           Error.raise_notrace
             (Unbound_namespace (Qualified_identifier.make_simple n))
-      | Option.Some { subtree; _ } -> (
-          try add_nested ns identifier node subtree with
-          | Unbound_namespace ns ->
-              Error.raise_notrace
-                (Unbound_namespace (Qualified_identifier.prepend_module n ns))
-          ))
+      | Option.Some ({ subtree; _ } as namespace) ->
+          let subtree' =
+            try add_nested ns identifier node subtree with
+            | Unbound_namespace ns ->
+                Error.raise_notrace
+                  (Unbound_namespace
+                     (Qualified_identifier.prepend_module n ns))
+          in
+          Identifier.Map.add n { namespace with subtree = subtree' } tree)
 
-let add qualified_identifier entry ?(subtree = create ()) tree =
+let add qualified_identifier entry ?(subtree = empty) tree =
   with_namespaces_and_identifier qualified_identifier
     (fun namespaces identifier ->
       add_nested namespaces identifier { entry; subtree } tree)
 
 let add_all t1 t2 =
-  Identifier.Hashtbl.iter
-    (fun identifier entry -> Identifier.Hashtbl.add t1 identifier entry)
-    t2
+  Identifier.Map.union (fun _identifier _e1 e2 -> Option.some e2) t1 t2
 
 let remove identifier tree =
-  match Identifier.Hashtbl.find_opt tree identifier with
+  match Identifier.Map.find_opt identifier tree with
   | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
-  | Option.Some _ -> Identifier.Hashtbl.remove tree identifier
+  | Option.Some _ -> Identifier.Map.remove identifier tree
 
 let lookup_toplevel identifier tree =
-  match Identifier.Hashtbl.find_opt tree identifier with
+  match Identifier.Map.find_opt identifier tree with
   | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
   | Option.Some { entry; subtree } -> (entry, subtree)
-
-let lookup_toplevel_opt identifier tree =
-  match Identifier.Hashtbl.find_opt tree identifier with
-  | Option.None -> Option.none
-  | Option.Some { entry; subtree } -> Option.some (entry, subtree)
 
 let rec lookup_nested namespaces identifier tree =
   match namespaces with
   | [] -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
+      match Identifier.Map.find_opt identifier tree with
       | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
       | Option.Some { entry; subtree } -> (entry, subtree))
   | n :: ns -> (
-      match Identifier.Hashtbl.find_opt tree n with
+      match Identifier.Map.find_opt n tree with
       | Option.None ->
           Error.raise_notrace
             (Unbound_namespace (Qualified_identifier.make_simple n))
@@ -103,20 +100,14 @@ let lookup_toplevel_filter identifier p tree =
   if p value then (value, subtree)
   else Error.raise_notrace (Unbound_identifier identifier)
 
-let lookup_toplevel_filter_opt identifier p tree =
-  match lookup_toplevel_opt identifier tree with
-  | Option.None -> Option.none
-  | Option.Some (value, subtree) ->
-      if p value then Option.some (value, subtree) else Option.none
-
 let rec maximum_lookup identifiers tree =
   match identifiers with
   | List1.T (identifier, []) -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
+      match Identifier.Map.find_opt identifier tree with
       | Option.None -> `Unbound (List1.singleton identifier)
       | Option.Some { entry; subtree } -> `Bound (entry, subtree))
   | List1.T (x1, x2 :: xs) -> (
-      match Identifier.Hashtbl.find_opt tree x1 with
+      match Identifier.Map.find_opt x1 tree with
       | Option.None -> `Unbound identifiers
       | Option.Some { entry; subtree } -> (
           match maximum_lookup (List1.from x2 xs) subtree with
@@ -129,13 +120,13 @@ let rec maximum_lookup identifiers tree =
 let rec maximum_lookup_filter identifiers p tree =
   match identifiers with
   | List1.T (identifier, []) -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
+      match Identifier.Map.find_opt identifier tree with
       | Option.None -> `Unbound (List1.singleton identifier)
       | Option.Some { entry; subtree } ->
           if p entry then `Bound (entry, subtree)
           else `Unbound (List1.singleton identifier))
   | List1.T (x1, x2 :: xs) -> (
-      match Identifier.Hashtbl.find_opt tree x1 with
+      match Identifier.Map.find_opt x1 tree with
       | Option.None -> `Unbound identifiers
       | Option.Some { entry; subtree } ->
           if p entry then
@@ -154,11 +145,11 @@ let open_namespace qualified_identifier tree =
 let rec is_bound_nested namespaces identifier tree =
   match namespaces with
   | [] -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
+      match Identifier.Map.find_opt identifier tree with
       | Option.None -> false
       | Option.Some _node -> true)
   | n :: ns -> (
-      match Identifier.Hashtbl.find_opt tree n with
+      match Identifier.Map.find_opt n tree with
       | Option.None -> false
       | Option.Some { subtree; _ } -> is_bound_nested ns identifier subtree)
 
@@ -170,19 +161,23 @@ let is_qualified_identifier_bound qualified_identifier tree =
 let rec replace_nested namespaces identifier f tree =
   match namespaces with
   | [] -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
+      match Identifier.Map.find_opt identifier tree with
       | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
       | Option.Some { entry; subtree } ->
           let entry', subtree' = f entry subtree in
-          Identifier.Hashtbl.add tree identifier
-            { entry = entry'; subtree = subtree' })
+          Identifier.Map.add identifier
+            { entry = entry'; subtree = subtree' }
+            tree)
   | n :: ns -> (
-      match Identifier.Hashtbl.find_opt tree n with
+      match Identifier.Map.find_opt n tree with
       | Option.None ->
           Error.raise_notrace
             (Unbound_namespace (Qualified_identifier.make_simple n))
-      | Option.Some { subtree; _ } -> (
-          try replace_nested ns identifier f subtree with
+      | Option.Some ({ subtree; _ } as node) -> (
+          try
+            let subtree' = replace_nested ns identifier f subtree in
+            Identifier.Map.add n { node with subtree = subtree' } tree
+          with
           | Unbound_identifier identifier ->
               Error.raise_notrace
                 (Unbound_qualified_identifier
@@ -202,27 +197,16 @@ let replace qualified_identifier f tree =
     (fun namespaces identifier ->
       replace_nested namespaces identifier f tree)
 
-let rec mem_nested namespaces identifier tree =
-  match namespaces with
-  | [] -> Identifier.Hashtbl.mem tree identifier
-  | n :: ns -> (
-      match Identifier.Hashtbl.find_opt tree n with
-      | Option.None -> false
-      | Option.Some { subtree; _ } -> mem_nested ns identifier subtree)
-
-let mem qualified_identifier tree =
-  with_namespaces_and_identifier qualified_identifier mem_nested tree
-
 let size =
   let rec size_tl tree acc =
-    Identifier.Hashtbl.fold
+    Identifier.Map.fold
       (fun _identifier { subtree; _ } acc -> size_tl subtree (acc + 1))
       tree acc
   in
   fun tree -> size_tl tree 0
 
 let rec to_seq tree =
-  Identifier.Hashtbl.fold
+  Identifier.Map.fold
     (fun identifier { entry; subtree } acc ->
       let binding = (Qualified_identifier.make_simple identifier, entry) in
       let subtree_bindings =

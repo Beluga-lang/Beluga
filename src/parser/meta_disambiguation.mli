@@ -4,24 +4,31 @@ open Disambiguation_state
 
 module type META_DISAMBIGUATION = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   (** {1 Disambiguation} *)
 
-  val disambiguate_meta_typ : Synprs.meta_thing -> Synext.meta_typ t
+  val disambiguate_meta_typ : state -> Synprs.meta_thing -> Synext.meta_typ
 
-  val disambiguate_meta_object : Synprs.meta_thing -> Synext.meta_object t
+  val disambiguate_meta_object :
+    state -> Synprs.meta_thing -> Synext.meta_object
 
   val disambiguate_meta_pattern :
-    Synprs.meta_thing -> Synext.Meta.Pattern.t t
+    state -> Synprs.meta_thing -> Synext.Meta.Pattern.t
 
-  val disambiguate_schema : Synprs.schema_object -> Synext.schema t
+  val disambiguate_schema : state -> Synprs.schema_object -> Synext.schema
 
   val with_disambiguated_meta_context :
-    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
+       state
+    -> Synprs.meta_context_object
+    -> (state -> Synext.meta_context -> 'a)
+    -> 'a
 
   val with_disambiguated_meta_context_pattern :
-    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
+       state
+    -> Synprs.meta_context_object
+    -> (state -> Synext.meta_context -> 'a)
+    -> 'a
 end
 
 module Make

@@ -93,149 +93,20 @@ module Make
   val get_disambiguation_state : Disambiguation_state.state t
 
   val parse_and_disambiguate :
-    parser:'a Parsing.t -> disambiguator:('a -> 'b Disambiguation.t) -> 'b t
-end
-
-module Make_demonad
-    (Parser_state : PARSER_STATE
-                      with type token = Located_token.t
-                       and type location = Location.t)
-    (Disambiguation_state : module type of
-                              Disambiguation_state_demonad
-                              .Mutable_disambiguation_state) : sig
-  module Parsing : sig
-    include module type of Parser_state
-
-    include Parser_combinator.PARSER with type state := state
-
-    include Common_parser.COMMON_PARSER with type state := state
-
-    include Lf_parser.LF_PARSER with type state := state
-
-    include Clf_parser.CLF_PARSER with type state := state
-
-    include Meta_parser.META_PARSER with type state := state
-
-    include Comp_parser.COMP_PARSER with type state := state
-
-    include Harpoon_parser.HARPOON_PARSER with type state := state
-
-    include Signature_parser.SIGNATURE_PARSER with type state := state
-  end
-
-  module Disambiguation : sig
-    include Disambiguation_state_demonad.DISAMBIGUATION_STATE
-
-    include
-      Lf_disambiguation_demonad.LF_DISAMBIGUATION with type state := state
-
-    include
-      Clf_disambiguation_demonad.CLF_DISAMBIGUATION with type state := state
-
-    include
-      Meta_disambiguation_demonad.META_DISAMBIGUATION
-        with type state := state
-
-    include
-      Comp_disambiguation_demonad.COMP_DISAMBIGUATION
-        with type state := state
-
-    include
-      Harpoon_disambiguation_demonad.HARPOON_DISAMBIGUATION
-        with type state := state
-
-    include
-      Signature_disambiguation_demonad.SIGNATURE_DISAMBIGUATION
-        with type state := state
-  end
-
-  include State.STATE
-
-  val set_parser_state : Parser_state.state -> Unit.t t
-
-  val get_parser_state : Parser_state.state t
-
-  val set_disambiguation_state : Disambiguation_state.state -> Unit.t t
-
-  val get_disambiguation_state : Disambiguation_state.state t
-
-  val parse_and_disambiguate :
        parser:'a Parsing.t
-    -> disambiguator:
-         ('a -> Disambiguation.state -> Disambiguation.state * 'b)
+    -> disambiguator:(Disambiguation.state -> 'a -> 'b)
     -> 'b t
 end
 
 (** {1 Instances} *)
 
-module Simple : sig
+module Beluga_parser : sig
   module Parser_state :
       module type of Parser_combinator.Make_persistent_state (Located_token)
 
-  module Disambiguation_state =
-    Disambiguation_state.Persistent_disambiguation_state
+  module Disambiguation_state = Disambiguation_state.Disambiguation_state
 
   include module type of Make (Parser_state) (Disambiguation_state)
-
-  val make_initial_parser_state_from_channel :
-    initial_location:Location.t -> in_channel -> Parser_state.state
-
-  val make_initial_parser_state_from_string :
-    initial_location:Location.t -> string -> Parser_state.state
-
-  val make_initial_state_from_channel :
-       disambiguation_state:Disambiguation_state.state
-    -> initial_location:Location.t
-    -> channel:in_channel
-    -> state
-
-  val make_initial_state_from_string :
-       disambiguation_state:Disambiguation_state.state
-    -> initial_location:Location.t
-    -> input:string
-    -> state
-
-  val read_multi_file_signature : string List1.t -> Synext.signature
-end
-
-module Mutable : sig
-  module Parser_state :
-      module type of Parser_combinator.Make_persistent_state (Located_token)
-
-  module Disambiguation_state =
-    Disambiguation_state.Mutable_disambiguation_state_monad
-
-  include module type of Make (Parser_state) (Disambiguation_state)
-
-  val make_initial_parser_state_from_channel :
-    initial_location:Location.t -> in_channel -> Parser_state.state
-
-  val make_initial_parser_state_from_string :
-    initial_location:Location.t -> string -> Parser_state.state
-
-  val make_initial_state_from_channel :
-       disambiguation_state:Disambiguation_state.state
-    -> initial_location:Location.t
-    -> channel:in_channel
-    -> state
-
-  val make_initial_state_from_string :
-       disambiguation_state:Disambiguation_state.state
-    -> initial_location:Location.t
-    -> input:string
-    -> state
-
-  val read_multi_file_signature : string List1.t -> Synext.signature
-end
-
-module Demonad : sig
-  module Parser_state :
-      module type of Parser_combinator.Make_persistent_state (Located_token)
-
-  module Disambiguation_state =
-    Disambiguation_state_demonad.Mutable_disambiguation_state
-
-  include module type of Make_demonad (Parser_state) (Disambiguation_state)
 
   val make_initial_parser_state_from_channel :
     initial_location:Location.t -> in_channel -> Parser_state.state

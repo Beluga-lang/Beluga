@@ -4,9 +4,8 @@ open Util
 
 exception Empty_configuration_file
 
-let save_signature_html ~filename signature =
-  Support.Files.with_pp_to_file filename (fun ppf ->
-      Format.fprintf ppf "%a@." Beluga_html.pp_signature signature)
+let save_signature_html signature =
+  Beluga_html.pp_signature_to_files ~directory:(Sys.getcwd ()) signature
 
 let replace_filename_extension filename ~extension =
   Filename.remove_extension filename ^ extension
@@ -23,14 +22,10 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Mutable.read_multi_file_signature
+        Beluga_parser.Beluga_parser.read_multi_file_signature
           signature_source_files
       in
-      if save_html_to_file then
-        save_signature_html
-          ~filename:
-            (replace_filename_extension compiler_test_file ~extension:".html")
-          signature;
+      if save_html_to_file then save_signature_html signature;
       ignore
         (Format.asprintf "%a@." Beluga_html.pp_signature signature : string)
 

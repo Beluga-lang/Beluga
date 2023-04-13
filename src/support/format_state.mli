@@ -1,66 +1,95 @@
-include module type of Format
+open Format
 
 module type S = sig
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
-  val pp_flush : Unit.t t
+  val pp_flush : state -> Unit.t
 
-  val pp_newline : Unit.t t
+  val pp_newline : state -> Unit.t
 
-  val pp_nop : Unit.t t
+  val pp_nop : state -> Unit.t
 
-  val pp_cut : Unit.t t
+  val pp_cut : state -> Unit.t
 
-  val pp_space : Unit.t t
+  val pp_space : state -> Unit.t
 
-  val pp_non_breaking_space : Unit.t t
+  val pp_non_breaking_space : state -> Unit.t
 
-  val pp_break : Int.t -> Int.t -> Unit.t t
+  val pp_break : state -> Int.t -> Int.t -> Unit.t
 
-  val pp_as : Int.t -> String.t -> Unit.t t
+  val pp_as : state -> Int.t -> String.t -> Unit.t
 
-  val append : Unit.t t -> Unit.t t -> Unit.t t
+  val pp_box : state -> ?indent:Int.t -> (state -> Unit.t) -> Unit.t
 
-  val ( ++ ) : Unit.t t -> Unit.t t -> Unit.t t
+  val pp_hbox : state -> (state -> Unit.t) -> Unit.t
 
-  val pp_box : ?indent:Int.t -> Unit.t t -> Unit.t t
+  val pp_vbox : state -> ?indent:Int.t -> (state -> Unit.t) -> Unit.t
 
-  val pp_hbox : Unit.t t -> Unit.t t
+  val pp_hvbox : state -> ?indent:Int.t -> (state -> Unit.t) -> Unit.t
 
-  val pp_vbox : ?indent:Int.t -> Unit.t t -> Unit.t t
+  val pp_hovbox : state -> ?indent:Int.t -> (state -> Unit.t) -> Unit.t
 
-  val pp_hvbox : ?indent:Int.t -> Unit.t t -> Unit.t t
+  val pp_bool : state -> Bool.t -> Unit.t
 
-  val pp_hovbox : ?indent:Int.t -> Unit.t t -> Unit.t t
+  val pp_int : state -> Int.t -> Unit.t
 
-  val pp_bool : Bool.t -> Unit.t t
+  val pp_float : state -> Float.t -> Unit.t
 
-  val pp_int : Int.t -> Unit.t t
+  val pp_char : state -> Char.t -> Unit.t
 
-  val pp_float : Float.t -> Unit.t t
-
-  val pp_char : Char.t -> Unit.t t
-
-  val pp_string : String.t -> Unit.t t
+  val pp_string : state -> String.t -> Unit.t
 
   val pp_option :
-    ?none:Unit.t t -> ('a -> Unit.t t) -> 'a Option.t -> Unit.t t
+       state
+    -> ?none:(state -> Unit.t)
+    -> (state -> 'a -> Unit.t)
+    -> 'a Option.t
+    -> Unit.t
 
-  val pp_list : ?sep:Unit.t t -> ('a -> Unit.t t) -> 'a List.t -> Unit.t t
+  val pp_list :
+       state
+    -> ?sep:(state -> Unit.t)
+    -> (state -> 'a -> Unit.t)
+    -> 'a List.t
+    -> Unit.t
 
-  val pp_list1 : ?sep:Unit.t t -> ('a -> Unit.t t) -> 'a List1.t -> Unit.t t
+  val pp_list1 :
+       state
+    -> ?sep:(state -> Unit.t)
+    -> (state -> 'a -> Unit.t)
+    -> 'a List1.t
+    -> Unit.t
 
-  val pp_list2 : ?sep:Unit.t t -> ('a -> Unit.t t) -> 'a List2.t -> Unit.t t
+  val pp_list2 :
+       state
+    -> ?sep:(state -> Unit.t)
+    -> (state -> 'a -> Unit.t)
+    -> 'a List2.t
+    -> Unit.t
 
-  val pp_text : String.t -> Unit.t t
+  val pp_text : state -> String.t -> Unit.t
 
-  val pp_utf_8 : String.t -> Unit.t t
+  val pp_utf_8 : state -> String.t -> Unit.t
 
-  val pp_utf_8_text : String.t -> Unit.t t
+  val pp_utf_8_text : state -> String.t -> Unit.t
+
+  val traverse_option :
+    state -> (state -> 'a -> 'b) -> 'a Option.t -> 'b Option.t
+
+  val traverse_list : state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
+
+  val traverse_list_void :
+    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+
+  val traverse_list1 :
+    state -> (state -> 'a -> 'b) -> 'a List1.t -> 'b List1.t
+
+  val traverse_list2 :
+    state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 end
 
-module Make (S : sig
-  include State.STATE
+module Make (State : sig
+  type state
 
-  val with_formatter : (formatter -> 'a t) -> 'a t
-end) : S with type state = S.state
+  val get_formatter : state -> formatter
+end) : S with type state = State.state

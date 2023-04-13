@@ -23,90 +23,80 @@ open Support
 open Beluga_syntax
 
 module type INDEXER = sig
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
-  (** [index_open_lf_kind kind state] is [(state', kind')] where [kind'] is
-      [kind] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are allowed in [kind] with
+  (** [index_open_lf_kind state kind] is [kind] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are allowed in [kind] with respect to [state]. *)
+  val index_open_lf_kind : state -> Synext.lf_kind -> Synapx.LF.kind
+
+  (** [index_closed_lf_kind state kind] is [kind] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are disallowed in [kind] with respect to [state]. *)
+  val index_closed_lf_kind : state -> Synext.lf_kind -> Synapx.LF.kind
+
+  (** [index_open_lf_typ state typ] is [typ] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are allowed in [typ] with respect to [state] *)
+  val index_open_lf_typ : state -> Synext.lf_typ -> Synapx.LF.typ
+
+  (** [index_closed_lf_typ state typ] is [typ] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are disallowed in [typ] with respect to [state] *)
+  val index_closed_lf_typ : state -> Synext.lf_typ -> Synapx.LF.typ
+
+  (** [index_open_comp_kind state kind] is [kind] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are allowed in [kind] with respect to [state]. *)
+  val index_open_comp_kind : state -> Synext.comp_kind -> Synapx.Comp.kind
+
+  (** [index_closed_comp_kind state kind] is [kind] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are disallowed in [kind] with respect to [state]. *)
+  val index_closed_comp_kind : state -> Synext.comp_kind -> Synapx.Comp.kind
+
+  (** [index_open_comp_typ state typ] is [typ] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are allowed in [typ] with respect to [state]. *)
+  val index_open_comp_typ : state -> Synext.comp_typ -> Synapx.Comp.typ
+
+  (** [index_closed_comp_typ state typ] is [typ] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are disallowed in [typ] with respect to [state]. *)
+  val index_closed_comp_typ : state -> Synext.comp_typ -> Synapx.Comp.typ
+
+  (** [index_comp_expression state expression] is [expression] with bound
+      variables and constants replaced with de Bruijn indices and IDs
+      respectively. Free variables are disallowed in [expression] with
       respect to [state]. *)
-  val index_open_lf_kind : Synext.lf_kind -> Synapx.LF.kind t
+  val index_comp_expression :
+    state -> Synext.comp_expression -> Synapx.Comp.exp
 
-  (** [index_closed_lf_kind kind state] is [(state', kind')] where [kind'] is
-      [kind] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [kind]
-      with respect to [state]. *)
-  val index_closed_lf_kind : Synext.lf_kind -> Synapx.LF.kind t
+  (** [index_schema state schema] is [schema] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are allowed in [schema] with respect to [state]. *)
+  val index_schema : state -> Synext.schema -> Synapx.LF.schema
 
-  (** [index_open_lf_typ typ state] is [(state', typ')] where [typ'] is [typ]
-      with bound variables and constants replaced with de Bruijn indices and
-      IDs respectively. Free variables are allowed in [typ] with respect to
-      [state] *)
-  val index_open_lf_typ : Synext.lf_typ -> Synapx.LF.typ t
+  (** [index_comp_theorem state theorem] is [theorem] with bound variables
+      and constants replaced with de Bruijn indices and IDs respectively.
+      Free variables are disallowed in [theorem] with respect to [state]. *)
+  val index_comp_theorem : state -> Synext.comp_expression -> Synapx.Comp.thm
 
-  (** [index_closed_lf_typ typ state] is [(state', typ')] where [typ'] is
-      [typ] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [typ]
-      with respect to [state] *)
-  val index_closed_lf_typ : Synext.lf_typ -> Synapx.LF.typ t
+  (** [index_harpoon_proof state proof] is [proof] with bound variables and
+      constants replaced with de Bruijn indices and IDs respectively. Free
+      variables are disallowed in [proof] with respect to [state]. *)
+  val index_harpoon_proof : state -> Synext.harpoon_proof -> Synapx.Comp.thm
 
-  (** [index_open_comp_kind kind state] is [(state', kind')] where [kind'] is
-      [kind] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are allowed in [kind] with
-      respect to [state]. *)
-  val index_open_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
-
-  (** [index_closed_comp_kind kind state] is [(state', kind')] where [kind']
-      is [kind] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [kind]
-      with respect to [state]. *)
-  val index_closed_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
-
-  (** [index_open_comp_typ typ state] is [(state', typ')] where [typ'] is
-      [typ] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are allowed in [typ] with
-      respect to [state]. *)
-  val index_open_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
-
-  (** [index_closed_comp_typ typ state] is [(state', typ')] where [typ'] is
-      [typ] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [typ]
-      with respect to [state]. *)
-  val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
-
-  (** [index_comp_expression expression state] is [(state', expression')]
-      where [expression'] is [expression] with bound variables and constants
-      replaced with de Bruijn indices and IDs respectively. Free variables
-      are disallowed in [expression] with respect to [state]. *)
-  val index_comp_expression : Synext.comp_expression -> Synapx.Comp.exp t
-
-  (** [index_schema schema state] is [(state', schema')] where [schema'] is
-      [schema] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are allowed in [schema]
-      with respect to [state]. *)
-  val index_schema : Synext.schema -> Synapx.LF.schema t
-
-  (** [index_comp_theorem theorem state] is [(state', theorem')] where
-      [theorem'] is [theorem] with bound variables and constants replaced
-      with de Bruijn indices and IDs respectively. Free variables are
-      disallowed in [theorem] with respect to [state]. *)
-  val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
-
-  (** [index_harpoon_proof proof state] is [(state', proof')] where [proof']
-      is [proof] with bound variables and constants replaced with de Bruijn
-      indices and IDs respectively. Free variables are disallowed in [proof]
-      with respect to [state]. *)
-  val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
-
-  (** [index_computation_typ_abbreviation typ kind] is
-      [(state', (typ', kind'))] where [kind'] is [kind] and [typ'] is [typ],
-      both with bound variables and constants replaced with de Bruijn indices
-      and IDs respectively. Overall, free variables are disallowed with
-      respect to [state]. Variables bound in Pi-kinds in [kind] count as
-      bound in [typ]. *)
+  (** [index_computation_typ_abbreviation state typ kind] is [(typ', kind')]
+      where [kind'] is [kind] and [typ'] is [typ], both with bound variables
+      and constants replaced with de Bruijn indices and IDs respectively.
+      Overall, free variables are disallowed with respect to [state].
+      Variables bound in Pi-kinds in [kind] count as bound in [typ]. *)
   val index_computation_typ_abbreviation :
-       Synext.comp_typ
+       state
+    -> Synext.comp_typ
     -> Synext.comp_kind
-    -> (Synapx.Comp.typ * Synapx.Comp.kind) t
+    -> Synapx.Comp.typ * Synapx.Comp.kind
 end
 
 module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
@@ -114,9 +104,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
 
 module Indexer : sig
   (** @closed *)
-  include module type of
-      Make_indexer (Index_state.Mutable_indexing_state_monad)
+  include INDEXER
 
   (** @closed *)
-  include module type of Index_state.Mutable_indexing_state_monad
+  include Index_state.INDEXING_STATE with type state := state
 end

@@ -25,14 +25,13 @@ module type LOAD_STATE = sig
 end
 
 module Load_state = struct
-  module Beluga_parser = Demonad
   module Parsing = Beluga_parser.Parsing
   module Disambiguation = Beluga_parser.Disambiguation
   module Disambiguation_state = Beluga_parser.Disambiguation_state
-  module Index_state = Index_state_demonad.Mutable_indexing_state
+  module Index_state = Index_state.Indexing_state
   module Signature_reconstruction_state =
-    Recsgn_state_demonad.Signature_reconstruction_state
-  module Signature_reconstruction = Recsgn_demonad.Signature_reconstruction
+    Recsgn_state.Signature_reconstruction_state
+  module Signature_reconstruction = Recsgn.Signature_reconstruction
 
   type state =
     { disambiguation_state : Disambiguation_state.state
@@ -42,9 +41,15 @@ module Load_state = struct
   let create_initial_state () =
     { disambiguation_state = Disambiguation_state.create_initial_state ()
     ; signature_reconstruction_state =
-        Signature_reconstruction_state.initial_state
+        Signature_reconstruction_state.create_initial_state
           (Index_state.create_initial_state ())
     }
+
+  include (
+    Imperative_state.Make (struct
+      type nonrec state = state
+    end) :
+      Imperative_state.IMPERATIVE_STATE with type state := state)
 
   let read_signature_file state ~filename =
     In_channel.with_open_bin filename (fun in_channel ->
@@ -57,10 +62,9 @@ module Load_state = struct
         Beluga_parser.eval
           (Beluga_parser.parse_and_disambiguate
              ~parser:Parsing.(only signature_file)
-             ~disambiguator:(fun signature_file state ->
-               ( state
-               , Disambiguation.disambiguate_signature_file state
-                   signature_file )))
+             ~disambiguator:(fun state signature_file ->
+               Disambiguation.disambiguate_signature_file state
+                 signature_file))
           initial_parser_state)
 
   let reconstruct_signature_file state signature =
@@ -70,13 +74,6 @@ module Load_state = struct
   let get_leftover_vars state =
     Signature_reconstruction_state.get_leftover_vars
       state.signature_reconstruction_state
-
-  let rec traverse_list_void state f l =
-    match l with
-    | [] -> ()
-    | x :: xs ->
-        f state x;
-        traverse_list_void state f xs
 end
 
 module Make_load (Load_state : LOAD_STATE) = struct
@@ -125,7 +122,8 @@ module Make_load (Load_state : LOAD_STATE) = struct
     (if Bool.not (Holes.none ()) then
        let open Format in
        Chatter.print 1 (fun ppf ->
-           Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@\n" filename
+           Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@\n"
+             filename
              (pp_print_list Interactive.fmt_ppr_hole)
              (Holes.list ())));
 

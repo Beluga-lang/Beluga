@@ -2328,8 +2328,12 @@ struct
         add_lf_type_constant state identifier
     | Signature.Declaration.Const { identifier; _ } ->
         add_lf_term_constant state identifier
-    | Signature.Declaration.CompTyp { identifier; _ } ->
+    | Signature.Declaration.CompTyp
+        { identifier; datatype_flavour = `Inductive; _ } ->
         add_inductive_computation_type_constant state identifier
+    | Signature.Declaration.CompTyp
+        { identifier; datatype_flavour = `Stratified; _ } ->
+        add_stratified_computation_type_constant state identifier
     | Signature.Declaration.CompCotyp { identifier; _ } ->
         add_coinductive_computation_type_constant state identifier
     | Signature.Declaration.CompConst { identifier; _ } ->

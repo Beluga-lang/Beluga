@@ -47,6 +47,11 @@ module Hamt = HamtExt.Make (struct
   include Hash
 end)
 
+module Hashtbl = Hashtbl.Make (struct
+  include Ord
+  include Hash
+end)
+
 let is_empty = ( = ) empty
 
 let is_non_empty = ( <> ) empty

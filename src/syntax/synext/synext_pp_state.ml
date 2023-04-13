@@ -3,201 +3,341 @@ open Synext_definition
 open Common
 
 module type PRINTING_STATE = sig
-  include State.STATE
+  (** @closed *)
+  include Imperative_state.IMPERATIVE_STATE
 
+  (** @closed *)
   include Format_state.S with type state := state
 
-  val add_binding : Identifier.t -> Unit.t t
+  val add_module :
+    state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
-  val add_module : Identifier.t -> 'a t -> 'a t
+  val open_module : state -> Qualified_identifier.t -> Unit.t
 
-  val open_module : Qualified_identifier.t -> Unit.t t
+  val add_abbreviation :
+    state -> Qualified_identifier.t -> Identifier.t -> Unit.t
 
-  val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
+  val set_default_associativity : state -> Associativity.t -> Unit.t
 
-  val set_default_associativity : Associativity.t -> Unit.t t
+  val get_default_associativity : state -> Associativity.t
 
-  val get_default_associativity : Associativity.t t
+  val set_default_precedence : state -> Int.t -> Unit.t
 
-  val set_default_precedence : Int.t -> Unit.t t
+  val get_default_precedence : state -> Int.t
 
-  val get_default_precedence : Int.t t
+  val add_lf_type_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
 
-  val make_prefix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+  val add_lf_term_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_schema_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_inductive_computation_type_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_stratified_computation_type_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_coinductive_computation_type_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_abbreviation_computation_type_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_computation_term_constructor :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_computation_term_destructor :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val add_program_constant :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
+  val make_prefix :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
   val make_infix :
-       ?precedence:Int.t
+       state
+    -> ?precedence:Int.t
     -> ?associativity:Associativity.t
     -> Qualified_identifier.t
-    -> Unit.t t
+    -> Unit.t
 
-  val make_postfix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+  val make_postfix :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
+  val lookup_operator :
+    state -> Qualified_identifier.t -> Operator.t Option.t
+
+  val lookup_operator_precedence :
+    state -> Qualified_identifier.t -> Int.t Option.t
+end
+
+module Entry = struct
+  type t = { operator : Operator.t Option.t }
+
+  let make_lf_type_constant_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_lf_term_constant_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_inductive_computation_type_constant_entry ?location:_ _identifier
+      =
+    { operator = Option.none }
+
+  let make_stratified_computation_type_constant_entry ?location:_ _identifier
+      =
+    { operator = Option.none }
+
+  let make_coinductive_computation_type_constant_entry ?location:_
+      _identifier =
+    { operator = Option.none }
+
+  let make_abbreviation_computation_type_constant_entry ?location:_
+      _identifier =
+    { operator = Option.none }
+
+  let make_computation_term_constructor_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_computation_term_destructor_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_program_constant_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_schema_constant_entry ?location:_ _identifier =
+    { operator = Option.none }
+
+  let make_module_entry ?location:_ _identifier = { operator = Option.none }
+
+  let[@warning "-23"] modify_operator f entry =
+    let operator' = f entry.operator in
+    { entry with operator = operator' }
 end
 
 module Printing_state = struct
-  module Binding_tree = Binding_tree.Hamt
-
-  type entry = { operator : Operator.t Option.t }
+  type scope =
+    | Module_scope of
+        { bindings : Entry.t Binding_tree.t
+        ; declarations : Entry.t Binding_tree.t
+        }
 
   type state =
-    { bindings : entry Binding_tree.t
-    ; formatter : Format.formatter
-    ; default_precedence : Int.t
-    ; default_associativity : Associativity.t
-    ; declarations : entry Binding_tree.t
+    { mutable formatter : Format.formatter
+    ; mutable scopes : scope List1.t
+    ; mutable default_precedence : Int.t
+    ; mutable default_associativity : Associativity.t
     }
-
-  module S = State.Make (struct
-    type t = state
-  end)
-
-  include (S : State.STATE with type state := state)
-
-  let with_formatter f =
-    let* { formatter; _ } = get in
-    f formatter
 
   include (
     Format_state.Make (struct
-      include S
+      type nonrec state = state
 
-      let with_formatter = with_formatter
+      let get_formatter state = state.formatter
     end) :
       Format_state.S with type state := state)
 
-  let make_initial_state formatter =
-    { bindings = Binding_tree.empty
-    ; formatter
+  let create_module_scope () =
+    Module_scope
+      { bindings = Binding_tree.create ()
+      ; declarations = Binding_tree.create ()
+      }
+
+  let create_initial_state formatter =
+    { formatter
+    ; scopes = List1.singleton (create_module_scope ())
     ; default_precedence
     ; default_associativity
-    ; declarations = Binding_tree.empty
     }
 
-  let set_formatter formatter =
-    modify (fun state -> { state with formatter })
+  let set_formatter state formatter = state.formatter <- formatter
 
-  let get_bindings =
-    let* state = get in
-    return state.bindings
+  let get_scope_bindings = function
+    | Module_scope { bindings; _ } -> bindings
 
-  let set_bindings bindings = modify (fun state -> { state with bindings })
+  let get_current_scope state = List1.head state.scopes
 
-  let[@inline] modify_bindings f =
-    let* bindings = get_bindings in
-    let bindings' = f bindings in
-    set_bindings bindings'
+  let get_current_scope_bindings state =
+    get_scope_bindings (get_current_scope state)
 
-  let add_declaration identifier =
-    let* bindings = get_bindings in
-    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
-    modify (fun state ->
-        let declarations' =
-          Binding_tree.add_toplevel identifier entry ~subtree
-            state.declarations
-        in
-        { state with declarations = declarations' })
+  let push_scope state scope = state.scopes <- List1.cons scope state.scopes
 
-  let add_binding identifier =
-    modify_bindings
-      (Binding_tree.add_toplevel identifier { operator = Option.none })
-    <& add_declaration identifier
+  let pop_scope state =
+    match state.scopes with
+    | List1.T (x1, x2 :: xs) ->
+        state.scopes <- List1.from x2 xs;
+        x1
+    | List1.T (_x, []) ->
+        Error.raise_violation
+          (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
 
-  let lookup identifier =
-    let* bindings = get_bindings in
-    return (Binding_tree.lookup identifier bindings)
+  let set_default_associativity state default_associativity =
+    state.default_associativity <- default_associativity
 
-  let add_synonym qualified_identifier synonym =
-    let* entry, subtree = lookup qualified_identifier in
-    modify_bindings (Binding_tree.add_toplevel synonym entry ~subtree)
+  let get_default_associativity state = state.default_associativity
 
-  let add_abbreviation = add_synonym
+  let get_default_associativity_opt state = function
+    | Option.None -> get_default_associativity state
+    | Option.Some associativity -> associativity
 
-  let open_namespace qualified_identifier =
-    modify_bindings (Binding_tree.open_namespace qualified_identifier)
+  let get_default_precedence state = state.default_precedence
 
-  let open_module = open_namespace
+  let set_default_precedence state default_precedence =
+    state.default_precedence <- default_precedence
 
-  let add_module identifier declarations =
-    let* state = get in
-    let* () = put { state with declarations = Binding_tree.empty } in
-    let* declarations' = declarations in
-    let* state' = get in
-    let* () = put state in
-    let* () =
-      modify_bindings
-        (Binding_tree.add_toplevel identifier ~subtree:state'.declarations
-           { operator = Option.none })
-      <& add_declaration identifier
-    in
-    return declarations'
+  let get_default_precedence_opt state = function
+    | Option.None -> get_default_precedence state
+    | Option.Some precedence -> precedence
 
-  let set_default_associativity default_associativity =
-    modify (fun state -> { state with default_associativity })
+  let add_binding state identifier ?subtree entry =
+    match get_current_scope state with
+    | Module_scope { bindings; _ } ->
+        Binding_tree.add_toplevel identifier entry ?subtree bindings
 
-  let get_default_associativity =
-    let* state = get in
-    return state.default_associativity
+  let add_declaration state identifier ?subtree entry =
+    match get_current_scope state with
+    | Module_scope { bindings; declarations } ->
+        Binding_tree.add_toplevel identifier entry ?subtree bindings;
+        Binding_tree.add_toplevel identifier entry ?subtree declarations
 
-  let get_default_associativity_opt = function
-    | Option.None -> get_default_associativity
-    | Option.Some associativity -> return associativity
+  let add_lf_type_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_lf_type_constant_entry ?location identifier)
 
-  let get_default_precedence =
-    let* state = get in
-    return state.default_precedence
+  let add_lf_term_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_lf_term_constant_entry ?location identifier)
 
-  let set_default_precedence default_precedence =
-    modify (fun state -> { state with default_precedence })
+  let add_schema_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_schema_constant_entry ?location identifier)
 
-  let get_default_precedence_opt = function
-    | Option.None -> get_default_precedence
-    | Option.Some precedence -> return precedence
+  let add_inductive_computation_type_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_inductive_computation_type_constant_entry ?location
+         identifier)
 
-  let lookup_operator constant =
-    let* { operator; _ }, _subtree = lookup constant in
-    return operator
+  let add_stratified_computation_type_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_stratified_computation_type_constant_entry ?location
+         identifier)
 
-  let[@warning "-23"] make_prefix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_prefix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
+  let add_coinductive_computation_type_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_coinductive_computation_type_constant_entry ?location
+         identifier)
 
-  let[@warning "-23"] make_infix ?precedence ?associativity constant =
-    let* precedence = get_default_precedence_opt precedence in
-    let* associativity = get_default_associativity_opt associativity in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator =
-                  Option.some
-                    (Operator.make_infix ~precedence ~associativity)
-              }
-            in
-            (entry', subtree))
-          bindings)
+  let add_abbreviation_computation_type_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_abbreviation_computation_type_constant_entry ?location
+         identifier)
 
-  let[@warning "-23"] make_postfix ?precedence constant =
-    let* precedence = get_default_precedence_opt precedence in
-    modify_bindings (fun bindings ->
-        Binding_tree.replace constant
-          (fun entry subtree ->
-            let entry' =
-              { entry with
-                operator = Option.some (Operator.make_postfix ~precedence)
-              }
-            in
-            (entry', subtree))
-          bindings)
+  let add_computation_term_constructor state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_computation_term_constructor_entry ?location identifier)
+
+  let add_computation_term_destructor state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_computation_term_destructor_entry ?location identifier)
+
+  let add_program_constant state ?location identifier =
+    add_declaration state identifier
+      (Entry.make_program_constant_entry ?location identifier)
+
+  let add_module state ?location identifier f =
+    let default_associativity = get_default_associativity state in
+    let default_precedence = get_default_precedence state in
+    let module_scope = create_module_scope () in
+    push_scope state module_scope;
+    let x = f state in
+    match pop_scope state with
+    | Module_scope { declarations; _ } ->
+        add_declaration state identifier ~subtree:declarations
+          (Entry.make_module_entry ?location identifier);
+        set_default_associativity state default_associativity;
+        set_default_precedence state default_precedence;
+        x
+
+  let rec lookup_in_scopes scopes identifiers =
+    match scopes with
+    | [] ->
+        Error.raise
+          (Qualified_identifier.Unbound_qualified_identifier
+             (Qualified_identifier.from_list1 identifiers))
+    | scope :: scopes -> (
+        match
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+        with
+        | `Bound result -> result
+        | `Partially_bound
+            ( bound_segments
+            , (identifier, _entry, _subtree)
+            , _unbound_segments ) ->
+            Error.raise
+              (Qualified_identifier.Unbound_namespace
+                 (Qualified_identifier.make ~namespaces:bound_segments
+                    identifier))
+        | `Unbound _ -> lookup_in_scopes scopes identifiers)
+
+  let lookup state query =
+    let identifiers = Qualified_identifier.to_list1 query in
+    lookup_in_scopes (List1.to_list state.scopes) identifiers
+
+  let lookup_operator state constant =
+    let entry, _subtree = lookup state constant in
+    entry.Entry.operator
+
+  let lookup_operator_precedence state constant =
+    Option.map Operator.precedence (lookup_operator state constant)
+
+  let modify_operator state identifier f =
+    let entry, subtree = lookup state identifier in
+    let entry' = Entry.modify_operator f entry in
+    let bindings = get_current_scope_bindings state in
+    if Binding_tree.mem identifier bindings then
+      Binding_tree.replace identifier
+        (fun _entry _subtree -> (entry', subtree))
+        bindings
+    else Binding_tree.add identifier ~subtree entry' bindings;
+    match get_current_scope state with
+    | Module_scope { declarations; _ } ->
+        if Binding_tree.mem identifier declarations then
+          Binding_tree.replace identifier
+            (fun _entry subtree -> (entry', subtree))
+            declarations
+        else ()
+
+  let[@warning "-23"] make_prefix state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    modify_operator state constant (fun _operator ->
+        Option.some (Operator.make_prefix ~precedence))
+
+  let[@warning "-23"] make_infix state ?precedence ?associativity constant =
+    let precedence = get_default_precedence_opt state precedence in
+    let associativity = get_default_associativity_opt state associativity in
+    modify_operator state constant (fun _operator ->
+        Option.some (Operator.make_infix ~precedence ~associativity))
+
+  let[@warning "-23"] make_postfix state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    modify_operator state constant (fun _operator ->
+        Option.some (Operator.make_postfix ~precedence))
+
+  let open_namespace state identifier =
+    let _entry, subtree = lookup state identifier in
+    let bindings = get_current_scope_bindings state in
+    Binding_tree.add_all bindings subtree
+
+  let open_module state identifier = open_namespace state identifier
+
+  let add_synonym state ?location:_ qualified_identifier synonym =
+    let entry, subtree = lookup state qualified_identifier in
+    add_binding state synonym ~subtree entry
+
+  let add_abbreviation state module_identifier abbreviation =
+    add_synonym state module_identifier abbreviation
 end

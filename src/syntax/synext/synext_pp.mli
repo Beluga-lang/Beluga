@@ -9,15 +9,15 @@ open Synext_pp_state
 (** Abstract definition for pretty-printing Beluga signatures. *)
 module type PRINTER = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
-  (** [pp_signature_file signature_file state] pretty-prints a
-      [signature_file] to [state], and returns [(state', ())]. *)
-  val pp_signature_file : signature_file -> Unit.t t
+  (** [pp_signature_file state signature_file] pretty-prints [signature_file]
+      with respect to the pretty-printing state [state]. *)
+  val pp_signature_file : state -> signature_file -> Unit.t
 
   (** [pp_signature signature state] pretty-prints [signature] as the
-      concatenation of its signature files and returns [(state', ())]. *)
-  val pp_signature : signature -> Unit.t t
+      concatenation of its signature files, and with respect to [state]. *)
+  val pp_signature : state -> signature -> Unit.t
 end
 
 module Make_printer (Printing_state : PRINTING_STATE) :

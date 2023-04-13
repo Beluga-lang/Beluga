@@ -1,4 +1,4 @@
-(** Mutable map data structure from namespaced identifiers to values.
+(** Immutable map data structure from namespaced identifiers to values.
 
     A binding tree is a tree of identifiers mapped to values, like in a map
     data structure. Identifiers may be used as keys for toplevel entries in
@@ -22,33 +22,34 @@ type 'a t
 (** [is_empty tree] is [true] if and only if there are no bindings in [tree]. *)
 val is_empty : 'a t -> Bool.t
 
-(** [add_toplevel identifier value ?subtree tree] adds [(value, subtree)]
-    bound for [identifier] in [tree], where [subtree] defaults to [empty].
-    This shadows any previous bindings for [identifier] in [tree]. *)
-val add_toplevel : Identifier.t -> 'a -> ?subtree:'a t -> 'a t -> Unit.t
+(** [add_toplevel identifier value ?subtree tree] is the binding tree derived
+    from [tree] with the addition of [(value, subtree)] bound for
+    [identifier], where [subtree] defaults to [empty]. This shadows any
+    previous bindings for [identifier] in [tree]. *)
+val add_toplevel : Identifier.t -> 'a -> ?subtree:'a t -> 'a t -> 'a t
 
-(** [add identifier entry ?subtree tree] adds [entry] and [subtree] bound to
-    [identifier] in [tree]. The namespaces of [identifier] must be bound in
-    [tree].
+(** [add identifier entry ?subtree tree] is the binding tree derived from
+    [tree] with the addition of [entry] and [subtree] bound to [identifier].
+    The namespaces of [identifier] must be bound in [tree].
 
     @raise Unbound_namespace *)
-val add : Qualified_identifier.t -> 'a -> ?subtree:'a t -> 'a t -> Unit.t
+val add : Qualified_identifier.t -> 'a -> ?subtree:'a t -> 'a t -> 'a t
 
-(** [add_all t1 t2] adds all the bindings from [t2] to [t1]. *)
-val add_all : 'a t -> 'a t -> Unit.t
+(** [add_all t1 t2] is the binding tree derived from [t1] by adding all the
+    bindings from [t2]. *)
+val add_all : 'a t -> 'a t -> 'a t
 
-(** [remove identifier tree] removes the binding in [tree] for [identifier].
+(** [remove identifier tree] is the tree derived from [tree] where the
+    binding for [identifier] is removed.
 
     @raise Unbound_identifier *)
-val remove : Identifier.t -> 'a t -> Unit.t
+val remove : Identifier.t -> 'a t -> 'a t
 
 (** [lookup_toplevel identifier tree] is [(value, subtree)] where [value] and
     [subtree] are as added with {!add}.
 
     @raise Unbound_identifier *)
 val lookup_toplevel : Identifier.t -> 'a t -> 'a * 'a t
-
-val lookup_toplevel_opt : Identifier.t -> 'a t -> ('a * 'a t) Option.t
 
 (** [lookup qualified_identifier tree] is [(value, subtree)] where [value]
     and [subtree] are as added with {!add}.
@@ -71,9 +72,6 @@ val lookup : Qualified_identifier.t -> 'a t -> 'a * 'a t
       satisfy [p]. *)
 val lookup_toplevel_filter :
   Identifier.t -> ('a -> Bool.t) -> 'a t -> 'a * 'a t
-
-val lookup_toplevel_filter_opt :
-  Identifier.t -> ('a -> Bool.t) -> 'a t -> ('a * 'a t) Option.t
 
 (** [maximum_lookup identifiers tree] looks up as many bound identifiers in
     [identifiers] as possible against [tree] in sequence. This effectively
@@ -114,14 +112,14 @@ val maximum_lookup_filter :
      | `Bound of 'a * 'a t
      ]
 
-(** [open_namespace qualified_identifier tree] adds all the bindings from
-    [subtree] to [tree] if
+(** [open_namespace qualified_identifier tree] is the binding tree derived
+    from [tree] by adding all the bindings from [subtree] if
     [lookup qualified_identifier tree = (_value, subtree)].
 
     @raise Unbound_identifier
     @raise Unbound_qualified_identifier
     @raise Unbound_namespace *)
-val open_namespace : Qualified_identifier.t -> 'a t -> Unit.t
+val open_namespace : Qualified_identifier.t -> 'a t -> 'a t
 
 (** [is_identifier_bound identifier tree] is [true] if and only if there is a
     binding for [identifier] in [tree]. *)
@@ -131,13 +129,11 @@ val is_identifier_bound : Identifier.t -> 'a t -> Bool.t
     there is a binding for [identifier] in [tree]. *)
 val is_qualified_identifier_bound : Qualified_identifier.t -> 'a t -> Bool.t
 
-(** [replace identifier f tree] replaces the value bound at [identifier] in
-    [tree] with [f entry subtree], with [(entry, subtree)] being the result
-    of [lookup identifier tree]. *)
+(** [replace identifier f tree] is the tree derived from [tree] where the
+    value bound at [identifier] is [f entry subtree], with [(entry, subtree)]
+    being the result of [lookup identifier tree]. *)
 val replace :
-  Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> Unit.t
-
-val mem : Qualified_identifier.t -> 'a t -> Bool.t
+  Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> 'a t
 
 (** [size tree] is the total number of key-value pairs in [tree]. *)
 val size : 'a t -> Int.t
@@ -145,6 +141,3 @@ val size : 'a t -> Int.t
 (** [to_seq tree] is the sequence of values mapped by qualified identifier in
     [tree]. *)
 val to_seq : 'a t -> (Qualified_identifier.t * 'a) Seq.t
-
-(** [create ()] is a new empty binding tree. *)
-val create : Unit.t -> 'a t

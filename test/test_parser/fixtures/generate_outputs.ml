@@ -1,7 +1,7 @@
 open Test_beluga_parser_fixtures_lib
 open Beluga_syntax
 open Util.Synext_json
-open Beluga_parser.Mutable
+open Beluga_parser.Beluga_parser
 
 let parse_only_lf_kind =
   parse_and_disambiguate

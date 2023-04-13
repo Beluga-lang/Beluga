@@ -79,7 +79,7 @@ exception
 let () =
   Error.register_exception_printer (function
     | Dangling_not_pragma ->
-        Format.dprintf "%a" Format.pp_print_text
+        Format.dprintf
           "This `--not' pragma must precede some signature entry."
     | Unexpected_entry_reconstruction_success ->
         Format.dprintf "%a" Format.pp_print_text
@@ -140,23 +140,23 @@ let () =
     | Lf_typ_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for LF constructor %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | Comp_typ_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for computation-level \
            constructor %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | Comp_cotyp_target_mismatch { constant; expected; actual } ->
         Format.dprintf
           "@[<v 2>@[Wrong target data type for computation-level destructor \
            %a.@]@,\
-           @[Expected %a@]@,\
-           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
-          Qualified_identifier.pp actual
+           @[Expected type %a@]@,\
+           @[Actual type %a@]@]" Identifier.pp constant Identifier.pp
+          expected Qualified_identifier.pp actual
     | No_positive identifier ->
         Format.dprintf "Positivity checking of constructor %a fails."
           Identifier.pp identifier
@@ -178,19 +178,11 @@ let fmt_ppr_leftover_vars ppf =
 
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
-module type SIGNATURE_RECONSTRUCTION = sig
-  include State.STATE
-
-  val reconstruct_signature : Synext.signature -> Synint.Sgn.sgn t
-
-  val reconstruct_signature_file : Synext.signature_file -> Synint.Sgn.sgn t
-end
-
 module Make
-    (Signature_reconstruction_state : Recsgn_state
-                                      .SIGNATURE_RECONSTRUCTION_STATE) :
-  SIGNATURE_RECONSTRUCTION
-    with type state = Signature_reconstruction_state.state = struct
+    (Signature_reconstruction_state : module type of
+                                        Recsgn_state
+                                        .Signature_reconstruction_state) =
+struct
   include Signature_reconstruction_state
 
   let rec get_lf_typ_target = function
@@ -279,42 +271,43 @@ module Make
         let location = Synint.Comp.loc_of_typ tau in
         Error.raise_at1 location Invalid_comp_cotyp_target
 
-  let rec reconstruct_signature signature_files =
-    let* signature_files' =
-      traverse_list1 reconstruct_signature_file signature_files
+  let rec reconstruct_signature state signature_files =
+    let signature_files' =
+      traverse_list1 state reconstruct_signature_file signature_files
     in
-    return (List.flatten (List1.to_list signature_files'))
+    List.flatten (List1.to_list signature_files')
 
-  and reconstruct_signature_file file =
+  and reconstruct_signature_file state file =
     let { Synext.Signature.global_pragmas; entries; _ } = file in
-    let* declarations' =
-      with_applied_global_pragmas global_pragmas
-        (reconstruct_signature_entries entries)
+    let declarations' =
+      with_applied_global_pragmas state global_pragmas (fun state ->
+          reconstruct_signature_entries state entries)
     in
-    let* () = freeze_all_unfrozen_declarations in
-    return declarations'
+    freeze_all_unfrozen_declarations state;
+    declarations'
 
-  and with_applied_global_pragmas global_pragmas f =
+  and with_applied_global_pragmas state global_pragmas f =
     match global_pragmas with
-    | [] -> f
+    | [] -> f state
     | x :: xs ->
-        with_applied_global_pragma x (with_applied_global_pragmas xs f)
+        with_applied_global_pragma state x (fun state ->
+            with_applied_global_pragmas state xs f)
 
-  and with_applied_global_pragma global_pragma f =
+  and with_applied_global_pragma state global_pragma f =
     match global_pragma with
     | Synext.Signature.Global_pragma.No_strengthening { location } ->
-        with_disabled_lf_strengthening ~location f
+        with_disabled_lf_strengthening state ~location f
     | Synext.Signature.Global_pragma.Warn_on_coverage_error { location } ->
-        with_warn_on_coverage_error ~location f
+        with_warn_on_coverage_error state ~location f
     | Synext.Signature.Global_pragma.Initiate_coverage_checking { location }
       ->
-        with_coverage_checking ~location f
+        with_coverage_checking state ~location f
 
   (** [reconstruct_signature_entries entries] reconstructs a list of
       signature entries. This in particular handles the reconstruction of
       entries that are not handled independently from one another, such as
       [--not] pragmas. *)
-  and reconstruct_signature_entries entries =
+  and reconstruct_signature_entries state entries =
     match entries with
     | Synext.Signature.Entry.Pragma
         { location = pragma_location
@@ -327,14 +320,14 @@ module Make
             (* The [--not] pragma indicates that we expect [entry] to fail
                reconstruction. So, we perform reconstruction of [entry]
                without keeping track of its side effects. *)
-            let* entry_res' =
-              try_catch
-                (lazy
-                  ( with_checkpoint (reconstruct_signature_entry entry)
-                  $> fun entry' -> Result.ok entry' ))
-                ~on_exn:(fun reconstruction_error ->
+            let entry_res' =
+              try
+                with_checkpoint state (fun state ->
+                    Result.ok (reconstruct_signature_entry state entry))
+              with
+              | reconstruction_error ->
                   (* The [--not] pragma was used properly *)
-                  return (Result.error reconstruction_error))
+                  Result.error reconstruction_error
             in
             match entry_res' with
             | Result.Ok _ ->
@@ -345,26 +338,26 @@ module Make
                 Chatter.print 1 (fun ppf ->
                     Format.fprintf ppf
                       "Reconstruction fails for --not'd declaration@\n");
-                reconstruct_signature_entries entries))
+                reconstruct_signature_entries state entries))
     | entry :: entries ->
-        let* entry' = reconstruct_signature_entry entry in
-        let* entries' = reconstruct_signature_entries entries in
-        return (entry' :: entries')
-    | [] -> return []
+        let entry' = reconstruct_signature_entry state entry in
+        let entries' = reconstruct_signature_entries state entries in
+        entry' :: entries'
+    | [] -> []
 
   (** [reconstruct_signature_entry entry] reconstructs a single signature
       entry. *)
-  and reconstruct_signature_entry entry =
+  and reconstruct_signature_entry state entry =
     match entry with
     | Synext.Signature.Entry.Comment { location; content } ->
-        return (Synint.Sgn.Comment { location; content })
+        Synint.Sgn.Comment { location; content }
     | Synext.Signature.Entry.Pragma { pragma; _ } ->
-        let* pragma' = reconstruct_signature_pragma pragma in
-        return (Synint.Sgn.Pragma { pragma = pragma' })
+        let pragma' = reconstruct_signature_pragma state pragma in
+        Synint.Sgn.Pragma { pragma = pragma' }
     | Synext.Signature.Entry.Declaration { declaration; _ } ->
-        reconstruct_signature_declaration declaration
+        reconstruct_signature_declaration state declaration
 
-  and reconstruct_signature_pragma pragma =
+  and reconstruct_signature_pragma state pragma =
     match pragma with
     | Synext.Signature.Pragma.Not _ ->
         Error.raise_violation
@@ -375,61 +368,48 @@ module Make
     | Synext.Signature.Pragma.Name
         { location; constant; meta_variable_base; computation_variable_base }
       ->
-        let* () =
-          set_name_generation_bases ~location ~meta_variable_base
-            ?computation_variable_base constant
-        in
+        set_name_generation_bases state ~location ~meta_variable_base
+          ?computation_variable_base constant;
         let name = Name.make_from_qualified_identifier constant in
-        return (Synint.LF.NamePrag name)
+        Synint.LF.NamePrag name
     | Synext.Signature.Pragma.Default_associativity
         { associativity; location } ->
-        let* () = set_default_associativity ~location associativity in
-        return (Synint.LF.DefaultAssocPrag associativity)
+        set_default_associativity state ~location associativity;
+        Synint.LF.DefaultAssocPrag associativity
     | Synext.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
-        let* () = set_operator_prefix ~location ?precedence constant in
+        set_operator_prefix state ~location ?precedence constant;
         let name = Name.make_from_qualified_identifier constant in
         let associativity = Option.some Associativity.right_associative in
-        return
-          (Synint.LF.FixPrag (name, Fixity.prefix, precedence, associativity))
+        Synint.LF.FixPrag (name, Fixity.prefix, precedence, associativity)
     | Synext.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
-        let* () =
-          set_operator_infix ~location ?precedence ?associativity constant
-        in
+        set_operator_infix state ~location ?precedence ?associativity
+          constant;
         let name = Name.make_from_qualified_identifier constant in
-        return
-          (Synint.LF.FixPrag (name, Fixity.infix, precedence, associativity))
+        Synint.LF.FixPrag (name, Fixity.infix, precedence, associativity)
     | Synext.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
-        let* () = set_operator_postfix ~location ?precedence constant in
+        set_operator_postfix state ~location ?precedence constant;
         let name = Name.make_from_qualified_identifier constant in
         let associativity = Option.some Associativity.left_associative in
-        return
-          (Synint.LF.FixPrag (name, Fixity.postfix, precedence, associativity))
+        Synint.LF.FixPrag (name, Fixity.postfix, precedence, associativity)
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
-        let* () = freeze_all_unfrozen_declarations in
-        let* () = open_module ~location module_identifier in
-        return (Synint.LF.OpenPrag module_identifier)
+        freeze_all_unfrozen_declarations state;
+        open_module state ~location module_identifier;
+        Synint.LF.OpenPrag module_identifier
     | Synext.Signature.Pragma.Abbreviation
         { location; module_identifier; abbreviation } ->
-        let* () =
-          add_module_abbreviation ~location module_identifier ~abbreviation
-        in
-        return
-          (Synint.LF.AbbrevPrag { location; module_identifier; abbreviation })
+        add_module_abbreviation state ~location module_identifier
+          ~abbreviation;
+        Synint.LF.AbbrevPrag { location; module_identifier; abbreviation }
     | Synext.Signature.Pragma.Query
-        { location
-        ; identifier
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        } ->
-        let* () = freeze_all_unfrozen_declarations in
-        reconstruct_query_pragma location identifier typ
+        { location; identifier; typ; expected_solutions; maximum_tries } ->
+        freeze_all_unfrozen_declarations state;
+        reconstruct_query_pragma state location identifier typ
           expected_solutions maximum_tries
 
-  and reconstruct_signature_declaration declaration =
+  and reconstruct_signature_declaration state declaration =
     match declaration with
     | Synext.Signature.Declaration.CompTyp { location; _ }
     | Synext.Signature.Declaration.CompCotyp { location; _ }
@@ -443,40 +423,47 @@ module Make
               within a mutually recursive group of declarations."
              __FUNCTION__)
     | Synext.Signature.Declaration.Typ { location; identifier; kind } ->
-        reconstruct_lf_typ_declaration location identifier kind
+        reconstruct_lf_typ_declaration state location identifier kind
     | Synext.Signature.Declaration.Const { location; identifier; typ } ->
-        reconstruct_lf_const_declaration location identifier typ
+        reconstruct_lf_const_declaration state location identifier typ
     | Synext.Signature.Declaration.Schema { location; identifier; schema } ->
-        let* () = freeze_all_unfrozen_declarations in
-        reconstruct_schema_declaration location identifier schema
+        freeze_all_unfrozen_declarations state;
+        reconstruct_schema_declaration state location identifier schema
     | Synext.Signature.Declaration.CompTypAbbrev
         { location; identifier; kind; typ } ->
-        let* () = freeze_all_unfrozen_declarations in
-        reconstruct_comp_typ_abbrev_declaration location identifier kind typ
+        freeze_all_unfrozen_declarations state;
+        reconstruct_comp_typ_abbrev_declaration state location identifier
+          kind typ
     | Synext.Signature.Declaration.Val
         { location; identifier; typ; expression } ->
-        let* () = freeze_all_unfrozen_declarations in
-        reconstruct_val_declaration location identifier typ expression
+        freeze_all_unfrozen_declarations state;
+        reconstruct_val_declaration state location identifier typ expression
     | Synext.Signature.Declaration.Recursive_declarations
         { location; declarations } ->
-        let* () = freeze_all_unfrozen_declarations in
-        let* declaration' =
-          reconstruct_recursive_declarations location declarations
+        freeze_all_unfrozen_declarations state;
+        let declaration' =
+          reconstruct_recursive_declarations state location declarations
         in
-        let* () = freeze_all_unfrozen_declarations in
-        return declaration'
+        freeze_all_unfrozen_declarations state;
+        declaration'
     | Synext.Signature.Declaration.Module { location; identifier; entries }
       ->
-        let* () = freeze_all_unfrozen_declarations in
-        reconstruct_module_declaration location identifier entries
+        freeze_all_unfrozen_declarations
+          state (* Can't extend definitions in a new module *);
+        let module_declaration =
+          reconstruct_module_declaration state location identifier entries
+        in
+        freeze_all_unfrozen_declarations
+          state (* Can't extend definitions in the new module from outside *);
+        module_declaration
 
-  and reconstruct_lf_typ_declaration location identifier extK =
+  and reconstruct_lf_typ_declaration state location identifier extK =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Typ at: %a" Location.print_short location);
     dprintf (fun p ->
         p.fmt "\nIndexing type constant %a" Identifier.pp identifier);
-    let* apxK = index_lf_kind extK in
+    let apxK = index_lf_kind state extK in
     dprintf (fun p ->
         p.fmt "\nElaborating type constant %a" Identifier.pp identifier);
     Reconstruct.reset_fvarCnstr ();
@@ -512,15 +499,15 @@ module Make
     let cid =
       Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
     in
-    let* () = add_lf_type_constant ~location identifier cid in
-    return (Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' })
+    add_lf_type_constant state ~location identifier cid;
+    Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' }
 
-  and reconstruct_lf_const_declaration location identifier extT =
+  and reconstruct_lf_const_declaration state location identifier extT =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Const %a at: %a" Identifier.pp identifier
           Location.print_short location);
-    let* apxT = index_lf_typ extT in
+    let apxT = index_lf_typ state extT in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     let rec get_type_family = function
@@ -571,15 +558,15 @@ module Make
       Store.Cid.Term.add' location constructedType (fun _cid ->
           Store.Cid.Term.mk_entry name tA' i)
     in
-    let* () = add_lf_term_constant ~location identifier cid in
-    return (Synint.Sgn.Const { location; identifier = name; cid; typ = tA' })
+    add_lf_term_constant state ~location identifier cid;
+    Synint.Sgn.Const { location; identifier = name; cid; typ = tA' }
 
-  and reconstruct_comp_typ_constant location identifier kind datatype_flavour
-      =
+  and reconstruct_comp_typ_constant state location identifier kind
+      datatype_flavour =
     dprintf (fun p ->
         p.fmt "Indexing computation-level data-type constant %a"
           Identifier.pp identifier);
-    let* apx_kind = index_comp_kind kind in
+    let apx_kind = index_comp_kind state kind in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     Store.FVar.clear ();
@@ -621,30 +608,22 @@ module Make
       Store.Cid.CompTyp.add (fun _cid ->
           Store.Cid.CompTyp.mk_entry name cK' i p)
     in
-    let* () =
-      match datatype_flavour with
-      | `Stratified ->
-          add_comp_stratified_type_constant ~location identifier cid
-      | `Inductive ->
-          add_comp_inductive_type_constant ~location identifier cid
-    in
-    return
-      (Synint.Sgn.CompTyp
-         { location
-         ; identifier = name
-         ; cid
-         ; kind = cK'
-         ; positivity_flag = p
-         })
+    (match datatype_flavour with
+    | `Stratified ->
+        add_comp_stratified_type_constant state ~location identifier cid
+    | `Inductive ->
+        add_comp_inductive_type_constant state ~location identifier cid);
+    Synint.Sgn.CompTyp
+      { location; identifier = name; cid; kind = cK'; positivity_flag = p }
 
-  and reconstruct_comp_cotyp_constant location identifier kind =
+  and reconstruct_comp_cotyp_constant state location identifier kind =
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompCotyp at %a: %a" Identifier.pp
           identifier Location.print location);
     dprintf (fun p ->
         p.fmt "Indexing computation-level codata-type constant %a"
           Identifier.pp identifier);
-    let* apxK = index_comp_kind kind in
+    let apxK = index_comp_kind state kind in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     Store.FVar.clear ();
@@ -683,18 +662,17 @@ module Make
       Store.Cid.CompCotyp.add (fun _cid ->
           Store.Cid.CompCotyp.mk_entry name cK' i)
     in
-    let* () = add_comp_cotype_constant ~location identifier cid in
-    return
-      (Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' })
+    add_comp_cotype_constant state ~location identifier cid;
+    Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' }
 
-  and reconstruct_comp_constructor location ~stratNum identifier typ =
+  and reconstruct_comp_constructor state location ~stratNum identifier typ =
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompConst at %a: %a" Identifier.pp
           identifier Location.print_short location);
     dprintf (fun p ->
         p.fmt "Indexing computation-level data-type constructor %a"
           Identifier.pp identifier);
-    let* apx_tau = index_comp_typ typ in
+    let apx_tau = index_comp_typ state typ in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     let cD = Synint.LF.Empty in
@@ -751,11 +729,10 @@ module Make
       Store.Cid.CompConst.add cid_ctypfamily (fun _ ->
           Store.Cid.CompConst.mk_entry name tau' i)
     in
-    let* () = add_comp_constructor ~location identifier cid in
-    return
-      (Synint.Sgn.CompConst { location; identifier = name; cid; typ = tau' })
+    add_comp_constructor state ~location identifier cid;
+    Synint.Sgn.CompConst { location; identifier = name; cid; typ = tau' }
 
-  and reconstruct_comp_destructor location identifier observation_type
+  and reconstruct_comp_destructor state location identifier observation_type
       return_type =
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] CompDest at: %a" Location.print_short
@@ -764,8 +741,8 @@ module Make
         p.fmt "Indexing computation-level codata-type destructor %a"
           Identifier.pp identifier);
     let cD = Synint.LF.Empty in
-    let* apx_observation_type = index_comp_typ observation_type in
-    let* apx_return_type = index_comp_typ return_type in
+    let apx_observation_type = index_comp_typ state observation_type in
+    let apx_return_type = index_comp_typ state return_type in
     dprintf (fun p ->
         p.fmt "Elaborating codata-type destructor %a" Identifier.pp
           identifier);
@@ -813,23 +790,22 @@ module Make
           Store.Cid.CompDest.mk_entry name mctx' observation_type'
             return_type' i)
     in
-    let* () = add_comp_destructor ~location identifier cid in
-    return
-      (Synint.Sgn.CompDest
-         { location
-         ; identifier = name
-         ; cid
-         ; mctx = mctx'
-         ; observation_typ = observation_type'
-         ; return_typ = return_type'
-         })
+    add_comp_destructor state ~location identifier cid;
+    Synint.Sgn.CompDest
+      { location
+      ; identifier = name
+      ; cid
+      ; mctx = mctx'
+      ; observation_typ = observation_type'
+      ; return_typ = return_type'
+      }
 
-  and reconstruct_schema_declaration location identifier schema =
+  and reconstruct_schema_declaration state location identifier schema =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Schema at: %a@\n" Location.print_short
           location);
-    let* apx_schema = index_schema schema in
+    let apx_schema = index_schema state schema in
     dprintf (fun p ->
         p.fmt "Reconstructing schema %a@\n" Identifier.pp identifier);
     Reconstruct.reset_fvarCnstr ();
@@ -856,14 +832,14 @@ module Make
     let cid =
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')
     in
-    let* () = add_schema_constant ~location identifier cid in
-    return
-      (Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' })
+    add_schema_constant state ~location identifier cid;
+    Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' }
 
-  and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
+  and reconstruct_comp_typ_abbrev_declaration state location identifier cK cT
+      =
     let name = Name.make_from_identifier identifier in
     (* index cT in a context which contains arguments to cK *)
-    let* apx_tau, apxK = index_comp_typedef cT cK in
+    let apx_tau, apxK = index_comp_typedef state cT cK in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     let (cD, cT), i, cK =
@@ -884,23 +860,26 @@ module Make
       Store.Cid.CompTypDef.add (fun _cid ->
           Store.Cid.CompTypDef.mk_entry name i (cD, cT) cK)
     in
-    let* () = add_comp_typedef ~location identifier cid in
-    return
-      (Synint.Sgn.CompTypAbbrev
-         { location; identifier = name; cid; kind = cK; typ = cT })
+    add_comp_typedef state ~location identifier cid;
+    Synint.Sgn.CompTypAbbrev
+      { location; identifier = name; cid; kind = cK; typ = cT }
 
-  and reconstruct_val_declaration location identifier typ_opt expression =
+  and reconstruct_val_declaration state location identifier typ_opt
+      expression =
     match typ_opt with
     | Option.None ->
-        reconstruct_untyped_val_declaration location identifier expression
+        reconstruct_untyped_val_declaration state location identifier
+          expression
     | Option.Some typ ->
-        reconstruct_typed_val_declaration location identifier typ expression
+        reconstruct_typed_val_declaration state location identifier typ
+          expression
 
-  and reconstruct_untyped_val_declaration location identifier expression =
+  and reconstruct_untyped_val_declaration state location identifier
+      expression =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at: %a" Location.print_short location);
-    let* apx_i = index_comp_expression expression in
+    let apx_i = index_comp_expression state expression in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
@@ -923,7 +902,7 @@ module Make
       Monitor.timer
         (Monitor.function_abstraction, fun () -> Abstract.exp expression')
     in
-    let* () = add_leftover_vars cQ location in
+    add_leftover_vars state cQ location;
     Monitor.timer
       ( Monitor.function_check
       , fun () ->
@@ -945,22 +924,22 @@ module Make
             (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
-    let* () = add_comp_val ~location identifier cid in
-    return
-      (Synint.Sgn.Val
-         { location
-         ; identifier = name
-         ; cid
-         ; typ = tau'
-         ; expression = expression''
-         ; expression_value = value_opt
-         })
+    add_comp_val state ~location identifier cid;
+    Synint.Sgn.Val
+      { location
+      ; identifier = name
+      ; cid
+      ; typ = tau'
+      ; expression = expression''
+      ; expression_value = value_opt
+      }
 
-  and reconstruct_typed_val_declaration location identifier tau expression =
+  and reconstruct_typed_val_declaration state location identifier tau
+      expression =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Val at %a" Location.print_short location);
-    let* apx_tau = index_comp_typ tau in
+    let apx_tau = index_comp_typ state tau in
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
@@ -976,7 +955,7 @@ module Make
     in
     Monitor.timer
       (Monitor.function_type_check, fun () -> Check.Comp.checkTyp cD tau');
-    let* apx_i = index_comp_expression expression in
+    let apx_i = index_comp_expression state expression in
     let i' =
       Monitor.timer
         ( Monitor.function_elaboration
@@ -997,7 +976,7 @@ module Make
       Monitor.timer
         (Monitor.function_abstraction, fun () -> Abstract.exp expression')
     in
-    let* () = add_leftover_vars cQ location in
+    add_leftover_vars state cQ location;
     Monitor.timer
       ( Monitor.function_check
       , fun () ->
@@ -1018,23 +997,22 @@ module Make
             (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
-    let* () = add_comp_val ~location identifier cid in
-    return
-      (Synint.Sgn.Val
-         { location
-         ; identifier = name
-         ; cid
-         ; typ = tau'
-         ; expression = expression''
-         ; expression_value = value_opt
-         })
+    add_comp_val state ~location identifier cid;
+    Synint.Sgn.Val
+      { location
+      ; identifier = name
+      ; cid
+      ; typ = tau'
+      ; expression = expression''
+      ; expression_value = value_opt
+      }
 
-  and reconstruct_query_pragma location identifier_opt extT
+  and reconstruct_query_pragma state location identifier_opt extT
       expected_solutions maximum_tries =
     let name_opt = Option.map Name.make_from_identifier identifier_opt in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);
-    let* apxT = index_lf_typ extT in
+    let apxT = index_lf_typ state extT in
     dprint (fun () -> "Reconstructing query.");
 
     Reconstruct.reset_fvarCnstr ();
@@ -1068,49 +1046,47 @@ module Make
       ( Monitor.type_check
       , fun () ->
           Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', S.LF.id) );
-    Logic.storeQuery name_opt (tA', i) Synint.LF.Empty expected_solutions maximum_tries;
-    return
-      (Synint.LF.Query
-         { location
-         ; name = name_opt
-         ; mctx = Synint.LF.Empty
-         ; typ = (tA', i)
-         ; expected_solutions
-         ; maximum_tries
-         })
+    Logic.storeQuery name_opt (tA', i) Synint.LF.Empty expected_solutions
+      maximum_tries;
+    Synint.LF.Query
+      { location
+      ; name = name_opt
+      ; mctx = Synint.LF.Empty
+      ; typ = (tA', i)
+      ; expected_solutions
+      ; maximum_tries
+      }
 
-  and reconstruct_module_declaration location identifier entries =
-    let* cid = next_module_id in
-    let* entries' =
-      add_module ~location identifier cid
-        (traverse_list reconstruct_signature_entry entries)
+  and reconstruct_module_declaration state location identifier entries =
+    let cid = next_module_id state in
+    let entries' =
+      add_module state ~location identifier cid (fun state ->
+          traverse_list state reconstruct_signature_entry entries)
     in
-    return
-      (Synint.Sgn.Module
-         { location; identifier; cid; declarations = entries' })
+    Synint.Sgn.Module { location; identifier; cid; declarations = entries' }
 
-  and reconstruct_recursive_declarations location declarations =
+  and reconstruct_recursive_declarations state location declarations =
     let (List1.T (first_declaration, declarations')) = declarations in
     match first_declaration with
     | Synext.Signature.Declaration.Typ _ ->
         let groups =
           group_recursive_lf_typ_declarations first_declaration declarations'
         in
-        reconstruct_recursive_lf_typ_declarations location groups
+        reconstruct_recursive_lf_typ_declarations state location groups
     | Synext.Signature.Declaration.CompTyp _
     | Synext.Signature.Declaration.CompCotyp _ ->
         let groups =
           group_recursive_comp_typ_declarations first_declaration
             declarations'
         in
-        reconstruct_recursive_comp_typ_declarations location groups
+        reconstruct_recursive_comp_typ_declarations state location groups
     | Synext.Signature.Declaration.Theorem _
     | Synext.Signature.Declaration.Proof _ ->
         let groups =
           group_recursive_theorem_declarations first_declaration
             declarations'
         in
-        reconstruct_recursive_theorem_declarations location groups
+        reconstruct_recursive_theorem_declarations state location groups
     | Synext.Signature.Declaration.Const _
     | Synext.Signature.Declaration.CompConst _
     | Synext.Signature.Declaration.CompDest _
@@ -1162,43 +1138,40 @@ module Make
       is assumed that the types and terms are already topologically sorted,
       such that we first reconstruct the type declarations, then the term
       declarations. *)
-  and reconstruct_recursive_lf_typ_declarations location declarations =
+  and reconstruct_recursive_lf_typ_declarations state location declarations =
     List1.iter
       (fun (`Lf_typ (typ_identifier, _kind, term_constants)) ->
         validate_lf_type_and_term_declaration typ_identifier term_constants)
       declarations;
-    let* typs' =
-      seq_list1
-        (List1.map
-           (fun (`Lf_typ (typ_identifier, kind, _term_constants)) ->
-             let location =
-               Location.join
-                 (Identifier.location typ_identifier)
-                 (Synext.location_of_lf_kind kind)
-             in
-             reconstruct_lf_typ_declaration location typ_identifier kind)
-           declarations)
+    let typs' =
+      traverse_list1 state
+        (fun state (`Lf_typ (typ_identifier, kind, _term_constants)) ->
+          let location =
+            Location.join
+              (Identifier.location typ_identifier)
+              (Synext.location_of_lf_kind kind)
+          in
+          reconstruct_lf_typ_declaration state location typ_identifier kind)
+        declarations
     in
-    let* consts' =
-      seq_list1
-        (List1.map
-           (fun (`Lf_typ (_typ_identifier, _kind, term_constants)) ->
-             seq_list
-               (List.map
-                  (fun (identifier, typ) ->
-                    let location =
-                      Location.join
-                        (Identifier.location identifier)
-                        (Synext.location_of_lf_typ typ)
-                    in
-                    reconstruct_lf_const_declaration location identifier typ)
-                  term_constants))
-           declarations)
+    let consts' =
+      traverse_list1 state
+        (fun state (`Lf_typ (_typ_identifier, _kind, term_constants)) ->
+          traverse_list state
+            (fun state (identifier, typ) ->
+              let location =
+                Location.join
+                  (Identifier.location identifier)
+                  (Synext.location_of_lf_typ typ)
+              in
+              reconstruct_lf_const_declaration state location identifier typ)
+            term_constants)
+        declarations
     in
     let declarations' =
       List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
     in
-    return (Synint.Sgn.MRecTyp { location; declarations = declarations' })
+    Synint.Sgn.MRecTyp { location; declarations = declarations' }
 
   and validate_comp_type_and_constructor_declaration typ_identifier
       constructors =
@@ -1238,7 +1211,8 @@ module Make
                }))
       destructors
 
-  and reconstruct_recursive_comp_typ_declarations location declarations =
+  and reconstruct_recursive_comp_typ_declarations state location declarations
+      =
     List1.iter
       (function
         | `Inductive_comp_typ (typ_identifier, _kind, constructors) ->
@@ -1251,80 +1225,77 @@ module Make
             validate_comp_cotype_and_destructor_declaration typ_identifier
               destructors)
       declarations;
-    let* typs' =
-      seq_list1
-        (List1.map
-           (function
-             | `Inductive_comp_typ (typ_identifier, kind, _constructors) ->
-                 let location =
-                   Location.join
-                     (Identifier.location typ_identifier)
-                     (Synext.location_of_comp_kind kind)
-                 in
-                 reconstruct_comp_typ_constant location typ_identifier kind
-                   `Inductive
-             | `Stratified_comp_typ (typ_identifier, kind, _constructors) ->
-                 let location =
-                   Location.join
-                     (Identifier.location typ_identifier)
-                     (Synext.location_of_comp_kind kind)
-                 in
-                 reconstruct_comp_typ_constant location typ_identifier kind
-                   `Stratified
-             | `Coinductive_comp_typ (typ_identifier, kind, _destructors) ->
-                 let location =
-                   Location.join
-                     (Identifier.location typ_identifier)
-                     (Synext.location_of_comp_kind kind)
-                 in
-                 reconstruct_comp_cotyp_constant location typ_identifier kind)
-           declarations)
+    let typs' =
+      traverse_list1 state
+        (fun state -> function
+          | `Inductive_comp_typ (typ_identifier, kind, _constructors) ->
+              let location =
+                Location.join
+                  (Identifier.location typ_identifier)
+                  (Synext.location_of_comp_kind kind)
+              in
+              reconstruct_comp_typ_constant state location typ_identifier
+                kind `Inductive
+          | `Stratified_comp_typ (typ_identifier, kind, _constructors) ->
+              let location =
+                Location.join
+                  (Identifier.location typ_identifier)
+                  (Synext.location_of_comp_kind kind)
+              in
+              reconstruct_comp_typ_constant state location typ_identifier
+                kind `Stratified
+          | `Coinductive_comp_typ (typ_identifier, kind, _destructors) ->
+              let location =
+                Location.join
+                  (Identifier.location typ_identifier)
+                  (Synext.location_of_comp_kind kind)
+              in
+              reconstruct_comp_cotyp_constant state location typ_identifier
+                kind)
+        declarations
     in
-    let* consts' =
-      seq_list1
-        (List1.map
-           (function
-             | `Inductive_comp_typ (_typ_identifier, _kind, constructors)
-             | `Stratified_comp_typ (_typ_identifier, _kind, constructors) ->
-                 let stratNum =
-                   ref (-1)
-                   (* This is inherited from the legacy system. This is an
-                      array with length equal to the number of explicit
-                      arguments in [_kind], and whose values are all [true].
-                      Reconstruction of constructors in the
-                      [`Stratified_comp_typ] case mutates this value. *)
-                 in
-                 seq_list
-                   (List.map
-                      (fun (identifier, typ) ->
-                        let location =
-                          Location.join
-                            (Identifier.location identifier)
-                            (Synext.location_of_comp_typ typ)
-                        in
-                        reconstruct_comp_constructor ~stratNum location
-                          identifier typ)
-                      constructors)
-             | `Coinductive_comp_typ (_typ_identifier, _kind, destructors) ->
-                 seq_list
-                   (List.map
-                      (fun (identifier, observation_typ, return_typ) ->
-                        let location =
-                          Location.join
-                            (Identifier.location identifier)
-                            (Location.join
-                               (Synext.location_of_comp_typ observation_typ)
-                               (Synext.location_of_comp_typ return_typ))
-                        in
-                        reconstruct_comp_destructor location identifier
-                          observation_typ return_typ)
-                      destructors))
-           declarations)
+    let consts' =
+      traverse_list1 state
+        (fun state -> function
+          | `Inductive_comp_typ (_typ_identifier, _kind, constructors)
+          | `Stratified_comp_typ (_typ_identifier, _kind, constructors) ->
+              let stratNum =
+                ref (-1)
+                (* This is inherited from the legacy system. This is an array
+                   with length equal to the number of explicit arguments in
+                   [_kind], and whose values are all [true]. Reconstruction
+                   of constructors in the [`Stratified_comp_typ] case mutates
+                   this value. *)
+              in
+              traverse_list state
+                (fun state (identifier, typ) ->
+                  let location =
+                    Location.join
+                      (Identifier.location identifier)
+                      (Synext.location_of_comp_typ typ)
+                  in
+                  reconstruct_comp_constructor state ~stratNum location
+                    identifier typ)
+                constructors
+          | `Coinductive_comp_typ (_typ_identifier, _kind, destructors) ->
+              traverse_list state
+                (fun state (identifier, observation_typ, return_typ) ->
+                  let location =
+                    Location.join
+                      (Identifier.location identifier)
+                      (Location.join
+                         (Synext.location_of_comp_typ observation_typ)
+                         (Synext.location_of_comp_typ return_typ))
+                  in
+                  reconstruct_comp_destructor state location identifier
+                    observation_typ return_typ)
+                destructors)
+        declarations
     in
     let declarations' =
       List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
     in
-    return (Synint.Sgn.MRecTyp { location; declarations = declarations' })
+    Synint.Sgn.MRecTyp { location; declarations = declarations' }
 
   and translate_totality_order :
         'a.
@@ -1369,24 +1340,25 @@ module Make
           | Option.Some order ->
               (* Reconstruct to a numeric order by looking up the positions
                  of the specified arguments. *)
-              let order =
-                order |> translate_totality_order
-                |> Synint.Comp.map_order (fun x ->
-                       match
-                         List.index_of
-                           (Option.equal Identifier.equal (Option.some x))
-                           argument_labels
-                       with
-                       | Option.None ->
-                           Error.raise_at1 location
-                             (Unbound_totality_declaration_argument
-                                { unbound_argument = x
-                                ; arguments = argument_labels
-                                })
-                       | Option.Some k ->
-                           k + 1 (* index_of is 0-based, but we're 1-based *))
+              let order' =
+                Synint.Comp.map_order
+                  (fun x ->
+                    match
+                      List.index_of
+                        (Option.equal Identifier.equal (Option.some x))
+                        argument_labels
+                    with
+                    | Option.None ->
+                        Error.raise_at1 location
+                          (Unbound_totality_declaration_argument
+                             { unbound_argument = x
+                             ; arguments = argument_labels
+                             })
+                    | Option.Some k ->
+                        k + 1 (* index_of is 0-based, but we're 1-based *))
+                  (translate_totality_order order)
               in
-              `inductive order)
+              `inductive order')
 
   (** [guard_totality_declarations location declarations] collects the
       totality declarations in [declarations] and ensures that either:
@@ -1427,9 +1399,10 @@ module Make
              ; programs_without = List1.to_list have_nots
              })
 
-  and reconstruct_recursive_theorem_declarations location declarations =
-    let reconstruct_program_typ typ =
-      let* apx_tau = index_comp_typ typ in
+  and reconstruct_recursive_theorem_declarations state location declarations
+      =
+    let reconstruct_program_typ state typ =
+      let apx_tau = index_comp_typ state typ in
       Reconstruct.reset_fvarCnstr ();
       Store.FCVar.clear ();
       let tau' =
@@ -1449,10 +1422,10 @@ module Make
         , fun () -> Check.Comp.checkTyp Synint.LF.Empty tau' );
       Store.FCVar.clear ();
 
-      return tau'
+      tau'
     in
 
-    let register_program identifier tau' total_decs =
+    let register_program state identifier tau' total_decs =
       let name = Name.make_from_identifier identifier in
       let cid =
         Store.Cid.Comp.add (fun _cid ->
@@ -1460,29 +1433,25 @@ module Make
               (Option.some (Decl.next ()))
               name tau' 0 total_decs Option.none)
       in
-      let* () = add_prog identifier cid in
-      return cid
+      add_prog state identifier cid;
+      cid
     in
 
     let total_decs = guard_totality_declarations location declarations in
 
-    let preprocess =
-      traverse_list1 (function
+    let preprocess state =
+      traverse_list1 state (fun state -> function
         | `Proof (identifier, typ, _totality_declaration_opt, body) ->
-            let* tau' = reconstruct_program_typ typ in
-            return
-              ( (identifier, `Proof body, location, tau')
-              , register_program identifier tau' )
+            let tau' = reconstruct_program_typ state typ in
+            ( (identifier, `Proof body, location, tau')
+            , fun state -> register_program state identifier tau' )
         | `Theorem (identifier, typ, _totality_declaration_opt, body) ->
-            let* tau' = reconstruct_program_typ typ in
-            return
-              ( (identifier, `Theorem body, location, tau')
-              , register_program identifier tau' ))
+            let tau' = reconstruct_program_typ state typ in
+            ( (identifier, `Theorem body, location, tau')
+            , fun state -> register_program state identifier tau' ))
     in
 
-    let* preprocessed = preprocess declarations in
-
-    let thm_list, registers = List1.split preprocessed in
+    let thm_list, registers = List1.split (preprocess state declarations) in
 
     (* We have the elaborated types of the theorems, so we construct the
        final list of totality declarations for this mutual group. *)
@@ -1507,19 +1476,22 @@ module Make
 
     (* We have the list of all totality declarations for this group, so we
        can register each theorem in the store. *)
-    let* thm_cid_list =
-      registers
-      |> List1.flap
-           (Store.Cid.Comp.add_mutual_group (List1.to_list total_decs))
-      |> seq_list1
+    let thm_cid_list =
+      traverse_list1 state
+        (fun state register ->
+          let cid =
+            Store.Cid.Comp.add_mutual_group (List1.to_list total_decs)
+          in
+          register state cid)
+        registers
     in
 
-    let reconThm loc (f, cid, thm, tau) =
+    let reconThm state loc (f, cid, thm, tau) =
       let name = Name.make_from_identifier f in
-      let* apx_thm =
+      let apx_thm =
         match thm with
-        | `Proof p -> index_harpoon_proof p
-        | `Theorem p -> index_comp_theorem p
+        | `Proof p -> index_harpoon_proof state p
+        | `Theorem p -> index_comp_theorem state p
       in
       dprint (fun () -> "[reconThm] Indexing theorem done.");
       let thm' =
@@ -1556,7 +1528,7 @@ module Make
         Monitor.timer
           (Monitor.function_abstraction, fun () -> Abstract.thm thm'')
       in
-      let* () = add_leftover_vars cQ location in
+      add_leftover_vars state cQ location;
 
       (* This abstraction is for detecting leftover metavariables, which is
          an error. *)
@@ -1592,14 +1564,15 @@ module Make
               (List1.to_list total_decs)
               thm_r' (tau_ann, C.m_id);
             Total.enabled := false );
-      return (thm_r', tau)
+      (thm_r', tau)
     in
 
-    let* ds =
-      let reconOne (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
+    let ds =
+      let reconOne state
+          (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
         let name = Name.make_from_identifier thm_name in
-        let* e_r', tau' =
-          reconThm thm_location (thm_name, thm_cid, thm_body, thm_typ)
+        let e_r', tau' =
+          reconThm state thm_location (thm_name, thm_cid, thm_body, thm_typ)
         in
         dprintf (fun p ->
             p.fmt
@@ -1612,18 +1585,17 @@ module Make
             (thm_cid, e_r', Synint.LF.MShift 0, Synint.Comp.Empty)
         in
         Store.Cid.Comp.set_prog thm_cid (Fun.const (Option.some v));
-        return
-          (Synint.Sgn.Theorem
-             { name
-             ; cid = thm_cid
-             ; body = e_r'
-             ; location = thm_location
-             ; typ = tau'
-             })
+        Synint.Sgn.Theorem
+          { name
+          ; cid = thm_cid
+          ; body = e_r'
+          ; location = thm_location
+          ; typ = tau'
+          }
       in
-      traverse_list1 reconOne (List1.combine thm_cid_list thm_list)
+      traverse_list1 state reconOne (List1.combine thm_cid_list thm_list)
     in
-    return (Synint.Sgn.Theorems { location; theorems = ds })
+    Synint.Sgn.Theorems { location; theorems = ds }
 
   and group_recursive_lf_typ_declarations first_declaration declarations =
     match first_declaration with

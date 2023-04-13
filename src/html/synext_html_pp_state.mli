@@ -15,88 +15,117 @@ open Synext
 (** Abstract definition for the HTML printing state. *)
 module type HTML_PRINTING_STATE = sig
   (** @closed *)
-  include State.STATE
+  include Imperative_state.IMPERATIVE_STATE
 
   (** @closed *)
   include Format_state.S with type state := state
 
-  (** [fresh_id ?prefix identifier state] is [(state', id)] where [id] is the
-      unique ID generated from [identifier] and [state], and optionally using
-      [prefix]. This ID is intended to be used as an HTML ID for anchor
-      elements to refer to. If [prefix = Option.Some p], then [id] starts
-      with [p] (this is just for aesthetics).
+  val set_formatter : state -> Format.formatter -> Unit.t
 
-      [state'] is [state] updated to keep track of [id] to guarantee that
-      subsequent ID generated are unique. *)
-  val fresh_id : ?prefix:String.t -> Identifier.t -> String.t t
+  (** [fresh_id state ?prefix identifier] is the unique ID generated from
+      [identifier] and [state], and optionally using [prefix]. This ID is
+      intended to be used as an HTML ID for anchor elements to refer to. If
+      [prefix = Option.Some p], then [id] starts with [p] (this is just for
+      aesthetics).
 
-  (** [add_binding identifier ~id state] is [(state', ())] where [state'] is
-      derived from [state] by adding the binding [identifier] with [id] in
-      the current module. This shadows the previous binding for [identifier]
-      if it exists. *)
-  val add_binding : Identifier.t -> id:String.t -> Unit.t t
+      [state] is updated to keep track of [id] to guarantee that subsequent
+      generated IDs are unique. *)
+  val fresh_id : state -> ?prefix:String.t -> Identifier.t -> String.t
 
-  (** [add_module identifier ~id declarations state] is
-      [(state', declarations')] where [declarations'] is the result of
-      [declarations] when run in a state in a new module with [identifier]
-      and [~id]. Bindings added by [declarations] are added to the new module
-      only. The derived state [state'] has [identifier] bound to the newly
-      created module. *)
-  val add_module : Identifier.t -> id:String.t -> 'a t -> 'a t
+  val set_current_page : state -> String.t -> Unit.t
 
-  (** [lookup_id constant state] is [(state', id)] where [id] is the HTML ID
-      for the bound [constant] in [state].
+  val lookup_reference : state -> Qualified_identifier.t -> String.t
+
+  (** [lookup_id state constant] is the HTML ID for the bound [constant] in
+      [state].
 
       If [constant] is unbound in [state], then an exception is raised. *)
-  val lookup_id : Qualified_identifier.t -> String.t t
+  val lookup_id : state -> Qualified_identifier.t -> String.t
 
-  (** [open_module module_identifier state] is [(state', ())] where [state']
-      is derived from [state] with the addition of the bindings in the module
+  (** [open_module state module_identifier] adds the bindings in the module
       having identifier [module_identifier] in [state].
 
       If [module_identifier] is unbound in [state], then an exception is
       raised. *)
-  val open_module : Qualified_identifier.t -> Unit.t t
+  val open_module : state -> Qualified_identifier.t -> Unit.t
 
-  (** [add_abbreviation module_identifier abbreviation state] is
-      [(state', ())] where [state'] is derived from [state] with the addition
-      of [abbreviation] for referring to the module [module_identifier] in
+  (** [add_abbreviation module_identifier state abbreviation] adds
+      [abbreviation] for referring to the module [module_identifier] in
       [state].
 
       If [module_identifier] is unbound in [state], then an exception is
       raised. *)
-  val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
+  val add_abbreviation :
+    state -> Qualified_identifier.t -> Identifier.t -> Unit.t
 
-  (** [set_default_associativity associativity state] is [(state', ())] where
-      [state'] is derived from [state] with [associativity] as the default
-      associativity for new user-defined infix operators. *)
-  val set_default_associativity : Associativity.t -> Unit.t t
+  (** [set_default_associativity state associativity] sets [associativity] as
+      the default associativity for new user-defined infix operators. *)
+  val set_default_associativity : state -> Associativity.t -> Unit.t
 
-  (** [get_default_associativity state] is [(state', associativity)] where
-      [associativity] is the default associativity for new user-defined infix
-      operators. *)
-  val get_default_associativity : Associativity.t t
+  (** [get_default_associativity state] is the default associativity for new
+      user-defined infix operators. *)
+  val get_default_associativity : state -> Associativity.t
 
-  (** [set_default_precedence precedence state] is [(state', ())] where
-      [state'] is derived from [state] with [precedence] as the default
-      precedence for new user-defined operators. *)
-  val set_default_precedence : Int.t -> Unit.t t
+  (** [set_default_precedence state precedence] sets [precedence] as the
+      default precedence for new user-defined operators. *)
+  val set_default_precedence : state -> Int.t -> Unit.t
 
-  (** [get_default_precedence state] is [(state', precedence)] where
-      [precedence] is the default precedence for new user-defined operators. *)
-  val get_default_precedence : Int.t t
+  (** [get_default_precedence state] is the default precedence for new
+      user-defined operators. *)
+  val get_default_precedence : state -> Int.t
 
-  (** [make_prefix ?precedence constant state] is [(state', ())] where
-      [state'] is derived from [state] with [constant] set as a prefix
+  val add_lf_type_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_lf_term_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_schema_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_inductive_computation_type_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_stratified_computation_type_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_coinductive_computation_type_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_abbreviation_computation_type_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_computation_term_constructor :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_computation_term_destructor :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  val add_program_constant :
+    state -> ?location:'a -> Identifier.t -> id:String.t -> Unit.t
+
+  (** [add_module state ?location module_identifier ~id f] is the result of
+      [f] when run in a state in a new module with [identifier] and [~id].
+      Bindings added by [declarations] are added to the new module only. The
+      derived state has [identifier] bound to the newly created module. *)
+  val add_module :
+       state
+    -> ?location:'a
+    -> Identifier.t
+    -> id:String.t
+    -> (state -> 'a)
+    -> 'a
+
+  (** [make_prefix state ?precedence constant] sets [constant] as a prefix
       operator with precedence [p] if [precedence = Option.Some p], or
       [state]'s default precedence if [precedence = Option.None].
 
       If [constant] is unbound in [state], then an exception is raised. *)
-  val make_prefix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+  val make_prefix :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  (** [make_infix ?precedence ?associativity constant state] is
-      [(state', ())] where [state'] is derived from [state] with [constant]
-      set as an infix operator with:
+  (** [make_infix state ?precedence ?associativity constant] sets [constant]
+      as an infix operator with:
 
       - precedence [p] if [precedence = Option.Some p], or [state]'s default
         precedence if [precedence = Option.None].
@@ -105,25 +134,29 @@ module type HTML_PRINTING_STATE = sig
 
       If [constant] is unbound in [state], then an exception is raised. *)
   val make_infix :
-       ?precedence:Int.t
+       state
+    -> ?precedence:Int.t
     -> ?associativity:Associativity.t
     -> Qualified_identifier.t
-    -> Unit.t t
+    -> Unit.t
 
-  (** [make_postfix ?precedence constant state] is [(state', ())] where
-      [state'] is derived from [state] with [constant] set as a postfix
+  (** [make_postfix state ?precedence constant] sets [constant] as a postfix
       operator with precedence [p] if [precedence = Option.Some p], or
       [state]'s default precedence if [precedence = Option.None].
 
       If [constant] is unbound, then an exception is raised. *)
-  val make_postfix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+  val make_postfix :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  (** [lookup_operator constant state] is [(state', operator_opt)] where
-      [operator_opt] is the operator description corresponding to [constant]
-      bound in [state].
+  (** [lookup_operator state constant] is the operator description
+      corresponding to [constant] bound in [state].
 
       If [constant] is unbound in [state], then an exception is raised. *)
-  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
+  val lookup_operator :
+    state -> Qualified_identifier.t -> Operator.t Option.t
+
+  val lookup_operator_precedence :
+    state -> Qualified_identifier.t -> Int.t Option.t
 end
 
 (** Concrete implementation of {!HTML_PRINTING_STATE} backed by a (mostly)
@@ -133,6 +166,8 @@ module Html_printing_state : sig
   (** @closed *)
   include HTML_PRINTING_STATE
 
-  (** [make_initial_state ppf] constructs an empty printing state. *)
-  val make_initial_state : Format.formatter -> state
+  (** [create_initial_state ~current_page ppf] constructs an empty printing
+      state. *)
+  val create_initial_state :
+    current_page:String.t -> Format.formatter -> state
 end

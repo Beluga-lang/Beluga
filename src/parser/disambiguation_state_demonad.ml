@@ -779,8 +779,6 @@ module Mutable_disambiguation_state = struct
     | Module_scope of
         { bindings : bindings
         ; declarations : bindings
-        ; default_associativity : Associativity.t
-        ; default_precedence : Int.t
         }
 
   type state =
@@ -801,13 +799,10 @@ module Mutable_disambiguation_state = struct
       ; expression_bindings = Binding_tree.create ()
       }
 
-  let create_module_scope ?(default_precedence = Synext.default_precedence)
-      ?(default_associativity = Synext.default_associativity) () =
+  let create_module_scope () =
     Module_scope
       { bindings = Binding_tree.create ()
       ; declarations = Binding_tree.create ()
-      ; default_precedence
-      ; default_associativity
       }
 
   let create_initial_state () =
@@ -889,12 +884,7 @@ module Mutable_disambiguation_state = struct
         Error.raise_violation
           (Format.asprintf "[%s] invalid pattern scope disambiguation state"
              __FUNCTION__)
-    | Module_scope
-        { bindings
-        ; declarations
-        ; default_associativity = _
-        ; default_precedence = _
-        } ->
+    | Module_scope { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings;
         Binding_tree.add_toplevel identifier entry ?subtree declarations
 
@@ -974,30 +964,6 @@ module Mutable_disambiguation_state = struct
   let add_program_constant state ?location ?arity identifier =
     add_declaration state identifier
       (Entry.make_program_constant_entry ?location ?arity identifier)
-
-  let start_module state =
-    let default_associativity = get_default_associativity state in
-    let default_precedence = get_default_precedence state in
-    let module_scope =
-      create_module_scope ~default_associativity ~default_precedence ()
-    in
-    push_scope state module_scope
-
-  let stop_module state ?location identifier =
-    match get_current_scope state with
-    | Plain_scope _ ->
-        Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
-    | Pattern_scope _ ->
-        Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope state" __FUNCTION__)
-    | Module_scope
-        { declarations; default_associativity; default_precedence; _ } ->
-        ignore (pop_scope state);
-        add_declaration state identifier ~subtree:declarations
-          (Entry.make_module_entry ?location identifier);
-        set_default_associativity state default_associativity;
-        set_default_precedence state default_precedence
 
   let add_free_lf_level_variable _state _identifier _entry = ()
 
@@ -1374,10 +1340,24 @@ module Mutable_disambiguation_state = struct
     x
 
   let add_module state ?location identifier m =
-    start_module state;
+    let default_associativity = get_default_associativity state in
+    let default_precedence = get_default_precedence state in
+    let module_scope = create_module_scope () in
+    push_scope state module_scope;
     let x = m state in
-    stop_module state ?location identifier;
-    x
+    match pop_scope state with
+    | Plain_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
+    | Pattern_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern scope state" __FUNCTION__)
+    | Module_scope { declarations; _ } ->
+        add_declaration state identifier ~subtree:declarations
+          (Entry.make_module_entry ?location identifier);
+        set_default_associativity state default_associativity;
+        set_default_precedence state default_precedence;
+        x
 
   let with_scope state m =
     let scope = create_empty_plain_scope () in
@@ -1429,7 +1409,7 @@ module Mutable_disambiguation_state = struct
     let pattern_scope = create_pattern_scope () in
     push_scope state pattern_scope;
     let pattern' = pattern state in
-    match get_current_scope state with
+    match pop_scope state with
     | Plain_scope _ ->
         Error.raise_violation
           (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
@@ -1447,7 +1427,6 @@ module Mutable_disambiguation_state = struct
               (fun identifiers -> Duplicate_pattern_variables identifiers)
               duplicates
         | Option.None ->
-            ignore (pop_scope state);
             let expression_scope = create_plain_scope expression_bindings in
             push_scope state expression_scope;
             let expression' = expression state pattern' in

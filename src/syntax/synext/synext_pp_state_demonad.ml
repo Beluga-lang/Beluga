@@ -53,8 +53,6 @@ module Printing_state_demonad = struct
     | Module_scope of
         { bindings : Entry.t Binding_tree.t
         ; declarations : Entry.t Binding_tree.t
-        ; default_associativity : Associativity.t
-        ; default_precedence : Int.t
         }
 
   type state =
@@ -70,20 +68,12 @@ module Printing_state_demonad = struct
 
       let get_formatter state = state.formatter
     end) :
-      module type of Format_state_demonad.Make (struct
-        type nonrec state = state
+      Format_state_demonad.S with type state := state)
 
-        let get_formatter state = state.formatter
-      end)
-      with type state := state)
-
-  let create_module_scope ?(default_precedence = default_precedence)
-      ?(default_associativity = default_associativity) () =
+  let create_module_scope () =
     Module_scope
       { bindings = Binding_tree.create ()
       ; declarations = Binding_tree.create ()
-      ; default_precedence
-      ; default_associativity
       }
 
   let create_initial_state formatter =
@@ -139,12 +129,7 @@ module Printing_state_demonad = struct
 
   let add_declaration state identifier ?subtree entry =
     match get_current_scope state with
-    | Module_scope
-        { bindings
-        ; declarations
-        ; default_associativity = _
-        ; default_precedence = _
-        } ->
+    | Module_scope { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings;
         Binding_tree.add_toplevel identifier entry ?subtree declarations
 
@@ -192,29 +177,19 @@ module Printing_state_demonad = struct
     add_declaration state identifier
       (Entry.make_program_constant_entry ?location identifier)
 
-  let start_module state =
+  let add_module state ?location identifier f =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
-    let module_scope =
-      create_module_scope ~default_associativity ~default_precedence ()
-    in
-    push_scope state module_scope
-
-  let stop_module state ?location identifier =
-    match get_current_scope state with
-    | Module_scope
-        { declarations; default_associativity; default_precedence; _ } ->
-        ignore (pop_scope state);
+    let module_scope = create_module_scope () in
+    push_scope state module_scope;
+    let x = f state in
+    match pop_scope state with
+    | Module_scope { declarations; _ } ->
         add_declaration state identifier ~subtree:declarations
           (Entry.make_module_entry ?location identifier);
         set_default_associativity state default_associativity;
-        set_default_precedence state default_precedence
-
-  let add_module state ?location identifier f =
-    start_module state;
-    let x = f state in
-    stop_module state ?location identifier;
-    x
+        set_default_precedence state default_precedence;
+        x
 
   let rec lookup_in_scopes scopes identifiers =
     match scopes with

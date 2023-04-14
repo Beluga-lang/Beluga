@@ -2,7 +2,7 @@
 
 (** Module type for hashable types.
 
-    Hashable types may be used as keys for {!Hashtbl.Make} and {!Hamt.Make}. *)
+    Hashable types may be used as keys for {!Hashtbl.Make}. *)
 module type HASH = sig
   type t
 

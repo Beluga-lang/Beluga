@@ -26,8 +26,3 @@ include (
 
 module Set = Set.Make (Ord)
 module Map = Map.Make (Ord)
-
-module Hamt = HamtExt.Make (struct
-  include Ord
-  include Hash
-end)

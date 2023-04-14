@@ -221,7 +221,7 @@ function check_compiler_test_case {
     # In bash < 4.4, array without an item is considered as an undefined variable.
     output=$("${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
     exit_code=$?
-    diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
+    diff_output=$(printf "%s" "${output}" | remove_colors | diff -b -u "${file_path}.out" - 2>/dev/null)
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.
     diff_code=$?
 
@@ -251,7 +251,7 @@ function check_compiler_test_case {
     fi
 
     if [[ -n "${RESET_OUT_FILES}" && -f "${file_path}.out" ]]; then
-        echo "${output}" > "${file_path}.out"
+        echo "${output}" | remove_colors > "${file_path}.out"
     fi
 }
 
@@ -366,6 +366,11 @@ function colorize_diff {
     sed "s/^+/${C_ADDED}+/
          s/^-/${C_REMOVED}-/
          s/\$/${C_END}/"
+}
+
+# Removes ANSI escape sequences used for coloring error messages
+function remove_colors {
+    sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g"
 }
 
 main "$@"

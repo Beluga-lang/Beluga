@@ -24,11 +24,6 @@ module Hash : HASH with type t = t =
 
 include (Hash : HASH with type t := t)
 
-module Hamt = Hamt.Make (struct
-  include Ord
-  include Hash
-end)
-
 module type SHOW = Show.SHOW
 
 module Set = Set.Make (Ord)

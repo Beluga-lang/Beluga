@@ -19,7 +19,6 @@ module Format_state = Format_state
 module DynArray = DynArrayExt
 module Format = Format
 module Gen = GenExt
-module Hamt = HamtExt
 module Hashtbl = Hashtbl
 module Int = Int
 module List = List

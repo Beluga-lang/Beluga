@@ -15,8 +15,6 @@ module type STATE = sig
 
   val exec : 'a t -> state -> state
 
-  val try_catch : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
-
   val traverse_tuple2 :
     ('a1 -> 'b1 t) -> ('a2 -> 'b2 t) -> 'a1 * 'a2 -> ('b1 * 'b2) t
 
@@ -106,10 +104,6 @@ end) : STATE with type state = S.t = struct
   let[@inline] [@specialise] exec m init =
     let final, _n = run m init in
     final
-
-  let[@inline] [@specialise] try_catch m ~on_exn state =
-    try run (Lazy.force m) state with
-    | exn -> run (on_exn exn) state
 
   let[@specialise] traverse_tuple2 f1 f2 (a1, a2) =
     let* b1 = f1 a1 in

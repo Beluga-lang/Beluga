@@ -1,4 +1,7 @@
-(** Mutable state helper definitions. *)
+(** Mutable state helper definitions.
+
+    This is analogous to the state monad defined in {!State}, but the
+    imperative state type assumes that the state is mutable. *)
 
 (** Abstract definition of helpers for stateful operations using a strictly
     mutable state. *)
@@ -20,6 +23,9 @@ module type IMPERATIVE_STATE = sig
     -> 'a1 * 'a2 * 'a3
     -> 'b1 * 'b2 * 'b3
 
+  (** [traverse_list state f \[x1; x2; ...; xn\]] is [\[y1; y2; ...; yn\]]
+      where [yi = f state xi], and [y1], [y2], ..., [yn] are computed in
+      order, meaning that [y1] is computed first, then [y2], etc. *)
   val traverse_list : state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
 
   val traverse_list1 :
@@ -37,6 +43,10 @@ module type IMPERATIVE_STATE = sig
   val traverse_list2_void :
     state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
 
+  (** [traverse_reverse_list state f \[x1; x2; ...; xn\]] is
+      [\[y1; y2; ...; yn\]] where [yi = f state xi], and [y1], [y2], ...,
+      [yn] are computed in reverse order, meaning that [yn] is computed
+      first, then [y(n-1)], etc. *)
   val traverse_reverse_list :
     state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
 

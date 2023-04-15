@@ -1,4 +1,63 @@
-(** State monad definition. *)
+(** State monad definition.
+
+    The state monad is used to define stateful actions, i.e. actions that can
+    read or write to some auxiliary data structure. In general, using the
+    state monad is slower than using side effects because of extra memory
+    allocations and eager closure constructions. For helpers to operations
+    defined with respect to mutable states, see {!Imperative_state}.
+
+    In order to effectively use the state monad, you should define:
+
+    + An abstract module type definition for the state data structure. This
+      acts as an interface between concrete implementations of the state data
+      structure and modules that are defined with respect to that state. Even
+      if only an immutable data structure is intended to be implemented for
+      this abstract definition, its operations should be implementable using
+      a mutable state.
+    + A concrete implementation for that abstract state definition.
+    + A functor taking an abstract state definition as argument, and
+      producing operations that use that state.
+
+    For instance:
+
+    {[
+      module type DISAMBIGUATION_STATE = sig
+        include State.STATE
+
+        val with_bound_lf_variable : Identifier.t -> 'a t -> 'a t
+        (* ... *)
+      end
+
+      module Immutable_disambiguation_state : sig
+        include DISAMBIGUATION_STATE
+
+        val initial_state : state
+      end = struct
+        (* ... *)
+      end
+
+      module Mutable_disambiguation_state : sig
+        include DISAMBIGUATION_STATE
+
+        val create_initial_state : unit -> state
+      end = struct
+        (* ... *)
+      end
+
+      module type LF_DISAMBIGUATION = sig
+        include State.STATE
+
+        val disambiguate_lf_kind : Synprs.lf_object -> Synext.lf_kind t
+        (* ... *)
+      end
+
+      module Make_lf_disambiguation
+          (Disambiguation_state : DISAMBIGUATION_STATE) :
+        LF_DISAMBIGUATION with type state = Disambiguation_state.state =
+      struct
+        (* ... *)
+      end
+    ]} *)
 
 (** The type of state monads. *)
 module type STATE = sig
@@ -25,13 +84,6 @@ module type STATE = sig
 
   (** [exec a init] is [run a init = (final, v)], but outputs only [final]. *)
   val exec : 'a t -> state -> state
-
-  (** [try_catch m ~on_exn state] is [on_exn cause] if [run m state] raises
-      [cause], and [run m state] otherwise. Mutations to [state] performed in
-      [run m state] persist even if it raised an exception.
-
-      Not tail-recursive. *)
-  val try_catch : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
 
   (** {1 Traversals} *)
 

@@ -1,9 +1,10 @@
-open Support.Equality
-open Support
 (**
    @author Renaud Germain
    @author Brigitte Pientka
 *)
+
+open Support.Equality
+open Support
 open Substitution
 open Beluga_syntax
 open Syntax

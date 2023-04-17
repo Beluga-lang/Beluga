@@ -1,9 +1,9 @@
-open Support.Equality
 (** Coverage checker
 
     @author Brigitte Pientka
  *)
 
+open Support.Equality
 open Support
 open Beluga_syntax
 

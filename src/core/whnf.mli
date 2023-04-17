@@ -2,10 +2,10 @@
    @author Brigitte Pientka
    modified: Joshua Dunfield
 *)
+
 open Beluga_syntax
 open Syntax.Int.LF
 open Syntax.Int
-
 
 val whnf : nclo -> nclo
 val whnfTyp : tclo -> tclo

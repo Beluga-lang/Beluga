@@ -1,6 +1,4 @@
 open Support.Equality
-(* module Holes *)
-
 open Support
 open Beluga_syntax
 module LF = Syntax.Int.LF

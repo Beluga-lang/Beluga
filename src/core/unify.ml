@@ -1,6 +1,3 @@
-open Support
-open Equality
-
 (**
    @author Brigitte Pientka
    code walk with Joshua Dunfield, Dec 3 2008
@@ -11,6 +8,8 @@ open Equality
    the instantiations EmptyTrail and StdTrail (hence Unify.EmptyTrail and Unify.StdTrail
    to other modules) are declared at the end of this file.
 *)
+open Support
+open Equality
 open Beluga_syntax
 open Syntax.Int.LF
 open Syntax.Int

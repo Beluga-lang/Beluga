@@ -1,6 +1,7 @@
 (** Common syntax elements that are used in multiple stages of the
     Beluga syntax.
  *)
+
 open Support
 open Beluga_syntax
 

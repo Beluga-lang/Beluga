@@ -1,5 +1,6 @@
+(** Internal Syntax *)
+
 open Support.Equality
-(* Internal Syntax *)
 open Support
 open Beluga_syntax
 

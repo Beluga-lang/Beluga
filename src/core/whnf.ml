@@ -1,4 +1,3 @@
-open Support.Equality
 (**
 
    @author Brigitte Pientka
@@ -10,6 +9,7 @@ open Support.Equality
  * Normalization, and alpha-conversion
  *)
 
+open Support.Equality
 open Support
 open Beluga_syntax
 open Syntax.Int.LF

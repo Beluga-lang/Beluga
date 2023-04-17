@@ -1,9 +1,9 @@
-open Support.Equality
 (** Contexts
 
     @author Brigitte Pientka
 *)
 
+open Support.Equality
 open Support
 open Beluga_syntax
 open Syntax.Int.LF

@@ -1,6 +1,4 @@
 open Support.Equality
-(* module Interactive *)
-
 open Support
 open Beluga_syntax
 

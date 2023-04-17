@@ -1,12 +1,12 @@
 (** Approximate Syntax *)
 
-(** Approximate LF Syntax *)
 open Support
 open Beluga_syntax
 open Id
 
 module Int = Synint
 
+(** Approximate LF Syntax *)
 module LF = struct
   include Syncom.LF
 

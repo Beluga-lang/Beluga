@@ -1,6 +1,6 @@
-open Support.Equality
-(* Checking termination of a function *)
+(** Checking termination of a function *)
 
+open Support.Equality
 open Support
 open Beluga_syntax
 open Syntax

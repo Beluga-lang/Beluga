@@ -152,12 +152,6 @@ struct
     let* x = p in
     fail_at_previous_location (Ambiguous_operator_placement x)
 
-  exception Unexpected_operator of Expression.t
-
-  let unexpected p =
-    let* x = p in
-    fail_at_previous_location (Unexpected_operator x)
-
   exception Missing_left_argument of Expression.t
 
   let missing_left_argument p =
@@ -240,50 +234,41 @@ struct
 
     Rewritten grammar to handle dynamic recursive descent:
 
-    Let N be the total number of precedence levels for the user-defined
+    Let M be the total number of precedence levels for the user-defined
     operators. Let R, L and N stand for right-, left- and non-associative.
 
-    <expression n> ::= (* n <= N *)
-      | <expression (n + 1)> (<infix-op n R> <expression (n + 1)>)+
-      | <expression (n + 1)> (<infix-op n L> <expression (n + 1)>)+
-      | <expression (n + 1)> <infix-op n N> <expression (n + 1)>
-      | <prefix-op n>+ <expression (n + 1)>
-      | <expression (n + 1)> <postfix-op n>+
-      | <expression (n + 1)>
+    <expression m> ::= (* m <= M *)
+      | <expression (m + 1)> <infix-op m N> <expression (m + 1)>
+      | (<prefix-op m> | <expression (m + 1)> <infix-op m R>)+ <expression (m + 1)>
+      | <expression (m + 1)> (<postfix-op m> | <infix-op m L> <expression (m + 1)>)+
+      | <expression (m + 1)>
 
-    <expression (N + 1)> ::=
+    <expression (M + 1)> ::=
+      | <atom>+
+
+    Further rewritten grammar:
+
+    <expression m> ::= (* m <= M *)
+      | <expression (m + 1)> <infix-op m N> <expression (m + 1)>
+      | <expression (m + 1)> <infix-op m R> <trailing-r m>
+      | <expression (m + 1)> <infix-op m L> <expression (m + 1)> <trailing-l m>
+      | <expression (m + 1)> <postfix-op m> <trailing-l m>
+      | <expression (m + 1)>
+      | <prefix-op m> <trailing-r m>
+
+    <trailing-r m> ::= (* Effectively (<prefix-op m> | <expression (m + 1)> <infix-op m R>)* <expression (m + 1)> *)
+      | <prefix-op m> <trailing-r m>
+      | <expression (m + 1)> <infix-op m R> <trailing-r m>
+      | <expression (m + 1)>
+
+    <trailing-l m> ::= (* Effectively (<postfix-op m> | <infix-op m L> <expression (m + 1)>)* *)
+      | <postfix-op m> <trailing-l m>
+      | <infix-op m L> <expression (m + 1)> <trailing-l m>
+      | .
+
+    <expression (M + 1)> ::=
       | <atom>+
   *)
-
-  let rec rewrite_prefix_applications operators argument =
-    match operators with
-    | [] -> argument
-    | o :: os ->
-        prefix_application o (rewrite_prefix_applications os argument)
-
-  let rec rewrite_infix_left_associative_applications left_argument
-      applications =
-    match applications with
-    | [] -> left_argument
-    | (operator, right_argument) :: applications' ->
-        rewrite_infix_left_associative_applications
-          (infix_application left_argument operator right_argument)
-          applications'
-
-  let rec rewrite_infix_right_associative_applications left_argument
-      applications =
-    match applications with
-    | [] -> left_argument
-    | (operator, right_argument) :: applications' ->
-        infix_application left_argument operator
-          (rewrite_infix_right_associative_applications right_argument
-             applications')
-
-  let rec rewrite_postfix_applications argument operators =
-    match operators with
-    | [] -> argument
-    | o :: os ->
-        rewrite_postfix_applications (postfix_application argument o) os
 
   let operator_choice operators =
     choice (List.map operator (Qualified_identifier.Set.elements operators))
@@ -294,14 +279,14 @@ struct
       ; infix_left_associative
       ; infix_right_associative
       ; infix_non_associative
-      } fallback =
-    let prefix_operator = operator_choice prefix
-    and postfix_operator = operator_choice postfix
-    and infix_left_associative_operator =
+      } fallback (* <expression (m + 1)> *) =
+    let prefix_operator (* <prefix-op m> *) = operator_choice prefix
+    and postfix_operator (* <postfix-op m> *) = operator_choice postfix
+    and infix_left_associative_operator (* <infix-op m L> *) =
       operator_choice infix_left_associative
-    and infix_right_associative_operator =
+    and infix_right_associative_operator (* <infix-op m R> *) =
       operator_choice infix_right_associative
-    and infix_non_associative_operator =
+    and infix_non_associative_operator (* <infix-op m N> *) =
       operator_choice infix_non_associative
     in
     let ambiguous_infix_left_associative_operator =
@@ -310,73 +295,69 @@ struct
       ambiguous infix_right_associative_operator
     and ambiguous_infix_non_associative_operator =
       ambiguous infix_non_associative_operator
-    and ambiguous_postfix_operator = ambiguous postfix_operator
-    and unexpected_prefix_operator = unexpected prefix_operator in
-    let prefix_application =
-      let* prefix_operators = some prefix_operator in
-      let* argument = fallback in
-      return
-        (rewrite_prefix_applications
-           (List1.to_list prefix_operators)
-           argument)
-    and postfix_application left_argument =
-      let* postfix_operators = some postfix_operator in
-      return
-        (rewrite_postfix_applications left_argument
-           (List1.to_list postfix_operators))
-    and infix_left_associative_application left_argument =
-      let* trailing_applications =
-        some (seq2 infix_left_associative_operator fallback)
-      in
-      return
-        (rewrite_infix_left_associative_applications left_argument
-           (List1.to_list trailing_applications))
-    and infix_right_associative_application left_argument =
-      let* trailing_applications =
-        some (seq2 infix_right_associative_operator fallback)
-      in
-      return
-        (rewrite_infix_right_associative_applications left_argument
-           (List1.to_list trailing_applications))
-    and infix_non_associative_application left_argument =
-      let* operator, right_argument =
-        seq2 infix_non_associative_operator fallback
-      in
-      return (infix_application left_argument operator right_argument)
+    and ambiguous_prefix_operator = ambiguous prefix_operator
+    and ambiguous_postfix_operator = ambiguous postfix_operator in
+    let trailing_r (* <trailing-r m> *) =
+      Fun.fix (fun trailing_r ->
+          choice
+            [ (let* operator = prefix_operator in
+               let* argument = trailing_r in
+               return (prefix_application operator argument))
+              (* <prefix-op m> <trailing-r m> *)
+            ; (let* left_argument = fallback in
+               choice
+                 [ (let* operator = infix_right_associative_operator in
+                    let* right_argument = trailing_r in
+                    return
+                      (infix_application left_argument operator
+                         right_argument))
+                   (* <expression (m + 1)> <infix-op m R> <trailing-r m> *)
+                 ; ambiguous_infix_left_associative_operator
+                 ; ambiguous_infix_non_associative_operator
+                 ; ambiguous_postfix_operator
+                 ; return left_argument (* <expression (m + 1)> *)
+                 ])
+            ; ambiguous_infix_left_associative_operator
+            ; ambiguous_infix_non_associative_operator
+            ; ambiguous_postfix_operator
+            ])
+    in
+    let rec trailing_l left_argument (* <trailing-l m> *) =
+      choice
+        [ (let* operator = postfix_operator in
+           trailing_l (postfix_application left_argument operator))
+          (* <postfix-op m> <trailing-l m> *)
+        ; (let* operator = infix_left_associative_operator in
+           let* right_argument = fallback in
+           trailing_l
+             (infix_application left_argument operator right_argument))
+          (* <infix-op m L> <expression (m + 1)> <trailing-l m> *)
+        ; ambiguous_infix_non_associative_operator
+        ; ambiguous_infix_right_associative_operator
+        ; ambiguous_prefix_operator
+        ; return left_argument (* . *)
+        ]
     in
     choice
-      [ prefix_application
-        <& choice
-             [ unexpected_prefix_operator
-             ; ambiguous_postfix_operator
-             ; ambiguous_infix_left_associative_operator
-             ; ambiguous_infix_right_associative_operator
-             ; ambiguous_infix_non_associative_operator
-             ; return ()
-             ]
+      [ (let* operator = prefix_operator in
+         let* argument = trailing_r in
+         return (prefix_application operator argument))
       ; (let* left_argument = fallback in
          choice
-           [ postfix_application left_argument
-             <& choice
-                  [ unexpected_prefix_operator
-                  ; ambiguous_infix_left_associative_operator
-                  ; ambiguous_infix_right_associative_operator
-                  ; ambiguous_infix_non_associative_operator
-                  ; return ()
-                  ]
-           ; infix_left_associative_application left_argument
-             <& choice
-                  [ ambiguous_infix_right_associative_operator
-                  ; ambiguous_infix_non_associative_operator
-                  ; return ()
-                  ]
-           ; infix_right_associative_application left_argument
-             <& choice
-                  [ ambiguous_infix_left_associative_operator
-                  ; ambiguous_infix_non_associative_operator
-                  ; return ()
-                  ]
-           ; infix_non_associative_application left_argument
+           [ (let* operator = postfix_operator in
+              trailing_l (postfix_application left_argument operator))
+           ; (let* operator = infix_left_associative_operator in
+              let* right_argument = fallback in
+              trailing_l
+                (infix_application left_argument operator right_argument))
+           ; (let* operator = infix_right_associative_operator in
+              let* right_argument = trailing_r in
+              return
+                (infix_application left_argument operator right_argument))
+           ; (let* operator = infix_non_associative_operator in
+              let* right_argument = fallback in
+              return
+                (infix_application left_argument operator right_argument))
              <& choice
                   [ ambiguous_infix_left_associative_operator
                   ; ambiguous_infix_right_associative_operator
@@ -449,8 +430,5 @@ struct
           Format.dprintf
             "This operator's placement is ambiguous.@ Add parentheses \
              around its arguments."
-      | Unexpected_operator _ ->
-          Format.dprintf
-            "This operator is unexpected.@ Add parentheses to its operands."
       | cause -> Error.raise_unsupported_exception_printing cause)
 end

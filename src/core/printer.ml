@@ -14,19 +14,20 @@ module Control = struct
     | Natural -> false
 end
 
-let with_implicits, with_ctx_underscore =
-  let generic_with get set b' (f : unit -> unit) =
-    let b = get () in
-    set b';
-    f ();
-    set b
-  in
-  let generic_with_ref r =
-    generic_with (fun _ -> !r) (fun x -> r := x)
-  in
-  ( generic_with_ref Control.printImplicit
-  , generic_with_ref Control.printCtxUnderscore
-  )
+let generic_with get set b' (f : unit -> unit) =
+  let b = get () in
+  set b';
+  f ();
+  set b
+
+let generic_with_ref r =
+  generic_with (fun _ -> !r) (fun x -> r := x)
+
+let with_normal = generic_with_ref Control.printNormal
+
+let with_implicits = generic_with_ref Control.printImplicit
+
+let with_ctx_underscore = generic_with_ref Control.printCtxUnderscore
 
 let fmt_ppr_implicits b f (ppf : formatter) x =
   with_implicits b (fun () -> f ppf x)

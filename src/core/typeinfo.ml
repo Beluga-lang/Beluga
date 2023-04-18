@@ -3,26 +3,22 @@ open Support
 open Beluga_syntax
 module P = Pretty.Int.DefaultPrinter
 
-let generate_annotations = ref false;
+let generate_annotations = ref false
 
 module Annot = struct
-  type entry =
-    { typ : string
-    }
+  type entry = { typ : string }
 
   let store = Hashtbl.create 0
+
   let mk_entry (t : string) : entry =
     let typ =
-      t
-      |> ExtString.String.map
-           begin fun c ->
-           if c <> '\n'
-           then c
-           else ' '
-           end
+      String.map
+        (function
+          | '\n' -> ' '
+          | c -> c)
+        t
     in
-    { typ
-    }
+    { typ }
 
   let add (l : Location.t) (e : entry) =
     (* dprint (fun () -> "[TypeInfo.Annot] Entry of " ^ e.typ ^ " added at: \n" ^ Location.to_string l ^ "\n");  *)

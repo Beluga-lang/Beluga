@@ -1363,14 +1363,14 @@ module Disambiguation_state = struct
   let with_bindings_checkpoint state m =
     let scope = create_empty_plain_scope () in
     push_scope state scope;
-    try
-      let x = m state in
-      merge_scope state;
-      x
-    with
-    | cause ->
-        ignore (pop_scope state);
-        Error.raise cause
+    let x =
+      try m state with
+      | cause ->
+          ignore (pop_scope state);
+          Error.raise cause
+    in
+    merge_scope state;
+    x
 
   let actual_binding_exn identifier entry =
     Error.located_exception1

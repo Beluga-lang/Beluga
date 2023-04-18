@@ -452,6 +452,10 @@ struct
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
         { location; identifier; typ_or_const }
     (* Old style LF type or term constant declaration *) -> (
+        (* First try to the disambiguate the declaration as an LF type-level
+           constant declaration. If that fails, rollback the disambiguation
+           state, then try to disambiguate the declaration as an LF
+           term-level constant declaration. *)
         try
           with_bindings_checkpoint state (fun state ->
               let kind' = disambiguate_lf_kind state typ_or_const in
@@ -466,18 +470,18 @@ struct
                     { location; identifier; typ = typ' })
             with
             | const_exn ->
-                if typ_exn <> const_exn then
+                if typ_exn = const_exn then
+                  (* Disambiguation as an LF type or term constant
+                     declaration failed for the same reason *)
+                  Error.raise typ_exn
+                else
                   (* Disambiguation as an LF type or term constant
                      declaration failed for different reasons *)
                   Error.raise_at1 location
                     (Old_style_lf_constant_declaration_error
                        { as_type_constant = typ_exn
                        ; as_term_constant = const_exn
-                       })
-                else
-                  (* Disambiguation as an LF type or term constant
-                     declaration failed for the same reason *)
-                  Error.raise typ_exn))
+                       })))
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { location; identifier; kind } ->
         let kind' = disambiguate_lf_kind state kind in

@@ -3,7 +3,8 @@
 
     This implementation is inspired by Parsec's [buildExpressionParser] found
     {{:https://github.com/haskell/parsec/blob/1f542120d9adc5e22f8791a6d595210e93c6c389/src/Text/Parsec/Expr.hs#L95-L177}
-      here}.
+      here}, and figure 2 of Nils Anders Danielsson and Ulf Norell's "Parsing
+    Mixfix Operators".
 
     @author Marc-Antoine Ouimet *)
 

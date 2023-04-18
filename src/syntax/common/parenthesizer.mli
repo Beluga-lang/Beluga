@@ -117,9 +117,10 @@ module type PARENTHESIZER = sig
     -> Unit.t
 
   (** {[
-        pp_application state ~guard_operator ~guard_operator_application
-          ~precedence_of_applicand ~precedence_of_argument ~pp_applicand
-          ~pp_argument ~parent_precedence applicand arguments
+        pp_application state ~indent ~guard_operator
+          ~guard_operator_application ~precedence_of_applicand
+          ~precedence_of_argument ~pp_applicand ~pp_argument
+          ~parent_precedence applicand arguments
       ]}
 
       pretty-prints the application of [applicand] with [arguments] as a

@@ -302,12 +302,12 @@ end = struct
     | CovPatt (cG, patt, ttau) -> fmt_ppr_covpatt cD ppf (cG, patt, ttau)
 
   let fmt_ppr_cov_goals ppf (goals : (LF.mctx * cov_goal * LF.msub) list) : unit =
-    let f ppf (cD, cg, _) =
+    let fmt_ppr_cov_goal ppf (cD, cg, _) =
       fprintf ppf "-- @[<hv 2>@[%a@] |-@ @[%a@]@]"
         (P.fmt_ppr_lf_mctx P.l0) cD
         (fmt_ppr_cov_goal cD) cg
     in
-    pp_print_list ~pp_sep: pp_print_cut f ppf goals
+    pp_print_list ~pp_sep:pp_print_cut fmt_ppr_cov_goal ppf goals
 
   let fmt_ppr_insides f ppf : 'a inside list -> unit =
     pp_print_list ~pp_sep: pp_print_cut
@@ -380,13 +380,13 @@ end = struct
     | [] ->
        fprintf ppf "<no candidates>"
     | candidates ->
-       let f ppf i c =
+       let fmt_ppr_candidate ppf i c =
          fprintf ppf "@[<v 2>CANDIDATE %d:@,%a@]"
            (i + 1)
            (fmt_ppr_candidate (cD, cG)) c
        in
        fprintf ppf "@[<v>";
-       List.iteri (f ppf) candidates;
+       List.iteri (fmt_ppr_candidate ppf) candidates;
        fprintf ppf "@]"
 
   let fmt_ppr_cov_problem ppf ((cD, cG, candidates, patt) : cov_problem) : unit =
@@ -415,13 +415,13 @@ end = struct
 
   let fmt_ppr_open_cov_problems ppf (gs : open_cov_problems) : unit =
     let open Format in
-    let f ppf i (cD, cG, patt) =
+    let fmt_ppr_open_cov_problem ppf i (cD, cG, patt) =
       fprintf ppf "@[(%d)@ @[%a@]@]@,"
         (i + 1)
         fmt_ppr_open_cov_problem (cD, cG, patt)
     in
     fprintf ppf "@[<v>";
-    List.iteri (f ppf) gs;
+    List.iteri (fmt_ppr_open_cov_problem ppf) gs;
     fprintf ppf "@]"
 end
 

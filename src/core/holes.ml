@@ -192,8 +192,7 @@ let clear () =
   DynArray.clear harpoon_subgoals
 
 let list () =
-  let f k h l = (k, h) :: l in
-  Hashtbl.fold f holes []
+  Hashtbl.fold (fun k h l -> (k, h) :: l) holes []
   |> List.sort (fun (_, Exists (_, h1)) (_, Exists (_, h2)) ->
          compare_hole_location h1 h2)
 

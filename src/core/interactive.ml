@@ -384,25 +384,24 @@ let whale_str =
    %                                              QQ                       \n\
    %                                           QQQQQ                       \n"
 
-let whale =
-  let open Format in
-  let emit = pp_print_string str_formatter in
-  let pass = pp_print_char str_formatter in
+let pp_whale ppf =
+  let emit = Format.pp_print_string ppf in
+  let pass = Format.pp_print_char ppf in
   let full_block = "\xe2\x96\x88" in
   let light_shade = "\xe2\x96\x91" in
   let medium_shade = "\xe2\x96\x92" in
   let dark_shade = "\xe2\x96\x93" in
-  let f =
-    function
-    | 'Q' | '#' | '+' | ';' | ':' -> emit full_block
-    | ',' -> pass ' ' (* emit light_shade *)
-    | '\'' -> emit light_shade
-    | '.' -> emit dark_shade
-    | '=' | '`' -> emit medium_shade
-    | c -> pass c
-  in
-  String.iter f whale_str;
-  flush_str_formatter ()
+  String.iter
+    (function
+      | 'Q' | '#' | '+' | ';' | ':' -> emit full_block
+      | ',' -> pass ' ' (* emit light_shade *)
+      | '\'' -> emit light_shade
+      | '.' -> emit dark_shade
+      | '=' | '`' -> emit medium_shade
+      | c -> pass c)
+    whale_str
+
+let whale = Format.asprintf "%t" pp_whale
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Name.t list =
   let (_, sub) = tA in

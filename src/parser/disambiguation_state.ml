@@ -246,7 +246,7 @@ module Entry = struct
         }
     | Module
 
-  let[@inline] binding_location { binding_location; _ } = binding_location
+  let[@inline] binding_location entry = entry.binding_location
 
   let operator entry =
     match entry.desc with
@@ -749,24 +749,47 @@ module Disambiguation_state = struct
 
   exception Unbound_namespace = Qualified_identifier.Unbound_namespace
 
+  (** A bindings environment is a binding tree of entries. *)
   type bindings = Entry.t Binding_tree.t
 
-  type scope =
+  (** A referencing environment is a stack of scopes (LIFO data structure).
+      An identifier is unbound in a referencing environment if it is unbound
+      in each of its scopes. An identifier is bound to an entry if it is
+      bound in one of the scopes. In lookups, the returned entry is the one
+      in the first scope that has the identifier bound. *)
+  type referencing_environment = scope List1.t
+
+  and scope =
     | Plain_scope of { bindings : bindings }
+        (** Plain scopes are scopes without special operations. *)
     | Pattern_scope of
         { pattern_bindings : bindings
+              (** The bindings to use to disambiguate nodes in the pattern
+                  AST. *)
         ; mutable pattern_variables_rev : Identifier.t List.t
+              (** The list of added free variables, in reverse order of
+                  addition. *)
         ; expression_bindings : bindings
+              (** The bindings to use for disambiguating the expression using
+                  the accumulated free variables as bound variables. *)
         }
+        (** Pattern scopes are scopes that keep track of added free variables
+            in patterns in order to add them to the expression bindings as
+            bound variables. *)
     | Module_scope of
         { bindings : bindings
         ; declarations : bindings
         }
+        (** Module scopes are scopes that keep track of added declarations in
+            order to add them as declarations in the module being
+            disambiguated. *)
 
   type state =
-    { mutable scopes : scope List1.t
+    { mutable scopes : referencing_environment
     ; mutable default_associativity : Associativity.t
+          (** The default associativity to use for user-defined operators. *)
     ; mutable default_precedence : Int.t
+          (** The default precedence to use for user-defined operators. *)
     }
 
   include (
@@ -833,15 +856,6 @@ module Disambiguation_state = struct
     | List1.T (_x, []) ->
         Error.raise_violation
           (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
-
-  let merge_scope state =
-    match state.scopes with
-    | List1.T (x1, x2 :: xs) ->
-        state.scopes <- List1.from x2 xs;
-        Binding_tree.add_all (get_scope_bindings x2) (get_scope_bindings x1)
-    | List1.T (_x, []) ->
-        Error.raise_violation
-          (Format.asprintf "[%s] cannot merge the last scope" __FUNCTION__)
 
   let[@inline] get_current_scope state = List1.head state.scopes
 
@@ -954,17 +968,22 @@ module Disambiguation_state = struct
       (Entry.make_program_constant_entry ?location ?arity identifier)
 
   let add_free_lf_level_variable _state _identifier _entry = ()
+  (* There are no pure LF pattern variables, so this intentionally does
+     nothing. *)
 
   let add_free_meta_level_variable state identifier entry =
     match get_current_scope state with
     | Pattern_scope scope ->
+        (* Free meta-level variables will have reconstructed binders in the
+           pattern meta-context, so they are hereafter considered as bound in
+           the pattern. *)
         Binding_tree.add_toplevel identifier entry scope.pattern_bindings;
         Binding_tree.add_toplevel identifier entry scope.expression_bindings;
         scope.pattern_variables_rev <-
           identifier :: scope.pattern_variables_rev
     | Module_scope _
     | Plain_scope _ ->
-        ()
+        () (* Currently not keeping track of free variables. *)
 
   let add_free_comp_level_variable state identifier entry =
     match get_current_scope state with
@@ -974,7 +993,7 @@ module Disambiguation_state = struct
           identifier :: scope.pattern_variables_rev
     | Module_scope _
     | Plain_scope _ ->
-        ()
+        () (* Currently not keeping track of free variables. *)
 
   let add_free_lf_variable state ?location identifier =
     add_free_lf_level_variable state identifier
@@ -1369,7 +1388,7 @@ module Disambiguation_state = struct
           ignore (pop_scope state);
           Error.raise cause
     in
-    merge_scope state;
+    ignore (pop_scope state);
     x
 
   let actual_binding_exn identifier entry =

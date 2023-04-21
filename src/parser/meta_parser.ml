@@ -22,19 +22,16 @@ module Make
                 with type token = Located_token.t
                  and type location = Location.t)
     (Lf_parser : Lf_parser.LF_PARSER
-                   with type token = Parser.token
-                    and type input = Parser.input
-                    and type state = Parser.state
+                   with type state = Parser.state
+                    and type token = Parser.token
                     and type location = Parser.location)
     (Clf_parser : Clf_parser.CLF_PARSER
-                    with type token = Parser.token
-                     and type input = Parser.input
-                     and type state = Parser.state
+                    with type state = Parser.state
+                     and type token = Parser.token
                      and type location = Parser.location) :
   META_PARSER
-    with type token = Parser.token
-     and type input = Parser.input
-     and type state = Parser.state
+    with type state = Parser.state
+     and type token = Parser.token
      and type location = Parser.location = struct
   include Parser
   include Lf_parser

@@ -1592,8 +1592,8 @@ module Indexing_state = struct
     | Option.Some
         ({ Entry.desc = Entry.Lf_variable { lf_level = Option.None }; _ }, _)
       ->
-        (* [identifier] is known to be a free LF variable because its LF
-           level is unknown, so we do not signal it as an illegal free
+        (* [identifier] is known to be a free LF variable because its LF de
+           Bruijn level is unknown, so we do not signal it as an illegal free
            variable. *)
         ()
     | _ ->
@@ -1611,8 +1611,8 @@ module Indexing_state = struct
         ( { Entry.desc = Entry.Meta_variable { meta_level = Option.None }; _ }
         , _ ) ->
         (* [identifier] is known to be a free meta-variable because its meta
-           level is unknown, so we do not signal it as an illegal free
-           variable. *)
+           de Bruijn level is unknown, so we do not signal it as an illegal
+           free variable. *)
         ()
     | _ ->
         if state.free_variables_allowed then
@@ -1631,8 +1631,8 @@ module Indexing_state = struct
           }
         , _ ) ->
         (* [identifier] is known to be a free parameter variable because its
-           meta level is unknown, so we do not signal it as an illegal free
-           variable. *)
+           meta de Bruijn level is unknown, so we do not signal it as an
+           illegal free variable. *)
         ()
     | _ ->
         if state.free_variables_allowed then
@@ -1652,8 +1652,8 @@ module Indexing_state = struct
           }
         , _ ) ->
         (* [identifier] is known to be a free substitution variable because
-           its meta level is unknown, so we do not signal it as an illegal
-           free variable. *)
+           its meta de Bruijn level is unknown, so we do not signal it as an
+           illegal free variable. *)
         ()
     | _ ->
         if state.free_variables_allowed then
@@ -1672,8 +1672,8 @@ module Indexing_state = struct
           }
         , _ ) ->
         (* [identifier] is known to be a free context variable because its
-           meta level is unknown, so we do not signal it as an illegal free
-           variable. *)
+           meta de Bruijn level is unknown, so we do not signal it as an
+           illegal free variable. *)
         ()
     | _ ->
         if state.free_variables_allowed then
@@ -1693,8 +1693,8 @@ module Indexing_state = struct
           }
         , _ ) ->
         (* [identifier] is known to be a free computationn variable because
-           its computation level is unknown, so we do not signal it as an
-           illegal free variable. *)
+           its computation de Bruijn level is unknown, so we do not signal it
+           as an illegal free variable. *)
         ()
     | _ ->
         if state.free_variables_allowed then

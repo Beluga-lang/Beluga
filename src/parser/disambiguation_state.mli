@@ -96,8 +96,17 @@ module type ENTRY = sig
   val is_module : t -> Bool.t
 end
 
-(** Abstract definition of the state monad for disambiguating parsed Beluga
-    signatures. *)
+(** Abstract definition of a disambiguation state.
+
+    A disambiguation state is the auxiliary data structure used during the
+    disambiguation phase found in modules {!module:Lf_disambiguation},
+    {!module:Clf_disambiguation}, {!module:Meta_disambiguation},
+    {!module:Comp_disambiguation}, {!module:Harpoon_disambiguation} and
+    {!module:Signature_disambiguation}. This data structure is responsible
+    for keeping track of the referencing environment (bindings in scope)
+    during the traversal of the parser syntax. In particular, it keeps track
+    of user-defined notations (i.e., prefix, infix and postfix notations
+    introduced by pragmas) for disambiguating applications. *)
 module type DISAMBIGUATION_STATE = sig
   (** @closed *)
   include Imperative_state.IMPERATIVE_STATE

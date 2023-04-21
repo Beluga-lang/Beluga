@@ -1,6 +1,16 @@
 open Support
 open Beluga_syntax
 
+(** [make_generator symbols] is a generating function for symbols. It is
+    assumed that [!symbols] is an infinite sequence. *)
+let make_generator symbols () =
+  match !symbols () with
+  | Seq.Cons (x, xs) ->
+      symbols := xs;
+      x
+  | Seq.Nil ->
+      Error.raise_violation "Unexpectedly exhausted the symbol sequence"
+
 (* The stuff in this module is ultimately just a very elaborate way of
    generating the same thing over and over again, esp. the name_gensym family
    of functions.
@@ -50,23 +60,11 @@ module VarData : GENSYM = struct
 
   let symbols = ref (create ())
 
-  let gensym () =
-    match !symbols () with
-    | Seq.Cons (x, xs) ->
-        symbols := xs;
-        x
-    | Seq.Nil ->
-        Error.raise_violation "Unexpectedly exhausted the symbol sequence"
+  let gensym = make_generator symbols
 
   let name_gensym s =
     let symbols = ref (create_symbols [| s |]) in
-    fun () ->
-      match !symbols () with
-      | Seq.Cons (x, xs) ->
-          symbols := xs;
-          x
-      | Seq.Nil ->
-          Error.raise_violation "Unexpectedly exhausted the symbol sequence"
+    make_generator symbols
 
   let reset () = symbols := create ()
 end
@@ -83,23 +81,11 @@ module MVarData : GENSYM = struct
 
   let symbols = ref (create ())
 
-  let gensym () =
-    match !symbols () with
-    | Seq.Cons (x, xs) ->
-        symbols := xs;
-        x
-    | Seq.Nil ->
-        Error.raise_violation "Unexpectedly exhausted the symbol sequence"
+  let gensym = make_generator symbols
 
   let name_gensym s =
     let symbols = ref (create_symbols [| s |]) in
-    fun () ->
-      match !symbols () with
-      | Seq.Cons (x, xs) ->
-          symbols := xs;
-          x
-      | Seq.Nil ->
-          Error.raise_violation "Unexpectedly exhausted the symbol sequence"
+    make_generator symbols
 
   let reset () = symbols := create ()
 end

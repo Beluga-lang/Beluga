@@ -6,10 +6,10 @@ let of_string s =
   let n = ref 0 in
   let n_max = String.length s in
   fun () ->
-    if !n < n_max then
+    if !n < n_max then (
       let c = String.get s !n in
-      let _ = incr n in
-      Some c
+      incr n;
+      Some c)
     else None
 
 let of_in_channel_lines chan () =

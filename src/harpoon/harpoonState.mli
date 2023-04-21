@@ -1,6 +1,5 @@
 open Support
 open Beluga.Syntax.Int
-open Beluga_parser
 
 type t
 
@@ -21,7 +20,7 @@ val make : Options.save_mode -> Options.interaction_mode ->
            t
 
 (** Wraps {!IO.parsed_prompt}. *)
-val parsed_prompt : t -> ?source : string -> string -> string option -> 'a Beluga_parser.t -> 'a
+val parsed_prompt : t -> ?source : string -> string -> string option -> 'a Beluga_parser.Parser.t -> 'a
 
 (** Prints a message to the user. *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a

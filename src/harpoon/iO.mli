@@ -1,7 +1,5 @@
 (** Centralizes high-level Harpoon input-output capabilities. *)
 
-open Beluga_parser
-
 module Error : sig
   type t =
     | EndOfInput (** Any prompt is subject to raising this. *)
@@ -50,5 +48,5 @@ val default_prompt_source : string
 val parsed_prompt : ?source : string ->
                     t ->
                     string -> string option ->
-                    'a Beluga_parser.t ->
+                    'a Beluga_parser.Parser.t ->
                     'a

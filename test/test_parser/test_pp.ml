@@ -1,10 +1,12 @@
 open Support
 open Beluga_syntax
+open Synext
 open Util
 open Base_json
 open Synext_json
 open Assert
-open Beluga_parser.Beluga_parser
+open Beluga_parser
+open Parser
 
 let parse_only_signature_file =
   parse_and_disambiguate
@@ -59,9 +61,6 @@ let save_signature_files_pp (List1.T (x, xs)) =
   in
   traverse_list_void state save_signature_file_pp xs
 
-module Printer = Synext.Printer
-module Parser = Beluga_parser
-
 let pp_and_parse_signature_files (List1.T (x, xs)) =
   let buffer = Buffer.create 1024 in
   let printing_state =
@@ -105,16 +104,14 @@ let make_compiler_test ?(save_json_to_file = false)
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =
-    Beluga_parser.Config_parser.read_configuration
-      ~filename:compiler_test_file
+    Config_parser.read_configuration ~filename:compiler_test_file
   in
   match beluga_source_files with
   | [] -> Error.raise Empty_configuration_file
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Beluga_parser.read_multi_file_signature
-          signature_source_files
+        Parser.read_multi_file_signature signature_source_files
       in
       if save_json_to_file then save_signature_files_json signature;
       if save_pp_to_file then save_signature_files_pp signature;

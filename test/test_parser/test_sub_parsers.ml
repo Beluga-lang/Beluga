@@ -3,7 +3,8 @@ open Support
 open Beluga_syntax
 open Util
 open Assert
-open Beluga_parser.Beluga_parser
+open Beluga_parser
+open Parser
 
 let parse_only_lf_kind =
   parse_and_disambiguate

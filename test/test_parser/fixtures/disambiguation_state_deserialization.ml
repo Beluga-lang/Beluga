@@ -1,6 +1,7 @@
 open Support
 open Beluga_syntax
-open Beluga_parser.Beluga_parser
+open Beluga_parser
+open Parser
 
 exception Unsupported_sort of string
 

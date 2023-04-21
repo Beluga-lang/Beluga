@@ -25,9 +25,9 @@ module type LOAD_STATE = sig
 end
 
 module Load_state = struct
-  module Parsing = Beluga_parser.Parsing
-  module Disambiguation = Beluga_parser.Disambiguation
-  module Disambiguation_state = Beluga_parser.Disambiguation_state
+  module Parsing = Parser.Parsing
+  module Disambiguation = Parser.Disambiguation
+  module Disambiguation_state = Parser.Disambiguation_state
   module Index_state = Index_state.Indexing_state
   module Signature_reconstruction_state =
     Recsgn_state.Signature_reconstruction_state
@@ -55,12 +55,12 @@ module Load_state = struct
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let initial_parser_state =
-          Beluga_parser.make_initial_state_from_channel ~initial_location
+          Parser.make_initial_state_from_channel ~initial_location
             ~disambiguation_state:state.disambiguation_state
             ~channel:in_channel
         in
-        Beluga_parser.eval
-          (Beluga_parser.parse_and_disambiguate
+        Parser.eval
+          (Parser.parse_and_disambiguate
              ~parser:Parsing.(only signature_file)
              ~disambiguator:(fun state signature_file ->
                Disambiguation.disambiguate_signature_file state

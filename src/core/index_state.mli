@@ -256,6 +256,10 @@ module type INDEXING_STATE = sig
 
   val with_parent_scope : state -> (state -> 'a) -> 'a
 
+  (** [with_bindings_checkpoint state m] runs [m] with a checkpoint on the
+      bindings' state to backtrack to in case [m] raises an exception. *)
+  val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
+
   (** {1 Pattern Variables} *)
 
   (** [with_free_variables_as_pattern_variables state ~pattern ~expression]

@@ -671,6 +671,8 @@ module type INDEXING_STATE = sig
 
   val with_parent_scope : state -> (state -> 'a) -> 'a
 
+  val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
+
   val with_free_variables_as_pattern_variables :
     state -> pattern:(state -> 'a) -> expression:(state -> 'a -> 'b) -> 'b
 
@@ -838,14 +840,12 @@ module Indexing_state = struct
     let current_scope_bindings_state =
       get_current_scope_bindings_state state
     in
-    let scope =
-      Plain_scope
-        { bindings =
-            { current_scope_bindings_state with
-              bindings = Binding_tree.create ()
-            }
-        }
+    let bindings =
+      { current_scope_bindings_state (* Copy context sizes *) with
+        bindings = Binding_tree.create ()
+      }
     in
+    let scope = Plain_scope { bindings } in
     push_scope state scope
 
   let entry_is_not_variable entry = Bool.not (Entry.is_variable entry)
@@ -1903,6 +1903,17 @@ module Indexing_state = struct
     let scope = pop_scope state in
     let x = with_scope state m in
     push_scope state scope;
+    x
+
+  let with_bindings_checkpoint state m =
+    push_new_plain_scope state;
+    let x =
+      try m state with
+      | cause ->
+          ignore (pop_scope state);
+          Error.raise cause
+    in
+    ignore (pop_scope state);
     x
 
   let allow_free_variables state m =

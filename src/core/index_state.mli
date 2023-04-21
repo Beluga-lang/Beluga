@@ -365,18 +365,6 @@ module type INDEXING_STATE = sig
 
   (** {1 Interoperability} *)
 
-  (** [add_all_bvar_store state store] adds all LF-bound variables in
-      [store]. *)
-  val add_all_bvar_store : state -> Store.BVar.t -> Unit.t
-
-  (** [add_all_cvar_store state store] adds all contextual variables in
-      [store]. *)
-  val add_all_cvar_store : state -> Store.CVar.t -> Unit.t
-
-  (** [add_all_var_store state store] adds all computation-level variables in
-      [store]. *)
-  val add_all_var_store : state -> Store.Var.t -> Unit.t
-
   (** [add_all_mctx state cD] adds all contextual variables in [cD]. *)
   val add_all_mctx : state -> Synint.LF.mctx -> Unit.t
 
@@ -389,5 +377,9 @@ module Indexing_state : sig
   (** @closed *)
   include INDEXING_STATE
 
+  (** [create_initial_state ()] is a fresh empty indexing state. *)
   val create_initial_state : Unit.t -> state
+
+  (** [clear_state state] resets [state] to its initial state. *)
+  val clear_state : state -> Unit.t
 end

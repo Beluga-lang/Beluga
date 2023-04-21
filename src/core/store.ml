@@ -340,6 +340,7 @@ module Cid = struct
       cid
 
     let addConstructor loc typ c tA =
+      (* TODO: Check name conflict, add parameter for the constructor name *)
       let entry = get typ in
       if !(entry.frozen)
       then raise (Error (loc, FrozenType typ))
@@ -820,140 +821,6 @@ module FCVar = struct
   let add = NameTable.add store
   let get = NameTable.find store
   let clear () = NameTable.clear store
-end
-
-(** LF-bound variables *)
-module BVar = struct
-
-  type entry = { name : Name.t }
-
-  let mk_entry n = { name = n }
-
-  type t = entry list
-
-  let index_of_name store n =
-    let rec loop i =
-      function
-      | [] -> raise Not_found
-      | { name; _ } :: es ->
-         if Name.(name = n)
-         then i
-         else loop (i + 1) es
-    in
-    loop 1 store
-
-  let empty = []
-  let extend ctx e = e :: ctx
-  let length = List.length
-  let get = List.nth
-
-  let to_list = Fun.id
-end
-
-(** Contextual variables *)
-module CVar = struct
-
-  type cvar = Name.t
-
-  type entry =
-    { name : cvar
-    ; plicity : Plicity.t
-    }
-
-  let mk_entry name plicity =
-    { name; plicity }
-
-  type t = entry list
-
-  let lookup store x =
-    let rec loop i = function
-      | [] -> raise Not_found
-      | (e :: es) ->
-         if Name.(e.name = x) then
-           (i, e)
-         else
-           loop (i + 1) es
-    in
-    loop 1 store
-
-  let index_of_name store x =
-    let (i, e) = lookup store x in
-    (e.plicity, i)
-
-  let empty = []
-  let extend cvars e = e :: cvars
-  let get = List.nth
-  let append cvars cvars' = cvars @ cvars'
-  let length cvars = List.length cvars
-
-  let to_string (cvars : t) : string =
-    let rec go s =
-      function
-      | [] -> s
-      | x :: xs -> go (s ^ ", " ^ Name.string_of_name x.name) xs
-    in
-    go "" cvars
-
-  let of_mctx f (cD : Int.LF.mctx) : t =
-    let f d v =
-      let open Int.LF in
-      match d with
-      | Decl (u, _, plicity, inductivity) ->
-        let plicity' = f (plicity, inductivity) in
-        mk_entry u plicity' |> extend v
-      | DeclOpt _ ->
-         Error.raise_violation "[of_mctx] DeclOpt impossible"
-    in
-    List.fold_right f (Context.to_list_rev cD) empty
-
-  let of_list (l : (Name.t * Plicity.t) list) : t =
-    List.map (fun (u, p) -> mk_entry u p) l
-
-  let to_list = Fun.id
-end
-
-(** Computation-level variables *)
-module Var = struct
-
-  type entry =
-    { name : Name.t
-    }
-
-  let mk_entry name =
-    { name
-    }
-
-  type t = entry list
-
-  let index_of_name store n =
-    let rec loop i =
-      function
-      | [] -> raise Not_found
-      | (e :: es) ->
-         if Name.(e.name = n)
-         then i
-         else loop (i + 1) es
-    in
-    loop 1 store
-
-  let to_list = Fun.id
-  let empty = []
-  let extend ctx e = e :: ctx
-  let append vars vars' = vars @ vars'
-  let get = List.nth
-  let size = List.length
-
-  (**
-   * Erases a context down to a mere list of variables.
-   * This is useful for indexing a term in the external syntax when the
-   * context it occurs in is know, e.g. as in Harpoon.
-   *)
-  let of_gctx (cG : Int.Comp.gctx) : t =
-    let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
-    List.fold_right f (Context.to_list_rev cG) empty
-
-  let of_list (l : Name.t list) : t =
-    List.map mk_entry l
 end
 
 let clear () =

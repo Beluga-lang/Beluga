@@ -19,3 +19,7 @@ val with_in_channel : string -> (in_channel -> 'a) -> 'a
     to the file at [filename]. The contents of the file are replaced by the
     outputs printed to it. *)
 val with_pp_to_file : string -> (Format.formatter -> 'a) -> 'a
+
+(** [copy_file ~source ~destination] copies the contents of file [~source] to
+    the file [~destination]. *)
+val copy_file : source:string -> destination:string -> unit

@@ -822,6 +822,11 @@ module Disambiguation_state = struct
     ; default_associativity = Synext.default_associativity
     }
 
+  let clear_state state =
+    state.scopes <- List1.singleton (create_module_scope ());
+    state.default_precedence <- Synext.default_precedence;
+    state.default_associativity <- Synext.default_associativity
+
   let get_scope_bindings = function
     | Plain_scope { bindings } -> bindings
     | Module_scope { bindings; _ } -> bindings

@@ -43,7 +43,7 @@ module Elab = struct
       Holes.catch
         begin fun _ ->
         let (i, (tau, theta)) =
-          Interactive.elaborate_exp' cD cG t
+          (* TODO: Interactive.elaborate_exp' *) (fun _ _ _ -> Obj.magic ()) cD cG t
         in
         dprintf
           begin fun p ->
@@ -62,14 +62,14 @@ module Elab = struct
   let exp mcid cIH cD cG mfs t ttau =
     Holes.catch
       begin fun _ ->
-      let e = Interactive.elaborate_exp cD cG t (Pair.map_left Total.strip ttau) in
+      let e = (* TODO: Interactive.elaborate_exp *) (fun _ _ _ _ -> Obj.magic ()) cD cG t (Pair.map_left Total.strip ttau) in
       let e = Whnf.cnormExp (e, Whnf.m_id) in
       Check.Comp.check mcid ~cIH: cIH cD cG mfs e ttau;
       e
       end
 
   let typ cD tau =
-    let (tau, k) = Interactive.elaborate_typ cD tau in
+    let (tau, k) = (* TODO: Interactive.elaborate_typ *) (fun _ _ -> Obj.magic ()) cD tau in
     tau
 
   (** Elaborates a metavariable. *)

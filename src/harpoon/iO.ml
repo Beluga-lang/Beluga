@@ -24,7 +24,7 @@ type t =
   ; ppf : Format.formatter
   }
 
-let prompt_number io = ! (io.prompt_number)
+let prompt_number io = !(io.prompt_number)
 
 let formatter io = io.ppf
 

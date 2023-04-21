@@ -1,13 +1,11 @@
-(** Registers a new bespoke command *)
-val register :
-  string -> (Format.formatter -> string list -> unit) -> string -> unit
+type state
 
-(** Decides whether an input string is some Beluga code (constructor
-    [`Input]) or an interactive mode command to run (constructor [`Cmd]). *)
-val is_command : string -> [> `Cmd of string | `Input of string ]
+val fprintf : state -> ('a, Format.formatter, Unit.t) format -> 'a
 
-(** Given a formatter for command output, parses the given string as a
-    command and runs it. *)
-val do_command : Format.formatter -> string -> unit
+val create_initial_state : Unit.t -> state
 
-val print_usage : Format.formatter -> unit
+val print_usage : state -> Unit.t
+
+val interpret_command : state -> input:String.t -> Unit.t
+
+val load : state -> filename:String.t -> Synint.Sgn.sgn

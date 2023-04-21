@@ -94,7 +94,6 @@ The Beluga executable accepts the following options from the command line.\\
 
 \begin{tabular}{ | p{0.2\linewidth} p{0.8\linewidth} }
     +d                      & Turn all on -- note that in interactive mode debugging information is piped to 'debug.out'           \\
-    +ext                    & Print external syntax before reconstruction                                                          \\
     -s=debruijn             & Print substitutions in deBruijn--ish style (when debugging Beluga)                                   \\
     +implicit               & Print implicit arguments                                                                             \\
     +t                      & Print timing information                                                                             \\
@@ -105,15 +104,9 @@ The Beluga executable accepts the following options from the command line.\\
     -width nnn              & Set output width to nnn (default 86, min 40)                                                         \\
     -logic                  & Turn off logic programming engine                                                                    \\
     +test                   & Make output suitable for test harness                                                                \\
-    +realNames              & Print holes using real names                                                                         \\
     +html                   & Generate an html page of the source code using default CSS                                           \\
-    +htmltest               & Run HTML mode on file, but do not create final HTML page                                             \\
-    +sexp                   & Dump the elaborated code using S-expressions                                                         \\
-    -css                    & Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage \\
-    +cssfile $<$filepath$>$ & Specify css file to link to from generated HTML page                                                 \\
     +annot                  & Generate a .annot file for use in emacs                                                              \\
-    +locs                   & Output location information (for testing)                                                            \\
-    -I [beli-options]       & Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli)\\
+    -I [beli-options]       & Invoke interactive (Beli) mode with an optional path to a Beluga signature to load\\
                             &  beli-options:
                             \begin{tabular}{ p{0.2\linewidth} p{0.6\linewidth} }
                                 -emacs    & mode used to interact with emacs (not recommended in commandline) \\
@@ -841,60 +834,20 @@ Interactive mode supports variable splitting to fill computation-level holes wit
 Use the split command with the hole number and variable name, and Beluga will elaborate the hole with case analysis, generating cases to cover all possible instances of the particular variable.
 After splitting one must recompile and reload the program, to continue splitting.
 
-% \section{VIM mode}
-
 \section{HTML mode}
 
-Beluga source code can be outputted to HTML complete with linking, highlighting, and unicode turnstiles.
-From the command line, compile the program with the \texttt{+HTML} option.
-\shellcmd{bin/beluga +HTML path/to/source.bel}
+Beluga source code can be outputted to HTML complete with linking and highlighting.
+From the command line, compile the program with the \texttt{+html} option.
+\shellcmd{bin/beluga +html path/to/source.bel}
 An HTML file called \verb+<source>.html+ is created in the directory containing the source file.
 The type reconstruction information appears on the web page as preformatted text in code boxes between \verb+<pre>+ tags.
 Beluga keywords along with user-defined types, constructors, and functions are enclosed between \verb+<keyword>+ and \verb+<code>+ tags, respectively, stylized with CSS embedded directly into the HTML.
 To forgo the default style, use the \verb+-css+ option to output the HTML body only.
-\shellcmd{bin/beluga +HTML -css path/to/source.bel}
+\shellcmd{bin/beluga +html -css path/to/source.bel}
 Alternatively, the user can specify a particular CSS stylesheet for the HTML page with the \verb++cssfile+ option.
 Note that filepaths must be relative to the directory in which the Beluga program is located, not the terminal current directory.
-\shellcmd{bin/beluga +HTML +cssfile path/to/style.css path/to/source.bel}
+\shellcmd{bin/beluga +html +cssfile path/to/style.css path/to/source.bel}
 
-\newpage
-
-HTML mode includes a markup language to add text to the web page.
-Three backticks \verb+```+ introduces and concludes a block of text to be rendered onto the page.
-In addition to the syntax described in the table below, pure HTML can embedded directly into text blocks.
-In fact, the special characters listed at the end are merely mnemonics for HTML encodings.
-
-\begin{tabular}{ | l | l |}
-\hline
-\verb+```+ & Begin/end text block \\
-\hline
-\begin{tabular}{ l } \verb+# Level 1+ \\ \verb+## Level 2+ \\ \verb+### Level 3+ \\  \end{tabular} & Headers \\
-\hline
-\verb+*text*+ & Italicize text\\
-\hline
-\verb+**text**+ & Bold text\\
-\hline
-\verb+'code'+ & Inline code\\
-\hline
-\begin{tabular}{ l } 1. \\ 2. \\ 3 .\\ .. \\ \end{tabular} & Ordered list\\
-\hline
-\begin{tabular}{ l } - \\ - \\ - \\ .. \\ \end{tabular} & Unordered list\\
-\hline
-\verb+-----+ & Horizontal line\\
-\hline
-\verb+&rarr;+ & Right-arrow\\
-\hline
-\verb+&Gamma;+ & Upper-case gamma\\
-\hline
-\verb+&delta;+ & Lower-case delta\\
-\hline
-\verb+&forall;+ & Turned A\\
-\hline
-\verb+&exist;+ & Turned E\\
-\hline
-\end{tabular}
-
-
-
+Documentation comments enclosed in \verb+%{{+ and \verb+}}%+ are parsed as Markdown following the \href{https://spec.commonmark.org/0.29}{\textsc{Commonmark} standard version 0.29}.
 
 \end{document}

@@ -11,44 +11,10 @@ open Syntax
 open Int
 module S = Substitution
 
-module P = Pretty.Int.DefaultPrinter
-
 let fmt_ppr_conv_list =
   Format.(pp_print_list ~pp_sep: Support.Format.comma pp_print_int)
 
-(* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
-let rec _blockdeclInDctx =
-  function
-  | LF.Null -> false
-  | LF.CtxVar psi -> false
-  | LF.DDec (cPsi', LF.TypDecl (x, tA)) ->
-     begin match Whnf.whnfTyp (tA, S.LF.id) with
-     | (LF.Sigma _, _) -> true
-     | _ -> _blockdeclInDctx cPsi'
-     end
-  | _ -> false
-
-type error =
-  | BlockInDctx of LF.mctx * LF.head * LF.typ * LF.dctx
-
 type t = Id.offset list
-
-exception Error of Location.t * error
-
-let () =
-  Error.register_exception_printer (function
-      | Error (location, BlockInDctx (cD, h, tA, cPsi)) ->
-      Error.located_exception_printer
-        (Format.dprintf
-           "Encountered contextual object [%a.%a] of type [%a.%a].@ \
-            Unification cannot prune it because its context contains \
-            blocks."
-           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-           (P.fmt_ppr_lf_head cD cPsi P.l0) h
-           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-           (P.fmt_ppr_lf_typ cD cPsi P.l0) tA)
-        (List1.singleton location)
-      | exn -> Error.raise_unsupported_exception_printing exn)
 
 (* ************************************************************************ *)
 let rec map conv_list k =

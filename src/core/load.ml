@@ -9,7 +9,7 @@ let dprintf, _, _ = Debug.(makeFunctions' (toFlags [ 11 ]))
 open Debug.Fmt
 
 module type LOAD_STATE = sig
-  type state
+  include Imperative_state.IMPERATIVE_STATE
 
   val read_signature_file :
     state -> filename:String.t -> Synext.signature_file
@@ -19,31 +19,29 @@ module type LOAD_STATE = sig
 
   val get_leftover_vars :
     state -> (Abstract.free_var Synint.LF.ctx * Location.t) List.t
-
-  val traverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 end
 
-module Load_state = struct
-  module Parsing = Parser.Parsing
-  module Disambiguation = Parser.Disambiguation
-  module Disambiguation_state = Parser.Disambiguation_state
-  module Index_state = Index_state.Indexing_state
-  module Signature_reconstruction_state =
-    Recsgn_state.Signature_reconstruction_state
-  module Signature_reconstruction = Recsgn.Signature_reconstruction
+module Make_load_state
+    (Disambiguation_state : Beluga_parser.DISAMBIGUATION_STATE)
+    (Disambiguation : Beluga_parser.DISAMBIGUATION
+                        with type state = Disambiguation_state.state)
+    (Signature_reconstruction_state : Recsgn_state
+                                      .SIGNATURE_RECONSTRUCTION_STATE)
+    (Signature_reconstruction : Recsgn.SIGNATURE_RECONSTRUCTION
+                                  with type state =
+                                    Signature_reconstruction_state.state) =
+struct
+  module Parser_state =
+    Parser_combinator.Make_persistent_state (Located_token)
+  module Parser = Beluga_parser.Make (Parser_state) (Disambiguation_state)
 
   type state =
     { disambiguation_state : Disambiguation_state.state
     ; signature_reconstruction_state : Signature_reconstruction_state.state
     }
 
-  let create_initial_state () =
-    { disambiguation_state = Disambiguation_state.create_initial_state ()
-    ; signature_reconstruction_state =
-        Signature_reconstruction_state.create_initial_state
-          (Index_state.create_initial_state ())
-    }
+  let create_state disambiguation_state signature_reconstruction_state =
+    { disambiguation_state; signature_reconstruction_state }
 
   include (
     Imperative_state.Make (struct
@@ -52,20 +50,24 @@ module Load_state = struct
       Imperative_state.IMPERATIVE_STATE with type state := state)
 
   let read_signature_file state ~filename =
-    In_channel.with_open_bin filename (fun in_channel ->
-        let initial_location = Location.initial filename in
-        let initial_parser_state =
-          Parser.make_initial_state_from_channel ~initial_location
-            ~disambiguation_state:state.disambiguation_state
-            ~channel:in_channel
-        in
-        Parser.eval
-          (Parser.parse_and_disambiguate
-             ~parser:Parsing.(only signature_file)
-             ~disambiguator:(fun state signature_file ->
-               Disambiguation.disambiguate_signature_file state
-                 signature_file))
-          initial_parser_state)
+    let signature_file =
+      In_channel.with_open_bin filename (fun in_channel ->
+          let initial_location = Location.initial filename in
+          let token_sequence =
+            Lexer.lex_input_channel ~initial_location in_channel
+          in
+          let parsing_state =
+            Parser_state.initial ~initial_location token_sequence
+          in
+          let _parsing_state', signature_file =
+            Parser.Parsing.run_exn
+              Parser.Parsing.(only signature_file)
+              parsing_state
+          in
+          signature_file)
+    in
+    Disambiguation.disambiguate_signature_file state.disambiguation_state
+      signature_file
 
   let reconstruct_signature_file state signature =
     Signature_reconstruction.reconstruct_signature_file
@@ -75,6 +77,29 @@ module Load_state = struct
     Signature_reconstruction_state.get_leftover_vars
       state.signature_reconstruction_state
 end
+
+module type LOAD = sig
+  include Imperative_state.IMPERATIVE_STATE
+
+  val load : state -> String.t -> String.t List.t * Synint.Sgn.sgn
+end
+
+let read_signature_and_write_html filename =
+  let source_files =
+    List.map Pair.snd (Config_parser.read_configuration ~filename)
+  in
+  let directory = Sys.getcwd () in
+  let signature =
+    Parser.read_multi_file_signature (List1.unsafe_of_list source_files)
+  in
+  Beluga_html.pp_signature_to_files ~directory signature;
+  let opam_switch_prefix = Sys.getenv "OPAM_SWITCH_PREFIX" in
+  let css_filename =
+    Filename.concat opam_switch_prefix
+      (Filename.concat "share" (Filename.concat "beluga" "beluga.css"))
+  in
+  Files.copy_file ~source:css_filename
+    ~destination:(Filename.concat directory (Filename.basename css_filename))
 
 module Make_load (Load_state : LOAD_STATE) = struct
   include Load_state
@@ -131,7 +156,9 @@ module Make_load (Load_state : LOAD_STATE) = struct
       (Option.from_predicate List.nonempty leftoverVars);
 
     if !Typeinfo.generate_annotations then Typeinfo.print_annot filename;
-    if !Monitor.on || !Monitor.onf then Monitor.print_timers ()
+    if !Monitor.on || !Monitor.onf then Monitor.print_timers ();
+
+    sgn'
 
   let load_one state path =
     try load_file state path with
@@ -157,12 +184,34 @@ module Make_load (Load_state : LOAD_STATE) = struct
     Store.clear ();
     Typeinfo.clear_all ();
     Holes.clear ();
-    traverse_list_void state load_one all_paths;
-    all_paths
+    let signature' = List.concat (traverse_list state load_one all_paths) in
+
+    if !Options.Html.enabled then
+      read_signature_and_write_html configuration_filename;
+
+    (all_paths, signature')
 end
 
-include Make_load (Load_state)
+module Load_state =
+  Make_load_state (Parser.Disambiguation_state) (Parser.Disambiguation)
+    (Recsgn_state.Signature_reconstruction_state)
+    (Recsgn.Signature_reconstruction)
+module Load = Make_load (Load_state)
 
-let load filename =
-  let state = Load_state.create_initial_state () in
-  load state filename
+let load disambiguation_state signature_reconstruction_state filename =
+  let state =
+    Load_state.create_state disambiguation_state
+      signature_reconstruction_state
+  in
+  Load.load state filename
+
+let load_fresh filename =
+  let disambiguation_state =
+    Parser.Disambiguation_state.create_initial_state ()
+  in
+  let indexing_state = Index_state.Indexing_state.create_initial_state () in
+  let signature_reconstruction_state =
+    Recsgn_state.Signature_reconstruction_state.create_initial_state
+      indexing_state
+  in
+  load disambiguation_state signature_reconstruction_state filename

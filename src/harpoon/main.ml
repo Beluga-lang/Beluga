@@ -44,5 +44,4 @@ let main () =
      print_string (Printexc.to_string e);
      exit 1
 
-let _ =
-  main ()
+let () = main ()

@@ -710,12 +710,6 @@ module type INDEXING_STATE = sig
 
   val disallow_free_variables : state -> (state -> 'a) -> 'a
 
-  val add_all_bvar_store : state -> Store.BVar.t -> Unit.t
-
-  val add_all_cvar_store : state -> Store.CVar.t -> Unit.t
-
-  val add_all_var_store : state -> Store.Var.t -> Unit.t
-
   val add_all_mctx : state -> Synint.LF.mctx -> Unit.t
 
   val add_all_gctx : state -> Synint.Comp.gctx -> Unit.t
@@ -776,6 +770,11 @@ module Indexing_state = struct
     ; free_variables_allowed = false
     ; generated_fresh_variables_count = 0
     }
+
+  let clear_state state =
+    state.scopes <- List1.singleton (create_empty_module_scope ());
+    state.free_variables_allowed <- false;
+    state.generated_fresh_variables_count <- 0
 
   let[@inline] enable_free_variables state =
     state.free_variables_allowed <- true
@@ -1966,27 +1965,6 @@ module Indexing_state = struct
             let expression' = expression state pattern' in
             ignore (pop_scope state);
             expression')
-
-  let add_all_bvar_store state store =
-    (* [store] is a stack, so traverse it from tail to head *)
-    List.iter_rev
-      (fun { Store.BVar.name } ->
-        add_lf_variable state (Name.to_identifier name))
-      (Store.BVar.to_list store)
-
-  let add_all_cvar_store state store =
-    (* [store] is a stack, so traverse it from tail to head *)
-    List.iter_rev
-      (fun { Store.CVar.name; _ } ->
-        add_context_variable state (Name.to_identifier name))
-      (Store.CVar.to_list store)
-
-  let add_all_var_store state store =
-    (* [store] is a stack, so traverse it from tail to head *)
-    List.iter_rev
-      (fun { Store.Var.name } ->
-        add_comp_variable state (Name.to_identifier name))
-      (Store.Var.to_list store)
 
   let rec add_all_mctx state cD =
     (* [cD] is a stack, so traverse it from tail to head *)

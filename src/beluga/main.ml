@@ -1,7 +1,6 @@
 (** Core / Frontend Driver
 
-    @author Joshua Dunfield
-*)
+    @author Joshua Dunfield *)
 
 open Support
 open Beluga
@@ -9,14 +8,13 @@ open Printf
 module F = Fun
 
 let bailout msg =
-  fprintf stderr "%s\n" msg;
+  fprintf stderr "%s@." msg;
   exit 2
 
 let usage () =
   let options =
           "    +d                    Turn all debugging printing on - note that in interactive mode\n"
         ^ "                              debugging information is piped to 'debug.out'\n"
-        ^ "    +ext                  Print external syntax before reconstruction\n"
         ^ "    -s=debruijn           Print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit             Print implicit arguments\n"
         ^ "    +t                    Print timing information\n"
@@ -27,13 +25,9 @@ let usage () =
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
         ^ "    +test                 Make output suitable for test harness. Implies -print\n"
-        ^ "    +html              Generate an html page of the source code using default CSS\n"
-        ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
-        ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
-        ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
+        ^ "    +html                 Generate an HTML page of the source Beluga code\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
-        ^ "    +locs                 Output location information (for testing)\n"
-        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
+        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with an optional path to a Beluga signature to load\n"
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
   in
@@ -61,6 +55,7 @@ let process_option arg rest =
   | "+printSubord" -> Subord.dump := true; rest
   | "+test" | "-print" -> Chatter.level := 0; rest
   | "+print" -> Chatter.level := 2; rest
+  | "+html" -> Options.Html.enabled := true; rest
   | "-width" ->
      with_arg_for "-width"
        begin fun arg rest ->
@@ -78,40 +73,38 @@ let process_option arg rest =
   | "-I" ->
      begin
        try Beli.run rest
-       with Beli.Invalid_Arg -> usage ()
+       with Beli.Invalid_argument -> usage ()
      end
   | _ ->
      usage ()
 
+let is_option argument =
+  let first = String.get argument 0 in
+  first = '-' || first = '+'
+
 let rec process_options = function
   | [] -> []
   | arg :: rest ->
-      let first = String.get arg 0 in
-        if first = '-' || first = '+' then
-          process_options (process_option arg rest)
-        else  (* reached end of options: return this and remaining arguments *)
-          arg :: rest
+      if is_option arg then process_options (process_option arg rest)
+      else
+        (* reached end of options: return this and remaining arguments *)
+        arg :: rest
 
 let main () =
-  let args   = List.tl (Array.to_list Sys.argv) in
+  let args = List.tl (Array.to_list Sys.argv) in
   let files = process_options args in
-  Debug.init None;
-  begin match files with
-  | [file] ->
-     let _ = Load.load file in
-     ()
-  | _ -> bailout "Wrong number of command line arguments."
-  end;
-  printf "%s" (Beluga.Coverage.get_information ())
+  Debug.init Option.none;
+  (match files with
+  | [ file ] ->
+      ignore (Load.load_fresh file)
+  | _ -> bailout "Wrong number of command line arguments.");
+  printf "%s@." (Beluga.Coverage.get_information ())
 
 let () =
   Format.set_margin 80;
-  if Array.length Sys.argv <= 1 then
-    usage ()
+  if Array.length Sys.argv <= 1 then usage ()
   else
-    try
-      main ()
-    with
+    try main () with
     | e ->
-       prerr_string (Printexc.to_string e);
-       exit 1
+        prerr_string (Printexc.to_string e);
+        exit 1

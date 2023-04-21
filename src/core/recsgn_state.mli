@@ -221,11 +221,14 @@ end)
   include SIGNATURE_RECONSTRUCTION_STATE
 
   val create_initial_state : Index_state.state -> state
+
+  val clear_state :
+    clear_index_state:(Index_state.state -> unit) -> state -> unit
 end
 [@@warning "-67"]
 
-module Signature_reconstruction_state : sig
-  include SIGNATURE_RECONSTRUCTION_STATE
-
-  val create_initial_state : Index_state.Indexing_state.state -> state
-end
+module Signature_reconstruction_state :
+    module type of
+      Make_signature_reconstruction_state
+        (Index_state.Indexing_state)
+        (Index.Indexer)

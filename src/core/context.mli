@@ -187,6 +187,6 @@ val is_empty : 'a LF.ctx -> bool
     in the second. *)
 val steal_mctx_names : LF.mctx -> LF.mctx -> LF.mctx
 
-(** Given two convertible computational contexts, rebuilds teh first using
+(** Given two convertible computational contexts, rebuilds the first using
     the names in the second. *)
 val steal_gctx_names : Comp.gctx -> Comp.gctx -> Comp.gctx

@@ -37,3 +37,24 @@ let with_pp_to_file filename f =
   | cause ->
       Out_channel.close_noerr out_channel;
       raise cause
+
+let copy_file ~source ~destination =
+  let buffer_size = 4096 in
+  let buffer = Bytes.create buffer_size in
+  let input_channel = In_channel.open_bin source in
+  let output_channel = Out_channel.open_bin destination in
+  try
+    let bytes_read_count = ref 0 in
+    while
+      bytes_read_count := In_channel.input input_channel buffer 0 buffer_size;
+      !bytes_read_count <> 0
+    do
+      Out_channel.output output_channel buffer 0 !bytes_read_count
+    done;
+    In_channel.close input_channel;
+    Out_channel.close output_channel
+  with
+  | cause ->
+      In_channel.close_noerr input_channel;
+      Out_channel.close_noerr output_channel;
+      raise cause

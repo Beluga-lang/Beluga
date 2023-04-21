@@ -257,6 +257,14 @@ struct
     ; unfrozen_declarations = []
     }
 
+  let clear_state ~clear_index_state state =
+    state.leftover_vars <- [];
+    clear_index_state state.index_state;
+    state.default_associativity <- Synext.default_associativity;
+    state.default_precedence <- Synext.default_precedence;
+    state.modules <- 0;
+    state.unfrozen_declarations <- []
+
   let get_leftover_vars state = state.leftover_vars
 
   let add_leftover_vars state vars location =
@@ -507,7 +515,7 @@ struct
     state.unfrozen_declarations <- []
 end
 
-module Index_state = Index_state.Indexing_state
-module Index = Index.Make_indexer (Index_state)
 module Signature_reconstruction_state =
-  Make_signature_reconstruction_state (Index_state) (Index)
+  Make_signature_reconstruction_state
+    (Index_state.Indexing_state)
+    (Index.Indexer)

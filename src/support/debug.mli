@@ -6,20 +6,21 @@
 (** Usage:
 
     - In each client module, create debug-printer functions by calling
-      [makeFunctions]:
+      {!makeFunctions} or {!makeFunctions'}:
 
     {[
       let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [...])
+
+      let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [...])
     ]}
 
-    where `...' is the category (conceivably, categories) specific to the
-    module.
+    where `...' is the category (or categories) specific to the module.
 
     Then,
 
-    - [print] takes a thunk
-    - [prnt] (misspelled) takes a string
-    - [printf] takes a callback receiving formatter, with which you can
+    - [dprint] takes a thunk
+    - [dprnt] (misspelled) takes a string
+    - [dprintf] takes a callback receiving formatter, with which you can
       generate formatted output, including custom indentation.
 
     If debugging is turned off, [print] is more efficient whenever computing
@@ -31,6 +32,8 @@
 type flags
 
 val enable : unit -> unit
+
+val is_enabled : unit -> bool
 
 val init : string option -> unit
 

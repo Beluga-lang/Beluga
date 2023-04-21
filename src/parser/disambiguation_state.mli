@@ -488,5 +488,9 @@ module Disambiguation_state : sig
   (** @closed *)
   include DISAMBIGUATION_STATE
 
+  (** [create_initial_state ()] is a fresh empty disambiguation state. *)
   val create_initial_state : Unit.t -> state
+
+  (** [clear_state state] resets [state] to its initial state. *)
+  val clear_state : state -> Unit.t
 end

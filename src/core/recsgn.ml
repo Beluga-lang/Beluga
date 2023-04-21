@@ -178,11 +178,20 @@ let fmt_ppr_leftover_vars ppf =
 
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
+module type SIGNATURE_RECONSTRUCTION = sig
+  include Imperative_state.IMPERATIVE_STATE
+
+  val reconstruct_signature : state -> Synext.signature -> Synint.Sgn.sgn
+
+  val reconstruct_signature_file :
+    state -> Synext.signature_file -> Synint.Sgn.sgn
+end
+
 module Make
-    (Signature_reconstruction_state : module type of
-                                        Recsgn_state
-                                        .Signature_reconstruction_state) =
-struct
+    (Signature_reconstruction_state : Recsgn_state
+                                      .SIGNATURE_RECONSTRUCTION_STATE) :
+  SIGNATURE_RECONSTRUCTION
+    with type state = Signature_reconstruction_state.state = struct
   include Signature_reconstruction_state
 
   let rec get_lf_typ_target = function

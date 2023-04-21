@@ -519,6 +519,12 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               }
         ; substitution
         } -> (
+        (* FIXME: Ideally, it should be the case that [#p.1[..]] and
+           [#p[..].1] have different meanings, because the following hacky
+           swapping of the substitution and projection misleads the user into
+           thinking those notations are equivalent. The notation [#p.1[..]]
+           should instead always be rejected (and never printed back to the
+           user). *)
         (* The external syntax supports [#p.1[..]] as [(#p.1)[..]], but the
            approximate syntax expects [(#p[..]).1]. *)
         match index_of_parameter_variable_opt state identifier with
@@ -753,6 +759,12 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
               }
         ; substitution
         } -> (
+        (* FIXME: Ideally, it should be the case that [#p.1[..]] and
+           [#p[..].1] have different meanings, because the following hacky
+           swapping of the substitution and projection misleads the user into
+           thinking those notations are equivalent. The notation [#p.1[..]]
+           should instead always be rejected (and never printed back to the
+           user). *)
         (* The external syntax supports [#p.1[..]] as [(#p.1)[..]], but the
            approximate syntax expects [(#p[..]).1]. *)
         match index_of_parameter_variable_opt state identifier with

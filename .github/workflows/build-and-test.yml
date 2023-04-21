@@ -43,8 +43,6 @@ jobs:
   build-and-test:
     name: Build & Test
 
-    needs: lint
-
     strategy:
       fail-fast: true
       matrix:

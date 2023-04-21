@@ -7,10 +7,10 @@ shopt -s nullglob
 
 # Option flags.
 declare FORCE_COLOR_OUTPUT=""
-declare NO_EXAMPLES=""
-declare ONLY_EXAMPLES=""
-declare ONLY_INTERACTIVES=""
-declare ONLY_HARPOON=""
+declare RUN_EXAMPLES_TESTS="true"
+declare RUN_COMPILER_TESTS="true"
+declare RUN_INTERACTIVE_MODE_TESTS="" # TODO: Set to "true"
+declare RUN_HARPOON_MODE_TESTS="" # TODO: Set to "true"
 declare PRINT_HARPOON_OUTPUT_ON_FAILURE=""
 declare RESET_OUT_FILES=""
 declare STOP_ON_FAILURE=""
@@ -87,21 +87,9 @@ function parse_opts {
             -c|--colour|--color)
                 FORCE_COLOR_OUTPUT="true"
                 ;;
-            --noexamples)
-                NO_EXAMPLES="true"
-                ;;
-            --examples)
-                ONLY_EXAMPLES="true"
-                ;;
             --reset)
                 SKIP_RSYNC=1
                 RESET_OUT_FILES="true"
-                ;;
-            --interactive)
-                ONLY_INTERACTIVES="true"
-                ;;
-            --harpoon)
-                ONLY_HARPOON="true"
                 ;;
             --printharpoon)
                 PRINT_HARPOON_OUTPUT_ON_FAILURE="true"
@@ -134,7 +122,7 @@ function do_testing {
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
-    if [[ -z "${NO_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
+    if [[ -n "${RUN_EXAMPLES_TESTS}" ]]; then
         echo "===== EXAMPLES ====="
 
         for file_path in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
@@ -144,7 +132,7 @@ function do_testing {
         done
     fi
 
-    if [[ -z "${ONLY_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
+    if [[ -n "${RUN_COMPILER_TESTS}" ]]; then
         echo "===== COMPILER TESTS ====="
 
         for file_path in $(find_compiler_tests_in "${TESTDIR}") ; do
@@ -154,7 +142,7 @@ function do_testing {
         done
     fi
 
-    if [[ -z "${ONLY_HARPOON}" ]]; then
+    if [[ -n "${RUN_INTERACTIVE_MODE_TESTS}" ]]; then
         echo "===== INTERACTIVE MODE TESTS ====="
 
         for file_path in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
@@ -185,13 +173,15 @@ function do_testing {
         done
     fi
 
-    echo "===== HARPOON MODE TESTS ====="
+    if [[ -n "${RUN_HARPOON_MODE_TESTS}" ]]; then
+      echo "===== HARPOON MODE TESTS ====="
 
-    for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
-        start_test_case "${file_path}"
+      for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
+          start_test_case "${file_path}"
 
-        check_harpoon "${file_path}"
-    done
+          check_harpoon "${file_path}"
+      done
+    fi
 
     echo
     echo "Successes: ${TEST_RESULT_SUCCESS}"
@@ -321,10 +311,6 @@ function usage {
     echo "Options:"
     echo "  -h,--help        Display this usage information."
     echo "  -c,--color       Force colorized output even when piped."
-    echo "  --noexamples     Do not also test ${EXAMPLEDIR}."
-    echo "  --examples       Only test ${EXAMPLEDIR}."
-    echo "  --interactive    Only test the interactive mode."
-    echo "  --harpoon        Only test the harpoon mode."
     echo "  --printharpoon   Print harpoon output of a test when the test is failed."
     echo "                   This option implies --stop."
     echo "  --reset          Replace all .out files with new output (use with caution!)."

@@ -5,7 +5,30 @@
 open Support
 open Beluga_syntax
 
+(** Abstract definition of an indexing state.
+
+    An indexing state is the auxiliary data structure used during the
+    indexing phase found in module {!module:Index}. This data structure is
+    responsible for keeping track of the referencing environment (bindings in
+    scope) during the traversal of the external syntax. In particular, it
+    keeps track of constant IDs as generated from the {!module:Store}, and de
+    Bruijn levels for pure LF-bound variables, meta-level variables and
+    computation-level variables, to subsequently compute their de Bruijn
+    indices.
+
+    An additional concern with de Bruijn indices in computation-level
+    expressions is that the de Bruijn level cannot be known for all binders.
+    This is because the abstraction phase of signature reconstruction
+    introduces binders after abstraction, particularly for meta-level pattern
+    variables. While such meta-level pattern variables shadow previous
+    bindings, no de Bruijn variables may be computed for them during
+    indexing. In those cases, functions like
+    {!val:index_of_meta_variable_opt} return [Option.None], like for unbound
+    identifiers, meaning that the meta-level variable whose binder is in a
+    meta-object pattern will be indexed like a free meta-variable.
+    Abstraction will rewrite it to a bound meta-variable afterwards. *)
 module type INDEXING_STATE = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   (** [fresh_identifier state] is an identifier that is not bound in [state].
@@ -47,9 +70,15 @@ module type INDEXING_STATE = sig
        | `Module of Id.module_id
        ]
 
+  (** [index_of_lf_type_constant state identifier] is the constant ID of
+      [identifier] in [state] if it is bound to an LF type-level constant. If
+      [identifier] is bound to any other entry, then an exception is raised. *)
   val index_of_lf_type_constant :
     state -> Qualified_identifier.t -> Id.cid_typ
 
+  (** [index_of_lf_term_constant state identifier] is like
+      [index_of_lf_type_constant state identifier], but for LF term-level
+      constants. *)
   val index_of_lf_term_constant :
     state -> Qualified_identifier.t -> Id.cid_term
 
@@ -90,7 +119,7 @@ module type INDEXING_STATE = sig
       If [identifier] is unbound, then [offset_opt = Option.None].
 
       If [state] is a pattern state, then [offset_opt] is additionally
-      [Option.None] if it is not an inner bound variable. *)
+      [Option.None] if it is not an inner pattern-bound variable. *)
   val index_of_lf_variable_opt : state -> Identifier.t -> Id.offset Option.t
 
   (** [index_of_meta_variable state identifier] is the meta-level de Bruijn
@@ -109,7 +138,7 @@ module type INDEXING_STATE = sig
         unknown (i.e. its binder is a meta-variable in a pattern), then
         [offset_opt = Option.None].
       - If [state] is a pattern state, then [offset_opt = Option.None] if it
-        is not an inner bound variable. *)
+        is not an inner pattern-bound variable. *)
   val index_of_meta_variable_opt :
     state -> Identifier.t -> Id.offset Option.t
 
@@ -166,13 +195,18 @@ module type INDEXING_STATE = sig
 
   (** [with_shifted_lf_context state m] is like
       [with_bound_lf_variable state _ m] without adding any identifier in the
-      namespace. That is, LF context de Bruijn indices looked up in [m] are
-      [+ 1] of what they were in [state]. This is used for omitted parameters
-      to lambda terms, like [\_. x]. *)
+      namespace. That is, de Bruijn indices looked up in [m] with respect to
+      the context of LF-bound variables are [+ 1] of what they were in
+      [state]. This is used for omitted parameters to lambda terms, like
+      [\_. x]. *)
   val with_shifted_lf_context : state -> (state -> 'a) -> 'a
 
+  (** [with_shifted_meta_context state m] is like
+      [with_shifted_lf_context state m] but for meta-level variables. *)
   val with_shifted_meta_context : state -> (state -> 'a) -> 'a
 
+  (** [with_shifted_comp_context state m] is like
+      [with_shifted_lf_context state m] but for computation-level variables. *)
   val with_shifted_comp_context : state -> (state -> 'a) -> 'a
 
   val add_lf_type_constant :
@@ -229,11 +263,22 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     state -> ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t
 
+  (** [start_module state] sets up [state] to keep track of subsequent
+      declaration additions as being in a new module.
+
+      Every call to {!val:start_module} must be followed by
+      {!val:stop_module}. The reason why we need these start/stop functions
+      is that we need to intersperse operations during signature
+      reconstruction. *)
   val start_module : state -> Unit.t
 
   val stop_module :
     state -> ?location:Location.t -> Identifier.t -> Int.t -> Unit.t
 
+  (** [add_module state ?location module_identifier cid m] starts a module,
+      computes [m], then stops the module. This effectively adds a new module
+      with identifier [module_identifier] to [state], along with the
+      declarations added in [m] as declarations in that module. *)
   val add_module :
        state
     -> ?location:Location.t
@@ -242,6 +287,10 @@ module type INDEXING_STATE = sig
     -> (state -> 'a)
     -> 'a
 
+  (** [open_module state ?location module_identifier] opens the module
+      [module_identifier] it is a bound module. This effectively adds all the
+      declarations in that module to the current scope, but not as
+      declarations (i.e., this opens the module like in OCaml). *)
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t
 
@@ -335,13 +384,10 @@ module type INDEXING_STATE = sig
   val add_all_gctx : state -> Synint.Comp.gctx -> Unit.t
 end
 
+(** Concrete instance of {!INDEXING_STATE}. *)
 module Indexing_state : sig
+  (** @closed *)
   include INDEXING_STATE
-
-  val start_module : state -> Unit.t
-
-  val stop_module :
-    state -> ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t
 
   val create_initial_state : Unit.t -> state
 end

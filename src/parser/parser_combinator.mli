@@ -89,10 +89,12 @@ open Beluga_syntax
 
 (** {1 Parser State} *)
 
-(** Base parser state definition. *)
+(** Abstract parser state definition. *)
 module type PARSER_STATE = sig
   (** @closed *)
   include State.STATE
+
+  (** {1 Lexing} *)
 
   (** The type of token in the finite stream being parsed. *)
   type token
@@ -117,13 +119,8 @@ module type PARSER_STATE = sig
       [state] by inserting [token] at the beginning of the input stream. That
       is, [token] is the next token in [state']. *)
   val insert : token -> unit t
-end
 
-(** State definition for the traversal of a sequence with location
-    annotations. *)
-module type PARSER_LOCATION_STATE = sig
-  (** @closed *)
-  include State.STATE
+  (** {1 Locations} *)
 
   (** The type of locations with which input tokens are annotated. *)
   type location
@@ -139,13 +136,8 @@ module type PARSER_LOCATION_STATE = sig
       have been consumed. [previous_location_opt = Option.None] at the
       beginning of the input stream. *)
   val previous_location : location option t
-end
 
-(** State definition for backtracking with toggleable backtracking and
-    checkpoints. *)
-module type BACKTRACKING_STATE = sig
-  (** @closed *)
-  include State.STATE
+  (** {1 Backtracking} *)
 
   (** [enable_backtracking state] is [(state', ())] where [state'] has
       backtracking enabled. *)
@@ -199,16 +191,17 @@ end
 
 (** {2 Constructors} *)
 
+(** Functor creating an instance of {!PARSER_STATE} backed by an immutable
+    data structure. *)
 module Make_persistent_state (Token : LOCATED) : sig
-  include PARSER_STATE with type token = Token.t
-
   include
-    PARSER_LOCATION_STATE
-      with type state := state
-       and type location = Token.location
+    PARSER_STATE with type token = Token.t and type location = Token.location
 
-  include BACKTRACKING_STATE with type state := state
-
+  (** [initial ?initial_location token_sequence] is the persistent parsing
+      state with [token_sequence] as input, and [?initial_location] as the
+      starting location for the first token in [token_sequence]. It is
+      assumed that [token_sequence] is a persistent sequence. To construct a
+      persistent sequence, see {!Seq.memoize}. *)
   val initial : ?initial_location:location -> token Seq.t -> state
 end
 
@@ -218,8 +211,6 @@ module type PARSER = sig
   type token
 
   type location
-
-  type input
 
   type state
 
@@ -356,18 +347,8 @@ end
 
 (** {2 Constructors} *)
 
-module Make (State : sig
-  include PARSER_STATE
-
-  include BACKTRACKING_STATE with type state := state
-
-  include
-    PARSER_LOCATION_STATE
-      with type state := state
-       and type location = Location.t
-end) :
+module Make (State : PARSER_STATE with type location = Location.t) :
   PARSER
     with type state = State.state
      and type token = State.token
-     and type input = State.token Seq.t
      and type location = State.location

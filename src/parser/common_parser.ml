@@ -1,14 +1,5 @@
 open Support
 open Beluga_syntax
-open Parser_combinator
-
-module type PARSER_STATE = sig
-  include PARSER_STATE
-
-  include PARSER_LOCATION_STATE with type state := state
-
-  include BACKTRACKING_STATE with type state := state
-end
 
 module type COMMON_PARSER = sig
   include Parser_combinator.PARSER
@@ -140,10 +131,9 @@ module Make
                 with type token = Located_token.t
                  and type location = Location.t) :
   COMMON_PARSER
-    with type token = Located_token.t
-     and type location = Location.t
-     and type state = Parser.state
-     and type input = Parser.input = struct
+    with type state = Parser.state
+     and type token = Located_token.t
+     and type location = Location.t = struct
   include Parser
 
   exception Unexpected_end_of_input of { expected : Token.t }

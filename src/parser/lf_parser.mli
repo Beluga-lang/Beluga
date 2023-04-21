@@ -17,7 +17,6 @@ module Make
                 with type token = Located_token.t
                  and type location = Location.t) :
   LF_PARSER
-    with type token = Parser.token
-     and type input = Parser.input
-     and type state = Parser.state
+    with type state = Parser.state
+     and type token = Parser.token
      and type location = Parser.location

@@ -27,33 +27,27 @@ module Make
                 with type token = Located_token.t
                  and type location = Location.t)
     (Lf_parser : Lf_parser.LF_PARSER
-                   with type token = Parser.token
-                    and type input = Parser.input
-                    and type state = Parser.state
+                   with type state = Parser.state
+                    and type token = Parser.token
                     and type location = Parser.location)
     (Clf_parser : Clf_parser.CLF_PARSER
-                    with type token = Parser.token
-                     and type input = Parser.input
-                     and type state = Parser.state
+                    with type state = Parser.state
+                     and type token = Parser.token
                      and type location = Parser.location)
     (Meta_parser : Meta_parser.META_PARSER
-                     with type token = Parser.token
-                      and type input = Parser.input
-                      and type state = Parser.state
+                     with type state = Parser.state
+                      and type token = Parser.token
                       and type location = Parser.location)
     (Comp_parser : Comp_parser.COMP_PARSER
-                     with type token = Parser.token
-                      and type input = Parser.input
-                      and type state = Parser.state
+                     with type state = Parser.state
+                      and type token = Parser.token
                       and type location = Parser.location)
     (Harpoon_parser : Harpoon_parser.HARPOON_PARSER
-                        with type token = Parser.token
-                         and type input = Parser.input
-                         and type state = Parser.state
+                        with type state = Parser.state
+                         and type token = Parser.token
                          and type location = Parser.location) :
   SIGNATURE_PARSER
-    with type token = Parser.token
-     and type input = Parser.input
-     and type state = Parser.state
+    with type state = Parser.state
+     and type token = Parser.token
      and type location = Parser.location
 [@@warning "-67"]

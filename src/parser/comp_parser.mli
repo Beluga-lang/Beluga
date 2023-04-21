@@ -23,13 +23,11 @@ module Make
                 with type token = Located_token.t
                  and type location = Location.t)
     (Meta_parser : Meta_parser.META_PARSER
-                     with type token = Parser.token
-                      and type input = Parser.input
-                      and type state = Parser.state
+                     with type state = Parser.state
+                      and type token = Parser.token
                       and type location = Parser.location) :
   COMP_PARSER
-    with type token = Parser.token
-     and type input = Parser.input
-     and type state = Parser.state
+    with type state = Parser.state
+     and type token = Parser.token
      and type location = Parser.location
 [@@warning "-67"]

@@ -4,15 +4,6 @@
     @author Marc-Antoine Ouimet *)
 
 open Beluga_syntax
-open Parser_combinator
-
-module type PARSER_STATE = sig
-  include PARSER_STATE
-
-  include PARSER_LOCATION_STATE with type state := state
-
-  include BACKTRACKING_STATE with type state := state
-end
 
 module type COMMON_PARSER = sig
   include Parser_combinator.PARSER
@@ -217,4 +208,3 @@ module Make
     with type token = Parser.token
      and type location = Parser.location
      and type state = Parser.state
-     and type input = Parser.input

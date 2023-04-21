@@ -9,9 +9,13 @@ open Beluga_syntax
 
 module Config_parser = Config_parser
 
+(** {1 Lexing} *)
+
+module Lexer = Lexer
+
 (** {1 Parsing} *)
 
-module type PARSER_STATE = Common_parser.PARSER_STATE
+module type PARSER_STATE = Parser_combinator.PARSER_STATE
 
 module Parser_combinator = Parser_combinator
 module Token = Token
@@ -35,14 +39,12 @@ module type PARSING = sig
       with type state := state
        and type location := location
        and type token := token
-       and type input = token Seq.t
 
   include
     Common_parser.COMMON_PARSER
       with type state := state
        and type location := location
        and type token := token
-       and type input := input
 
   include Lf_parser.LF_PARSER with type state := state
 

@@ -4,6 +4,8 @@ open Beluga_syntax
 module type PARSER_STATE = sig
   include State.STATE
 
+  (** {1 Lexing} *)
+
   type token
 
   val peek : token option t
@@ -13,20 +15,16 @@ module type PARSER_STATE = sig
   val accept : unit t
 
   val insert : token -> unit t
-end
 
-module type PARSER_LOCATION_STATE = sig
-  include State.STATE
+  (** {1 Locations} *)
 
   type location
 
   val next_location : location option t
 
   val previous_location : location option t
-end
 
-module type BACKTRACKING_STATE = sig
-  include State.STATE
+  (** {1 Backtracking} *)
 
   val enable_backtracking : unit t
 
@@ -49,18 +47,7 @@ module type LOCATED = sig
   val location : t -> location
 end
 
-module Make_persistent_state (Token : LOCATED) : sig
-  include PARSER_STATE with type token = Token.t
-
-  include
-    PARSER_LOCATION_STATE
-      with type state := state
-       and type location = Token.location
-
-  include BACKTRACKING_STATE with type state := state
-
-  val initial : ?initial_location:location -> token Seq.t -> state
-end = struct
+module Make_persistent_state (Token : LOCATED) = struct
   type token = Token.t
 
   type location = Token.location
@@ -226,8 +213,6 @@ module type PARSER = sig
 
   type location
 
-  type input
-
   type state
 
   type 'a t = state -> state * ('a, exn) result
@@ -298,30 +283,8 @@ module type PARSER = sig
   val insert_token : token -> unit t
 end
 
-module Make (State : sig
-  type location = Location.t
-
-  include PARSER_STATE
-
-  include BACKTRACKING_STATE with type state := state
-
-  include
-    PARSER_LOCATION_STATE
-      with type state := state
-       and type location := location
-end) :
-  PARSER
-    with type state = State.state
-     and type token = State.token
-     and type input = State.token Seq.t
-     and type location = State.location = struct
-  type token = State.token
-
-  type location = State.location
-
-  type input = State.token Seq.t
-
-  type state = State.state
+module Make (State : PARSER_STATE with type location = Location.t) = struct
+  include State
 
   type +'a t = State.state -> State.state * ('a, exn) result
 

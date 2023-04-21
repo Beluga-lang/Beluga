@@ -37,7 +37,6 @@ module Make
                  and type location = Location.t) :
   CLF_PARSER
     with type token = Parser.token
-     and type input = Parser.input
      and type state = Parser.state
      and type location = Parser.location = struct
   include Parser

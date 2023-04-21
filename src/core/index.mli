@@ -104,7 +104,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) :
 
 module Indexer : sig
   (** @closed *)
-  include INDEXER
+  include INDEXER with type state = Index_state.Indexing_state.state
 
   (** @closed *)
   include Index_state.INDEXING_STATE with type state := state

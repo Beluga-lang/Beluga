@@ -151,7 +151,7 @@ struct
     return disambiguated
 end
 
-module Beluga_parser = struct
+module Parser = struct
   module Parser_state =
     Parser_combinator.Make_persistent_state (Located_token)
   module Disambiguation_state = Disambiguation_state.Disambiguation_state

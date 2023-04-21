@@ -1,4 +1,5 @@
-open Beluga_parser.Beluga_parser
+open Beluga_parser
+open Parser
 
 exception Unsupported_sort of string
 

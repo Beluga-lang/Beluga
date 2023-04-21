@@ -1,6 +1,7 @@
 open Support
 open Beluga_syntax
 open Util
+open Beluga_parser
 
 exception Empty_configuration_file
 
@@ -14,16 +15,14 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =
-    Beluga_parser.Config_parser.read_configuration
-      ~filename:compiler_test_file
+    Config_parser.read_configuration ~filename:compiler_test_file
   in
   match beluga_source_files with
   | [] -> Error.raise Empty_configuration_file
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature =
-        Beluga_parser.Beluga_parser.read_multi_file_signature
-          signature_source_files
+        Parser.read_multi_file_signature signature_source_files
       in
       if save_html_to_file then save_signature_html signature;
       ignore

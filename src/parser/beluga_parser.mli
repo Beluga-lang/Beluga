@@ -100,7 +100,7 @@ end
 
 (** {1 Instances} *)
 
-module Beluga_parser : sig
+module Parser : sig
   module Parser_state :
       module type of Parser_combinator.Make_persistent_state (Located_token)
 

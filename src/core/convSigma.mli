@@ -7,12 +7,8 @@ open Syntax
 open Int
 open LF
 
-type error =
-  | BlockInDctx of mctx * head * typ * dctx
-
 type t
 
-exception Error of Location.t * error
 val fmt_ppr_conv_list : Format.formatter -> t -> unit
 
 (** Translates a bound variable index according to the sigma

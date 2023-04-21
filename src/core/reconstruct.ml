@@ -1057,8 +1057,6 @@ and elExpW cD cG e theta_tau =
           *)
          Whnf.cnormExp (i', Whnf.m_id)
        with
-       | ConvSigma.Error (_loc, msg) ->
-          raise (ConvSigma.Error (loc, msg))
        | _ ->
           raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau, t), tau_t')))
      end

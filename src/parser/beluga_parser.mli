@@ -24,6 +24,48 @@ module Comp_parser = Comp_parser
 module Harpoon_parser = Harpoon_parser
 module Signature_parser = Signature_parser
 
+module type PARSING = sig
+  include
+    PARSER_STATE
+      with type token = Located_token.t
+       and type location = Location.t
+
+  include
+    Parser_combinator.PARSER
+      with type state := state
+       and type location := location
+       and type token := token
+       and type input = token Seq.t
+
+  include
+    Common_parser.COMMON_PARSER
+      with type state := state
+       and type location := location
+       and type token := token
+       and type input := input
+
+  include Lf_parser.LF_PARSER with type state := state
+
+  include Clf_parser.CLF_PARSER with type state := state
+
+  include Meta_parser.META_PARSER with type state := state
+
+  include Comp_parser.COMP_PARSER with type state := state
+
+  include Harpoon_parser.HARPOON_PARSER with type state := state
+
+  include Signature_parser.SIGNATURE_PARSER with type state := state
+end
+
+module Make_parsing
+    (Parser_state : PARSER_STATE
+                      with type token = Located_token.t
+                       and type location = Location.t) :
+  PARSING
+    with type state = Parser_state.state
+     and type token = Parser_state.token
+     and type location = Parser_state.location
+
 (** {1 Disambiguation} *)
 
 module type DISAMBIGUATION_STATE = Disambiguation_state.DISAMBIGUATION_STATE
@@ -36,6 +78,28 @@ module Comp_disambiguation = Comp_disambiguation
 module Harpoon_disambiguation = Harpoon_disambiguation
 module Signature_disambiguation = Signature_disambiguation
 
+module type DISAMBIGUATION = sig
+  include DISAMBIGUATION_STATE
+
+  include Lf_disambiguation.LF_DISAMBIGUATION with type state := state
+
+  include Clf_disambiguation.CLF_DISAMBIGUATION with type state := state
+
+  include Meta_disambiguation.META_DISAMBIGUATION with type state := state
+
+  include Comp_disambiguation.COMP_DISAMBIGUATION with type state := state
+
+  include
+    Harpoon_disambiguation.HARPOON_DISAMBIGUATION with type state := state
+
+  include
+    Signature_disambiguation.SIGNATURE_DISAMBIGUATION
+      with type state := state
+end
+
+module Make_disambiguation (Disambiguation_state : DISAMBIGUATION_STATE) :
+  DISAMBIGUATION with type state = Disambiguation_state.state
+
 (** {1 Constructors} *)
 
 module Make
@@ -43,46 +107,17 @@ module Make
                       with type token = Located_token.t
                        and type location = Location.t)
     (Disambiguation_state : DISAMBIGUATION_STATE) : sig
-  module Parsing : sig
-    include module type of Parser_state
+  module Parsing : module type of Make_parsing (Parser_state)
 
-    include Parser_combinator.PARSER with type state := state
-
-    include Common_parser.COMMON_PARSER with type state := state
-
-    include Lf_parser.LF_PARSER with type state := state
-
-    include Clf_parser.CLF_PARSER with type state := state
-
-    include Meta_parser.META_PARSER with type state := state
-
-    include Comp_parser.COMP_PARSER with type state := state
-
-    include Harpoon_parser.HARPOON_PARSER with type state := state
-
-    include Signature_parser.SIGNATURE_PARSER with type state := state
-  end
-
-  module Disambiguation : sig
-    include module type of Disambiguation_state
-
-    include Lf_disambiguation.LF_DISAMBIGUATION with type state := state
-
-    include Clf_disambiguation.CLF_DISAMBIGUATION with type state := state
-
-    include Meta_disambiguation.META_DISAMBIGUATION with type state := state
-
-    include Comp_disambiguation.COMP_DISAMBIGUATION with type state := state
-
-    include
-      Harpoon_disambiguation.HARPOON_DISAMBIGUATION with type state := state
-
-    include
-      Signature_disambiguation.SIGNATURE_DISAMBIGUATION
-        with type state := state
-  end
+  module Disambiguation :
+      module type of Make_disambiguation (Disambiguation_state)
 
   include State.STATE
+
+  val make_state :
+       parser_state:Parser_state.state
+    -> disambiguation_state:Disambiguation_state.state
+    -> state
 
   val set_parser_state : Parser_state.state -> Unit.t t
 

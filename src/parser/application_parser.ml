@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 
 module type EXPRESSION = sig
   type t

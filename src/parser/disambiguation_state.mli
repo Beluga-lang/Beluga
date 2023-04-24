@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 
 (** Abstract definition of entries bound to identifiers. *)
 module type ENTRY = sig

@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 
 [@@@warning "+A-4-44"]
 

@@ -6,7 +6,7 @@
 
 open Support.Equality
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Synint
 open Beluga_parser
 module P = Prettyint.DefaultPrinter

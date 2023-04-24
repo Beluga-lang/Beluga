@@ -8,7 +8,7 @@
     @author Marc-Antoine Ouimet *)
 
 open Support
-open Common
+open Syncom
 
 (** Abstract definition for the pretty-printing state. *)
 module type PRINTING_STATE = sig

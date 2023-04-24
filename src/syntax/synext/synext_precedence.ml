@@ -40,7 +40,7 @@
     ]} *)
 
 open Support
-open Common
+open Syncom
 open Synext_definition
 
 module type BASE_PRECEDENCE = sig

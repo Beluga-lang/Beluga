@@ -1,7 +1,7 @@
 (** Approximate Syntax *)
 
 open Support
-open Common
+open Syncom
 open Id
 
 module Int = Synint

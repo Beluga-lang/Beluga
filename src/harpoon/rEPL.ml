@@ -3,7 +3,7 @@ open Support
 module O = Options
 
 open Beluga
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Synint
 
 module P = Prettyint.DefaultPrinter

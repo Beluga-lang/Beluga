@@ -1,5 +1,5 @@
 open Beluga
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Synint.Comp
 
 module Conf : sig

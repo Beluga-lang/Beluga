@@ -4,7 +4,7 @@
  (modules :standard)
  (libraries
   support
-  (re_export common)
+  (re_export syncom)
   (re_export synext)
   (re_export synapx)
   (re_export synint))

@@ -2,7 +2,7 @@
 
 open Support.Equality
 open Support
-open Common
+open Syncom
 
 open Id
 

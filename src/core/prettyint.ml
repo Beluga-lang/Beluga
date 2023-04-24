@@ -270,7 +270,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
     | LF.Root (_, _, _, Plicity.Implicit) when Bool.not !PC.printImplicit ->
-       fprintf ppf "_" (* XXX what to do about spines? -je *)
+       fprintf ppf "_" (* FIXME: what to do about spines? -je *)
 
     | LF.Root (_, h, LF.Nil, _) ->
        fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
@@ -458,7 +458,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let s = Whnf.normSub s in
     let cPsi = Whnf.normDCtx cPsi in
     let print_front = fmt_ppr_lf_front cD cPsi 1 in
-    (* XXX O(n^2) algorithm below.
+    (* FIXME: O(n^2) algorithm below.
        The following algorithm for printing the substitution
        effectively converts it to a list of items, so these items can
        be printed using pp_print_list with a comma separator.

@@ -335,7 +335,7 @@ let unify_phat cD psihat =
      end
 
   | phihat -> Stdlib.(=) psihat phihat
-(* XXX this should not use equality -je *)
+(* FIXME: this should not use equality -je *)
 
 (* ******************************************************************* *)
 
@@ -2070,7 +2070,7 @@ and elClosedTerm' recT cD cPsi =
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
          (Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, Plicity.explicit), sQ)
        with
-       | Error.Violation msg -> (* XXX this is probably bad -je *)
+       | Error.Violation msg -> (* FIXME: this is probably bad -je *)
           dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
           throw loc CompTypAnn
      end
@@ -2083,7 +2083,7 @@ and elClosedTerm' recT cD cPsi =
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
          (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS, Plicity.explicit), sQ)
        with
-       | Error.Violation msg -> (* XXX this is probably bad -je *)
+       | Error.Violation msg -> (* FIXME: this is probably bad -je *)
           dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
           throw loc CompTypAnn
      end

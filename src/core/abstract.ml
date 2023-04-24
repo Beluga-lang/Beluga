@@ -1849,7 +1849,7 @@ let abstrThm =
      let (cQ, e') = abstrExp e in
      (cQ, Comp.Program e')
   | Comp.Proof p ->
-     (* XXX how should abstraction work for proofs? *)
+     (* FIXME: how should abstraction work for proofs? *)
      (I.Empty, Comp.Proof p)
 
 (* Shorter names for export outside of this module. *)

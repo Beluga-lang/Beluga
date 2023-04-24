@@ -100,7 +100,7 @@ module Elab = struct
               match mT with
               | MTyp _ -> MObj (MVar (Offset k, S.LF.id) |> head)
               | PTyp _ -> PObj (PVar (k, S.LF.id))
-              | STyp _ -> SObj (SVar (k, 0, S.LF.id)) (* XXX not sure about 0 -je *)
+              | STyp _ -> SObj (SVar (k, 0, S.LF.id)) (* FIXME: not sure about 0 -je *)
             in
             ClObj (psi_hat, obj)
          | LF.CTyp _ ->

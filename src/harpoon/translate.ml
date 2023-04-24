@@ -163,7 +163,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp =
   | Comp.ImpossibleSplit i -> Comp.Impossible (Beluga_syntax.Location.ghost, i)
 
   | Comp.Suffices (i, args) ->
-     (* XXX consider storing tau_i inside Suffices to avoid
+     (* FIXME: consider storing tau_i inside Suffices to avoid
         needing to synthesize it here? -je *)
      let _, ttau_i = Check.Comp.syn None cD cG [] i in
      let loc = Comp.loc_of_exp i in

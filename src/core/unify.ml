@@ -2546,7 +2546,7 @@ let rec blockdeclInDctx =
        else raise (Failure "Front FPVar mismatch")
 
     | (Head (MVar (u, s)), Head (MVar (v, s'))) ->
-       (* XXX THIS IS SKETCHY!
+       (* FIXME: THIS IS SKETCHY!
             It is very suspicious to me that here we just check
             structural equality of the cvars.
             Should they not be unified? What if they're actually

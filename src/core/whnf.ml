@@ -1896,7 +1896,7 @@ let cnormThm (t, theta) =
   | Comp.Program e -> Comp.Program (cnormExp (e, theta))
   | Comp.Proof p ->
      dprnt "[cnormThm] WARNING: normalizing a proof: no-op";
-     (* XXX how should contextual substitution work with proofs? *)
+     (* FIXME: how should contextual substitution work with proofs? *)
      Comp.Proof p
 
 let rec cwhnfCtx (cG, t) =

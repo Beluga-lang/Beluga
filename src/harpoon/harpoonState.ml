@@ -70,7 +70,7 @@ let recover_theorem ppf hooks (cid, gs) =
 let recover_session ppf hooks (mutual_group, thm_confs) =
   let theorems =
     let f = recover_theorem ppf hooks in
-    (* XXX to_list -> of_list later is inefficient
+    (* FIXME: to_list -> of_list later is inefficient
            It would be best to add a function to obtain a Seq.t from
            an List1.t, lazily map the sequence, and the force the
            sequence with DynArray.of_seq

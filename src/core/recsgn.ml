@@ -930,7 +930,6 @@ module Make
               [ { Synint.Comp.name; tau = tau'; order = `not_recursive } ]
           in
           Store.Cid.Comp.mk_entry
-            (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
@@ -1003,7 +1002,6 @@ module Make
       in
       Store.Cid.Comp.add (fun _cid ->
           Store.Cid.Comp.mk_entry
-            (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
@@ -1439,7 +1437,6 @@ module Make
       let cid =
         Store.Cid.Comp.add (fun _cid ->
             Store.Cid.Comp.mk_entry
-              (Option.some (Decl.next ()))
               name tau' 0 total_decs Option.none)
       in
       add_prog state identifier cid;

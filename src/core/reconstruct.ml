@@ -301,7 +301,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
      Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Plicity.implicit Inductivity.not_inductive)
 
   | Apx.LF.CtxVar ((Apx.LF.CtxOffset _) as c_var) ->
-     let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get s_cid in
+     let { Store.Cid.Schema.Entry.name; schema } = Store.Cid.Schema.get s_cid in
      let c_var = Lfrecon.elCtxVar c_var in
      Int.LF.CtxVar c_var
      |> F.through (fun cPsi' -> Check.LF.checkSchema loc cD cPsi' name schema)
@@ -314,7 +314,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
          if Id.cid_schema_equal s_cid s_cid'
          then Int.LF.CtxVar (Int.LF.CtxName psi)
          else
-           let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get s_cid in
+           let { Store.Cid.Schema.Entry.name; schema } = Store.Cid.Schema.get s_cid in
            let c_var' = Int.LF.CtxName psi in
            Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Name.location psi))
        with

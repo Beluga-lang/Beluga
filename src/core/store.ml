@@ -130,7 +130,6 @@ module Cid = struct
         ; subordinates : BitSet.t ref
         (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
         ; typesubordinated : BitSet.t ref (* unused at the moment *)
-        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_typ
@@ -149,7 +148,6 @@ module Cid = struct
       ; constructors = ref []
       ; subordinates = ref (BitSet.empty ())
       ; typesubordinated = ref (BitSet.empty ())
-      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -370,7 +368,6 @@ module Cid = struct
         { name : Name.t
         ; implicit_arguments : int
         ; typ : Int.LF.typ
-        ; decl : Decl.t
         }
       type cid = Id.cid_term
       let name_of_entry e = e.name
@@ -382,7 +379,6 @@ module Cid = struct
       { name
       ; implicit_arguments
       ; typ
-      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -417,7 +413,6 @@ module Cid = struct
       type t =
         { name : Name.t
         ; schema : Int.LF.schema
-        ; decl : Decl.t
         }
       type cid = Id.cid_schema
       let name_of_entry e = e.name
@@ -428,7 +423,6 @@ module Cid = struct
     let mk_entry name schema =
       { name
       ; schema
-      ; decl = Decl.next ()
       }
 
     let get_schema cid = (get cid).schema
@@ -471,7 +465,6 @@ module Cid = struct
 
         ; mutable frozen : bool
         ; constructors : Id.cid_comp_const list ref
-        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typ
@@ -486,7 +479,6 @@ module Cid = struct
       ; positivity
       ; frozen = false
       ; constructors = ref []
-      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -516,7 +508,6 @@ module Cid = struct
         ; kind : Int.Comp.kind
         ; frozen : bool ref
         ; destructors: Id.cid_comp_dest list ref
-        ; decl : Decl.t
         }
       type cid = Id.cid_comp_cotyp
       let name_of_entry e = e.name
@@ -531,7 +522,6 @@ module Cid = struct
       ; kind
       ; frozen = ref false
       ; destructors = ref []
-      ; decl = Decl.next ()
       }
 
     let freeze a = (get a).frozen := true
@@ -555,7 +545,6 @@ module Cid = struct
         { name : Name.t
         ; implicit_arguments : int
         ; typ : Int.Comp.typ
-        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_const
@@ -567,7 +556,6 @@ module Cid = struct
       { name
       ; implicit_arguments
       ; typ
-      ; decl = Decl.next ()
       }
 
     let add cid_ctyp f =
@@ -595,7 +583,6 @@ module Cid = struct
         ; mctx : Int.LF.mctx
         ; obs_type : Int.Comp.typ
         ; return_type : Int.Comp.typ
-        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_dest
@@ -609,7 +596,6 @@ module Cid = struct
       ; mctx
       ; obs_type
       ; return_type
-      ; decl = Decl.next ()
       }
 
     let add cid_ctyp f =
@@ -628,7 +614,6 @@ module Cid = struct
         ; kind : Int.Comp.kind
         ; mctx : Int.LF.mctx
         ; typ : Int.Comp.typ
-        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typdef
@@ -642,7 +627,6 @@ module Cid = struct
       ; kind
       ; mctx
       ; typ
-      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -664,10 +648,6 @@ module Cid = struct
         ; typ : Int.Comp.typ
         ; prog : Int.Comp.value option
         ; mutual_group : Id.cid_mutual_group
-        ; decl : Decl.t option
-          (* theorems without an associated
-             declaration number have not yet been reflected into the
-             signature. *)
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_const
@@ -675,13 +655,12 @@ module Cid = struct
     include CidStore (Entry)
     open Entry
 
-    let mk_entry decl name typ implicit_arguments mutual_group prog =
+    let mk_entry name typ implicit_arguments mutual_group prog =
       { name
       ; implicit_arguments
       ; typ
       ; prog
       ; mutual_group
-      ; decl
       }
 
     let mutual_groups = DynArray.make 32
@@ -719,9 +698,6 @@ module Cid = struct
 
     let set_prog cid f =
       set cid (fun e -> { e with prog = f e.prog })
-
-    let set_decl cid f =
-      set cid (fun e -> { e with decl = f e.decl })
 
     let rec args =
       function

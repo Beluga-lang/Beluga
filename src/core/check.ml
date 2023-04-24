@@ -748,7 +748,7 @@ module Comp = struct
       | Int.LF.Null -> () (* raise (Error (Location.ghost, IllegalParamTyp (cD, cPsi, tA))) *)
       | Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
-         let { Store.Cid.Schema.Entry.name; schema = Int.LF.Schema elems; decl = _ } =
+         let { Store.Cid.Schema.Entry.name; schema = Int.LF.Schema elems } =
            Store.Cid.Schema.get (Context.lookupCtxVarSchema cD psi)
          in
          begin
@@ -1145,7 +1145,6 @@ module Comp = struct
 
     | Const (loc, prog) as e ->
        let { Store.Cid.Comp.Entry.typ = tau
-           ; decl = d1
            ; name
            ; _ } = Store.Cid.Comp.get prog in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
@@ -1154,15 +1153,6 @@ module Comp = struct
           the current mutual block. *)
        begin match Total.lookup_dec name total_decs with
        | None -> (* No, we aren't. *)
-          (* Since we're not calling a function in the mutual block,
-             we need to decide whether the call is well-scoped.
-             Harpoon violates the traditional scoping assumption that
-             everything in the store is in scope: an incomplete
-             harpoon proof could be defined before other functions,
-             and we must prevent the user from calling those functions
-             interactively, else the resulting proof script refer to
-             out-of-scope values. *)
-          ScopeCheck.thm_thm loc prog mcid;
           (None, tau, C.m_id)
        | Some d -> (* Yes we are, and d is its total dec *)
           (* Second, need to check whether the function we're calling

@@ -512,7 +512,7 @@ and canAppear cD cPsi head sA loc =
                       it is not inhabited *)
 
   | CtxVar ctx_var ->
-     let { Store.Cid.Schema.Entry.name; schema = Schema elems; decl = _ } =
+     let { Store.Cid.Schema.Entry.name; schema = Schema elems } =
        Store.Cid.Schema.get (lookupCtxVarSchema cD ctx_var)
      in
      begin
@@ -963,7 +963,7 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
      let Some (ICtx cPhi) = mmvar.instantiation.contents in
      checkSchema loc cD cPhi schema_name schema
   | CtxVar (CtxOffset _ as phi) ->
-     let { Store.Cid.Schema.Entry.name; schema = Schema phiSchemaElements; decl = _ } =
+     let { Store.Cid.Schema.Entry.name; schema = Schema phiSchemaElements } =
        Store.Cid.Schema.get (lookupCtxVarSchema cD phi)
      in
      if
@@ -1075,7 +1075,7 @@ and checkClObj cD loc cPsi' cM cTt =
 and checkMetaObj cD (loc, cM) cTt =
   match (cM, cTt) with
   | (CObj cPsi, (CTyp (Some w), _)) ->
-     let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get w in
+     let { Store.Cid.Schema.Entry.name; schema } = Store.Cid.Schema.get w in
      checkSchema loc cD cPsi name schema
 
   | (ClObj (phat, tM), (ClTyp (tp, cPsi), t)) ->

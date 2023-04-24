@@ -95,17 +95,3 @@ val configuration_wizard : IO.t -> (Theorem.t -> unit Theorem.subgoal_hook) list
     session.
  *)
 val fmt_ppr_theorem_list : Format.formatter -> t -> unit
-
-(** Assigns a declaration number to all theorems in this session.
-    This has the effect of making the theorems visible to other
-    incomplete theorems.
-    Precondition: all theorems in the session must be complete.
-
-    Normally, this should be called right before the session is
-    removed.
-    It's unnecessary to call this when running in save-back mode, as
-    saving the theorems and reloading the signature has the effect of
-    physically materializing them in the file.
-    The materialization performed by this function is virtual.
- *)
-val materialize_theorems : t -> unit

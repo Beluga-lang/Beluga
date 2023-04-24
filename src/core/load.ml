@@ -128,7 +128,7 @@ module Make_load (Load_state : LOAD_STATE) = struct
     Chatter.print 2 (fun ppf ->
         Format.fprintf ppf
           "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@\n" filename
-          Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn');
+          Prettyint.DefaultPrinter.fmt_ppr_sgn sgn');
 
     Chatter.print 1 (fun ppf ->
         Format.fprintf ppf "## Type Reconstruction done:  %s ##@\n" filename);

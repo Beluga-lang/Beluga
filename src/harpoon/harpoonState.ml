@@ -3,7 +3,7 @@ open Beluga.Syntax.Int
 
 module F = Fun
 
-module P = Beluga.Pretty.Int.DefaultPrinter
+module P = Beluga.Prettyint.DefaultPrinter
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [14]))
 open Debug.Fmt

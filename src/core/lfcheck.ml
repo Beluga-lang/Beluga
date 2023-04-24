@@ -1,6 +1,6 @@
 open Support
 open Equality
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [5])
@@ -9,8 +9,6 @@ open Debug.Fmt
 open Context
 open Beluga_syntax
 open Syntax.Int.LF
-
-module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
 module S = Substitution

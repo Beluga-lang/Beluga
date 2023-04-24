@@ -2,7 +2,7 @@ open Support
 
 module B = Beluga
 
-module P = B.Pretty.Int.DefaultPrinter
+module P = B.Prettyint.DefaultPrinter
 module Command = B.Syntax.Ext.Harpoon
 module Comp = B.Syntax.Int.Comp
 module LF = B.Syntax.Int.LF

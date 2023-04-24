@@ -15,7 +15,7 @@ open Syntax.Int.LF
 open Syntax.Int
 open Trail
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [15])
@@ -110,7 +110,7 @@ end
 module Make (T : TRAIL) : UNIFY = struct
 
   open Substitution.LF
-  module P = Pretty.Int.DefaultPrinter
+  module P = Prettyint.DefaultPrinter
 
   exception Failure of string
   exception GlobalCnstrFailure of Location.t * string

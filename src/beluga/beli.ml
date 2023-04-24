@@ -2,7 +2,7 @@ open Support
 open Beluga
 open Beluga_syntax
 module LF = Syntax.Int.LF
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 exception Too_many_input_files
 

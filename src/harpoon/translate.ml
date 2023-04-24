@@ -5,7 +5,7 @@ open Syntax.Int
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 type error =
   | IncompleteProof

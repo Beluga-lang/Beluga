@@ -1,7 +1,7 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 let generate_annotations = ref false
 

@@ -14,7 +14,7 @@ module LF = Syntax.Int.LF
 
 module S = Substitution
 module U = Unify.EmptyTrail
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.NamedRenderer
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [29])

@@ -6,7 +6,7 @@ open Beluga_syntax
 module C = Whnf
 module S = Substitution
 module Unify = Unify.StdTrail
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
 let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [ 11 ])

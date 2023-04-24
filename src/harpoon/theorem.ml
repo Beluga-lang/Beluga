@@ -1,11 +1,10 @@
 open Support
 open Beluga
-module F = Fun
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt

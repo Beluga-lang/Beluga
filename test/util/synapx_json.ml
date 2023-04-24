@@ -326,13 +326,13 @@ and json_of_comp_case_label = function
           [ ("location", json_of_location location)
           ; ("name", json_of_name name)
           ]
-  | Syncom.Comp.BVarCase location ->
+  | Synapx.Comp.BVarCase location ->
       json_of_variant ~name:"Synapx.Comp.BVarCase"
         ~data:[ ("location", json_of_location location) ]
-  | Syncom.Comp.ContextCase case ->
+  | Synapx.Comp.ContextCase case ->
       json_of_variant ~name:"Synapx.Comp.ContextCase"
         ~data:[ ("case", json_of_comp_context_case case) ]
-  | Syncom.Comp.PVarCase (location, schema_element, projection_opt) ->
+  | Synapx.Comp.PVarCase (location, schema_element, projection_opt) ->
       json_of_variant ~name:"Synapx.Comp.PVarCase"
         ~data:
           [ ("location", json_of_location location)

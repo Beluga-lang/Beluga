@@ -3,7 +3,7 @@ open Support
 open Beluga_syntax
 
 module F = Fun
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module LF = Syntax.Int.LF
 module ExtComp = Syntax.Ext.Comp
 module Comp = Syntax.Int.Comp

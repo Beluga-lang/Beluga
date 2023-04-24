@@ -6,7 +6,7 @@ module Total = Beluga.Total
 module Whnf = B.Whnf
 module F = Fun
 
-module P = B.Pretty.Int.DefaultPrinter
+module P = B.Prettyint.DefaultPrinter
 
 open B.Syntax.Int
 

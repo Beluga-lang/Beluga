@@ -35,9 +35,12 @@ let fmt_ppr_implicits b f (ppf : formatter) x =
 let fmt_ppr_ctx_underscore b f (ppf : formatter) x =
   with_ctx_underscore b (fun () -> f ppf x)
 
-module Common = struct
+module Int = struct
   module type T = sig
-    open Syntax.Common
+    type lvl
+    val l0 : lvl
+
+    open Syntax.Int
 
     type depend_print_style =
       [ `depend
@@ -49,20 +52,8 @@ module Common = struct
     val fmt_ppr_lf_depend : formatter -> Plicity.t * Inductivity.t -> unit
     val fmt_ppr_lf_depend_clean : formatter -> Inductivity.t -> unit
     val fmt_ppr_lf_depend_inductive : formatter -> Inductivity.t -> unit
-    val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
     val fmt_ppr_cmp_split_kind : formatter -> [ `split | `invert | `impossible ] -> unit
     val fmt_ppr_cmp_context_case : formatter -> Comp.context_case -> unit
-  end
-end
-
-module Int = struct
-  module type T = sig
-    include Common.T
-
-    type lvl
-    val l0 : lvl
-
-    open Syntax.Int
 
     val fmt_ppr_sgn : formatter -> Sgn.sgn -> unit
     val fmt_ppr_sgn_decl : formatter -> Sgn.decl -> unit

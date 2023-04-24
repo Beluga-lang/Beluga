@@ -13,7 +13,7 @@ open Id
 module I = Int.LF
 module Comp = Int.Comp
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [3])

@@ -5,7 +5,7 @@ module O = Options
 open Beluga
 open Syntax.Int
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 (** A computed value of type 'a or a function to print an error. *)
 type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t

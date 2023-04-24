@@ -16,7 +16,7 @@ module F = Fun
 module Unify = Unify.StdTrail
 module C = Whnf
 
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
 module A = Syntax.Apx.Comp

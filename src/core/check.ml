@@ -5,7 +5,7 @@
 *)
 
 open Beluga_syntax
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
 module F = Fun

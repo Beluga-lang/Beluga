@@ -8,7 +8,7 @@ open Support.Equality
 open Support
 open Beluga_syntax
 open Beluga_parser
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 open Syntax.Int
 
 [@@@warning "-A-4-44"] (* FIXME: *)
@@ -496,7 +496,7 @@ module Make (State : COMMAND_STATE) = struct
                        Logic.Solver.solve cD cPsi query
                          (fun (ctx, norm) ->
                            fprintf state "%a@\n"
-                             (Pretty.Int.DefaultPrinter.fmt_ppr_lf_normal cD
+                             (P.fmt_ppr_lf_normal cD
                                 ctx P.l0)
                              norm;
                            incr n;

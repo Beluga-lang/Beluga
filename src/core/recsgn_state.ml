@@ -270,7 +270,7 @@ struct
   let add_leftover_vars state vars location =
     match vars with
     | Synint.LF.Empty -> ()
-    | Syncom.LF.Dec _ ->
+    | Synint.LF.Dec _ ->
         state.leftover_vars <- (vars, location) :: state.leftover_vars
 
   let with_disabled_lf_strengthening state ~location:_ m =

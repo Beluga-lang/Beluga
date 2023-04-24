@@ -4,7 +4,7 @@ open Syntax
 
 (* ********************************************************************************)
 (* Pretty printing                                                                *)
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
@@ -170,25 +170,26 @@ and cnormApxCVar cD delta cv (cD'', t) =
 and cnormApxHead cD delta h (cD'', t) =
   match h with
   | Apx.LF.MVar (cv, s) ->
-     Apx.LF.MVar
-       ( cnormApxCVar cD delta cv (cD'', t)
-       , cnormApxSubOpt cD delta s (cD'', t)
-       )
+     let cv' = cnormApxCVar cD delta cv (cD'', t) in
+     let s' = cnormApxSubOpt cD delta s (cD'', t) in
+     Apx.LF.MVar (cv', s')
 
   | Apx.LF.PVar (cv, s) ->
-     Apx.LF.PVar
-       ( cnormApxCVar cD delta cv (cD'', t)
-       , cnormApxSubOpt cD delta s (cD'', t)
-       )
+     let cv' = cnormApxCVar cD delta cv (cD'', t) in
+     let s' = cnormApxSubOpt cD delta s (cD'', t) in
+     Apx.LF.PVar (cv', s')
 
   | Apx.LF.Proj (pv, j) ->
-     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
+     let pv' = cnormApxHead cD delta pv (cD'', t) in
+     Apx.LF.Proj (pv', j)
 
   | Apx.LF.FMVar(u, s) ->
-     Apx.LF.FMVar(u, cnormApxSubOpt cD delta s (cD'', t))
+     let s' = cnormApxSubOpt cD delta s (cD'', t) in
+     Apx.LF.FMVar(u, s')
 
   | Apx.LF.FPVar(u, s) ->
-     Apx.LF.FPVar(u, cnormApxSubOpt cD delta s (cD'', t))
+     let s' = cnormApxSubOpt cD delta s (cD'', t) in
+     Apx.LF.FPVar(u, s')
 
   | _ -> h
 
@@ -197,8 +198,8 @@ and cnormApxSubOpt cD delta s (cD'', t) =
 
 and cnormApxSub cD delta (s : Apx.LF.sub) (cD'', t) =
   match s with
-  | Apx.LF.EmptySub -> s
-  | Apx.LF.Id -> s
+  | Apx.LF.EmptySub -> Apx.LF.EmptySub
+  | Apx.LF.Id -> Apx.LF.Id
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
      let h' = cnormApxHead cD delta h (cD'', t) in
@@ -257,7 +258,7 @@ and cnormApxTypRec cD delta t_rec (cD'', t) =
 let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) =
   match psi with
   | Apx.LF.CtxHole -> Apx.LF.CtxHole
-  | Apx.LF.Null -> psi
+  | Apx.LF.Null -> Apx.LF.Null
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
      let l_delta = lengthApxMCtx delta in
      dprintf (fun p -> p.fmt "[cnormApxDCtx] CtxOffset = %d@\n" offset);

@@ -13,7 +13,7 @@ open Syntax.Int.LF
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [12])
 open Debug.Fmt
 
-(* module P = Pretty.Int.DefaultPrinter *)
+(* module P = Prettyint.DefaultPrinter *)
 
 let rec pp_sub ppf =
   function

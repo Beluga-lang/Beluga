@@ -6,7 +6,7 @@ open Syntax.Int
 
 module E = Beluga_syntax.Error
 module S = Substitution
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
@@ -175,7 +175,7 @@ let process_command
         dprintf
           begin fun p ->
           p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
-            (P.fmt_ppr_cmp_typ cDh Pretty.Int.DefaultPrinter.l0) typ
+            (P.fmt_ppr_cmp_typ cDh P.l0) typ
           end;
         Logic.prepare ();
         let (mquery, skinnyCTyp, mquerySub, instMMVars) =

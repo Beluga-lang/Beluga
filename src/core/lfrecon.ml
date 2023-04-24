@@ -10,7 +10,7 @@ module S     = Substitution
 
 (* **********************************************************************)
 (* Pretty printing                                                      *)
-module P = Pretty.Int.DefaultPrinter
+module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 

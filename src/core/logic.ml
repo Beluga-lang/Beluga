@@ -976,7 +976,7 @@ end
 
 
 module Printer = struct
-  module P = Pretty.Int.DefaultPrinter
+  module P = Prettyint.DefaultPrinter
   open Index
 
   let fmt_ppr_dctx cD ppf cPsi =
@@ -1898,7 +1898,7 @@ module CSolver = struct
   module C = Convert
   module I = Index
   module P = Printer
-  module DP = Pretty.Int.DefaultPrinter
+  module DP = Prettyint.DefaultPrinter
 
   (* Unboxed status of assumptions in Gamma *)
   (* We use this tag to tell us when a boxed assumption from Gamma has

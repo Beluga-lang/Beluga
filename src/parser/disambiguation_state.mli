@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax
+open Beluga_syntax.Common
 
 (** Abstract definition of entries bound to identifiers. *)
 module type ENTRY = sig

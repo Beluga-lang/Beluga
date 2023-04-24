@@ -1,6 +1,5 @@
 open Support
 open Beluga_syntax
-open Syntax
 
 module NameTable = Hashtbl.Make (Name)
 
@@ -711,7 +710,7 @@ module Cid = struct
 
   module type RENDERER = sig
     open Id
-    open Syntax.Int
+    open Synint
 
     val render_cid_comp_typ : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp -> string

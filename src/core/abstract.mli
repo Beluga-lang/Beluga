@@ -5,7 +5,7 @@
 
 open Support
 open Beluga_syntax
-open Syntax.Int
+open Synint
 
 type kind =
   | MMV of (Name.t * LF.iterm option ref)

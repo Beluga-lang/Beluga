@@ -10,7 +10,7 @@
     as to which syntactic structures have ambiguities. *)
 
 open Support
-open Beluga_syntax
+open Beluga_syntax.Synext
 
 (** {1 Exceptions} *)
 

@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax
+open Beluga_syntax.Common
 
 module type SIGNATURE_RECONSTRUCTION_STATE = sig
   include Imperative_state.IMPERATIVE_STATE

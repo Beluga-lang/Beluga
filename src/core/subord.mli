@@ -1,4 +1,5 @@
-open Syntax.Int.LF
+open Beluga_syntax
+open Synint.LF
 
 val dump : bool ref
 

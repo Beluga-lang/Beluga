@@ -1,6 +1,5 @@
 open Support
 open Beluga_syntax
-open Syntax
 
 (* ********************************************************************************)
 (* Pretty printing                                                                *)

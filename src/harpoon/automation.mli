@@ -1,5 +1,5 @@
-module Comp = Beluga.Syntax.Int.Comp
-module Command = Beluga.Syntax.Ext.Harpoon
+module Comp = Beluga_syntax.Synint.Comp
+module Command = Beluga_syntax.Ext.Harpoon
 
 type t =
   Theorem.t -> Comp.proof_state -> bool

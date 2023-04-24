@@ -1,5 +1,7 @@
 _opam/**
 src/core/**
+src/syntax/synapx/**
+src/syntax/synint/**
 src/beluga/**
 src/replay/**
 src/harpoon/**

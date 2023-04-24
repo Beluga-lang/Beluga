@@ -1,5 +1,4 @@
 open Beluga_syntax
-open Syntax
 
 val solve_fvarCnstr : Lfrecon.reconType -> unit
 val reset_fvarCnstr : unit -> unit

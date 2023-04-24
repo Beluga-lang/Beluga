@@ -6,10 +6,10 @@
 
 open Support.Equality
 open Support
-open Beluga_syntax
+open Beluga_syntax.Common
+open Synint
 open Beluga_parser
 module P = Prettyint.DefaultPrinter
-open Syntax.Int
 
 [@@@warning "-A-4-44"] (* FIXME: *)
 
@@ -639,7 +639,7 @@ module Make (State : COMMAND_STATE) = struct
                match entry.Store.Cid.Comp.Entry.prog with
                | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
                    let d =
-                     Syntax.Int.Sgn.Theorem
+                     Synint.Sgn.Theorem
                        { name
                        ; cid
                        ; typ = entry.Store.Cid.Comp.Entry.typ

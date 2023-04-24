@@ -8,7 +8,7 @@ open Support
 
 open Context
 open Beluga_syntax
-open Syntax.Int.LF
+open Synint.LF
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [12])
 open Debug.Fmt
@@ -31,7 +31,7 @@ and pp_front ppf =
   | Obj _ -> Format.pp_print_string ppf "Obj _"
   | Undef -> Format.pp_print_string ppf "Undef"
 
-(* module Comp = Syntax.Int.Comp *)
+(* module Comp = Synint.Comp *)
 
 let ctxShift cPsi = EmptySub (* match cPsi with *)
   (* | Null -> Shift (NoCtxShift, 0) *)

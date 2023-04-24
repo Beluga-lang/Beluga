@@ -3,7 +3,6 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-open Syntax
 open Int
 module Unify = Unify.StdTrail
 module P = Prettyint.DefaultPrinter
@@ -1274,8 +1273,8 @@ let filter cD cG cIH (loc, e) =
     of bounds.
  *)
 let annotate'
-      (tau : Syntax.Int.Comp.typ) (order : int list)
-    : Syntax.Int.Comp.typ option =
+      (tau : Synint.Comp.typ) (order : int list)
+    : Synint.Comp.typ option =
   let open Option in
   let rec ann tau pos =
     match (tau, pos) with
@@ -1296,7 +1295,7 @@ let annotate'
   List.fold_left_opt (fun tau' x -> ann tau' x) tau order
 
 (** Removes all TypInd marks in a computational type. *)
-let rec strip : Syntax.Int.Comp.typ -> Syntax.Int.Comp.typ =
+let rec strip : Synint.Comp.typ -> Synint.Comp.typ =
   function
   | Comp.TypInd tau' -> strip tau'
   | Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.Inductive), tau') ->

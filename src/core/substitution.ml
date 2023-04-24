@@ -6,7 +6,7 @@
 
 open Support
 open Support.Equality
-open Syntax.Int.LF
+open Synint.LF
 
 module LF = struct
 

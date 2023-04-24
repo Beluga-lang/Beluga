@@ -7,7 +7,7 @@
     syntax. *)
 
 open Support
-open Beluga_syntax
+open Beluga_syntax.Common
 
 (** {1 Parser LF Syntax} *)
 

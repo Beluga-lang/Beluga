@@ -1,7 +1,6 @@
 (** Module for dealing with Harpoon proof serialization. *)
 
-open Beluga
-open Syntax
+open Beluga_syntax
 open Int
 
 (** Appends mutual groups of theorems to the end of the file at the

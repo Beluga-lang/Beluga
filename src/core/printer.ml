@@ -40,7 +40,7 @@ module Int = struct
     type lvl
     val l0 : lvl
 
-    open Syntax.Int
+    open Synint
 
     type depend_print_style =
       [ `depend

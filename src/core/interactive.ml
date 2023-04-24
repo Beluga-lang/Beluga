@@ -4,12 +4,12 @@ open Beluga_syntax
 
 module F = Fun
 module P = Prettyint.DefaultPrinter
-module LF = Syntax.Int.LF
-module ExtComp = Syntax.Ext.Comp
-module Comp = Syntax.Int.Comp
+module LF = Synint.LF
+module ExtComp = Beluga_syntax.Ext.Comp
+module Comp = Synint.Comp
 module Cover = Coverage
 module S = Substitution
-open Syntax.Int.Comp
+open Synint.Comp
 
 (*********************)
 (* helper functions *)

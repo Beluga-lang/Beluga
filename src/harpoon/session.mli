@@ -1,7 +1,7 @@
 (** A Harpoon session represents a set of mutually proven theorems. *)
 
-open Beluga
-open Syntax.Int
+open Beluga_syntax.Common
+open Synint
 
 type t
 

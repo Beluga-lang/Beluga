@@ -3,7 +3,8 @@
     @author Brigitte Pientka
 *)
 
-open Syntax.Int.LF
+open Beluga_syntax
+open Synint.LF
 
 module LF : sig
   exception NotComposable of string

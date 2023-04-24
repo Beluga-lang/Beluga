@@ -1,4 +1,4 @@
-module LF = Syntax.Int.LF
+module LF = Synint.LF
 
 (** Calculates the type of a projection of a sigma.
     project k tH tRec = Some (tA, s)

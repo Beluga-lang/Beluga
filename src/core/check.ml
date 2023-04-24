@@ -5,6 +5,7 @@
 *)
 
 open Beluga_syntax
+open Beluga_syntax.Common
 module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
@@ -16,8 +17,6 @@ open Debug.Fmt
 module LF = Lfcheck
 
 module Comp = struct
-  open Syntax
-
   module Unify = Unify.EmptyTrail
     (* NOTES on handling context variables: -bp
      *
@@ -48,10 +47,11 @@ module Comp = struct
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
      *)
 
-  open Syntax.Int.Comp
+  open Synint.Comp
 
   module S = Substitution
-  module I = Syntax.Int.LF
+  module Int = Synint
+  module I = Synint.LF
   module C = Whnf
 
   type typeVariant =
@@ -88,8 +88,8 @@ module Comp = struct
     | MissingTotal of Id.cid_prog
     | NotImpossible of I.mctx * gctx * typ * exp
     | InvalidHypotheses
-      of Int.Comp.hypotheses (* expected *)
-         * Int.Comp.hypotheses (* actual *)
+      of Synint.Comp.hypotheses (* expected *)
+         * Synint.Comp.hypotheses (* actual *)
     | SufficesDecompositionFailed of I.mctx * typ
     | SufficesLengthsMismatch
       of I.mctx
@@ -758,9 +758,9 @@ module Comp = struct
            | _ -> throw loc (IllegalParamTyp (cD, cPsi, tA))
          end
 
-      | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
+      | Synint.LF.DDec (cPsi0', Synint.LF.TypDecl (x, tB)) ->
          (* tA is instance of tB *)
-         let tB' = Syntax.Int.LF.TClo (tB, Syntax.Int.LF.Shift n) in
+         let tB' = Synint.LF.TClo (tB, Synint.LF.Shift n) in
          let ms = Ctxsub.mctxToMSub cD in
          let tB0 = Whnf.cnormTyp (tB', ms) in
          begin
@@ -1735,16 +1735,16 @@ module Comp = struct
          end
          args
 
-  let syn mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
+  let syn mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Synint.LF.Empty) e =
     let (cIH, tau, ms) = syn mcid cD (cG, cIH) total_decs e in
     (cIH, (tau, ms))
 
-  let check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
+  let check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Synint.LF.Empty) e ttau =
     check mcid cD (cG, cIH) total_decs e ttau
 
-  let thm mcid cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
+  let thm mcid cD cG total_decs ?cIH:(cIH = Synint.LF.Empty) t ttau =
     match t with
-    | Syntax.Int.Comp.Program e -> check mcid cD cG total_decs ~cIH:cIH e ttau
-    | Syntax.Int.Comp.Proof p -> proof mcid cD cG cIH total_decs p ttau
+    | Synint.Comp.Program e -> check mcid cD cG total_decs ~cIH:cIH e ttau
+    | Synint.Comp.Proof p -> proof mcid cD cG cIH total_decs p ttau
 
 end

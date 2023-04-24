@@ -1,0 +1,12 @@
+(library
+ (name synapx)
+ (package beluga)
+ (modules :standard)
+ (libraries support common synint)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))
+
+(env
+ (dev
+  (flags
+   (:standard -w +A-z-e-p-44-48-50-58-69-70 -warn-error +A-p-37-48-50-60))))

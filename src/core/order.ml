@@ -1,7 +1,7 @@
 open Support
+open Beluga_syntax
 
-module Comp = Syntax.Ext.Comp
-module I = Syntax.Int.Comp
+module I = Synint.Comp
 
 (* Mutual dependencies in call patterns:                            *)
 (* A call pattern   (a1 P1) .. (ai Pi) .. (an Pn)   expresses       *)

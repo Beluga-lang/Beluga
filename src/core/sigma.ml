@@ -1,5 +1,5 @@
 open Support.Equality
-module LF = Syntax.Int.LF
+module LF = Synint.LF
 
 let rec project' fuel k tH s =
   function

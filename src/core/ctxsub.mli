@@ -3,7 +3,7 @@
    modified: Joshua Dunfield
 *)
 
-open Syntax.Int.LF
+open Synint.LF
 
 (* Moved from reconstruct.ml: *)
 

@@ -1,5 +1,6 @@
 open Beluga
-open Syntax.Int.Comp
+open Beluga_syntax.Common
+open Synint.Comp
 
 module Conf : sig
   type t

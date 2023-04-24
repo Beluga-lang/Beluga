@@ -10,7 +10,8 @@
 include Options.Subord
 
 open Support
-open Syntax.Int.LF
+open Beluga_syntax
+open Synint.LF
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [28]))
 open Debug.Fmt

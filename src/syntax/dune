@@ -5,7 +5,9 @@
  (libraries
   support
   (re_export common)
-  (re_export synext))
+  (re_export synext)
+  (re_export synapx)
+  (re_export synint))
  (preprocess
   (pps sedlex.ppx))
  (instrumentation

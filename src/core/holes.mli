@@ -1,5 +1,5 @@
 open Beluga_syntax
-open Syntax.Int
+open Synint
 
 (* Define two opaque types to be used as indices for `hole_info`. *)
 

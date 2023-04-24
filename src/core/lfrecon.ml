@@ -1,7 +1,6 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-open Syntax
 
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail

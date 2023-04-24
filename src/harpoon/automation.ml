@@ -3,9 +3,9 @@ open Support
 module B = Beluga
 
 module P = B.Prettyint.DefaultPrinter
-module Command = B.Syntax.Ext.Harpoon
-module Comp = B.Syntax.Int.Comp
-module LF = B.Syntax.Int.LF
+module Command = Beluga_syntax.Ext.Harpoon
+module Comp = Beluga_syntax.Synint.Comp
+module LF = Beluga_syntax.Synint.LF
 module Location = Beluga_syntax.Location
 module Context = B.Context
 module Whnf = B.Whnf

@@ -66,7 +66,7 @@ module Annot = struct
 end
 
 module LF = struct
-  open Syntax.Int
+  open Synint
 
   type entry =
     { ctx : LF.mctx
@@ -96,7 +96,7 @@ module LF = struct
 end
 
 module Comp = struct
-  open Syntax.Int
+  open Synint
 
   type entry =
     { ctx : LF.mctx
@@ -124,7 +124,7 @@ module Comp = struct
 end
 
 module Sgn = struct
-  open Syntax.Int
+  open Synint
 
   type typ_or_kind = Typ of LF.typ | Kind of LF.kind
 

@@ -7,7 +7,6 @@ open Support.Equality
 open Support
 open Substitution
 open Beluga_syntax
-open Syntax
 open Id
 
 module I = Int.LF

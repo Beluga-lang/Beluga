@@ -12,8 +12,8 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-open Syntax.Int.LF
-open Syntax.Int
+open Synint.LF
+open Synint
 open Substitution
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [11]))

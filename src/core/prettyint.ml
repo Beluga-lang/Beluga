@@ -1,8 +1,7 @@
 open Support
 open Format
 open Beluga_syntax
-open Syntax
-open Int
+open Synint
 
 let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
 

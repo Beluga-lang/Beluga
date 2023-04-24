@@ -8,7 +8,7 @@ open Debug.Fmt
 
 open Context
 open Beluga_syntax
-open Syntax.Int.LF
+open Synint.LF
 
 module Unify = Unify.EmptyTrail
 module S = Substitution

@@ -9,8 +9,8 @@ open Beluga_syntax
 
 module F = Fun
 
-module Comp = Syntax.Int.Comp
-module LF = Syntax.Int.LF
+module Comp = Synint.Comp
+module LF = Synint.LF
 
 module S = Substitution
 module U = Unify.EmptyTrail

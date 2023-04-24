@@ -50,6 +50,8 @@ exception Expected_lf_term_constant
 
 exception Expected_schema_constant
 
+exception Expected_computation_type_constant
+
 exception Expected_computation_inductive_type_constant
 
 exception Expected_computation_stratified_type_constant
@@ -171,6 +173,9 @@ let () =
         Format.dprintf "Expected an LF term-level constant."
     | Expected_schema_constant ->
         Format.dprintf "Expected a schema constant."
+    | Expected_computation_type_constant ->
+        Format.dprintf
+          "Expected an inductive or stratified computation type constant."
     | Expected_computation_inductive_type_constant ->
         Format.dprintf "Expected an inductive computation type constant."
     | Expected_computation_stratified_type_constant ->
@@ -513,6 +518,9 @@ module type INDEXING_STATE = sig
 
   val index_of_lf_term_constant :
     state -> Qualified_identifier.t -> Id.cid_term
+
+  val index_of_comp_type_constant :
+    state -> Qualified_identifier.t -> Id.cid_comp_typ
 
   val index_of_inductive_comp_constant :
     state -> Qualified_identifier.t -> Id.cid_comp_typ
@@ -1113,6 +1121,21 @@ module Indexing_state = struct
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
           (Error.composite_exception2 Expected_lf_term_constant
+             (actual_binding_exn qualified_identifier entry))
+
+  let index_of_comp_type_constant state qualified_identifier =
+    match lookup state qualified_identifier with
+    | ( { Entry.desc =
+            ( Entry.Computation_inductive_type_constant { cid }
+            | Entry.Computation_stratified_type_constant { cid } )
+        ; _
+        }
+      , _ ) ->
+        cid
+    | entry, _ ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Error.composite_exception2 Expected_computation_type_constant
              (actual_binding_exn qualified_identifier entry))
 
   let index_of_inductive_comp_constant state qualified_identifier =

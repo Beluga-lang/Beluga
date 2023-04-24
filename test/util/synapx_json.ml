@@ -320,11 +320,19 @@ and json_of_comp_context_case = function
           [ ("location", json_of_location location); ("i", json_of_int i) ]
 
 and json_of_comp_case_label = function
-  | Synapx.Comp.NamedCase (location, name) ->
-      json_of_variant ~name:"Synapx.Comp.NamedCase"
+  | Synapx.Comp.Lf_constant (location, name, cid) ->
+      json_of_variant ~name:"Synapx.Comp.Lf_constant"
         ~data:
           [ ("location", json_of_location location)
           ; ("name", json_of_name name)
+          ; ("cid", json_of_int cid)
+          ]
+  | Synapx.Comp.Comp_constant (location, name, cid) ->
+      json_of_variant ~name:"Synapx.Comp.Comp_constant"
+        ~data:
+          [ ("location", json_of_location location)
+          ; ("name", json_of_name name)
+          ; ("cid", json_of_int cid)
           ]
   | Synapx.Comp.BVarCase location ->
       json_of_variant ~name:"Synapx.Comp.BVarCase"

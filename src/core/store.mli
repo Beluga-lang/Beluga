@@ -57,12 +57,9 @@ module Cid : sig
     val gen_var_name : LF.typ -> (unit -> string) option
     val gen_mvar_name : LF.typ -> (unit -> string) option
     val get : cid_typ -> entry
-    val index_of_name : Name.t -> cid_typ
     val addConstructor : Location.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear : unit -> unit
     val explicit_arguments : entry -> int
-    val args_of_name : Name.t -> int
-    val args_of_name_opt : Name.t -> int option
     val current_entries : unit -> (cid_typ * entry) list
 
     (* see subord.ml for an explanation of term-level subordination
@@ -90,9 +87,6 @@ module Cid : sig
     val add' : Location.t -> cid_typ -> (cid_term -> entry) -> cid_term
     val explicit_arguments : entry -> int
     val get_implicit_arguments : cid_term -> int
-    val index_of_name : Name.t -> cid_term
-    val args_of_name : Name.t -> int
-    val args_of_name_opt : Name.t -> int option
     val clear : unit -> unit
   end
 
@@ -119,8 +113,6 @@ module Cid : sig
     val get : cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
     val addConstructor : cid_comp_const -> cid_comp_typ -> unit
-    val index_of_name : Name.t -> cid_comp_typ
-    val index_of_name_opt : Name.t -> cid_comp_typ option
     val clear : unit -> unit
     val explicit_arguments : entry -> int
     val get_implicit_arguments : cid_comp_typ -> int
@@ -149,8 +141,6 @@ module Cid : sig
     val current_entries : unit -> (cid_comp_cotyp * entry) list
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
-    val index_of_name : Name.t -> cid_comp_cotyp
-    val index_of_name_opt : Name.t -> cid_comp_cotyp option
     val clear : unit -> unit
     val explicit_arguments : entry -> int
   end
@@ -174,8 +164,6 @@ module Cid : sig
     val get : cid_comp_const -> entry
     val explicit_arguments : entry -> int
     val get_implicit_arguments : cid_comp_const -> int
-    val index_of_name : Name.t -> cid_comp_const
-    val index_of_name_opt : Name.t -> cid_comp_const option
     val clear : unit -> unit
   end
 
@@ -200,8 +188,6 @@ module Cid : sig
     val get : cid_comp_dest -> entry
     val fixed_name_of : cid_comp_dest -> Name.t
     val get_implicit_arguments : cid_comp_dest -> int
-    val index_of_name : Name.t -> cid_comp_dest
-    val index_of_name_opt : Name.t -> cid_comp_dest option
     val clear : unit -> unit
   end
 
@@ -227,8 +213,6 @@ module Cid : sig
     val fixed_name_of : cid_comp_typdef -> Name.t
     val explicit_arguments : entry -> int
     val get_implicit_arguments : cid_comp_typdef -> int
-    val index_of_name : Name.t -> cid_comp_typdef
-    val index_of_name_opt : Name.t -> cid_comp_typdef option
     val clear : unit -> unit
   end
 
@@ -283,8 +267,6 @@ module Cid : sig
     val explicit_arguments : entry -> int
 
     val fixed_name_of : cid_prog -> Name.t
-    val index_of_name : Name.t -> cid_prog
-    val index_of_name_opt : Name.t -> cid_prog option
 
     (* val entry_list : ((Id.cid_prog * Location.t) list ref) DynArray.t *)
     val clear : unit -> unit
@@ -317,7 +299,6 @@ module Cid : sig
     val add : (cid_schema -> entry) -> cid_schema
     val get : cid_schema -> entry
     val get_schema : cid_schema -> LF.schema
-    val index_of_name : Name.t -> cid_schema
     val get_name : cid_schema -> Name.t
     val clear : unit -> unit
   end

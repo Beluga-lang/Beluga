@@ -128,7 +128,8 @@ module Comp = struct
     | ExtendedBy of Location.t * int (* specifies a schema element *)
 
   type case_label = Synint.Comp.case_label =
-    | NamedCase of Location.t * Name.t
+    | Lf_constant of Location.t * Name.t * Id.cid_term
+    | Comp_constant of Location.t * Name.t * Id.cid_comp_const
     | BVarCase of Location.t
     | ContextCase of context_case
     | PVarCase

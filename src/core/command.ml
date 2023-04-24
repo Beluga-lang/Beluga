@@ -91,6 +91,17 @@ module type COMMAND_STATE = sig
        * Int.t Option.t
        * Identifier.t Option.t
        * (LF.typ * Int.t)
+
+  (** [index_of_lf_type_constant state identifier] is the constant ID of
+      [identifier] in [state] if it is bound to an LF type-level constant. If
+      [identifier] is bound to any other entry, then an exception is raised. *)
+  val index_of_lf_type_constant :
+    state -> Qualified_identifier.t -> Id.cid_typ
+
+  val index_of_comp_program : state -> Qualified_identifier.t -> Id.cid_prog
+
+  val index_of_comp_type_constant :
+    state -> Qualified_identifier.t -> Id.cid_comp_typ
 end
 
 module Make_command_state
@@ -254,6 +265,15 @@ struct
     Unify.StdTrail.resetGlobalCnstrs ();
     Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id);
     (expected, tries, identifier, (tA', i))
+
+  let index_of_lf_type_constant state identifier =
+    Indexing_state.index_of_lf_type_constant state.index_state identifier
+
+  let index_of_comp_program state identifier =
+    Indexing_state.index_of_comp_program state.index_state identifier
+
+  let index_of_comp_type_constant state identifier =
+    Indexing_state.index_of_comp_type_constant state.index_state identifier
 end
 
 module type COMMAND = sig
@@ -496,8 +516,7 @@ module Make (State : COMMAND_STATE) = struct
                        Logic.Solver.solve cD cPsi query
                          (fun (ctx, norm) ->
                            fprintf state "%a@\n"
-                             (P.fmt_ppr_lf_normal cD
-                                ctx P.l0)
+                             (P.fmt_ppr_lf_normal cD ctx P.l0)
                              norm;
                            incr n;
                            if !n = 10 then raise Logic.Frontend.Done)
@@ -512,10 +531,11 @@ module Make (State : COMMAND_STATE) = struct
       ~help:"Print all constructors of a given type passed as a parameter"
       ~run:
         (command1 (fun state n ->
-             let typ_name = Name.(mk_name (SomeString n)) in
-             let entry =
-               Store.Cid.Typ.index_of_name typ_name |> Store.Cid.Typ.get
+             let name =
+               Qualified_identifier.make_simple (Identifier.make n)
              in
+             let cid = index_of_lf_type_constant state name in
+             let entry = Store.Cid.Typ.get cid in
              let termlist =
                List.map Store.Cid.Term.get
                  !(entry.Store.Cid.Typ.Entry.constructors)
@@ -584,12 +604,12 @@ module Make (State : COMMAND_STATE) = struct
          a parameter"
       ~run:
         (command1 (fun state arg ->
-             let name = Name.(mk_name (SomeString arg)) in
+             let name =
+               Qualified_identifier.make_simple (Identifier.make arg)
+             in
              try
-               let entry =
-                 Store.Cid.CompTyp.index_of_name name
-                 |> Store.Cid.CompTyp.get
-               in
+               let cid = index_of_comp_type_constant state name in
+               let entry = Store.Cid.CompTyp.get cid in
                let termlist =
                  List.map Store.Cid.CompConst.get
                    !(entry.Store.Cid.CompTyp.Entry.constructors)
@@ -615,10 +635,11 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state arg ->
              try
-               let name = Name.(mk_name (SomeString arg)) in
-               let entry =
-                 Store.Cid.Comp.index_of_name name |> Store.Cid.Comp.get
+               let name =
+                 Qualified_identifier.make_simple (Identifier.make arg)
                in
+               let cid = index_of_comp_program state name in
+               let entry = Store.Cid.Comp.get cid in
                fprintf state "%a : %a;@\n" Name.pp
                  entry.Store.Cid.Comp.Entry.name
                  (P.fmt_ppr_cmp_typ LF.Empty P.l0)
@@ -632,15 +653,17 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state arg ->
              try
-               let name = Name.(mk_name (SomeString arg)) in
-               let entry =
-                 Store.Cid.Comp.get (Store.Cid.Comp.index_of_name name)
+               let name =
+                 Qualified_identifier.make_simple (Identifier.make arg)
                in
+               let cid = index_of_comp_program state name in
+               let entry = Store.Cid.Comp.get cid in
                match entry.Store.Cid.Comp.Entry.prog with
                | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
+                   (* FIXME: No need to construct [d] to print the function *)
                    let d =
                      Synint.Sgn.Theorem
-                       { name
+                       { name = Name.make_from_qualified_identifier name
                        ; cid
                        ; typ = entry.Store.Cid.Comp.Entry.typ
                        ; body

@@ -53,9 +53,6 @@ end
 module type CIDSTORE = sig
   type entry
   type cid
-
-  val index_of_name : Name.t -> cid
-  val index_of_name_opt : Name.t -> cid option
   val replace_entry : cid -> entry -> unit
   val fixed_name_of : cid -> Name.t
   val get : cid -> entry
@@ -91,15 +88,6 @@ module CidStore (M : ENTRY) : CIDSTORE
 
   let replace_entry n e =
     DynArray.set store n e
-
-  let index_of_name (n : Name.t) : cid =
-    NameTable.find directory n
-
-  let index_of_name_opt (n : Name.t) : cid option =
-    try
-      Some (index_of_name n)
-    with
-    | Not_found -> None
 
   let get n =
     DynArray.get store n
@@ -156,16 +144,6 @@ module Cid = struct
 
     let explicit_arguments entry =
       args entry.kind - entry.implicit_arguments
-
-    let args_of_name n =
-      let entry = get (index_of_name n) in
-      explicit_arguments entry
-
-    let args_of_name_opt n =
-      try
-        Option.some (args_of_name n)
-      with
-      | Not_found -> Option.none
 
     let freeze a =
       (get a).frozen := true
@@ -393,16 +371,6 @@ module Cid = struct
 
     let explicit_arguments entry =
       args entry.typ - entry.implicit_arguments
-
-    let args_of_name n =
-      let entry = get (index_of_name n) in
-      explicit_arguments entry
-
-    let args_of_name_opt n =
-      try
-        Option.some (args_of_name n)
-      with
-      | Not_found -> Option.none
 
     let get_implicit_arguments c = (get c).implicit_arguments
   end

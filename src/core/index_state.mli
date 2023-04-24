@@ -82,6 +82,12 @@ module type INDEXING_STATE = sig
   val index_of_lf_term_constant :
     state -> Qualified_identifier.t -> Id.cid_term
 
+  (** [index_of_comp_type_constant state identifier] is a lookup for the ID
+      corresponding to [identifier] in [state] for computation-level
+      inductive or stratified type constant. *)
+  val index_of_comp_type_constant :
+    state -> Qualified_identifier.t -> Id.cid_comp_typ
+
   val index_of_inductive_comp_constant :
     state -> Qualified_identifier.t -> Id.cid_comp_typ
 

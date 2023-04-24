@@ -1,7 +1,7 @@
 (** The external syntax of Beluga. *)
 
 open Support
-open Common
+open Syncom
 
 (** ASTs constructed with the constructors in this module are not necessarily
     in normal form.

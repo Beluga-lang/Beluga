@@ -1,6 +1,6 @@
 open Support
 open Synext_definition
-open Common
+open Syncom
 
 exception Unsupported_implicit_lf_pi_kind
 

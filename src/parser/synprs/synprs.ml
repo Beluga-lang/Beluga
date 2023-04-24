@@ -4,7 +4,7 @@ include Synprs_definition
 
 (** {1 Common} *)
 
-include Common
+include Syncom
 
 (** {1 Explicit Arguments} *)
 

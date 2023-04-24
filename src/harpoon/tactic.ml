@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 module B = Beluga
 module Context = B.Context
 module Command = Beluga_syntax.Synext.Harpoon

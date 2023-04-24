@@ -1,6 +1,6 @@
 open Support
 open Beluga
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Beluga_syntax.Synint
 
 module F = Fun
@@ -234,7 +234,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
     match
       IO.parsed_prompt io "  Name of theorem (:quit or empty to finish): "
         None
-        (Obj.magic ())
+        (Obj.magic ()) (* TODO: Parse [":quit"] or [<identifier>] *)
     with
     | None | Some `quit -> []
     | Some (`next name) ->
@@ -281,20 +281,18 @@ let configuration_wizard io automation_state : t option =
   (* c will be populated with theorems; if there are none it's
      because the session is over. *)
   match thms with
-  | _ :: _ ->
-     Some (make mutual_group thms)
-  | [] -> None
+  | _ :: _ -> Option.some (make mutual_group thms)
+  | [] -> Option.none
 
 let fmt_ppr_theorem_list ppf c =
-  let open Format in
   let theorem_list = full_theorem_list c in
   let fmt_ppr_theorem_completeness ppf t =
     match Theorem.completeness t with
-    | `complete -> fprintf ppf " (finished)"
+    | `complete -> Format.fprintf ppf " (finished)"
     | _ -> ()
   in
   let fmt_ppr_indexed_theorem ppf (i, t) =
-    fprintf ppf "%d. %a%a" (i + 1)
+    Format.fprintf ppf "%d. %a%a" (i + 1)
       Name.pp (Theorem.get_name t)
       fmt_ppr_theorem_completeness t
   in
@@ -302,6 +300,6 @@ let fmt_ppr_theorem_list ppf c =
     Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_theorem
   in
   (* It may be better to add the current session name to this message *)
-  fprintf ppf
+  Format.fprintf ppf
     "@[<v>%a@]"
     fmt_ppr_indexed_theorems (List.index theorem_list)

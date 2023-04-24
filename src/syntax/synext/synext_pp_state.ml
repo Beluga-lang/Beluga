@@ -1,6 +1,6 @@
 open Support
 open Synext_definition
-open Common
+open Syncom
 
 module type PRINTING_STATE = sig
   (** @closed *)

@@ -5,7 +5,7 @@
 *)
 
 open Beluga_syntax
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support

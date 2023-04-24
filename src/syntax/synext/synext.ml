@@ -4,7 +4,7 @@ include Synext_definition
 
 (** {1 Common} *)
 
-include Common
+include Syncom
 
 (** {1 Locations} *)
 

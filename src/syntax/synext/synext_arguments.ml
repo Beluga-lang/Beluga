@@ -1,4 +1,4 @@
-open Common
+open Syncom
 open Synext_definition
 
 let explicit_arguments_lf_kind =

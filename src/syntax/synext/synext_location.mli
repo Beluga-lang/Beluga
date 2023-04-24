@@ -1,4 +1,4 @@
-open Common
+open Syncom
 open Synext_definition
 
 (** {1 LF} *)

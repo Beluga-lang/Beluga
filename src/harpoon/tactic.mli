@@ -11,7 +11,7 @@
  *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Beluga_syntax.Synint
 
 module Command = Beluga_syntax.Ext.Harpoon

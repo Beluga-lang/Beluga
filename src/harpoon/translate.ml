@@ -1,6 +1,6 @@
 open Support
 open Beluga
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 open Synint
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))

@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax.Syncom
 
 exception Unknown_constant_arity of Qualified_identifier.t
 

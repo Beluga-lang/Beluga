@@ -2,7 +2,7 @@
  (name synapx)
  (package beluga)
  (modules :standard)
- (libraries support common synint)
+ (libraries support syncom synint)
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))
 

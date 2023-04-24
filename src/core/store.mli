@@ -40,7 +40,6 @@ module Cid : sig
           ; constructors : Id.cid_term list ref
           ; subordinates : BitSet.t ref
           ; typesubordinated : BitSet.t ref
-          ; decl : Decl.t
           }
     end
     type entry = Entry.t
@@ -80,7 +79,6 @@ module Cid : sig
           { name : Name.t
           ; implicit_arguments : int
           ; typ : LF.typ
-          ; decl : Decl.t
           }
       type cid = Id.cid_term
       val name_of_entry : t -> Name.t
@@ -108,7 +106,6 @@ module Cid : sig
           ; positivity : Sgn.positivity_flag
           ; mutable frozen : bool
           ; constructors : cid_comp_const list ref
-          ; decl : Decl.t
           }
       val name_of_entry : t -> Name.t
       type cid = Id.cid_comp_typ
@@ -138,7 +135,6 @@ module Cid : sig
           ; kind : Comp.kind
           ; frozen : bool ref
           ; destructors : cid_comp_dest list ref
-          ; decl : Decl.t
           }
       type cid = Id.cid_comp_cotyp
       val name_of_entry : t -> Name.t
@@ -166,7 +162,6 @@ module Cid : sig
           { name : Name.t
           ; implicit_arguments : int
           ; typ : Comp.typ
-          ; decl : Decl.t
           }
       type cid = Id.cid_comp_const
       val name_of_entry : t -> Name.t
@@ -193,7 +188,6 @@ module Cid : sig
           ; mctx : LF.mctx
           ; obs_type : Comp.typ
           ; return_type : Comp.typ
-          ; decl : Decl.t
           }
       type cid = Id.cid_comp_dest
       val name_of_entry : t -> Name.t
@@ -220,7 +214,6 @@ module Cid : sig
           ; kind : Comp.kind
           ; mctx : LF.mctx
           ; typ : Comp.typ
-          ; decl : Decl.t
           }
       type cid = Id.cid_comp_typdef
       val name_of_entry : t -> Name.t
@@ -249,7 +242,6 @@ module Cid : sig
         ; typ : Comp.typ
         ; prog : Comp.value option
         ; mutual_group : cid_mutual_group
-        ; decl : Decl.t option
         }
       type cid = Id.cid_prog
       val name_of_entry : t -> Name.t
@@ -273,8 +265,7 @@ module Cid : sig
     (** Looks up the totality declaration for the given theorem. *)
     val get_total_decl : cid_prog -> Comp.total_dec
 
-    val mk_entry : Decl.t option ->
-                   Name.t -> Comp.typ -> int
+    val mk_entry : Name.t -> Comp.typ -> int
                    -> cid_mutual_group -> Comp.value option
                    -> entry
 
@@ -308,9 +299,6 @@ module Cid : sig
           updated to hold the body as well.
      *)
     val set_prog : Id.cid_prog -> (Comp.value option -> Comp.value option) -> unit
-
-    (** Modifies the declaration number of a theorem. *)
-    val set_decl : Id.cid_prog -> (Decl.t option -> Decl.t option) -> unit
   end
 
   module Schema : sig
@@ -319,7 +307,6 @@ module Cid : sig
         private
           { name : Name.t
           ; schema : LF.schema
-          ; decl : Decl.t
           }
       val name_of_entry : t -> Name.t
       type cid = Id.cid_schema

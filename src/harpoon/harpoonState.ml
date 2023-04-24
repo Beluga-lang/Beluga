@@ -305,7 +305,6 @@ let on_session_completed s c =
   match save_mode s with
   | `save_back -> save s; reset s
   | `no_save_back ->
-     Session.materialize_theorems c;
      remove_current_session s
 
 let serialize s ctg = keeping_focus s ctg (fun _ -> save s; reset s)

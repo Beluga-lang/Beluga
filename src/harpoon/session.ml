@@ -141,7 +141,6 @@ let prepare_translated_proofs tes total_decs =
                  cid for the translated proof *)
           Hashtbl.add h cid cid';
           Store.Cid.Comp.mk_entry
-            None
             (trans_name entry.Store.Cid.Comp.Entry.name)
             tau
             entry.Store.Cid.Comp.Entry.implicit_arguments
@@ -305,9 +304,3 @@ let fmt_ppr_theorem_list ppf c =
   fprintf ppf
     "@[<v>%a@]"
     fmt_ppr_indexed_theorems (List.index theorem_list)
-
-let materialize_theorems c =
-  if DynArray.length c.theorems > 0 then
-    Beluga_syntax.Error.raise_violation
-      "[materialize_theorems] not all theorems are complete";
-  DynArray.iter F.(Theorem.materialize ++ Pair.fst) c.finished_theorems

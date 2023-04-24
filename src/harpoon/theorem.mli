@@ -123,13 +123,3 @@ type completeness =
 
 (** Decides whether the theorem is complete. *)
 val completeness : t -> completeness
-
-(** Assigns a declaration number to this theorem.
-
-    Be careful calling this. It should never be the case that some
-    theorems in a session are materialized and some not.
-
-    This function is idempotent: calling this on a theorem that is
-    already materialized will do nothing.
- *)
-val materialize : t -> unit

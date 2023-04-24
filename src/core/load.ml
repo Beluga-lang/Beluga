@@ -99,7 +99,10 @@ let read_signature_and_write_html filename =
       (Filename.concat "share" (Filename.concat "beluga" "beluga.css"))
   in
   Files.copy_file ~source:css_filename
-    ~destination:(Filename.concat directory (Filename.basename css_filename))
+    ~destination:
+      (Filename.concat
+         (Filename.dirname filename)
+         (Filename.basename css_filename))
 
 module Make_load (Load_state : LOAD_STATE) = struct
   include Load_state

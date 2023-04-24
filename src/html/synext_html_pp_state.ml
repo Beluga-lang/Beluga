@@ -412,16 +412,15 @@ module Html_printing_state = struct
       (Entry.make_program_constant_entry ?location ~page:state.current_page
          ~id identifier)
 
-  let start_module state =
+  let add_module state ?location identifier ~id f =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
     let module_scope =
       create_module_scope ~default_associativity ~default_precedence ()
     in
-    push_scope state module_scope
-
-  let stop_module state ?location identifier ~id =
-    match get_current_scope state with
+    push_scope state module_scope;
+    let x = f state in
+    (match get_current_scope state with
     | Module_scope
         { declarations; default_associativity; default_precedence; _ } ->
         ignore (pop_scope state);
@@ -429,12 +428,7 @@ module Html_printing_state = struct
           (Entry.make_module_entry ?location ~page:state.current_page ~id
              identifier);
         set_default_associativity state default_associativity;
-        set_default_precedence state default_precedence
-
-  let add_module state ?location identifier ~id f =
-    start_module state;
-    let x = f state in
-    stop_module state ?location identifier ~id;
+        set_default_precedence state default_precedence);
     x
 
   let rec lookup_in_scopes scopes identifiers =

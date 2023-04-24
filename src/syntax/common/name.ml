@@ -32,14 +32,14 @@ let pp ppf n =
   Format.fprintf ppf "%a%s"
     (Format.pp_print_list
        ~pp_sep:(fun _ _ -> ())
-       (fun ppf x -> Format.fprintf ppf "%s::" x))
+       (fun ppf x -> Format.fprintf ppf "%s." x))
     n.modules (string_of_name n)
 
 (** Computes a string representation of a name, with all modules. *)
 let show n =
   match n.modules with
   | [] -> string_of_name n
-  | l -> String.concat "::" l ^ "::" ^ string_of_name n
+  | l -> String.concat "." l ^ "." ^ string_of_name n
 
 let pp_list = List.pp ~pp_sep:Format.pp_print_space pp
 

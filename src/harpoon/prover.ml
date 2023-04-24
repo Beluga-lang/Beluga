@@ -301,30 +301,18 @@ let process_command
   | Synext.Harpoon.Repl.Command.Info { kind; object_identifier; _ } ->
      begin match kind with
      | `prog ->
-        let open Option in
-        let name = Name.make_from_qualified_identifier object_identifier in
-        begin match Store.Cid.Comp.index_of_name_opt name $> Store.Cid.Comp.get with
-        | None ->
-           HarpoonState.printf s
-             "- No such theorem by name %a" Qualified_identifier.pp object_identifier
-        | Some e ->
-           HarpoonState.printf s
-             "- @[%a@]"
-             P.fmt_ppr_cmp_comp_prog_info e
-        end
+        let cid = (fun _ _ -> Obj.magic ()) (* index_of_comp_program *) s object_identifier in
+        let e = Store.Cid.Comp.get cid in
+        HarpoonState.printf s
+          "- @[%a@]"
+          P.fmt_ppr_cmp_comp_prog_info e
      end
 
   | Synext.Harpoon.Repl.Command.Translate { theorem; _ } ->
-     let n = Name.make_from_qualified_identifier theorem in
-     let open Option in
-     begin match Store.Cid.Comp.(index_of_name_opt n $> get) with
-     | Some e ->
-        HarpoonState.printf s "%a"
-          Translate.fmt_ppr_result (Translate.entry e)
-     | None ->
-        HarpoonState.printf s "No such theorem by name %a defined."
-          Name.pp n
-     end
+     let cid = (fun _ _ -> Obj.magic ()) (* index_of_comp_program *) s theorem in
+     let e = Store.Cid.Comp.get cid in
+     HarpoonState.printf s "%a"
+       Translate.fmt_ppr_result (Translate.entry e)
 
   | Synext.Harpoon.Repl.Command.Undo _ ->
      if Bool.not Theorem.(history_step t Direction.backward) then

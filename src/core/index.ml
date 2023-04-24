@@ -1877,18 +1877,14 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
   and index_harpoon_split_branch_label state = function
     | Synext.Harpoon.Split_branch.Label.Lf_constant { location; identifier }
       ->
-        let _cid = index_of_lf_term_constant state identifier in
+        let cid = index_of_lf_term_constant state identifier in
         let name = Name.make_from_qualified_identifier identifier in
-        (* TODO: The approximate syntax should have an [Lf_constant _]
-           constructor *)
-        Synapx.Comp.NamedCase (location, name)
+        Synapx.Comp.Lf_constant (location, name, cid)
     | Synext.Harpoon.Split_branch.Label.Comp_constant
         { location; identifier } ->
-        let _cid = index_of_comp_constructor state identifier in
+        let cid = index_of_comp_constructor state identifier in
         let name = Name.make_from_qualified_identifier identifier in
-        (* TODO: The approximate syntax should have a [Comp_constant _]
-           constructor *)
-        Synapx.Comp.NamedCase (location, name)
+        Synapx.Comp.Comp_constant (location, name, cid)
     | Synext.Harpoon.Split_branch.Label.Bound_variable { location } ->
         Synapx.Comp.BVarCase location
     | Synext.Harpoon.Split_branch.Label.Empty_context { location } ->

@@ -43,11 +43,6 @@ type error =
   | TypMismatch of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
   | InvalidSchemaElementIndex of int * Id.cid_schema
-  | UnboundCaseLabel
-    of [ `comp | `meta ]
-       * Name.t
-       * Int.LF.mctx
-       * Int.Comp.typ
   | CaseLabelMismatch
     of case_label_variant (* expected *)
        * case_label_variant (* actual *)
@@ -162,21 +157,6 @@ let error_printer = function
         @,@]"
         print_case_label_kind expected
         print_case_label_kind actual
-
-  | UnboundCaseLabel (kind, name, cD, tau) ->
-      let print_case_label_kind ppf =
-        function
-        | `meta -> Format.fprintf ppf "LF"
-        | `comp -> Format.fprintf ppf "computational"
-      in
-      Format.dprintf
-        "@[<v>Unbound constructor @[%a@].\
-        @,@[A %a constructor is expected, due to the type of the scrutinee, namely@]\
-        @,  @[%a@]\
-        @]"
-        Name.pp name
-        print_case_label_kind kind
-        P.(fmt_ppr_cmp_typ cD l0) tau
 
   | InvalidSchemaElementIndex (n, w) ->
       let Int.LF.Schema elems as schema = Store.Cid.Schema.get_schema w in
@@ -2059,7 +2039,8 @@ let rec elGCtx (delta : Int.LF.mctx) =
 
 let variant_of_case_label =
   function
-  | A.NamedCase _ -> `named
+  | A.Lf_constant _ -> `named
+  | A.Comp_constant _ -> `named
   | A.ContextCase _ -> `context
   | A.PVarCase (_, _, _) -> `pvar
   | A.BVarCase _ -> `bvar
@@ -2319,17 +2300,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
 
        I.SplitBranch (l', (Int.LF.Empty, pat'), t', hyp')
 
-    | A.NamedCase (loc, name) ->
-       let cid, tA, k =
-         try
-           let cid = Store.Cid.Term.index_of_name name in
-           let { Store.Cid.Term.Entry.typ; implicit_arguments; _ } = Store.Cid.Term.get cid in
-           (cid, typ, implicit_arguments)
-         with
-         | Not_found ->
-            UnboundCaseLabel (`meta, name, cD, tau_i)
-            |> throw loc
-       in
+    | A.Lf_constant (loc, name, cid) ->
+      let { Store.Cid.Term.Entry.typ = tA; implicit_arguments = k; _ } = Store.Cid.Term.get cid in
        (* FIXME: Is this always going to be MTyp?
           Need to think about how this will interact with parameter variables.
         *)
@@ -2465,15 +2437,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
   in
   let make_comp_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
-    | A.NamedCase (loc, name) ->
-       let cid =
-         try
-           Store.Cid.CompConst.index_of_name name
-         with
-         | Not_found ->
-            UnboundCaseLabel (`comp, name, cD, tau_i)
-            |> throw loc
-       in
+    | A.Comp_constant (loc, name, cid) ->
        let { Store.Cid.CompConst.Entry.typ = tau_c; _ } = Store.Cid.CompConst.get cid in
 
        dprintf

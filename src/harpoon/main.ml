@@ -12,10 +12,11 @@ module B = Beluga
 open Harpoon
 
 let realMain () =
-  Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let open Options in
   let options = parse_arguments args |> elaborate in
+
+  if Debug.is_enabled () then Debug.init (Some "debug.out");
 
   let ppf = Format.std_formatter in
   let stubs =

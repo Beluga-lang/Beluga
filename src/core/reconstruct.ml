@@ -192,12 +192,12 @@ let box_hole_cM loc cT =
   , let open Apx.LF in
     match cT with
     | Int.LF.ClTyp _ ->
-       Apx.Comp.ClObj
+       Apx.LF.ClObj
          ( CtxHole
          , Dot (Obj (Root (loc, Hole, Nil)), EmptySub)
          )
     | Int.LF.CTyp _ ->
-       Apx.Comp.CObj CtxHole
+       Apx.LF.CObj CtxHole
   )
 
 (* extend_mctx cD (x, cdecl, t) = cD'
@@ -636,11 +636,11 @@ let elClObj cD loc cPsi' clobj mtyp =
 
 let rec elMetaObj' cD loc cM cTt =
   match (cM, cTt) with
-  | (Apx.Comp.CObj psi, (Int.LF.CTyp (Some w))) ->
+  | (Apx.LF.CObj psi, (Int.LF.CTyp (Some w))) ->
      let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
      Int.LF.CObj cPsi'
 
-  | (Apx.Comp.ClObj (cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
+  | (Apx.LF.ClObj (cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
      begin
        try
          unifyDCtxWithFCVar loc cD cPsi' cPhi
@@ -1318,11 +1318,11 @@ and elExp' cD cG i =
      substitutions in general is not allowed (only matching on
      substitution variables is), so we can safely disambiguate this to
      a boxed *term*. -je *)
-  | Apx.Comp.Box (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.LF.ClObj (psi, Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)))) ->
      (* package the head into a full term *)
      elBoxVal loc loc' psi (Apx.LF.Root (Location.ghost, h, Apx.LF.Nil))
 
-  | Apx.Comp.Box (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Obj r, Apx.LF.EmptySub)))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.LF.ClObj (psi, Apx.LF.Dot (Apx.LF.Obj r, Apx.LF.EmptySub)))) ->
      elBoxVal loc loc' psi r
 
      (* old elaboration
@@ -1339,7 +1339,7 @@ and elExp' cD cG i =
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
       *)
 
-  | Apx.Comp.Box (loc, (_loc', Apx.Comp.ClObj (phi, Apx.LF.SVar (Apx.LF.Offset k, id)))) ->
+  | Apx.Comp.Box (loc, (_loc', Apx.LF.ClObj (phi, Apx.LF.SVar (Apx.LF.Offset k, id)))) ->
      dprint (fun () -> "Case Analysis on SubstVar");
      let isId =
        match id with
@@ -1365,7 +1365,7 @@ and elExp' cD cG i =
        throw loc IllegalSubstMatch
   (* (ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported") *)
 
-  | Apx.Comp.Box (loc, (_loc', Apx.Comp.ClObj (phi2, Apx.LF.SVar (s, s')))) ->
+  | Apx.Comp.Box (loc, (_loc', Apx.LF.ClObj (phi2, Apx.LF.SVar (s, s')))) ->
       let Apx.LF.MInst (Int.LF.SObj s0, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) = s in
       let cPhi2 = Lfrecon.elDCtx Lfrecon.Pibox cD phi2 in
       let s' = Lfrecon.elSub loc Lfrecon.Pibox cD cPhi2 s' cl cPhi in
@@ -1392,7 +1392,7 @@ and elExp' cD cG i =
       end
 
 
-  | Apx.Comp.Box (loc, (loc', Apx.Comp.CObj (cpsi))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.LF.CObj (cpsi))) ->
      dprintf (fun p -> p.fmt "[elExp'] BoxVal");
      begin
        match cpsi with
@@ -1742,7 +1742,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in
      (cG', pat', ttau')
 
-  | Apx.Comp.PatMetaObj (loc, (_, Apx.Comp.ClObj (psi, _))) ->
+  | Apx.Comp.PatMetaObj (loc, (_, Apx.LF.ClObj (psi, _))) ->
      (* Factor out the case for PatMetaObj, since the context associated
         with the MetaObj is used in generating the mg type of pattern;
         this is useful, if the context psi contains Sigma-types,

@@ -1087,7 +1087,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     match meta_object with
     | Synext.Meta.Object.Context { location; context } ->
         let context' = index_clf_context state context in
-        (location, Synapx.Comp.CObj context')
+        (location, Synapx.LF.CObj context')
     | Synext.Meta.Object.Contextual_term { location; context; term } ->
         with_indexed_clf_context state context (fun state context' ->
             let term' = index_clf_term state term in
@@ -1095,18 +1095,18 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
                constructor like in the internal syntax. See
                {!Reconstruct.elClObj}. *)
             ( location
-            , Synapx.Comp.ClObj
+            , Synapx.LF.ClObj
                 ( context'
                 , Synapx.LF.Dot (to_head_or_obj term', Synapx.LF.EmptySub) )
             ))
     | Synext.Meta.Object.Plain_substitution { location; domain; range } ->
         with_indexed_clf_context state domain (fun state domain' ->
             let range' = index_clf_substitution state range in
-            (location, Synapx.Comp.ClObj (domain', range')))
+            (location, Synapx.LF.ClObj (domain', range')))
     | Synext.Meta.Object.Renaming_substitution { location; domain; range } ->
         with_indexed_clf_context state domain (fun state domain' ->
             let range' = index_clf_substitution state range in
-            (location, Synapx.Comp.ClObj (domain', range')))
+            (location, Synapx.LF.ClObj (domain', range')))
 
   and index_meta_type state = function
     | Synext.Meta.Typ.Context_schema { schema; location = _ } ->
@@ -1247,7 +1247,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
   and index_meta_pattern state = function
     | Synext.Meta.Pattern.Context { location; context } ->
         let context' = index_clf_context_pattern state context in
-        (location, Synapx.Comp.CObj context')
+        (location, Synapx.LF.CObj context')
     | Synext.Meta.Pattern.Contextual_term { location; context; term } ->
         with_indexed_clf_context_pattern state context (fun state context' ->
             let term' = index_clf_term_pattern state term in
@@ -1255,19 +1255,19 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
                constructor like in the internal syntax. See
                {!Reconstruct.elClObj}. *)
             ( location
-            , Synapx.Comp.ClObj
+            , Synapx.LF.ClObj
                 ( context'
                 , Synapx.LF.Dot (to_head_or_obj term', Synapx.LF.EmptySub) )
             ))
     | Synext.Meta.Pattern.Plain_substitution { location; domain; range } ->
         with_indexed_clf_context_pattern state domain (fun state domain' ->
             let range' = index_clf_substitution_pattern state range in
-            (location, Synapx.Comp.ClObj (domain', range')))
+            (location, Synapx.LF.ClObj (domain', range')))
     | Synext.Meta.Pattern.Renaming_substitution { location; domain; range }
       ->
         with_indexed_clf_context_pattern state domain (fun state domain' ->
             let range' = index_clf_substitution_pattern state range in
-            (location, Synapx.Comp.ClObj (domain', range')))
+            (location, Synapx.LF.ClObj (domain', range')))
 
   and with_indexed_meta_context_binding state (identifier, typ) f =
     let typ' = index_meta_type state typ in

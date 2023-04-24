@@ -397,14 +397,14 @@ and json_of_comp_meta_typ (location, cA) =
       ]
 
 and json_of_comp_mfront = function
-  | Synapx.Comp.ClObj (cPsi, s) ->
-      json_of_variant ~name:"Synapx.Comp.ClObj"
+  | Synapx.LF.ClObj (cPsi, s) ->
+      json_of_variant ~name:"Synapx.LF.ClObj"
         ~data:
           [ ("context", json_of_lf_dctx cPsi)
           ; ("substitution", json_of_lf_sub s)
           ]
-  | Synapx.Comp.CObj cPsi ->
-      json_of_variant ~name:"Synapx.Comp.CObj"
+  | Synapx.LF.CObj cPsi ->
+      json_of_variant ~name:"Synapx.LF.CObj"
         ~data:[ ("context", json_of_lf_dctx cPsi) ]
 
 and json_of_comp_meta_obj (location, mft) =

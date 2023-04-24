@@ -360,17 +360,13 @@ struct
     Index_state.add_computation_term_destructor state.index_state ?location
       identifier cid
 
-  let start_module state = Index_state.start_module state.index_state
-
-  let stop_module state ?location identifier cid =
-    Index_state.stop_module state.index_state ?location identifier cid
-
   let add_module state ?location identifier cid m =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
-    start_module state;
-    let x = m state in
-    stop_module state ?location identifier cid;
+    let x =
+      Index_state.add_module state.index_state ?location identifier cid
+        (fun _index_state -> m state)
+    in
     set_default_associativity state default_associativity;
     set_default_precedence state default_precedence;
     x

@@ -644,11 +644,6 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     state -> ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t
 
-  val start_module : state -> Unit.t
-
-  val stop_module :
-    state -> ?location:Location.t -> Identifier.t -> Int.t -> Unit.t
-
   val add_module :
        state
     -> ?location:Location.t
@@ -1062,34 +1057,6 @@ module Indexing_state = struct
   let unshift_comp_context state =
     let bindings_state = get_current_scope_bindings_state state in
     bindings_state.comp_context_size <- bindings_state.comp_context_size - 1
-
-  let start_module state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
-    in
-    let module_scope =
-      Module_scope
-        { bindings =
-            { current_scope_bindings_state with
-              bindings = Binding_tree.create ()
-            }
-        ; declarations = Binding_tree.create ()
-        }
-    in
-    push_scope state module_scope
-
-  let stop_module state ?location identifier cid =
-    match get_current_scope state with
-    | Plain_scope _ ->
-        Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope" __FUNCTION__)
-    | Pattern_scope _ ->
-        Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope" __FUNCTION__)
-    | Module_scope { declarations; _ } ->
-        ignore (pop_scope state);
-        add_declaration state ~subtree:declarations identifier
-          (Entry.make_module_entry ?location identifier cid)
 
   let actual_binding_exn = Entry.actual_binding_exn
 
@@ -1887,9 +1854,31 @@ module Indexing_state = struct
       (Entry.make_program_constant_entry ?location identifier cid)
 
   let add_module state ?location identifier cid m =
-    start_module state;
+    let current_scope_bindings_state =
+      get_current_scope_bindings_state state
+    in
+    let module_scope =
+      Module_scope
+        { bindings =
+            { current_scope_bindings_state with
+              bindings = Binding_tree.create ()
+            }
+        ; declarations = Binding_tree.create ()
+        }
+    in
+    push_scope state module_scope;
     let x = m state in
-    stop_module state ?location identifier cid;
+    (match get_current_scope state with
+    | Plain_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid plain scope" __FUNCTION__)
+    | Pattern_scope _ ->
+        Error.raise_violation
+          (Format.asprintf "[%s] invalid pattern scope" __FUNCTION__)
+    | Module_scope { declarations; _ } ->
+        ignore (pop_scope state);
+        add_declaration state ~subtree:declarations identifier
+          (Entry.make_module_entry ?location identifier cid));
     x
 
   let with_scope state m =

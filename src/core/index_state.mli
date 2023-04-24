@@ -263,18 +263,6 @@ module type INDEXING_STATE = sig
   val add_program_constant :
     state -> ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t
 
-  (** [start_module state] sets up [state] to keep track of subsequent
-      declaration additions as being in a new module.
-
-      Every call to {!val:start_module} must be followed by
-      {!val:stop_module}. The reason why we need these start/stop functions
-      is that we need to intersperse operations during signature
-      reconstruction. *)
-  val start_module : state -> Unit.t
-
-  val stop_module :
-    state -> ?location:Location.t -> Identifier.t -> Int.t -> Unit.t
-
   (** [add_module state ?location module_identifier cid m] starts a module,
       computes [m], then stops the module. This effectively adds a new module
       with identifier [module_identifier] to [state], along with the

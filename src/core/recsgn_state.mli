@@ -209,15 +209,9 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
   val freeze_all_unfrozen_declarations : state -> Unit.t
 end
 
-module Make_signature_reconstruction_state (Index_state : sig
-  include Index_state.INDEXING_STATE
-
-  val start_module : state -> Unit.t
-
-  val stop_module :
-    state -> ?location:Location.t -> Identifier.t -> Id.module_id -> Unit.t
-end)
-(Index : Index.INDEXER with type state = Index_state.state) : sig
+module Make_signature_reconstruction_state
+    (Index_state : Index_state.INDEXING_STATE)
+    (Index : Index.INDEXER with type state = Index_state.state) : sig
   include SIGNATURE_RECONSTRUCTION_STATE
 
   val create_initial_state : Index_state.state -> state

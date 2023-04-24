@@ -1797,22 +1797,18 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     with_bound_comp_variable state identifier (fun state ->
         f state (Synapx.Comp.CTypDecl (name, typ')))
 
-  and with_indexed_comp_context_bindings state bindings f =
+  and with_indexed_comp_context_bindings state cG bindings f =
     match bindings with
-    | [] -> f state []
+    | [] -> f state cG
     | x :: xs ->
         with_indexed_comp_context_binding state x (fun state y ->
-            with_indexed_comp_context_bindings state xs (fun state ys ->
-                f state (y :: ys)))
+            with_indexed_comp_context_bindings state
+              (Synapx.LF.Dec (cG, y))
+              xs f)
 
   and with_indexed_comp_context state
       { Synext.Comp.Context.bindings; location = _ } f =
-    with_indexed_comp_context_bindings state bindings (fun state bindings' ->
-        f state
-          (List.fold_left (* TODO: Construct the context on the fly *)
-             (fun accumulator binding' ->
-               Synapx.LF.Dec (accumulator, binding'))
-             Synapx.LF.Empty bindings'))
+    with_indexed_comp_context_bindings state Synapx.LF.Empty bindings f
 
   let rec index_harpoon_proof state = function
     | Synext.Harpoon.Proof.Incomplete { location; label } ->

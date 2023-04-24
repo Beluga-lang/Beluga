@@ -383,7 +383,7 @@ let rec etaExpandTuple tRec h k =
 let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA plicity n names =
   match Whnf.whnfTyp sA with
   | LF.Sigma tRec as tA, s ->
-     (* XXX this doesn't do any strengthening !! -je *)
+     (* FIXME: this doesn't do any strengthening !! -je *)
      let tH =
        mk_head ((new_mxvar n (cD, cPsi, LF.tclo tA s) plicity Inductivity.not_inductive, Whnf.m_id), s)
      in

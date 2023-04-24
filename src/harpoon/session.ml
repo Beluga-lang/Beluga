@@ -239,7 +239,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
     | None | Some `quit -> []
     | Some (`next name) ->
        let tau, k =
-         (* XXX These calls are sketchy as hell.
+         (* FIXME: These calls are sketchy as hell.
                 There must be a better place to put them -je
           *)
          Reconstruct.reset_fvarCnstr ();

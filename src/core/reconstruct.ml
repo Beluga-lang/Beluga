@@ -905,7 +905,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
       Unify.unifyCompTyp Int.LF.Empty (tau_s', Whnf.m_id) (tau_p', Whnf.m_id)
     with
     | Unify.Failure msg ->
-       (* XXX there's no way this error is formatted correctly -je *)
+       (* FIXME: there's no way this error is formatted correctly -je *)
        raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau_s', Whnf.m_id), (tau_p', Whnf.m_id))))
   in
   let unifyScrutinee tau_p' t1 t1t =
@@ -2244,7 +2244,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
 
        (* Construct the pattern, appropriately projected. *)
-       (* XXX need to eta-expand parameter variables ? -je
+       (* FIXME: need to eta-expand parameter variables ? -je
           If we do, then pattern and type construction will need to
           take place at the same time, or pattern construction will
           need to return some kind of function that can accept the
@@ -2330,14 +2330,14 @@ and elSplit loc cD cG pb i tau_i bs ttau =
             UnboundCaseLabel (`meta, name, cD, tau_i)
             |> throw loc
        in
-       (* XXX Is this always going to be MTyp?
+       (* FIXME: Is this always going to be MTyp?
           Need to think about how this will interact with parameter variables.
         *)
        let Int.LF.MTyp tP = cU in
        let (cD', (cPsi', tR_p, tA_p), t) =
          match Coverage.genObj (cD, cPsi, tP) (Int.LF.Const cid, tA, k) with
          | None -> assert false
-         (* XXX throw an appropriate error
+         (* FIXME: throw an appropriate error
             Normally this would be a type mismatch, because the user
             types the full pattern, but here since the user only
             types the constructor.

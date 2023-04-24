@@ -1,14 +1,15 @@
 open Support
+open Beluga_syntax.Common
 module B = Beluga
 module Context = B.Context
-module Command = Beluga.Syntax.Ext.Harpoon
+module Command = Beluga_syntax.Synext.Harpoon
 module Total = Beluga.Total
 module Whnf = B.Whnf
 module F = Fun
 
 module P = B.Prettyint.DefaultPrinter
 
-open B.Syntax.Int
+open Beluga_syntax.Synint
 
 let dprintf, dprint, _ = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
@@ -27,14 +28,14 @@ let solve ?(action_name = "solve") (proof : Comp.proof) : t =
  *)
 let check_variable_uniqueness variable_kind ctx decl name_of_decl print t =
   let name = name_of_decl decl in
-  let p d = B.Name.(name_of_decl d = name) in
+  let p d = Name.(name_of_decl d = name) in
   match Context.find_rev' ctx p with
   | Some d ->
      Theorem.printf t
        "- @[<v>Error: Defining the %s %a is forbidden@ as it overshadows \
         the declaration@,  @[%a@]@]"
        variable_kind
-       B.Name.pp name
+       Name.pp name
        print d;
      `duplicate
   | None -> `unique
@@ -73,7 +74,7 @@ type intros'_failure =
  *)
 let intros' : Theorem.t ->
               string list option ->
-              B.Name.t list ->
+              Name.t list ->
               LF.mctx -> Comp.gctx -> Comp.typ ->
               (intros'_failure, LF.mctx * Comp.gctx * Comp.typ) Either.t =
   let gen_var_for_typ active_names tau =
@@ -90,7 +91,7 @@ let intros' : Theorem.t ->
               ( gen_var_for_typ active_names tau_1
               , Option.none)
          | Option.Some (name, user_names) ->
-              ( B.Name.(mk_name (SomeString name))
+              ( Name.(mk_name (SomeString name))
               , Option.some user_names )
        in
        let d = Comp.CTypDecl (name, tau_1, false) in
@@ -609,10 +610,10 @@ let solve_with_new_comp_decl action_name decl f t g =
        f
        g
 
-let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Name.t) : t =
+let solve_by_unbox' f (cT : Comp.meta_typ) (name : Name.t) : t =
   solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, Beluga_syntax.Plicity.explicit, Beluga_syntax.Inductivity.not_inductive)) f
 
-let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Name.t) modifier : t =
+let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : Name.t) modifier : t =
   let open Comp in
   fun t g ->
   let {cD; cG; cIH} = g.context in
@@ -629,11 +630,11 @@ let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau 
           (P.fmt_ppr_cmp_exp cD cG P.l0) m
           (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let unbox (m : Comp.exp) (tau : Comp.typ) (name : B.Name.t) modifier : t =
+let unbox (m : Comp.exp) (tau : Comp.typ) (name : Name.t) modifier : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT, modifier)) tau name modifier
 
-let invoke (i : Comp.exp) (tau : Comp.typ) (name : B.Name.t) : t =
+let invoke (i : Comp.exp) (tau : Comp.typ) (name : Name.t) : t =
   let open Comp in
   solve_with_new_comp_decl "by" (CTypDecl (name, tau, false))
     (prepend_commands [By (i, name, tau)])

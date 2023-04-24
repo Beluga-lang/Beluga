@@ -3,8 +3,8 @@
     @author Brigitte Pientka *)
 
 open Beluga_syntax
-open Syntax.Int.LF
-open Syntax.Int
+open Synint.LF
+open Synint
 
 exception NoTypAvailable
 

@@ -5,8 +5,8 @@
     recursive calls with calls to the translated functions.
  *)
 
-open Beluga
-open Syntax.Int.Comp
+open Beluga_syntax
+open Synint.Comp
 
 type cid_map = Id.cid_prog -> Id.cid_prog
 

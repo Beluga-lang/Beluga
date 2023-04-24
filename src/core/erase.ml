@@ -1,5 +1,5 @@
 open Beluga_syntax
-open Syntax.Int
+open Synint
 
 let rec numeric_order_arg tau n =
   let open Comp in

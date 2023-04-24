@@ -1,4 +1,5 @@
-open Syntax.Int
+open Beluga_syntax
+open Synint
 
 type goal
 type comp_goal

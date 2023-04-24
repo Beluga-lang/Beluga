@@ -1,7 +1,7 @@
 (** Approximate Syntax *)
 
 open Support
-open Beluga_syntax
+open Common
 open Id
 
 module Int = Synint

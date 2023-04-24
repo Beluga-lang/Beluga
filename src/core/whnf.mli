@@ -4,8 +4,8 @@
 *)
 
 open Beluga_syntax
-open Syntax.Int.LF
-open Syntax.Int
+open Synint.LF
+open Synint
 
 val whnf : nclo -> nclo
 val whnfTyp : tclo -> tclo

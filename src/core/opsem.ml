@@ -4,7 +4,7 @@
 
 open Support
 open Beluga_syntax
-open Syntax.Int
+open Synint
 
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail

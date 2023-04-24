@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax
+open Beluga_syntax.Common
 
 exception Expected_module of Qualified_identifier.t
 

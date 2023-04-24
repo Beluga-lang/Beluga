@@ -1,5 +1,4 @@
 open Support
-open Beluga_syntax
 
 (** [make_generator symbols] is a generating function for symbols. It is
     assumed that [!symbols] is an infinite sequence. *)

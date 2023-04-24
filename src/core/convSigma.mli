@@ -3,8 +3,7 @@
 *)
 
 open Beluga_syntax
-open Syntax
-open Int
+open Synint
 open LF
 
 type t

@@ -1,5 +1,4 @@
 open Support
-open Beluga_syntax
 
 (** A `name' represents the original named representation of a variable.
     These are primarily used in parsing and pretty- printing. Names should

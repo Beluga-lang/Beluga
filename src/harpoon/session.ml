@@ -1,6 +1,7 @@
 open Support
 open Beluga
-open Syntax.Int
+open Beluga_syntax.Common
+open Beluga_syntax.Synint
 
 module F = Fun
 module P = Prettyint.DefaultPrinter

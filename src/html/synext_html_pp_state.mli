@@ -9,8 +9,7 @@
     @author Marc-Antoine Ouimet *)
 
 open Support
-open Beluga_syntax
-open Synext
+open Beluga_syntax.Common
 
 (** Abstract definition for the HTML printing state. *)
 module type HTML_PRINTING_STATE = sig

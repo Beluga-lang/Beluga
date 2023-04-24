@@ -6,7 +6,6 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-open Syntax
 open Substitution
 open ConvSigma
 
@@ -19,8 +18,8 @@ module C = Whnf
 module P = Prettyint.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-module A = Syntax.Apx.Comp
-module I = Syntax.Int.Comp
+module A = Apx.Comp
+module I = Synint.Comp
 
 let strengthen : bool ref = Lfrecon.strengthen
 

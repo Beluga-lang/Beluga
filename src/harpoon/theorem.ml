@@ -1,7 +1,8 @@
 open Support
 open Beluga
-module LF = Syntax.Int.LF
-module Comp = Syntax.Int.Comp
+open Beluga_syntax
+module LF = Synint.LF
+module Comp = Synint.Comp
 open Id
 
 module P = Prettyint.DefaultPrinter

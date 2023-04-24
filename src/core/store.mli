@@ -1,6 +1,6 @@
-open Id
 open Beluga_syntax
-open Syntax.Int
+open Id
+open Synint
 
 module OpPragmas : sig
   type fixPragma =
@@ -324,7 +324,7 @@ module Cid : sig
 
   module type RENDERER = sig
     open Id
-    open Syntax.Int
+    open Synint
     val render_cid_comp_typ : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp -> string
     val render_cid_comp_const : cid_comp_const -> string

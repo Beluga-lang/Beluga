@@ -3,12 +3,11 @@
    @author Brigitte Pientka
 *)
 
-open Support.Equality
+open[@warning "-33"] Support.Equality
 open Support
 
 open Beluga_syntax
-open Syntax
-open Int
+open Synint
 module S = Substitution
 
 let fmt_ppr_conv_list =

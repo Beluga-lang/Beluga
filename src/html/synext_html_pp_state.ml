@@ -1,6 +1,5 @@
 open Support
-open Beluga_syntax
-open Synext
+open Beluga_syntax.Synext
 
 module type HTML_PRINTING_STATE = sig
   type state

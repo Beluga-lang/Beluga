@@ -7,7 +7,6 @@ open Beluga_syntax
 
 module LF : sig
 
-  open Syntax
   open Int.LF
 
   type error =
@@ -66,8 +65,8 @@ module LF : sig
 end
 
 module Comp : sig
-  open Syntax.Int.Comp
-  open Syntax.Int
+  open Synint.Comp
+  open Synint
 
   type typeVariant =
     | VariantCross

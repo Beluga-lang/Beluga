@@ -1,5 +1,5 @@
 open Support
-open Beluga_syntax
+open Beluga_syntax.Synext
 open Disambiguation_state
 
 module type SIGNATURE_DISAMBIGUATION = sig

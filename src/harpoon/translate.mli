@@ -1,6 +1,6 @@
 open Support
 open Beluga
-open Syntax.Int
+open Synint
 
 type error =
   | IncompleteProof

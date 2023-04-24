@@ -21,13 +21,15 @@ module Annot : sig
 end
 
 module LF : sig
+  open Synint.LF
+
   type entry =
-    { ctx : Syntax.Int.LF.mctx
-    ; psi : Syntax.Int.LF.dctx
-    ; tc : Syntax.Int.LF.tclo
+    { ctx : mctx
+    ; psi : dctx
+    ; tc : tclo
     }
 
-  val mk_entry : Syntax.Int.LF.mctx -> Syntax.Int.LF.dctx -> Syntax.Int.LF.tclo -> entry
+  val mk_entry : mctx -> dctx -> tclo -> entry
 
   val add : Location.t -> entry -> string -> unit
   val get : Location.t -> entry
@@ -35,12 +37,14 @@ module LF : sig
 end
 
 module Comp : sig
+  open Synint.LF
+  open Synint.Comp
   type entry =
-    { ctx : Syntax.Int.LF.mctx
-    ; tc : Syntax.Int.Comp.tclo
+    { ctx : mctx
+    ; tc : tclo
     }
 
-  val mk_entry : Syntax.Int.LF.mctx -> Syntax.Int.Comp.tclo -> entry
+  val mk_entry : mctx -> tclo -> entry
 
   val add : Location.t -> entry -> string -> unit
   val get : Location.t -> entry
@@ -48,7 +52,8 @@ module Comp : sig
 end
 
 module Sgn : sig
-  type typ_or_kind = Typ of Syntax.Int.LF.typ | Kind of Syntax.Int.LF.kind
+  open Synint.LF
+  type typ_or_kind = Typ of typ | Kind of kind
 
   type entry =
     { sgn : typ_or_kind

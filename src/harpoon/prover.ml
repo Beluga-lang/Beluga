@@ -2,7 +2,7 @@ open Support
 
 open Beluga
 open Beluga_syntax
-open Syntax.Int
+open Synint
 
 module E = Beluga_syntax.Error
 module S = Substitution

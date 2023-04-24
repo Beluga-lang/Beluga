@@ -1,8 +1,8 @@
 open Support.Equality
 open Support
 open Beluga_syntax
-module LF = Syntax.Int.LF
-module Comp = Syntax.Int.Comp
+module LF = Synint.LF
+module Comp = Synint.Comp
 
 [@@@warning "+A-4-44"]
 

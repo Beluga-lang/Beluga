@@ -18,6 +18,13 @@ module Parenthesizer = Parenthesizer
 module Identifier = Identifier
 module Qualified_identifier = Qualified_identifier
 module Binding_tree = Binding_tree
+module Id = Id
+module HoleId = HoleId
+
+(** {1 Legacy Names} *)
+
+module Name = Name
+module Gensym = Gensym
 
 (** {1 Utilities} *)
 

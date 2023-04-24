@@ -30,7 +30,8 @@
     highest count.
  *)
 
-open Syntax.Int
+open Beluga_syntax
+open Synint
 
 (** Generates a raw parameter variable name for a given LF type.
     Uses the programmer-supplied name hint, with a fallback.

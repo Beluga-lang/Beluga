@@ -10,7 +10,7 @@ open Support
 open Beluga_syntax
 module S = Substitution.LF
 open Format
-open Syntax.Int
+open Synint
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
 open! Debug.Fmt

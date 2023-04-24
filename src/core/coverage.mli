@@ -1,6 +1,6 @@
 open Beluga_syntax
-module Comp = Syntax.Int.Comp
-module LF = Syntax.Int.LF
+module Comp = Synint.Comp
+module LF = Synint.LF
 
 type error =
   | NoCover of string

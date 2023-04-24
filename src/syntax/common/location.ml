@@ -102,6 +102,20 @@ let set_start start location = { location with start }
 
 let set_stop stop location = { location with stop }
 
+let set_start_line line location =
+  set_start
+    (Position.make ~line
+       ~beginning_of_line:(Position.beginning_of_line location.start)
+       ~offset:(Position.offset location.start))
+    location
+
+let set_stop_line line location =
+  set_stop
+    (Position.make ~line
+       ~beginning_of_line:(Position.beginning_of_line location.stop)
+       ~offset:(Position.offset location.stop))
+    location
+
 let start_position_as_location location = set_stop location.start location
 
 let stop_position_as_location location = set_start location.stop location

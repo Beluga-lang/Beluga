@@ -65,6 +65,16 @@ val set_start : Position.t -> t -> t
 
 val set_stop : Position.t -> t -> t
 
+(** [set_start_line line location] is [location] with its start line set to
+    [line]. The start position's beginning of line and offset are not
+    modified, so the output location may be invalid. This should only be used
+    with locations that do not point to files, like ghost locations. *)
+val set_start_line : int -> t -> t
+
+(** [set_stop_line line location] is like [set_start_line line location] but
+    for the location's stop position. *)
+val set_stop_line : int -> t -> t
+
 (** {1 Destructors} *)
 
 val filename : t -> string

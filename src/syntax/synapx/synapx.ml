@@ -110,6 +110,12 @@ module LF = struct
     | Schema of sch_elem list
 
   and psi_hat = Int.LF.ctx_var option * offset
+
+  and mfront =
+    | ClObj of dctx * sub
+        (** Either a contextual term, plain substitution or renaming
+            substitution. *)
+    | CObj of dctx  (** Context meta-object. *)
 end
 
 
@@ -166,13 +172,7 @@ module Comp = struct
 
   type meta_typ = Location.t * LF.ctyp
 
-  type mfront =
-    | ClObj of LF.dctx * LF.sub
-        (** Either a contextual term, plain substitution or renaming
-            substitution. *)
-    | CObj of LF.dctx  (** Context meta-object. *)
-
-  type meta_obj = Location.t * mfront
+  type meta_obj = Location.t * LF.mfront
 
   type meta_spine =
     | MetaNil

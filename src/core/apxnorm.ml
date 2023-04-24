@@ -357,12 +357,12 @@ let rec cnormApxExp cD delta e cDt =
 and cnormApxMetaObj cD delta (loc, mobj) cDt =
   ( loc
   , match mobj with
-    | Apx.Comp.ClObj (psi, sigma) ->
+    | Apx.LF.ClObj (psi, sigma) ->
        let psi' = cnormApxDCtx loc cD delta psi cDt in
        let sigma' = cnormApxSub cD delta sigma cDt in
-       Apx.Comp.ClObj (psi', sigma')
+       Apx.LF.ClObj (psi', sigma')
 
-    | Apx.Comp.CObj psi -> Apx.Comp.CObj (cnormApxDCtx loc cD delta psi cDt)
+    | Apx.LF.CObj psi -> Apx.LF.CObj (cnormApxDCtx loc cD delta psi cDt)
   )
 
 and cnormApxBranches cD delta branches cDt =
@@ -539,9 +539,9 @@ and collectApxCTypDecl fMVs =
 
 and collectApxMetaObj fMVs (_loc, mO) =
   match mO with
-  | Apx.Comp.CObj (cPsi) ->
+  | Apx.LF.CObj (cPsi) ->
      collectApxDCtx fMVs cPsi
-  | Apx.Comp.ClObj (psi, sub) ->
+  | Apx.LF.ClObj (psi, sub) ->
      let fMVh = collectApxDCtx fMVs psi in
      collectApxSub fMVh sub
 
@@ -888,13 +888,13 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) =
 and fmvApxMetaObj fMVs cD d_param (loc, mobj) =
   ( loc
   , match mobj with
-    | Apx.Comp.ClObj (psi, sigma) ->
+    | Apx.LF.ClObj (psi, sigma) ->
        let psi' = fmvApxDCtx loc fMVs cD d_param psi in
        let sigma' = fmvApxSub fMVs cD d_param sigma in
-       Apx.Comp.ClObj (psi', sigma')
+       Apx.LF.ClObj (psi', sigma')
 
-    | Apx.Comp.CObj psi ->
-       Apx.Comp.CObj (fmvApxDCtx loc fMVs cD d_param psi)
+    | Apx.LF.CObj psi ->
+       Apx.LF.CObj (fmvApxDCtx loc fMVs cD d_param psi)
   )
 
 and fmvApxBranches fMVs cD d_param branches =

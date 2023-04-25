@@ -1,5 +1,42 @@
 (** Parsing and disambiguation of Beluga signatures.
 
+    Make sure to familiarize yourself with the
+    [beluga-language-specification.tex] file which exhaustively details the
+    functional requirements of this parser.
+
+    Parsing of Beluga signatures is implemented in three phases:
+
+    + Lexing/tokenization (see {!module:Token} and {!module:Lexer})
+    + Context-free parsing (see {!module:Parser_combinator} and modules with
+      the suffix [_parser])
+    + Context-sensitive disambiguation (see {!module:Disambiguation_state}
+      and modules with the suffix [_disambiguation])
+
+    The lexing phase converts UTF-8 encoded input files to tokens using the
+    [sedlex] library (see the [dune] file for the pre-processing
+    configuration of the {!module:Lexer} module). Tokenization works like in
+    other programming language implementations, except for a special handling
+    of the dot [.] operator with the [Token.DOT], [Token.DOT_IDENT s] and
+    [Token.DOT_INTLIT i] token kinds. See the {!module:Common_parser} module
+    for a note on how those tokens are handled.
+
+    The context-free parsing phase is a recursive descent parser implemented
+    with parser combinators and selective unlimited backtracking. This phase
+    handles parsing of static operators, and constructs a parse tree with
+    ambiguous nodes. These ambiguous nodes are qualified and dotted qualified
+    identifiers (which may represent projections instead of references to
+    constants in namespaces), applications (the juxtaposition of terms and
+    user-defined operators), contextual LF substitutions and contexts, and
+    old-style LF declarations (LF type-level and term-level declarations).
+
+    The context-sensitive disambiguation phase is a stateful translation from
+    the parser syntax to the external syntax. The disambiguation state
+    constructs the lexical referencing environment during the traversal so
+    that identifiers and qualified identifiers may be resolved to their
+    binding sites to determine what kind of AST node to produce. Overloading
+    of identifiers is not supported. The disambiguation state is mutable to
+    ensure good performance.
+
     @author Marc-Atoine Ouimet *)
 
 open Support
@@ -28,6 +65,9 @@ module Comp_parser = Comp_parser
 module Harpoon_parser = Harpoon_parser
 module Signature_parser = Signature_parser
 
+(** Abstract definition of parsing for Beluga.
+
+    This is a union of the parser module types for Beluga. *)
 module type PARSING = sig
   include
     PARSER_STATE
@@ -59,6 +99,7 @@ module type PARSING = sig
   include Signature_parser.SIGNATURE_PARSER with type state := state
 end
 
+(** Functor creating a Beluga parser using the given implementation of state. *)
 module Make_parsing
     (Parser_state : PARSER_STATE
                       with type token = Located_token.t
@@ -80,6 +121,9 @@ module Comp_disambiguation = Comp_disambiguation
 module Harpoon_disambiguation = Harpoon_disambiguation
 module Signature_disambiguation = Signature_disambiguation
 
+(** Abstract definition of disambiguation for Beluga.
+
+    This is a union of the disambiguation module types for Beluga. *)
 module type DISAMBIGUATION = sig
   include DISAMBIGUATION_STATE
 
@@ -99,6 +143,8 @@ module type DISAMBIGUATION = sig
       with type state := state
 end
 
+(** Functor creating a Beluga disambiguator using the given implementation of
+    state. *)
 module Make_disambiguation (Disambiguation_state : DISAMBIGUATION_STATE) :
   DISAMBIGUATION with type state = Disambiguation_state.state
 

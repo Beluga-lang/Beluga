@@ -530,9 +530,10 @@ module Make (State : COMMAND_STATE) = struct
     make_command ~name:"constructors"
       ~help:"Print all constructors of a given type passed as a parameter"
       ~run:
-        (command1 (fun state n ->
+        (command1 (fun state arg ->
              let name =
-               Qualified_identifier.make_simple (Identifier.make n)
+               Qualified_identifier.make_simple (Identifier.make arg)
+               (* TODO: Parse [arg] as a qualified identifier *)
              in
              let cid = index_of_lf_type_constant state name in
              let entry = Store.Cid.Typ.get cid in
@@ -606,6 +607,7 @@ module Make (State : COMMAND_STATE) = struct
         (command1 (fun state arg ->
              let name =
                Qualified_identifier.make_simple (Identifier.make arg)
+               (* TODO: Parse [arg] as a qualified identifier *)
              in
              try
                let cid = index_of_comp_type_constant state name in
@@ -637,6 +639,7 @@ module Make (State : COMMAND_STATE) = struct
              try
                let name =
                  Qualified_identifier.make_simple (Identifier.make arg)
+                 (* TODO: Parse [arg] as a qualified identifier *)
                in
                let cid = index_of_comp_program state name in
                let entry = Store.Cid.Comp.get cid in
@@ -655,15 +658,17 @@ module Make (State : COMMAND_STATE) = struct
              try
                let name =
                  Qualified_identifier.make_simple (Identifier.make arg)
+                 (* TODO: Parse [arg] as a qualified identifier *)
                in
                let cid = index_of_comp_program state name in
                let entry = Store.Cid.Comp.get cid in
                match entry.Store.Cid.Comp.Entry.prog with
                | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
-                   (* FIXME: No need to construct [d] to print the function *)
+                   (* FIXME: No need to construct [d] to print the
+                      function *)
                    let d =
                      Synint.Sgn.Theorem
-                       { name = Name.make_from_qualified_identifier name
+                       { identifier = Qualified_identifier.name name
                        ; cid
                        ; typ = entry.Store.Cid.Comp.Entry.typ
                        ; body

@@ -1825,10 +1825,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fmt_ppr_sgn_thm_decl ppf =
     function
-    | Sgn.Theorem { name; cid; typ; body; _ } ->
+    | Sgn.Theorem { identifier; cid; typ; body; _ } ->
        fprintf ppf "%a %a : %a =@ @[<v2>%a;@]"
          fmt_ppr_cmp_thm_prefix body
-         Name.pp name
+         Identifier.pp identifier
          (fmt_ppr_cmp_typ LF.Empty 0) typ
          fmt_ppr_cmp_thm body
 
@@ -1837,22 +1837,22 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Sgn.CompTypAbbrev _ -> ()
     | Sgn.Const { identifier; typ; _ } ->
        fprintf ppf "%a : %a.@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_lf_typ LF.Empty LF.Null l0) typ
 
     | Sgn.Typ { identifier; kind; _ } ->
        fprintf ppf "%a : %a.@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_lf_kind LF.Null l0) kind
 
     | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@\ndatatype %a : @[%a@] = @\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_kind LF.Empty l0) kind
 
     | Sgn.CompCotyp { identifier; kind; _ } ->
        fprintf ppf "@\ncodatatype %a : @[%a@] = @\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_kind LF.Empty l0) kind
 
     | Sgn.CompDest
@@ -1863,13 +1863,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       ; _
       } ->
        fprintf ppf "@ | (%a : @[%a@] :: @[%a@]@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_typ cD l0) tau0
          (fmt_ppr_cmp_typ cD l0) tau1
 
     | Sgn.CompConst { identifier; typ; _ } ->
        fprintf ppf "@ | %a : @[%a@]@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_typ LF.Empty l0) typ
 
     | Sgn.MRecTyp { declarations; _ } ->
@@ -1880,20 +1880,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.Val { identifier; typ; expression; expression_value=None; _ } ->
        fprintf ppf "@\nlet %a : %a = %a@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_typ LF.Empty l0) typ
          (fmt_ppr_cmp_exp LF.Empty LF.Empty l0) expression
 
     | Sgn.Val { identifier; typ; expression; expression_value=Some value; _ } ->
        fprintf ppf "@\nlet %a : %a = %a@\n   ===> %a@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_cmp_typ LF.Empty l0) typ
          (fmt_ppr_cmp_exp LF.Empty LF.Empty l0) expression
          (fmt_ppr_cmp_value l0) value
 
     | Sgn.Schema { identifier; schema; _ } ->
        fprintf ppf "@\nschema %a = @[%a@];@\n"
-         Name.pp identifier
+         Identifier.pp identifier
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
     | Sgn.Theorems { theorems; _ } ->

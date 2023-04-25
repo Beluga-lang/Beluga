@@ -9,6 +9,7 @@ type error =
 exception Error of Location.t * error
 
 (* Register error printer at the end of this module. *)
+
 module OpPragmas = struct
   type fixPragma =
     { name : Name.t
@@ -71,15 +72,6 @@ module CidStore (M : ENTRY) : CIDSTORE
       the index of an entry is its {!cid}. *)
   let store : entry DynArray.t = DynArray.create ()
 
-  (* FIXME: This needs to be phased out in favour of a persistent data
-     structure for the names in scope. *)
-  (** The entries in the store mapped by name. Only the latest binding is kept,
-      so shadowed entries may only be retrived from {!store}. This does not
-      take into account shadowing by entries in other stores, meaning that
-      lookups from this hash table do not fully respect lexical scoping of
-      signature entries. *)
-  let directory : cid NameTable.t = NameTable.create 0
-
   let current_entries () =
     List.index (DynArray.to_list store)
 
@@ -98,7 +90,6 @@ module CidStore (M : ENTRY) : CIDSTORE
     let cid = DynArray.length store in
     let e = f cid in
     DynArray.add store e;
-    NameTable.add directory (name_of_entry e) cid;
     cid
 end
 
@@ -777,13 +768,3 @@ let clear () =
   Cid.CompTypDef.clear ();
   Cid.Comp.clear ();
   OpPragmas.clear ()
-
-let () =
-  Error.register_exception_printer (function
-      | Error (location, FrozenType n) ->
-      Error.located_exception_printer
-        (Format.dprintf
-           "Type %s is frozen. A new constructor cannot be defined."
-           (Cid.DefaultRenderer.render_cid_typ n))
-        (List1.singleton location)
-      | exn -> Error.raise_unsupported_exception_printing exn)

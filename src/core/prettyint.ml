@@ -7,6 +7,122 @@ let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
 
 module PC = Printer.Control
 
+(* FIXME(Marc-Antoine): Pretty-printing of the internal syntax is not
+   implemented correctly for various reasons.
+
+   Name generation: The generation of fresh variable names is required to go
+   from a nameless representation to a named representation. At a given binder,
+   for instance [\_. tM], one needs to determine what are the identifiers
+   used in [tM] to avoid capture. For instance, the variable name [x] and the
+   constant name [s] cannot be used as the parameter in [\x. \_. s x tM']. This
+   requires the complete referencing environment (i.e., the bindings in scope
+   at that point in the program, like during indexing {!module:Index}) in order
+   to resolve the constants and offsets in [tM] to names already decided, and
+   a traversal of [tM] to collect those used constants and offsets.
+   Additionally, in order to respect the order of declaration for name
+   generation conventions (using the [--name] pragma), the referencing
+   environment has to attach those conventions to the appropriate constant,
+   and use the conventions in a type-driven manner.
+
+   Erasure: Reconstructed arguments passed to reconstructed or implicit
+   abstractions need to be erased. Reconstructed abstractions are the
+   abstractions introduced during signature reconstruction for free variables
+   in the user's program. In contrast, implicit abstractions are textually
+   specified by the user. If the user can interleave implicit and
+   explicit abstractions (like [(g:...) {M:...} (N:...) P]), then we have
+   to annotate the argument nodes with a flag indicating that the argument was
+   reconstructed. Otherwise, we can just lookup the number of expected explicit
+   arguments from the store for a given constant, and remove the first few
+   arguments introduced by reconstruction. Properly implementing this will
+   require disentangling the plicity flags (implicit/explicit) from the
+   reconstructed flags (reconstructed/user-specified) in the internal syntax
+   throughout signature reconstruction. There are also known instances of bugs
+   where inductivity flags affect plicity flags for some reason.
+
+   Minimal parenthesizing: Parentheses should only be introduced during
+   pretty-printing as necessary for the parser to be able to re-parse the
+   program. This requires taking into account the precedence, fixity and
+   associativity of both user-defined and static operators. This is properly
+   implemented for the external syntax {!module:Beluga_syntax.Synext}.
+
+
+   Overall, pretty-printing of the internal syntax is inherently stateful with
+   respect to the Beluga signature, and cannot be implemented before the issues
+   with erasure are fixed. This also poses a bigger problem in that stateful
+   pretty-printing makes it harder to report types in error messages, and makes
+   it impossible to trace the execution of functions with debug statements.
+   Arguably, uses of the internal syntax pretty-printer for debugging are
+   misleading.
+
+   The approach I'm thinking of to implementing pretty-printing is to first
+   translate programs from the internal syntax to the external syntax, then to
+   use the already implemented external syntax pretty-printer. This takes care
+   of the minimal parenthesizing problem, and guarantees that printed programs
+   will parse.
+
+   The translation from the internal syntax to the external syntax may proceed
+   as in the following pseudo-code. This translation is type-directed and in
+   an inner and an outer phase:
+
+   + The inner phase constructs translator closures that compute the set of
+     constant IDs and variable offsets used by the expression to translate.
+   + The outer phase traverses the signature to construct the referencing
+     environment, and calls the inner phase to perform the translation.
+
+   {[
+     type used_constants of {
+       used_lf_type_constants : Int.Set.t;
+       used_lf_term_constants : Int.Set.t;
+       ...
+     }
+
+     type used_offsets of {
+       used_lf_offsets : Int.Set.t;
+       used_meta_offsets : Int.Set.t;
+       used_comp_offsets : Int.Set.t;
+     }
+
+     type free_variables = Identifier.Set.t
+
+     type used_names_state = used_constants * used_offsets * free_variables
+
+     type referencing_environment = ... (* Like the indexing state, but keeps
+        track of name convention pragmas and all visible aliases for each
+        constant. *)
+
+     let unshift_offsets (offsets : Int.Set.t) =
+       offsets
+       |> Int.Set.map (fun offset -> offset - 1)
+       |> Int.Set.remove 0 (* Non-positive offsets are out of scope *)
+
+     let unshift_lf_offsets : used_names_state -> used_names_state = ...
+
+     let rec lf_term_translator
+         (tM : LF.normal)
+         (tA : LF.typ (* For type-driven name generation *))
+         : used_names_state * (referencing_environment -> Synext.lf_term) =
+       match (tM, tA) with
+       | Int.LF.Lam (location, _param, body), Int.LF.PiTyp (_decl, body_typ) ->
+           let (body_names, body_translator) =
+             lf_term_translator body body_typ
+           in
+           let lam_translator state =
+             let variable = fresh_name state body_names body_typ in
+             let body' =
+               with_bound_lf_variable state variable body_translator
+             in
+             Synext.LF.Term.Abstraction
+               { location
+               ; parameter_identifier = Option.some variable
+               ; parameter_type = Option.none
+               ; body = body'
+               }
+           in
+           let lam_names = unshift_lf_offsets body_names in
+           (lam_names, lam_translator)
+       | ...
+   ]} *)
+
 let ident_regexp = Str.regexp {|[^"].*|}
 
 (** [is_name_syntactically_valid name] is a heuristic for determining whether
@@ -1801,8 +1917,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        (* FIXME: The pretty-printer for the internal syntax has to be
           stateful, and not rely on the {!Store} module for the bindings
           currently in scope. *)
-       (*=let n' = Store.Modules.name_of_id n in
-       ignore (Store.Modules.open_module n');*)
        fprintf ppf "@\n--open %a@\n" Qualified_identifier.pp n
 
     | Sgn.Pragma _ -> ()

@@ -100,8 +100,8 @@ module type PARSER_STATE = sig
   type token
 
   (** [peek state] is [(state', token_opt)] where [token_opt] is the next
-      unconsumed token [state]. If [token_opt = Option.None], then the end of
-      the input stream was reached. Otherwise,
+      unconsumed token in [state]. If [token_opt = Option.None], then the end
+      of the input stream was reached. Otherwise,
       [token_opt = Option.Some token]. The token is not consumed, meaning
       that [state'] is not advanced to the next token in the stream. *)
   val peek : token option t

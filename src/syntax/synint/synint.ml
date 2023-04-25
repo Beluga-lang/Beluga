@@ -10,7 +10,7 @@ open Id
 module LF = struct
   type 'a ctx =                          (* Generic context declaration    *)
     | Empty                              (* C ::= Empty                    *)
-    | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
+    | Dec of 'a ctx * 'a                 (*   | C, x:'a                    *)
 
   type svar_class = Ren | Subst
 
@@ -19,7 +19,7 @@ module LF = struct
     | PiKind of (typ_decl * Plicity.t) * kind
 
   and typ_decl =                                (* LF Declarations                *)
-    | TypDecl of Name.t * typ                   (* D := x:A                       *)
+    | TypDecl of Name.t * typ                   (* D ::= x:A                      *)
     | TypDeclOpt of Name.t                      (*   |  x:_                       *)
 
   and cltyp =
@@ -115,8 +115,8 @@ module LF = struct
     | MShift of int                             (* theta ::= ^n                   *)
     | MDot of mfront * msub                     (*       | MFt . theta            *)
 
-  and cvar =                                    (* Contextual Variables           *)
-    | Offset of offset                          (* Bound Variables                *)
+  and cvar =                                    (* Contextual Variables                  *)
+    | Offset of offset                          (* Bound Variables                       *)
     | Inst of mm_var                            (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var =
@@ -145,16 +145,16 @@ module LF = struct
   (* unique identifiers attached to constraints, used for debugging *)
   and constrnt_id = int
 
-  and constrnt =                                       (* Constraint                     *)
-    | Queued of constrnt_id                            (* constraint ::= Queued          *)
+  and constrnt =                                       (* Constraint                            *)
+    | Queued of constrnt_id                            (* constraint ::= Queued                 *)
     | Eqn of constrnt_id * mctx * dctx * iterm * iterm (*            | Delta; Psi |-(M1 == M2)  *)
 
   and cnstr = constrnt ref
 
-  and dctx =                               (* LF Context                     *)
-    | Null                                 (* Psi ::= .                      *)
-    | CtxVar of ctx_var                    (* | psi                          *)
-    | DDec of dctx * typ_decl              (* | Psi, x:A   or x:block ...    *)
+  and dctx =                               (* LF Context                      *)
+    | Null                                 (* Psi ::= .                       *)
+    | CtxVar of ctx_var                    (*     | psi                       *)
+    | DDec of dctx * typ_decl              (*     | Psi, x:A   or x:block ... *)
 
   and ctx_var =
     | CtxName of Name.t
@@ -494,23 +494,23 @@ module Comp = struct
   type ihctx = ih_decl LF.ctx
 
   (** Normal computational terms *)
-  and exp =                                                                              (* e :=                                              *)
-    | Fn         of Location.t * Name.t * exp                                            (* | \x. e'                                          *)
-    | Fun        of Location.t * fun_branches                                            (* | b_1...b_k                                       *)
-    | MLam       of Location.t * Name.t * exp * Plicity.t                                (* | Pi X.e'                                         *)
-    | Tuple      of Location.t * exp List2.t                                             (* | (e1, e2, ..., en)                               *)
-    | LetTuple   of Location.t * exp * (Name.t List2.t * exp)                            (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
-    | Let        of Location.t * exp * (Name.t * exp)                                    (* | let x = e' in e''                               *)
-    | Box        of Location.t * meta_obj * meta_typ (* for printing *)                  (* | Box (C) : [U]            *)
-    | Case       of Location.t * case_pragma * exp * branch list                         (* | case e of branches                              *)
-    | Impossible of Location.t * exp                                                     (* | impossible e                                    *)
-    | Hole       of Location.t * HoleId.t * HoleId.name                                  (* | _                                               *)
-    | Var        of Location.t * offset                                                  (* | x:tau in cG                                     *)
-    | DataConst  of Location.t * cid_comp_const                                          (* | c:tau in Comp. Sig.                             *)
-    | Obs        of Location.t * exp * LF.msub * cid_comp_dest                           (* | observation (e, ms, destructor={typ, ret_typ}   *)
-    | Const      of Location.t * cid_prog                                                (* | theorem cp                                      *)
-    | Apply      of Location.t * exp * exp                                               (* | (n:tau_1 -> tau_2) (e:tau_1)                    *)
-    | MApp       of Location.t * exp * meta_obj * meta_typ (* for printing *) * Plicity.t (* | (Pi X:U. e': tau) (C : U)      *)
+  and exp =                                                                               (* e :=                                              *)
+    | Fn         of Location.t * Name.t * exp                                             (* | \x. e'                                          *)
+    | Fun        of Location.t * fun_branches                                             (* | b_1...b_k                                       *)
+    | MLam       of Location.t * Name.t * exp * Plicity.t                                 (* | Pi X.e'                                         *)
+    | Tuple      of Location.t * exp List2.t                                              (* | (e1, e2, ..., en)                               *)
+    | LetTuple   of Location.t * exp * (Name.t List2.t * exp)                             (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
+    | Let        of Location.t * exp * (Name.t * exp)                                     (* | let x = e' in e''                               *)
+    | Box        of Location.t * meta_obj * meta_typ (* for printing *)                   (* | Box (C) : [U]                                   *)
+    | Case       of Location.t * case_pragma * exp * branch list                          (* | case e of branches                              *)
+    | Impossible of Location.t * exp                                                      (* | impossible e                                    *)
+    | Hole       of Location.t * HoleId.t * HoleId.name                                   (* | _                                               *)
+    | Var        of Location.t * offset                                                   (* | x:tau in cG                                     *)
+    | DataConst  of Location.t * cid_comp_const                                           (* | c:tau in Comp. Sig.                             *)
+    | Obs        of Location.t * exp * LF.msub * cid_comp_dest                            (* | observation (e, ms, destructor={typ, ret_typ}   *)
+    | Const      of Location.t * cid_prog                                                 (* | theorem cp                                      *)
+    | Apply      of Location.t * exp * exp                                                (* | (n:tau_1 -> tau_2) (e:tau_1)                    *)
+    | MApp       of Location.t * exp * meta_obj * meta_typ (* for printing *) * Plicity.t (* | (Pi X:U. e': tau) (C : U)                       *)
     | AnnBox     of Location.t * meta_obj * meta_typ                                      (* | [cPsihat |- tM] : [cPsi |- tA]                  *)
 
   and pattern =
@@ -929,13 +929,6 @@ end
 
 (* Internal Signature Syntax *)
 module Sgn = struct
-
-  (* type positivity_flag =  *)
-  (*   | Noflag *)
-  (*   | Positivity *)
-  (*   | Stratify of Location.t * Comp.order * Name.t * (Name.t option) list  *)
-
-
   type positivity_flag =
     | Nocheck
     | Positivity
@@ -944,7 +937,7 @@ module Sgn = struct
 
   type thm_decl =
     | Theorem of
-      { name : Name.t
+      { identifier : Identifier.t
       ; cid : cid_prog
       ; typ : Comp.typ
       ; body : Comp.thm
@@ -956,21 +949,21 @@ module Sgn = struct
     | Typ of
       { location: Location.t
       ; cid : Id.cid_typ
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; kind: LF.kind
       } (** LF type family declaration *)
 
     | Const of
       { location: Location.t
       ; cid : Id.cid_term
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; typ: LF.typ
       } (** LF type constant declaration *)
 
     | CompTyp of
       { location: Location.t
       ; cid : Id.cid_comp_typ
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; kind: Comp.kind
       ; positivity_flag: positivity_flag
       } (** Computation-level data type constant declaration *)
@@ -978,21 +971,21 @@ module Sgn = struct
     | CompCotyp of
       { location: Location.t
       ; cid : Id.cid_comp_cotyp
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
 
     | CompConst of
       { location: Location.t
       ; cid : Id.cid_comp_const
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
 
     | CompDest of
       { location: Location.t
       ; cid : Id.cid_comp_dest
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; mctx: LF.mctx
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
@@ -1001,7 +994,7 @@ module Sgn = struct
     | CompTypAbbrev of
       { location: Location.t
       ; cid : Id.cid_comp_typdef
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; kind: Comp.kind
       ; typ: Comp.typ
       } (** Synonym declaration for computation-level type *)
@@ -1009,7 +1002,7 @@ module Sgn = struct
     | Schema of
       { location: Location.t
       ; cid: cid_schema
-      ; identifier : Name.t
+      ; identifier : Identifier.t
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
 
@@ -1025,7 +1018,7 @@ module Sgn = struct
     | Val of
       { location: Location.t
       ; cid : Id.cid_prog
-      ; identifier: Name.t
+      ; identifier: Identifier.t
       ; typ: Comp.typ
       ; expression: Comp.exp
       ; expression_value: Comp.value option
@@ -1050,5 +1043,4 @@ module Sgn = struct
 
   (** Reconstructed Beluga project *)
   type sgn = decl list
-
 end

@@ -509,7 +509,7 @@ module Make
       Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
     in
     add_lf_type_constant state ~location identifier cid;
-    Synint.Sgn.Typ { location; identifier = name; cid; kind = tK' }
+    Synint.Sgn.Typ { location; identifier; cid; kind = tK' }
 
   and reconstruct_lf_const_declaration state location identifier extT =
     let name = Name.make_from_identifier identifier in
@@ -568,7 +568,7 @@ module Make
           Store.Cid.Term.mk_entry name tA' i)
     in
     add_lf_term_constant state ~location identifier cid;
-    Synint.Sgn.Const { location; identifier = name; cid; typ = tA' }
+    Synint.Sgn.Const { location; identifier; cid; typ = tA' }
 
   and reconstruct_comp_typ_constant state location identifier kind
       datatype_flavour =
@@ -623,7 +623,7 @@ module Make
     | `Inductive ->
         add_comp_inductive_type_constant state ~location identifier cid);
     Synint.Sgn.CompTyp
-      { location; identifier = name; cid; kind = cK'; positivity_flag = p }
+      { location; identifier; cid; kind = cK'; positivity_flag = p }
 
   and reconstruct_comp_cotyp_constant state location identifier kind =
     dprintf (fun p ->
@@ -672,7 +672,7 @@ module Make
           Store.Cid.CompCotyp.mk_entry name cK' i)
     in
     add_comp_cotype_constant state ~location identifier cid;
-    Synint.Sgn.CompCotyp { location; identifier = name; cid; kind = cK' }
+    Synint.Sgn.CompCotyp { location; identifier; cid; kind = cK' }
 
   and reconstruct_comp_constructor state location ~stratNum identifier typ =
     dprintf (fun p ->
@@ -739,7 +739,7 @@ module Make
           Store.Cid.CompConst.mk_entry name tau' i)
     in
     add_comp_constructor state ~location identifier cid;
-    Synint.Sgn.CompConst { location; identifier = name; cid; typ = tau' }
+    Synint.Sgn.CompConst { location; identifier; cid; typ = tau' }
 
   and reconstruct_comp_destructor state location identifier observation_type
       return_type =
@@ -802,7 +802,7 @@ module Make
     add_comp_destructor state ~location identifier cid;
     Synint.Sgn.CompDest
       { location
-      ; identifier = name
+      ; identifier
       ; cid
       ; mctx = mctx'
       ; observation_typ = observation_type'
@@ -842,7 +842,7 @@ module Make
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')
     in
     add_schema_constant state ~location identifier cid;
-    Synint.Sgn.Schema { location; identifier = name; cid; schema = sW' }
+    Synint.Sgn.Schema { location; identifier; cid; schema = sW' }
 
   and reconstruct_comp_typ_abbrev_declaration state location identifier cK cT
       =
@@ -871,7 +871,7 @@ module Make
     in
     add_comp_typedef state ~location identifier cid;
     Synint.Sgn.CompTypAbbrev
-      { location; identifier = name; cid; kind = cK; typ = cT }
+      { location; identifier; cid; kind = cK; typ = cT }
 
   and reconstruct_val_declaration state location identifier typ_opt
       expression =
@@ -929,13 +929,12 @@ module Make
             Store.Cid.Comp.add_mutual_group
               [ { Synint.Comp.name; tau = tau'; order = `not_recursive } ]
           in
-          Store.Cid.Comp.mk_entry
-            name tau' 0 mgid value_opt)
+          Store.Cid.Comp.mk_entry name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
     Synint.Sgn.Val
       { location
-      ; identifier = name
+      ; identifier
       ; cid
       ; typ = tau'
       ; expression = expression''
@@ -1001,13 +1000,12 @@ module Make
           [ { Synint.Comp.name; tau = tau'; order = `not_recursive } ]
       in
       Store.Cid.Comp.add (fun _cid ->
-          Store.Cid.Comp.mk_entry
-            name tau' 0 mgid value_opt)
+          Store.Cid.Comp.mk_entry name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
     Synint.Sgn.Val
       { location
-      ; identifier = name
+      ; identifier
       ; cid
       ; typ = tau'
       ; expression = expression''
@@ -1436,8 +1434,7 @@ module Make
       let name = Name.make_from_identifier identifier in
       let cid =
         Store.Cid.Comp.add (fun _cid ->
-            Store.Cid.Comp.mk_entry
-              name tau' 0 total_decs Option.none)
+            Store.Cid.Comp.mk_entry name tau' 0 total_decs Option.none)
       in
       add_prog state identifier cid;
       cid
@@ -1575,24 +1572,24 @@ module Make
 
     let ds =
       let reconOne state
-          (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
-        let name = Name.make_from_identifier thm_name in
+          (thm_cid, (thm_identifier, thm_body, thm_location, thm_typ)) =
         let e_r', tau' =
-          reconThm state thm_location (thm_name, thm_cid, thm_body, thm_typ)
+          reconThm state thm_location
+            (thm_identifier, thm_cid, thm_body, thm_typ)
         in
         dprintf (fun p ->
             p.fmt
               "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a \
                successful@,\
-               Adding definition to the store.@]" Identifier.pp thm_name
-              Location.print_short thm_location);
+               Adding definition to the store.@]" Identifier.pp
+              thm_identifier Location.print_short thm_location);
         let v =
           Synint.Comp.ThmValue
             (thm_cid, e_r', Synint.LF.MShift 0, Synint.Comp.Empty)
         in
         Store.Cid.Comp.set_prog thm_cid (Fun.const (Option.some v));
         Synint.Sgn.Theorem
-          { name
+          { identifier = thm_identifier
           ; cid = thm_cid
           ; body = e_r'
           ; location = thm_location

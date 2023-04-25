@@ -10,7 +10,7 @@ module Int = Synint
 module LF = struct
   type 'a ctx = 'a Synint.LF.ctx =       (* Generic context declaration    *)
     | Empty                              (* C ::= Empty                    *)
-    | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
+    | Dec of 'a ctx * 'a                 (*   | C, x:'a                    *)
 
   type svar_class = Synint.LF.svar_class =
     | Ren

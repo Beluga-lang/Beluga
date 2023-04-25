@@ -1,34 +1,64 @@
-type module_id = int
+module type ID = sig
+  type t
+
+  val of_int : int -> t
+
+  val to_int : t -> int
+end
+
+module Module : ID
+
+module Typ : ID
+
+module Term : ID
+
+module Schema : ID
+
+module CompTyp : ID
+
+module CompCotyp : ID
+
+module CompConst : ID
+
+module CompDest : ID
+
+module CompTypdef : ID
+
+module Prog : ID
+
+module MutualGroup : ID
+
+type module_id = Module.t
 
 (** A constant identifier for types *)
-type cid_typ = int
+type cid_typ = Typ.t
 
 (** A constant identifier for terms *)
-type cid_term = int
+type cid_term = Term.t
 
 (** A constant identifier for schemas *)
-type cid_schema = int
+type cid_schema = Schema.t
 
 (** A constant identifier for computation-level data-types *)
-type cid_comp_typ = int
+type cid_comp_typ = CompTyp.t
 
 (** A constant identifier for computation-level codata-types *)
-type cid_comp_cotyp = int
+type cid_comp_cotyp = CompCotyp.t
 
 (** A constant identifier for computation-level constructors *)
-type cid_comp_const = int
+type cid_comp_const = CompConst.t
 
 (** A constant identifier for computation-level destructors *)
-type cid_comp_dest = int
+type cid_comp_dest = CompDest.t
 
 (** A constant identifier for type synonyms. *)
-type cid_comp_typdef = int
+type cid_comp_typdef = CompTypdef.t
 
 (** A constant identifier for recursive computations/programs *)
-type cid_prog = int
+type cid_prog = Prog.t
 
 (** A constant identifier for a group of mutually proven theorems. *)
-type cid_mutual_group = int
+type cid_mutual_group = MutualGroup.t
 
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)

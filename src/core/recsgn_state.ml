@@ -374,7 +374,7 @@ struct
   let next_module_id state =
     let modules' = state.modules + 1 in
     state.modules <- modules';
-    modules'
+    Id.Module.of_int modules'
 
   (* This implementation is incorrect. We need a deep copy of the state.
 

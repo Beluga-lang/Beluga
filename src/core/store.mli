@@ -26,7 +26,7 @@ module type ENTRY = sig
   type t
   val name_of_entry : t -> Name.t
 
-  type cid = int
+  type cid
 end
 
 module Cid : sig

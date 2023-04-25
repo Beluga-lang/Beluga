@@ -276,11 +276,6 @@ struct
     Indexing_state.index_of_comp_type_constant state.index_state identifier
 end
 
-module type COMMAND = sig
-  include Imperative_state.IMPERATIVE_STATE
-  (* TODO: *)
-end
-
 module Make (State : COMMAND_STATE) = struct
   include State
 

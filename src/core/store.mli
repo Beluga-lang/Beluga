@@ -2,6 +2,9 @@ open Beluga_syntax
 open Id
 open Synint
 
+(* FIXME(Marc-Antoine): This store of pragmas cannot be used in a correct way.
+   See the note at the beginning of the {!module:Prettyint} module. *)
+
 module OpPragmas : sig
   type fixPragma =
     { name : Name.t
@@ -50,6 +53,12 @@ module Cid : sig
 
     val mk_entry : Name.t -> LF.kind -> int -> entry
     val add : (cid_typ -> entry) -> cid_typ
+
+    (* FIXME(Marc-Antoine): Setting the name-generation conventions directly
+       in the store is incorrect. Those conventions should instead be
+       determined with the visiting state for pretty-printing of the internal
+       syntax. See the note at the beginning of the {!module:Prettyint}
+       module. *)
     val set_name_convention : cid_typ
                               -> (unit -> string) option
                               -> (unit -> string) option
@@ -303,6 +312,9 @@ module Cid : sig
     val clear : unit -> unit
   end
 
+  (* FIXME(Marc-Antoine): The following renderers cannot work correctly.
+     See the note at the beginning of the {!module:Prettyint} module. *)
+
   module type RENDERER = sig
     open Id
     open Synint
@@ -332,12 +344,30 @@ end
 
 val clear : unit -> unit
 
+(** The global mutable store of free variables in pure LF.
+
+    This is a mutable list of free LF term-level variables occurring in LF
+    type-level or term-level constant declarations. It is used during LF
+    reconstruction.
+
+    For free contextual variables, see {!module:FCVar}. *)
 module FVar : sig
   val add : Name.t -> LF.typ -> unit
   val get : Name.t -> LF.typ
   val clear : unit -> unit
 end
 
+(** The global mutable store of free contextual variables.
+
+    This is a mutable list of free contextual variables occuring in meta-level
+    objects. It is used during reconstruction.
+
+    Free contextual variables include:
+
+    - Free context variables
+    - Free meta-variables (ranging over meta-objects)
+    - Free parameter variables
+    - Free substitution variables. *)
 module FCVar : sig
   val add : Name.t -> LF.mctx * LF.ctyp_decl -> unit
   val get : Name.t -> LF.mctx * LF.ctyp_decl

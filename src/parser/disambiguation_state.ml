@@ -1391,7 +1391,7 @@ module Disambiguation_state = struct
       try m state with
       | cause ->
           ignore (pop_scope state);
-          Error.raise cause
+          Error.re_raise cause
     in
     ignore (pop_scope state);
     x

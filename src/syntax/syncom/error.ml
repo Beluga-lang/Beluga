@@ -3,6 +3,10 @@ open Debug.Fmt
 
 let raise = raise
 
+let re_raise exn =
+  let exn_backtrace = Printexc.get_raw_backtrace () in
+  Printexc.raise_with_backtrace exn exn_backtrace
+
 let raise_notrace = raise_notrace
 
 let printers : (exn -> Format.formatter -> unit) list Atomic.t =

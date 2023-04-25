@@ -3,6 +3,11 @@ open Support
 (** [raise exn] raises [exn]. *)
 val raise : exn -> 'a
 
+(** [re_raise exn] raises [exn] with the backtrace of the latest caught
+    exception. This should only be used if [exn] was caught in a [try-with]
+    expression. *)
+val re_raise : exn -> 'a
+
 (** [raise_notrace exn] raises [exn] without producing a stack trace. This is
     more efficient for exceptions used for control flow. *)
 val raise_notrace : exn -> 'a

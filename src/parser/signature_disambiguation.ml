@@ -473,15 +473,16 @@ struct
                 if typ_exn = const_exn then
                   (* Disambiguation as an LF type or term constant
                      declaration failed for the same reason *)
-                  Error.raise typ_exn
+                  Error.re_raise typ_exn
                 else
                   (* Disambiguation as an LF type or term constant
                      declaration failed for different reasons *)
-                  Error.raise_at1 location
-                    (Old_style_lf_constant_declaration_error
-                       { as_type_constant = typ_exn
-                       ; as_term_constant = const_exn
-                       })))
+                  Error.re_raise
+                    (Error.located_exception1 location
+                       (Old_style_lf_constant_declaration_error
+                          { as_type_constant = typ_exn
+                          ; as_term_constant = const_exn
+                          }))))
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { location; identifier; kind } ->
         let kind' = disambiguate_lf_kind state kind in

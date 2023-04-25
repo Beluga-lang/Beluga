@@ -48,10 +48,7 @@ let read_configuration_file ~filename =
         Seq.of_gen (fun () -> tokenize_configuration_file lexer_buffer)
       in
       (* Consume the token sequence *)
-      try Seq.to_list tokens_seq with
-      | cause ->
-          In_channel.close_noerr in_channel;
-          Error.raise cause)
+      Seq.to_list tokens_seq)
 
 let read_configuration_file_paths ~filename =
   let dir = Filename.dirname filename in

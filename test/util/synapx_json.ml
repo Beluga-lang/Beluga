@@ -25,6 +25,28 @@ let json_of_name name =
     ; ("location", json_of_location (Name.location name))
     ]
 
+let json_of_module_id cid = json_of_int (Id.Module.to_int cid)
+
+let json_of_typ_id cid = json_of_int (Id.Typ.to_int cid)
+
+let json_of_term_id cid = json_of_int (Id.Term.to_int cid)
+
+let json_of_schema_id cid = json_of_int (Id.Schema.to_int cid)
+
+let json_of_comp_typ_id cid = json_of_int (Id.CompTyp.to_int cid)
+
+let json_of_comp_cotyp_id cid = json_of_int (Id.CompCotyp.to_int cid)
+
+let json_of_comp_const_id cid = json_of_int (Id.CompConst.to_int cid)
+
+let json_of_comp_dest_id cid = json_of_int (Id.CompDest.to_int cid)
+
+let json_of_comp_typdef_id cid = json_of_int (Id.CompTypdef.to_int cid)
+
+let json_of_prog_id cid = json_of_int (Id.Prog.to_int cid)
+
+let json_of_mutual_group_id cid = json_of_int (Id.MutualGroup.to_int cid)
+
 let rec lf_tuple_to_list1 = function
   | Synapx.LF.Last tM -> List1.singleton tM
   | Synapx.LF.Cons (tM, rest) -> List1.cons tM (lf_tuple_to_list1 rest)
@@ -88,7 +110,7 @@ and json_of_lf_ctyp = function
           [ ("context", json_of_lf_dctx cPsi); ("typ", json_of_lf_cltyp tp) ]
   | Synapx.LF.CTyp cid ->
       json_of_variant ~name:"Synapx.LF.CTyp"
-        ~data:[ ("schema_cid", json_of_int cid) ]
+        ~data:[ ("schema_cid", json_of_schema_id cid) ]
 
 and json_of_lf_ctyp_decl = function
   | Synapx.LF.Decl (name, cA, plicity) ->
@@ -107,7 +129,7 @@ and json_of_lf_typ = function
       json_of_variant ~name:"Synapx.LF.Atom"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_typ", json_of_int cid)
+          ; ("cid_typ", json_of_typ_id cid)
           ; ("spine", json_of_lf_spine spine)
           ]
   | Synapx.LF.PiTyp ((declaration, plicity), tA) ->
@@ -174,7 +196,7 @@ and json_of_lf_head = function
         ~data:[ ("offset", json_of_int offset) ]
   | Synapx.LF.Const cid ->
       json_of_variant ~name:"Synapx.LF.Const"
-        ~data:[ ("cid_term", json_of_int cid) ]
+        ~data:[ ("cid_term", json_of_term_id cid) ]
   | Synapx.LF.MVar (u, s) ->
       json_of_variant ~name:"Synapx.LF.MVar"
         ~data:
@@ -325,14 +347,14 @@ and json_of_comp_case_label = function
         ~data:
           [ ("location", json_of_location location)
           ; ("name", json_of_name name)
-          ; ("cid", json_of_int cid)
+          ; ("cid", json_of_term_id cid)
           ]
   | Synapx.Comp.Comp_constant (location, name, cid) ->
       json_of_variant ~name:"Synapx.Comp.Comp_constant"
         ~data:
           [ ("location", json_of_location location)
           ; ("name", json_of_name name)
-          ; ("cid", json_of_int cid)
+          ; ("cid", json_of_comp_const_id cid)
           ]
   | Synapx.Comp.BVarCase location ->
       json_of_variant ~name:"Synapx.Comp.BVarCase"
@@ -422,21 +444,21 @@ and json_of_comp_typ = function
       json_of_variant ~name:"Synapx.Comp.TypBase"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_typ", json_of_int cid)
+          ; ("cid_comp_typ", json_of_comp_typ_id cid)
           ; ("spine", json_of_comp_meta_spine mspine)
           ]
   | Synapx.Comp.TypCobase (location, cid, mspine) ->
       json_of_variant ~name:"Synapx.Comp.TypCobase"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_cotyp", json_of_int cid)
+          ; ("cid_comp_cotyp", json_of_comp_cotyp_id cid)
           ; ("spine", json_of_comp_meta_spine mspine)
           ]
   | Synapx.Comp.TypDef (location, cid, mspine) ->
       json_of_variant ~name:"Synapx.Comp.TypDef"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_typdef", json_of_int cid)
+          ; ("cid_comp_typdef", json_of_comp_typdef_id cid)
           ; ("spine", json_of_comp_meta_spine mspine)
           ]
   | Synapx.Comp.TypBox (location, cA) ->
@@ -551,20 +573,20 @@ and json_of_comp_exp = function
       json_of_variant ~name:"Synapx.Comp.DataConst"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_const", json_of_int cid)
+          ; ("cid_comp_const", json_of_comp_const_id cid)
           ]
   | Synapx.Comp.Obs (location, destructee, cid) ->
       json_of_variant ~name:"Synapx.Comp.Obs"
         ~data:
           [ ("location", json_of_location location)
           ; ("destructee", json_of_comp_exp destructee)
-          ; ("cid_comp_dest", json_of_int cid)
+          ; ("cid_comp_dest", json_of_comp_dest_id cid)
           ]
   | Synapx.Comp.Const (location, cid) ->
       json_of_variant ~name:"Synapx.Comp.Const"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_prog", json_of_int cid)
+          ; ("cid_prog", json_of_prog_id cid)
           ]
   | Synapx.Comp.Apply (location, applicand, argument) ->
       json_of_variant ~name:"Synapx.Comp.Apply"
@@ -592,7 +614,7 @@ and json_of_comp_pattern = function
       json_of_variant ~name:"Synapx.Comp.PatConst"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_const", json_of_int cid)
+          ; ("cid_comp_const", json_of_comp_const_id cid)
           ; ("spine", json_of_comp_pattern_spine pat_spine)
           ]
   | Synapx.Comp.PatFVar (location, name) ->
@@ -637,7 +659,7 @@ and json_of_comp_pattern_spine = function
       json_of_variant ~name:"Synapx.Comp.PatObs"
         ~data:
           [ ("location", json_of_location location)
-          ; ("cid_comp_dest", json_of_int cid)
+          ; ("cid_comp_dest", json_of_comp_dest_id cid)
           ; ("spine", json_of_comp_pattern_spine pat_spine)
           ]
 

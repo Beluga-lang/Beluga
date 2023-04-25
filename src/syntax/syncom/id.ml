@@ -1,27 +1,55 @@
 open Support
 
-type module_id = int
+module type ID = sig
+  type t
 
-type cid_typ = int
+  val of_int : int -> t
 
-type cid_term = int
+  val to_int : t -> int
+end
 
-type cid_schema = int
+module Id_base = struct
+  type t = int
 
-type cid_comp_typ = int
+  let of_int = Fun.id
 
-type cid_comp_cotyp = int
+  let to_int = Fun.id
+end
 
-type cid_comp_const = int
+module Module = Id_base
+module Typ = Id_base
+module Term = Id_base
+module Schema = Id_base
+module CompTyp = Id_base
+module CompCotyp = Id_base
+module CompConst = Id_base
+module CompDest = Id_base
+module CompTypdef = Id_base
+module Prog = Id_base
+module MutualGroup = Id_base
 
-type cid_comp_dest = int
+type module_id = Module.t
 
-type cid_comp_typdef = int
+type cid_typ = Typ.t
 
-type cid_prog = int
+type cid_term = Term.t
+
+type cid_schema = Schema.t
+
+type cid_comp_typ = CompTyp.t
+
+type cid_comp_cotyp = CompCotyp.t
+
+type cid_comp_const = CompConst.t
+
+type cid_comp_dest = CompDest.t
+
+type cid_comp_typdef = CompTypdef.t
+
+type cid_prog = Prog.t
 
 (** Used to identify a group of mutually proven theorems. *)
-type cid_mutual_group = int
+type cid_mutual_group = MutualGroup.t
 
 type offset = int
 

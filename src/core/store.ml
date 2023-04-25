@@ -48,7 +48,7 @@ module type ENTRY = sig
   type t
   val name_of_entry : t -> Name.t
 
-  type cid = int
+  type cid
 end
 
 module type CIDSTORE = sig
@@ -62,9 +62,9 @@ module type CIDSTORE = sig
   val current_entries : unit -> (cid * entry) list
 end
 
-module CidStore (M : ENTRY) : CIDSTORE
+module CidStore (Cid: Id.ID) (M : ENTRY with type cid = Cid.t) : CIDSTORE
        with type entry = M.t
-       with type cid = M.cid = struct
+       with type cid = Cid.t = struct
   include M
   type entry = M.t
 
@@ -73,21 +73,21 @@ module CidStore (M : ENTRY) : CIDSTORE
   let store : entry DynArray.t = DynArray.create ()
 
   let current_entries () =
-    List.index (DynArray.to_list store)
+    List.mapi (fun i a -> (Cid.of_int i, a)) (DynArray.to_list store)
 
   let clear () =
     DynArray.clear store
 
   let replace_entry n e =
-    DynArray.set store n e
+    DynArray.set store (Cid.to_int n) e
 
   let get n =
-    DynArray.get store n
+    DynArray.get store (Cid.to_int n)
 
   let fixed_name_of n = M.name_of_entry (get n)
 
   let add f =
-    let cid = DynArray.length store in
+    let cid = Cid.of_int (DynArray.length store) in
     let e = f cid in
     DynArray.add store e;
     cid
@@ -114,7 +114,7 @@ module Cid = struct
     end
     open Entry
 
-    include CidStore (Entry)
+    include CidStore (Id.Typ) (Entry)
 
     let mk_entry name kind implicit_arguments =
       { name
@@ -195,16 +195,16 @@ module Cid = struct
     let rec addSubord a b =
       let a_e = get a in
       let b_e = get b in
-      if Bool.not (BitSet.is_set !(b_e.subordinates) a)
+      if Bool.not (BitSet.is_set !(b_e.subordinates) (Id.Typ.to_int a))
       then
         begin
           (* a is not yet in the subordinate relation for b, i.e. b depends on a *)
-          BitSet.set !(b_e.subordinates) a;
+          BitSet.set !(b_e.subordinates) (Id.Typ.to_int a);
           (* Take transitive closure:
              If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
           (* Call below could be replaced by
              subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
-          subord_iter (fun aa -> addSubord aa b) !(a_e.subordinates);
+          subord_iter (fun aa -> addSubord (Id.Typ.of_int aa) b) !(a_e.subordinates);
         end
       (* in else case, a is already in the subordinate relation for b, i.e. b depends on a *)
 
@@ -323,11 +323,11 @@ module Cid = struct
 
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
-      (* subord_read *)BitSet.is_set !(a_e.subordinates) b
+      (* subord_read *)BitSet.is_set !(a_e.subordinates) (Id.Typ.to_int b)
 
     let is_typesubordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let b_e = get b in
-      (* subord_read *)BitSet.is_set !(b_e.typesubordinated) a
+      (* subord_read *)BitSet.is_set !(b_e.typesubordinated) (Id.Typ.to_int a)
   end
 
   module Term = struct
@@ -340,7 +340,7 @@ module Cid = struct
       type cid = Id.cid_term
       let name_of_entry e = e.name
     end
-    include CidStore (Entry)
+    include CidStore (Id.Term) (Entry)
     open Entry
 
     let mk_entry name typ implicit_arguments =
@@ -375,7 +375,7 @@ module Cid = struct
       type cid = Id.cid_schema
       let name_of_entry e = e.name
     end
-    include CidStore (Entry)
+    include CidStore (Id.Schema) (Entry)
     open Entry
 
     let mk_entry name schema =
@@ -427,7 +427,7 @@ module Cid = struct
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typ
     end
-    include CidStore (Entry)
+    include CidStore (Id.CompTyp) (Entry)
     open Entry
 
     let mk_entry name kind implicit_arguments positivity =
@@ -471,7 +471,7 @@ module Cid = struct
       let name_of_entry e = e.name
     end
 
-    include CidStore (Entry)
+    include CidStore (Id.CompCotyp) (Entry)
     open Entry
 
     let mk_entry name kind implicit_arguments =
@@ -507,7 +507,7 @@ module Cid = struct
       let name_of_entry e = e.name
       type cid = Id.cid_comp_const
     end
-    include CidStore (Entry)
+    include CidStore (Id.CompConst) (Entry)
     open Entry
 
     let mk_entry name typ implicit_arguments =
@@ -545,7 +545,7 @@ module Cid = struct
       let name_of_entry e = e.name
       type cid = Id.cid_comp_dest
     end
-    include CidStore (Entry)
+    include CidStore (Id.CompDest) (Entry)
     open Entry
 
     let mk_entry name mctx obs_type return_type implicit_arguments =
@@ -576,7 +576,7 @@ module Cid = struct
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typdef
     end
-    include CidStore (Entry)
+    include CidStore (Id.CompTypdef) (Entry)
     open Entry
 
     let mk_entry name implicit_arguments (mctx, typ) kind =
@@ -608,9 +608,9 @@ module Cid = struct
         ; mutual_group : Id.cid_mutual_group
         }
       let name_of_entry e = e.name
-      type cid = Id.cid_comp_const
+      type cid = Id.cid_prog
     end
-    include CidStore (Entry)
+    include CidStore (Id.Prog) (Entry)
     open Entry
 
     let mk_entry name typ implicit_arguments mutual_group prog =
@@ -625,9 +625,10 @@ module Cid = struct
 
     let add_mutual_group decs =
       DynArray.add mutual_groups decs;
-      DynArray.length mutual_groups - 1
+      Id.MutualGroup.of_int (DynArray.length mutual_groups - 1)
 
-    let lookup_mutual_group = DynArray.get mutual_groups
+    let lookup_mutual_group cid =
+      DynArray.get mutual_groups (Id.MutualGroup.to_int cid)
 
     let get_total_decl cid =
       let e = get cid in
@@ -698,7 +699,7 @@ module Cid = struct
     let render_cid_term c = Name.show (Term.fixed_name_of c)
     let render_cid_schema w = Name.show (Schema.fixed_name_of w)
     let render_cid_prog f = Name.show (Comp.fixed_name_of f)
-    let render_cid_mutual_group c = string_of_int c
+    let render_cid_mutual_group c = string_of_int (Id.MutualGroup.to_int c)
     let render_ctx_var cO g =
       try
         Name.show (Context.getNameMCtx cO g)

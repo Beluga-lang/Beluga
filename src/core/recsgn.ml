@@ -379,34 +379,34 @@ module Make
       ->
         set_name_generation_bases state ~location ~meta_variable_base
           ?computation_variable_base constant;
-        let name = Name.make_from_qualified_identifier constant in
-        Synint.LF.NamePrag name
+        Synint.LF.NamePrag
+          { location
+          ; constant
+          ; meta_variable_base
+          ; computation_variable_base
+          }
     | Synext.Signature.Pragma.Default_associativity
         { associativity; location } ->
         set_default_associativity state ~location associativity;
-        Synint.LF.DefaultAssocPrag associativity
+        Synint.LF.DefaultAssocPrag { associativity; location }
     | Synext.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
         set_operator_prefix state ~location ?precedence constant;
-        let name = Name.make_from_qualified_identifier constant in
-        let associativity = Option.some Associativity.right_associative in
-        Synint.LF.FixPrag (name, Fixity.prefix, precedence, associativity)
+        Synint.LF.PrefixFixityPrag { location; constant; precedence }
     | Synext.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
         set_operator_infix state ~location ?precedence ?associativity
           constant;
-        let name = Name.make_from_qualified_identifier constant in
-        Synint.LF.FixPrag (name, Fixity.infix, precedence, associativity)
+        Synint.LF.InfixFixityPrag
+          { location; constant; precedence; associativity }
     | Synext.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
         set_operator_postfix state ~location ?precedence constant;
-        let name = Name.make_from_qualified_identifier constant in
-        let associativity = Option.some Associativity.left_associative in
-        Synint.LF.FixPrag (name, Fixity.postfix, precedence, associativity)
+        Synint.LF.PostfixFixityPrag { location; constant; precedence }
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
         freeze_all_unfrozen_declarations state;
         open_module state ~location module_identifier;
-        Synint.LF.OpenPrag module_identifier
+        Synint.LF.OpenPrag { location; module_identifier }
     | Synext.Signature.Pragma.Abbreviation
         { location; module_identifier; abbreviation } ->
         add_module_abbreviation state ~location module_identifier
@@ -1055,8 +1055,7 @@ module Make
       maximum_tries;
     Synint.LF.Query
       { location
-      ; name = name_opt
-      ; mctx = Synint.LF.Empty
+      ; name = identifier_opt
       ; typ = (tA', i)
       ; expected_solutions
       ; maximum_tries

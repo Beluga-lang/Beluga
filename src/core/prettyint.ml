@@ -1913,13 +1913,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
      *)
 
-    | Sgn.Pragma { pragma=LF.OpenPrag n } ->
-       (* FIXME: The pretty-printer for the internal syntax has to be
-          stateful, and not rely on the {!Store} module for the bindings
-          currently in scope. *)
-       fprintf ppf "@\n--open %a@\n" Qualified_identifier.pp n
-
-    | Sgn.Pragma _ -> ()
+    | Sgn.Pragma { pragma } -> fmt_ppr_pragma ppf pragma
 
     | Sgn.Module { identifier; declarations; _ } ->
        let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
@@ -1929,6 +1923,92 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          aux declarations;
 
     | _ -> ()
+
+  and fmt_ppr_associativity ppf associativity =
+    match associativity with
+    | Associativity.Left_associative -> pp_print_string ppf "left"
+    | Associativity.Right_associative -> pp_print_string ppf "right"
+    | Associativity.Non_associative -> pp_print_string ppf "none"
+
+  and fmt_ppr_pragma ppf pragma =
+    match pragma with
+    | LF.NamePrag
+        { constant
+        ; meta_variable_base
+        ; computation_variable_base
+        ; location = _
+        } -> (
+        match computation_variable_base with
+        | Option.Some computation_variable_base ->
+            fprintf ppf "@\n--name %a %a %a.@\n" Qualified_identifier.pp
+              constant Identifier.pp meta_variable_base Identifier.pp
+              computation_variable_base
+        | Option.None ->
+            fprintf ppf "@\n--name %a %a.@\n" Qualified_identifier.pp
+              constant Identifier.pp meta_variable_base)
+    | LF.NotPrag { location = _ } -> fprintf ppf "@\n--not@\n"
+    | LF.OpenPrag { module_identifier; location = _ } ->
+        fprintf ppf "@\n--open %a.@\n" Qualified_identifier.pp
+          module_identifier
+    | LF.DefaultAssocPrag { associativity; location = _ } ->
+        fprintf ppf "@\n--assoc %a.@\n" fmt_ppr_associativity associativity
+    | LF.PrefixFixityPrag { constant; precedence; location = _ } -> (
+        match precedence with
+        | Option.Some precedence ->
+            fprintf ppf "@\n--prefix %a %d.@\n" Qualified_identifier.pp
+              constant precedence
+        | Option.None ->
+            fprintf ppf "@\n--prefix %a.@\n" Qualified_identifier.pp constant
+        )
+    | LF.InfixFixityPrag
+        { constant; precedence; associativity; location = _ } -> (
+        match (precedence, associativity) with
+        | Option.Some precedence, Option.Some associativity ->
+            fprintf ppf "@\n--infix %a %d %a.@\n" Qualified_identifier.pp
+              constant precedence fmt_ppr_associativity associativity
+        | Option.None, Option.Some associativity ->
+            fprintf ppf "@\n--infix %a %a.@\n" Qualified_identifier.pp
+              constant fmt_ppr_associativity associativity
+        | Option.Some precedence, Option.None ->
+            fprintf ppf "@\n--infix %a %d.@\n" Qualified_identifier.pp
+              constant precedence
+        | Option.None, Option.None ->
+            fprintf ppf "@\n--infix %a.@\n" Qualified_identifier.pp constant)
+    | LF.PostfixFixityPrag { constant; precedence; location = _ } -> (
+        match precedence with
+        | Option.Some precedence ->
+            fprintf ppf "@\n--postfix %a %d.@\n" Qualified_identifier.pp
+              constant precedence
+        | Option.None ->
+            fprintf ppf "@\n--postfix %a.@\n" Qualified_identifier.pp
+              constant)
+    | LF.AbbrevPrag { module_identifier; abbreviation; location = _ } ->
+        fprintf ppf "@\n--abbrev %a %a.@\n" Qualified_identifier.pp
+          module_identifier Identifier.pp abbreviation
+    | LF.Query
+        { name
+        ; typ = tA, _i
+        ; expected_solutions
+        ; maximum_tries
+        ; location = _
+        } -> (
+        let fmt_ppr_query_argument ppf argument =
+          match argument with
+          | Option.Some argument -> pp_print_int ppf argument
+          | Option.None -> pp_print_string ppf "*"
+        in
+        match name with
+        | Option.Some name ->
+            fprintf ppf "--query@ %a@ %a@ %a :@ %a." fmt_ppr_query_argument
+              expected_solutions fmt_ppr_query_argument maximum_tries
+              Identifier.pp name
+              (fmt_ppr_lf_typ LF.Empty LF.Null l0)
+              tA
+        | Option.None ->
+            fprintf ppf "--query@ %a@ %a@ :@ %a." fmt_ppr_query_argument
+              expected_solutions fmt_ppr_query_argument maximum_tries
+              (fmt_ppr_lf_typ LF.Empty LF.Null l0)
+              tA)
 
   let fmt_ppr_sgn ppf sgn = List.iter (fmt_ppr_sgn_decl ppf) sgn
 end (* Int.Make *)

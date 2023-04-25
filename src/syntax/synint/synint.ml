@@ -263,11 +263,37 @@ module LF = struct
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
   type prag =
-    | NamePrag of Name.t
-    | NotPrag
-    | OpenPrag of Qualified_identifier.t
-    | DefaultAssocPrag of Associativity.t
-    | FixPrag of Name.t * Fixity.t * int option * Associativity.t option
+    | NamePrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; meta_variable_base : Identifier.t
+        ; computation_variable_base : Identifier.t Option.t
+        }
+    | NotPrag of { location : Location.t }
+    | OpenPrag  of
+        { location : Location.t
+        ; module_identifier : Qualified_identifier.t
+        }
+    | DefaultAssocPrag of
+        { location : Location.t
+        ; associativity : Associativity.t
+        }
+    | PrefixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        }
+    | InfixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        ; associativity : Associativity.t Option.t
+        }
+    | PostfixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        }
     | AbbrevPrag of
         { location : Location.t
         ; module_identifier : Qualified_identifier.t
@@ -278,11 +304,10 @@ module LF = struct
             the alias [abbreviation] for the module [module_identifier]. *)
     | Query of
         { location : Location.t
-        ; name : Name.t option
-        ; mctx : mctx
+        ; name : Identifier.t Option.t
         ; typ : typ * Id.offset
-        ; expected_solutions : int option
-        ; maximum_tries : int option
+        ; expected_solutions : Int.t Option.t
+        ; maximum_tries : Int.t Option.t
         }  (** Logic programming query on LF type *)
 
   (**********************)

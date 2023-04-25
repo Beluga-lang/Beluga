@@ -28,7 +28,7 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
        dprintf begin fun p ->
          p.fmt "[replace_locs] opening file %s" file_name
          end;
-       Files.with_in_channel file_name
+       In_channel.with_open_bin file_name
          begin fun in_ch ->
          let in_lexbuf = Sedlexing.Utf8.from_channel in_ch in
          let read_length = ref 0 in
@@ -41,7 +41,7 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
            | None -> n ()
            | Some v ->
               incr read_length;
-              if v != Uchar.of_char '\n'
+              if v <> Uchar.of_char '\n'
               then incr indentation
               else indentation := 0;
               f v
@@ -95,8 +95,6 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
                true
                end
              end;
-           close_in in_ch;
-           close_out out_ch;
            dprintf begin fun p ->
              p.fmt "[replace_locs] moving %s -> %s" temp_file_name file_name
              end;
@@ -120,21 +118,15 @@ let update_existing_holes existing_holes =
   |> replace_locs
 
 let append_sessions target_file_name new_mutual_rec_thmss =
-  let out_ch = open_out_gen [Open_append; Open_text] 0o600 target_file_name in
-  let out_ppf = Format.formatter_of_out_channel out_ch in
-  let printf_out fmt = Format.fprintf out_ppf fmt in
-  new_mutual_rec_thmss
-  |> List.iter
-       begin fun thms ->
-       printf_out "@\n";
-       printf_out "@[<v>";
-       thms
-       |> List.iteri
-            begin fun i thm ->
-            if i != 0
-            then printf_out "and@,";
-            Format.fprintf out_ppf "%a" Theorem.serialize thm
-            end;
-       printf_out ";@]@\n"
-       end;
-  close_out out_ch
+  Out_channel.with_open_gen [ Open_append; Open_text ] 0o600 target_file_name
+    (fun out_ch ->
+      List.pp
+        ~pp_sep:(fun _ppf () -> ())
+        (fun ppf thms ->
+          Format.fprintf ppf "@\n@[<v>%a;@]@\n"
+            (List.pp
+               ~pp_sep:(fun ppf () -> Format.fprintf ppf "and@,")
+               Theorem.serialize)
+            thms)
+        (Format.formatter_of_out_channel out_ch)
+        new_mutual_rec_thmss)

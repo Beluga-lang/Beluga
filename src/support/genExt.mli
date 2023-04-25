@@ -7,12 +7,6 @@ val of_string : string -> char Gen.t
     until it encounters an error. *)
 val of_in_channel_lines : in_channel -> string Gen.t
 
-(** Constructs a generator yielding successive characters from an input
-    channel. Channel reads are internally buffered according to the optional
-    argument buffer_size, which defaults to one KiB. When the channel hits
-    end-of-file, it is automatically closed. *)
-val of_in_channel : ?buffer_size:int -> in_channel -> char Gen.t
-
 (** [drop_lines g ln] drops the first [ln] elements from the generator [g]. *)
 val drop_lines : 'a Gen.t -> int -> unit
 

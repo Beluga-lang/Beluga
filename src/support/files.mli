@@ -10,11 +10,6 @@ val read_lines : string -> string list
     output channel is closed and the temporary file is unlinked. *)
 val with_temp_file : string -> string -> (string -> out_channel -> 'a) -> 'a
 
-(** [with_in_channel filename f] opens an input channel on [filename] and
-    runs [f] with it. Guarantees to close the channel, even in case of
-    exceptional exit. *)
-val with_in_channel : string -> (in_channel -> 'a) -> 'a
-
 (** [with_pp_to_file filename handler] calls [handler] with a pretty-printer
     to the file at [filename]. The contents of the file are replaced by the
     outputs printed to it. *)

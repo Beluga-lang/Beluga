@@ -3,7 +3,7 @@
 
     @author Clare Jang *)
 
-let is_short_opt arg = String.get arg 0 = '-' && String.get arg 1 != '-'
+let is_short_opt arg = String.get arg 0 = '-' && String.get arg 1 <> '-'
 
 let is_long_opt arg = String.get arg 0 = '-'
 
@@ -26,7 +26,7 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
     Format.pp_open_hovbox ppf 0;
     List.iteri
       (fun idx desc_word ->
-        if idx != 0 then Format.pp_print_space ppf ();
+        if idx <> 0 then Format.pp_print_space ppf ();
         Format.pp_print_string ppf desc_word)
       desc_words;
     Format.pp_close_box ppf ()
@@ -95,7 +95,7 @@ let parse spec args =
               |> String.to_seq |> Array.of_seq
               |> Array.mapi (fun idx c ->
                      ( "-" ^ String.make 1 c
-                     , if idx != number_of_options then [] else sub_args ))
+                     , if idx <> number_of_options then [] else sub_args ))
             in
             Array.fold_right
               (fun (name, sub_args) cont _ ->

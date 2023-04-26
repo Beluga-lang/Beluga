@@ -262,54 +262,6 @@ module LF = struct
   type tclo = typ * sub                  (* As = [s]A                      *)
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
-  type prag =
-    | NamePrag of
-        { location : Location.t
-        ; constant : Qualified_identifier.t
-        ; meta_variable_base : Identifier.t
-        ; computation_variable_base : Identifier.t Option.t
-        }
-    | NotPrag of { location : Location.t }
-    | OpenPrag  of
-        { location : Location.t
-        ; module_identifier : Qualified_identifier.t
-        }
-    | DefaultAssocPrag of
-        { location : Location.t
-        ; associativity : Associativity.t
-        }
-    | PrefixFixityPrag of
-        { location : Location.t
-        ; constant : Qualified_identifier.t
-        ; precedence : Int.t Option.t
-        }
-    | InfixFixityPrag of
-        { location : Location.t
-        ; constant : Qualified_identifier.t
-        ; precedence : Int.t Option.t
-        ; associativity : Associativity.t Option.t
-        }
-    | PostfixFixityPrag of
-        { location : Location.t
-        ; constant : Qualified_identifier.t
-        ; precedence : Int.t Option.t
-        }
-    | AbbrevPrag of
-        { location : Location.t
-        ; module_identifier : Qualified_identifier.t
-        ; abbreviation : Identifier.t
-        }
-        (** [AbbrevPrag { module_identifier; abbreviation; _ }] is the
-            pragma [--abbrev module_identifier abbreviation.] for defining
-            the alias [abbreviation] for the module [module_identifier]. *)
-    | Query of
-        { location : Location.t
-        ; name : Identifier.t Option.t
-        ; typ : typ * Id.offset
-        ; expected_solutions : Int.t Option.t
-        ; maximum_tries : Int.t Option.t
-        }  (** Logic programming query on LF type *)
-
   (**********************)
   (* Helpers            *)
   (**********************)
@@ -954,118 +906,176 @@ end
 
 (* Internal Signature Syntax *)
 module Sgn = struct
+  type global_prag =
+    | No_strengthening of { location : Location.t }
+    | Warn_on_coverage_error of { location : Location.t }
+    | Initiate_coverage_checking of { location : Location.t }
+
+  type prag =
+    | NamePrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; meta_variable_base : Identifier.t
+        ; computation_variable_base : Identifier.t Option.t
+        }
+    | NotPrag of { location : Location.t }
+    | OpenPrag  of
+        { location : Location.t
+        ; module_identifier : Qualified_identifier.t
+        }
+    | DefaultAssocPrag of
+        { location : Location.t
+        ; associativity : Associativity.t
+        }
+    | PrefixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        }
+    | InfixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        ; associativity : Associativity.t Option.t
+        }
+    | PostfixFixityPrag of
+        { location : Location.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t Option.t
+        }
+    | AbbrevPrag of
+        { location : Location.t
+        ; module_identifier : Qualified_identifier.t
+        ; abbreviation : Identifier.t
+        }
+        (** [AbbrevPrag { module_identifier; abbreviation; _ }] is the
+            pragma [--abbrev module_identifier abbreviation.] for defining
+            the alias [abbreviation] for the module [module_identifier]. *)
+    | Query of
+        { location : Location.t
+        ; name : Identifier.t Option.t
+        ; typ : LF.typ * Id.offset
+        ; expected_solutions : Int.t Option.t
+        ; maximum_tries : Int.t Option.t
+        }  (** Logic programming query on LF type *)
+
   type positivity_flag =
     | Nocheck
     | Positivity
     | Stratify of  Location.t * int
     | StratifyAll of Location.t
 
-  type thm_decl =
-    | Theorem of
-      { identifier : Identifier.t
-      ; cid : cid_prog
-      ; typ : Comp.typ
-      ; body : Comp.thm
-      ; location : Location.t
-      }
-
   (** Reconstructed signature element *)
   type decl =
     | Typ of
-      { location: Location.t
-      ; cid : Id.cid_typ
-      ; identifier: Identifier.t
-      ; kind: LF.kind
-      } (** LF type family declaration *)
+        { location: Location.t
+        ; cid : Id.cid_typ
+        ; identifier: Identifier.t
+        ; kind: LF.kind
+        } (** LF type family declaration *)
 
     | Const of
-      { location: Location.t
-      ; cid : Id.cid_term
-      ; identifier: Identifier.t
-      ; typ: LF.typ
-      } (** LF type constant declaration *)
+        { location: Location.t
+        ; cid : Id.cid_term
+        ; identifier: Identifier.t
+        ; typ: LF.typ
+        } (** LF type constant declaration *)
 
     | CompTyp of
-      { location: Location.t
-      ; cid : Id.cid_comp_typ
-      ; identifier: Identifier.t
-      ; kind: Comp.kind
-      ; positivity_flag: positivity_flag
-      } (** Computation-level data type constant declaration *)
+        { location: Location.t
+        ; cid : Id.cid_comp_typ
+        ; identifier: Identifier.t
+        ; kind: Comp.kind
+        ; positivity_flag: positivity_flag
+        } (** Computation-level data type constant declaration *)
 
     | CompCotyp of
-      { location: Location.t
-      ; cid : Id.cid_comp_cotyp
-      ; identifier: Identifier.t
-      ; kind: Comp.kind
-      } (** Computation-level codata type constant declaration *)
+        { location: Location.t
+        ; cid : Id.cid_comp_cotyp
+        ; identifier: Identifier.t
+        ; kind: Comp.kind
+        } (** Computation-level codata type constant declaration *)
 
     | CompConst of
-      { location: Location.t
-      ; cid : Id.cid_comp_const
-      ; identifier: Identifier.t
-      ; typ: Comp.typ
-      } (** Computation-level type constructor declaration *)
+        { location: Location.t
+        ; cid : Id.cid_comp_const
+        ; identifier: Identifier.t
+        ; typ: Comp.typ
+        } (** Computation-level type constructor declaration *)
 
     | CompDest of
-      { location: Location.t
-      ; cid : Id.cid_comp_dest
-      ; identifier: Identifier.t
-      ; mctx: LF.mctx
-      ; observation_typ: Comp.typ
-      ; return_typ: Comp.typ
-      } (** Computation-level type destructor declaration *)
+        { location: Location.t
+        ; cid : Id.cid_comp_dest
+        ; identifier: Identifier.t
+        ; mctx: LF.mctx
+        ; observation_typ: Comp.typ
+        ; return_typ: Comp.typ
+        } (** Computation-level type destructor declaration *)
 
     | CompTypAbbrev of
-      { location: Location.t
-      ; cid : Id.cid_comp_typdef
-      ; identifier: Identifier.t
-      ; kind: Comp.kind
-      ; typ: Comp.typ
-      } (** Synonym declaration for computation-level type *)
+        { location: Location.t
+        ; cid : Id.cid_comp_typdef
+        ; identifier: Identifier.t
+        ; kind: Comp.kind
+        ; typ: Comp.typ
+        } (** Synonym declaration for computation-level type *)
 
     | Schema of
-      { location: Location.t
-      ; cid: cid_schema
-      ; identifier : Identifier.t
-      ; schema: LF.schema
-      } (** Declaration of a specification for a set of contexts *)
-
-    | Theorems of
-      { location: Location.t
-      ; theorems: thm_decl List1.t
-      } (** Mutually recursive theorem declaration(s) *)
-
-    | Pragma of
-      { pragma: LF.prag
-      } (** Compiler directive *)
+        { location: Location.t
+        ; cid: cid_schema
+        ; identifier : Identifier.t
+        ; schema: LF.schema
+        } (** Declaration of a specification for a set of contexts *)
 
     | Val of
-      { location: Location.t
-      ; cid : Id.cid_prog
-      ; identifier: Identifier.t
-      ; typ: Comp.typ
-      ; expression: Comp.exp
-      ; expression_value: Comp.value option
-      } (** Computation-level value declaration *)
+        { location: Location.t
+        ; cid : Id.cid_prog
+        ; identifier: Identifier.t
+        ; typ: Comp.typ
+        ; expression: Comp.exp
+        ; expression_value: Comp.value option
+        } (** Computation-level value declaration *)
 
-    | MRecTyp of
-      { location: Location.t
-      ; declarations: decl list List1.t
-      } (** Mutually-recursive LF type family declaration *)
+    | Recursive_declarations of
+        { location: Location.t
+        ; declarations: decl List1.t
+        } (** Mutually-recursive declarations *)
+
+    | Theorem of
+        { identifier : Identifier.t
+        ; cid : cid_prog
+        ; typ : Comp.typ
+        ; body : Comp.thm
+        ; location : Location.t
+        } (** Theorem declaration *)
 
     | Module of
-      { location: Location.t
-      ; cid : Id.module_id
-      ; identifier: Identifier.t
-      ; declarations: decl list
-      } (** Namespace declaration for other declarations *)
+        { location: Location.t
+        ; cid : Id.module_id
+        ; identifier: Identifier.t
+        ; entries: entry list
+        } (** Namespace declaration for other declarations *)
 
+  and entry =
+    | Pragma of
+        { location : Location.t
+        ; pragma : prag
+        }
+    | Declaration of
+        { location : Location.t
+        ; declaration : decl
+        }
     | Comment of
-      { location: Location.t
-      ; content: string
-      } (** Documentation comment *)
+        { location : Location.t
+        ; content : String.t
+        } (** Documentation comment *)
+
+  type sgn_file =
+    { location : Location.t
+    ; global_pragmas : global_prag list
+    ; entries : entry list
+    }
 
   (** Reconstructed Beluga project *)
-  type sgn = decl list
+  type sgn = sgn_file List1.t
 end

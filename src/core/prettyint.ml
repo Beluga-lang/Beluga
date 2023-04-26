@@ -1823,15 +1823,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_cmp_ih cD cG))
       (Context.to_list cIH)
 
-  let fmt_ppr_sgn_thm_decl ppf =
-    function
-    | Sgn.Theorem { identifier; cid; typ; body; _ } ->
-       fprintf ppf "%a %a : %a =@ @[<v2>%a;@]"
-         fmt_ppr_cmp_thm_prefix body
-         Identifier.pp identifier
-         (fmt_ppr_cmp_typ LF.Empty 0) typ
-         fmt_ppr_cmp_thm body
-
   let rec fmt_ppr_sgn_decl ppf =
     function
     | Sgn.CompTypAbbrev _ -> ()
@@ -1872,10 +1863,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Identifier.pp identifier
          (fmt_ppr_cmp_typ LF.Empty l0) typ
 
-    | Sgn.MRecTyp { declarations; _ } ->
+    | Sgn.Recursive_declarations { declarations; _ } ->
       declarations
       |> List1.to_list
-      |> List.flatten
       |> List.iter (fmt_ppr_sgn_decl ppf)
 
     | Sgn.Val { identifier; typ; expression; expression_value=None; _ } ->
@@ -1896,33 +1886,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Identifier.pp identifier
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
-    | Sgn.Theorems { theorems; _ } ->
-       fprintf ppf "@[<v>%a@]"
-         (List1.pp ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
-            (fun ppf x ->
-              fprintf ppf "@[%a@]"
-                fmt_ppr_sgn_thm_decl x))
-         theorems
+    | Sgn.Theorem { identifier; cid; typ; body; _ } ->
+       fprintf ppf "%a %a : %a =@ @[<v2>%a;@]"
+         fmt_ppr_cmp_thm_prefix body
+         Identifier.pp identifier
+         (fmt_ppr_cmp_typ LF.Empty 0) typ
+         fmt_ppr_cmp_thm body
 
-    (*
-    | Sgn.Rec (((f, _, _) as h) :: t) ->
-       let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total
-                   then " total" else ""
-       in
-       fmt_ppr_rec l0 ppf ("rec"^total) h;
-       List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
-     *)
-
-    | Sgn.Pragma { pragma } -> fmt_ppr_pragma ppf pragma
-
-    | Sgn.Module { identifier; declarations; _ } ->
-       let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
-
+    | Sgn.Module { identifier; entries; _ } ->
+       let aux fmt t = List.iter (fun x ->  fmt_ppr_sgn_entry fmt x) t in
        fprintf ppf "@\nmodule %a = struct@\n@[<v2>%a@]@\nend;@\n"
          Identifier.pp identifier
-         aux declarations;
-
-    | _ -> ()
+         aux entries
 
   and fmt_ppr_associativity ppf associativity =
     match associativity with
@@ -1930,9 +1905,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Associativity.Right_associative -> pp_print_string ppf "right"
     | Associativity.Non_associative -> pp_print_string ppf "none"
 
+  and fmt_ppr_global_pragma ppf global_pragma =
+    match global_pragma with
+    | Sgn.No_strengthening _ ->
+        Format.pp_print_string ppf "--nostrengthen"
+    | Sgn.Warn_on_coverage_error _ ->
+        Format.pp_print_string ppf "--warncoverage"
+    | Sgn.Initiate_coverage_checking _ ->
+        Format.pp_print_string ppf "--coverage"
+
   and fmt_ppr_pragma ppf pragma =
     match pragma with
-    | LF.NamePrag
+    | Sgn.NamePrag
         { constant
         ; meta_variable_base
         ; computation_variable_base
@@ -1946,13 +1930,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         | Option.None ->
             fprintf ppf "@\n--name %a %a.@\n" Qualified_identifier.pp
               constant Identifier.pp meta_variable_base)
-    | LF.NotPrag { location = _ } -> fprintf ppf "@\n--not@\n"
-    | LF.OpenPrag { module_identifier; location = _ } ->
+    | Sgn.NotPrag { location = _ } -> fprintf ppf "@\n--not@\n"
+    | Sgn.OpenPrag { module_identifier; location = _ } ->
         fprintf ppf "@\n--open %a.@\n" Qualified_identifier.pp
           module_identifier
-    | LF.DefaultAssocPrag { associativity; location = _ } ->
+    | Sgn.DefaultAssocPrag { associativity; location = _ } ->
         fprintf ppf "@\n--assoc %a.@\n" fmt_ppr_associativity associativity
-    | LF.PrefixFixityPrag { constant; precedence; location = _ } -> (
+    | Sgn.PrefixFixityPrag { constant; precedence; location = _ } -> (
         match precedence with
         | Option.Some precedence ->
             fprintf ppf "@\n--prefix %a %d.@\n" Qualified_identifier.pp
@@ -1960,7 +1944,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         | Option.None ->
             fprintf ppf "@\n--prefix %a.@\n" Qualified_identifier.pp constant
         )
-    | LF.InfixFixityPrag
+    | Sgn.InfixFixityPrag
         { constant; precedence; associativity; location = _ } -> (
         match (precedence, associativity) with
         | Option.Some precedence, Option.Some associativity ->
@@ -1974,7 +1958,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
               constant precedence
         | Option.None, Option.None ->
             fprintf ppf "@\n--infix %a.@\n" Qualified_identifier.pp constant)
-    | LF.PostfixFixityPrag { constant; precedence; location = _ } -> (
+    | Sgn.PostfixFixityPrag { constant; precedence; location = _ } -> (
         match precedence with
         | Option.Some precedence ->
             fprintf ppf "@\n--postfix %a %d.@\n" Qualified_identifier.pp
@@ -1982,10 +1966,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         | Option.None ->
             fprintf ppf "@\n--postfix %a.@\n" Qualified_identifier.pp
               constant)
-    | LF.AbbrevPrag { module_identifier; abbreviation; location = _ } ->
+    | Sgn.AbbrevPrag { module_identifier; abbreviation; location = _ } ->
         fprintf ppf "@\n--abbrev %a %a.@\n" Qualified_identifier.pp
           module_identifier Identifier.pp abbreviation
-    | LF.Query
+    | Sgn.Query
         { name
         ; typ = tA, _i
         ; expected_solutions
@@ -2010,7 +1994,26 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
               (fmt_ppr_lf_typ LF.Empty LF.Null l0)
               tA)
 
-  let fmt_ppr_sgn ppf sgn = List.iter (fmt_ppr_sgn_decl ppf) sgn
+  and fmt_ppr_sgn_entry ppf entry =
+    match entry with
+    | Sgn.Pragma { pragma; _} -> fmt_ppr_pragma ppf pragma
+    | Sgn.Declaration { declaration; _ } -> fmt_ppr_sgn_decl ppf declaration
+    | Sgn.Comment { content; _ } ->
+      Format.pp_print_string ppf "%{{";
+      Format.pp_print_cut ppf ();
+      Format.pp_print_string ppf content;
+      Format.pp_print_cut ppf ();
+      Format.pp_print_string ppf "}}%"
+
+  and fmt_ppr_sgn_file ppf { Sgn.global_pragmas; entries; _ } =
+    List.iter (fun global_pragma ->
+      fmt_ppr_global_pragma ppf global_pragma;
+      Format.pp_print_newline ppf ()) global_pragmas;
+    List.iter (fun entry ->
+      fmt_ppr_sgn_entry ppf entry;
+      Format.pp_print_newline ppf ()) entries
+
+  let fmt_ppr_sgn ppf sgn = List1.iter (fmt_ppr_sgn_file ppf) sgn
 end (* Int.Make *)
 
 (* Default Error Pretty Printer Functor Instantiation *)

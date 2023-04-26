@@ -184,7 +184,7 @@ module type SIGNATURE_RECONSTRUCTION = sig
   val reconstruct_signature : state -> Synext.signature -> Synint.Sgn.sgn
 
   val reconstruct_signature_file :
-    state -> Synext.signature_file -> Synint.Sgn.sgn
+    state -> Synext.signature_file -> Synint.Sgn.sgn_file
 end
 
 module Make
@@ -281,36 +281,49 @@ module Make
         Error.raise_at1 location Invalid_comp_cotyp_target
 
   let rec reconstruct_signature state signature_files =
-    let signature_files' =
-      traverse_list1 state reconstruct_signature_file signature_files
-    in
-    List.flatten (List1.to_list signature_files')
+    traverse_list1 state reconstruct_signature_file signature_files
 
   and reconstruct_signature_file state file =
-    let { Synext.Signature.global_pragmas; entries; _ } = file in
-    let declarations' =
-      with_applied_global_pragmas state global_pragmas (fun state ->
-          reconstruct_signature_entries state entries)
+    let { Synext.Signature.global_pragmas; entries; location } = file in
+    let global_pragmas', entries' =
+      with_applied_global_pragmas state global_pragmas
+        (fun state global_pragmas' ->
+          let entries' = reconstruct_signature_entries state entries in
+          (global_pragmas', entries'))
     in
     freeze_all_unfrozen_declarations state;
-    declarations'
+    { Synint.Sgn.global_pragmas = global_pragmas'
+    ; entries = entries'
+    ; location
+    }
 
   and with_applied_global_pragmas state global_pragmas f =
     match global_pragmas with
-    | [] -> f state
+    | [] -> f state []
     | x :: xs ->
-        with_applied_global_pragma state x (fun state ->
-            with_applied_global_pragmas state xs f)
+        with_applied_global_pragma state x (fun state y ->
+            with_applied_global_pragmas state xs (fun state ys ->
+                f state (y :: ys)))
 
   and with_applied_global_pragma state global_pragma f =
     match global_pragma with
     | Synext.Signature.Global_pragma.No_strengthening { location } ->
-        with_disabled_lf_strengthening state ~location f
+        let global_pragma' = Synint.Sgn.No_strengthening { location } in
+        with_disabled_lf_strengthening state ~location (fun state ->
+            f state global_pragma')
     | Synext.Signature.Global_pragma.Warn_on_coverage_error { location } ->
-        with_warn_on_coverage_error state ~location f
+        let global_pragma' =
+          Synint.Sgn.Warn_on_coverage_error { location }
+        in
+        with_warn_on_coverage_error state ~location (fun state ->
+            f state global_pragma')
     | Synext.Signature.Global_pragma.Initiate_coverage_checking { location }
       ->
-        with_coverage_checking state ~location f
+        let global_pragma' =
+          Synint.Sgn.Initiate_coverage_checking { location }
+        in
+        with_coverage_checking state ~location (fun state ->
+            f state global_pragma')
 
   (** [reconstruct_signature_entries entries] reconstructs a list of
       signature entries. This in particular handles the reconstruction of
@@ -360,11 +373,14 @@ module Make
     match entry with
     | Synext.Signature.Entry.Comment { location; content } ->
         Synint.Sgn.Comment { location; content }
-    | Synext.Signature.Entry.Pragma { pragma; _ } ->
+    | Synext.Signature.Entry.Pragma { pragma; location } ->
         let pragma' = reconstruct_signature_pragma state pragma in
-        Synint.Sgn.Pragma { pragma = pragma' }
-    | Synext.Signature.Entry.Declaration { declaration; _ } ->
-        reconstruct_signature_declaration state declaration
+        Synint.Sgn.Pragma { pragma = pragma'; location }
+    | Synext.Signature.Entry.Declaration { declaration; location } ->
+        let declaration' =
+          reconstruct_signature_declaration state declaration
+        in
+        Synint.Sgn.Declaration { declaration = declaration'; location }
 
   and reconstruct_signature_pragma state pragma =
     match pragma with
@@ -379,7 +395,7 @@ module Make
       ->
         set_name_generation_bases state ~location ~meta_variable_base
           ?computation_variable_base constant;
-        Synint.LF.NamePrag
+        Synint.Sgn.NamePrag
           { location
           ; constant
           ; meta_variable_base
@@ -388,30 +404,30 @@ module Make
     | Synext.Signature.Pragma.Default_associativity
         { associativity; location } ->
         set_default_associativity state ~location associativity;
-        Synint.LF.DefaultAssocPrag { associativity; location }
+        Synint.Sgn.DefaultAssocPrag { associativity; location }
     | Synext.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
         set_operator_prefix state ~location ?precedence constant;
-        Synint.LF.PrefixFixityPrag { location; constant; precedence }
+        Synint.Sgn.PrefixFixityPrag { location; constant; precedence }
     | Synext.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
         set_operator_infix state ~location ?precedence ?associativity
           constant;
-        Synint.LF.InfixFixityPrag
+        Synint.Sgn.InfixFixityPrag
           { location; constant; precedence; associativity }
     | Synext.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
         set_operator_postfix state ~location ?precedence constant;
-        Synint.LF.PostfixFixityPrag { location; constant; precedence }
+        Synint.Sgn.PostfixFixityPrag { location; constant; precedence }
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
         freeze_all_unfrozen_declarations state;
         open_module state ~location module_identifier;
-        Synint.LF.OpenPrag { location; module_identifier }
+        Synint.Sgn.OpenPrag { location; module_identifier }
     | Synext.Signature.Pragma.Abbreviation
         { location; module_identifier; abbreviation } ->
         add_module_abbreviation state ~location module_identifier
           ~abbreviation;
-        Synint.LF.AbbrevPrag { location; module_identifier; abbreviation }
+        Synint.Sgn.AbbrevPrag { location; module_identifier; abbreviation }
     | Synext.Signature.Pragma.Query
         { location; identifier; typ; expected_solutions; maximum_tries } ->
         freeze_all_unfrozen_declarations state;
@@ -1053,7 +1069,7 @@ module Make
           Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', S.LF.id) );
     Logic.storeQuery name_opt (tA', i) Synint.LF.Empty expected_solutions
       maximum_tries;
-    Synint.LF.Query
+    Synint.Sgn.Query
       { location
       ; name = identifier_opt
       ; typ = (tA', i)
@@ -1067,7 +1083,7 @@ module Make
       add_module state ~location identifier cid (fun state ->
           traverse_list state reconstruct_signature_entry entries)
     in
-    Synint.Sgn.Module { location; identifier; cid; declarations = entries' }
+    Synint.Sgn.Module { location; identifier; cid; entries = entries' }
 
   and reconstruct_recursive_declarations state location declarations =
     let (List1.T (first_declaration, declarations')) = declarations in
@@ -1174,8 +1190,10 @@ module Make
     in
     let declarations' =
       List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
+      |> List1.to_list |> List.flatten |> List1.unsafe_of_list
     in
-    Synint.Sgn.MRecTyp { location; declarations = declarations' }
+    Synint.Sgn.Recursive_declarations
+      { location; declarations = declarations' }
 
   and validate_comp_type_and_constructor_declaration typ_identifier
       constructors =
@@ -1298,8 +1316,10 @@ module Make
     in
     let declarations' =
       List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
+      |> List1.to_list |> List.flatten |> List1.unsafe_of_list
     in
-    Synint.Sgn.MRecTyp { location; declarations = declarations' }
+    Synint.Sgn.Recursive_declarations
+      { location; declarations = declarations' }
 
   and translate_totality_order :
         'a.
@@ -1597,7 +1617,7 @@ module Make
       in
       traverse_list1 state reconOne (List1.combine thm_cid_list thm_list)
     in
-    Synint.Sgn.Theorems { location; theorems = ds }
+    Synint.Sgn.Recursive_declarations { location; declarations = ds }
 
   and group_recursive_lf_typ_declarations first_declaration declarations =
     match first_declaration with

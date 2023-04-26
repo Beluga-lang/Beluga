@@ -671,9 +671,9 @@ module Make (State : COMMAND_STATE) = struct
                        }
                    in
                    fprintf state "%a@\n" P.fmt_ppr_sgn_decl
-                     (Synint.Sgn.Theorems
+                     (Synint.Sgn.Recursive_declarations
                         { location = Location.ghost
-                        ; theorems = List1.singleton d
+                        ; declarations = List1.singleton d
                         })
                | _ -> fprintf state "- %s is not a function.;@\n" arg
              with

@@ -130,6 +130,6 @@ module Int = struct
     val fmt_ppr_cmp_comp_prog_info : formatter -> Store.Cid.Comp.entry -> unit
 
     val fmt_ppr_cmp_thm : formatter -> Comp.thm -> unit
-    val fmt_ppr_sgn_thm_decl : formatter -> Sgn.thm_decl -> unit
+    val fmt_ppr_sgn_file : formatter -> Sgn.sgn_file -> unit
   end
 end

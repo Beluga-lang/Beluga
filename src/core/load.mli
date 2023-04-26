@@ -9,7 +9,7 @@ module type LOAD_STATE = sig
     state -> filename:String.t -> Synext.signature_file
 
   val reconstruct_signature_file :
-    state -> Synext.signature_file -> Synint.Sgn.sgn
+    state -> Synext.signature_file -> Synint.Sgn.sgn_file
 
   val get_leftover_vars :
     state -> (Abstract.free_var Synint.LF.ctx * Location.t) List.t
@@ -40,7 +40,7 @@ val load :
      Parser.Disambiguation_state.state
   -> Recsgn_state.Signature_reconstruction_state.state
   -> string
-  -> string list * Synint.Sgn.decl list
+  -> string list * Synint.Sgn.sgn
 
 (** [load_fresh filename] clears all internal state and loads the given path
     to a [.cfg] or [.bel] file. The list of resolved paths (paths to [.bel]

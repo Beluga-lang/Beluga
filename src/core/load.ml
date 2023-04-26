@@ -15,7 +15,7 @@ module type LOAD_STATE = sig
     state -> filename:String.t -> Synext.signature_file
 
   val reconstruct_signature_file :
-    state -> Synext.signature_file -> Synint.Sgn.sgn
+    state -> Synext.signature_file -> Synint.Sgn.sgn_file
 
   val get_leftover_vars :
     state -> (Abstract.free_var Synint.LF.ctx * Location.t) List.t
@@ -128,7 +128,7 @@ module Make_load (Load_state : LOAD_STATE) = struct
     Chatter.print 2 (fun ppf ->
         Format.fprintf ppf
           "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@\n" filename
-          Prettyint.DefaultPrinter.fmt_ppr_sgn sgn');
+          Prettyint.DefaultPrinter.fmt_ppr_sgn_file sgn');
 
     Chatter.print 1 (fun ppf ->
         Format.fprintf ppf "## Type Reconstruction done:  %s ##@\n" filename);
@@ -187,7 +187,10 @@ module Make_load (Load_state : LOAD_STATE) = struct
     Store.clear ();
     Typeinfo.clear_all ();
     Holes.clear ();
-    let signature' = List.concat (traverse_list state load_one all_paths) in
+
+    let all_paths' = List1.unsafe_of_list all_paths in
+
+    let signature' = traverse_list1 state load_one all_paths' in
 
     if !Options.Html.enabled then
       read_signature_and_write_html configuration_filename;

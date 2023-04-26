@@ -1,5 +1,6 @@
 open Support
 open Beluga
+open Beluga_syntax
 open Synint
 
 module F = Fun
@@ -12,9 +13,9 @@ open Debug.Fmt
  * TODO: Move this util into a dedicated module
  * TODO: Add more abstraction layers for system level operations
  *)
-let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> unit -> unit)) list) : unit =
+let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Hashtbl.group_by F.(Beluga_syntax.Location.filename ++ Pair.fst)
+  |> Hashtbl.group_by F.(Location.filename ++ Pair.fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -34,7 +35,7 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
          let read_length = ref 0 in
          let indentation = ref 0 in
          let raise_edited_error () =
-           Beluga_syntax.Error.raise_violation "[harpoon] [serialize] original file is edited"
+           Error.raise_violation "[harpoon] [serialize] original file is edited"
          in
          let with_uchar n f =
            match Sedlexing.next in_lexbuf with
@@ -52,11 +53,11 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
            dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
-           |> List.sort (Misc.on Pair.fst Beluga_syntax.Location.compare_start)
+           |> List.sort (Misc.on Pair.fst Location.compare_start)
            |> List.iter
                 begin fun (loc, printer) ->
-                let start_offset = Beluga_syntax.Location.start_offset loc in
-                let stop_offset = Beluga_syntax.Location.stop_offset loc in
+                let start_offset = Location.start_offset loc in
+                let stop_offset = Location.stop_offset loc in
                 Fun.until
                   begin fun _ ->
                   if !read_length < start_offset

@@ -1,3 +1,5 @@
+(** Tokenization of UTF-8 text input. *)
+
 open Support
 open Beluga_syntax
 

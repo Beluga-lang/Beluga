@@ -6,10 +6,10 @@
 (** The type of labelled record for accumulating execution times. *)
 type timer
 
-(** The flag for enabling execution time monitoring in calls to {!timer}. *)
+(** The flag for enabling execution time monitoring in calls to {!val-timer}. *)
 val on : bool ref
 
-(** The flag for enabling execution time monitoring in calls to {!timer} and
+(** The flag for enabling execution time monitoring in calls to {!val-timer} and
     saving the statistics to the file ["./time.txt"]. *)
 val onf : bool ref
 

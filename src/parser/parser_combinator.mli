@@ -170,8 +170,8 @@ module type PARSER_STATE = sig
       backtracking occurred.
 
       In the case of a parser [m], backtracking can occur if backtracking is
-      enabled with {!enabled_backtracking}, or if [m] did not consume any
-      input. *)
+      enabled with {!allow_backtracking_on_error}, or if [m] did not consume
+      any input. *)
   val with_checkpoint :
        ('a, 'e) result t
     -> ('a, [> `Backtracked of 'e | `Did_not_backtrack of 'e ]) result t

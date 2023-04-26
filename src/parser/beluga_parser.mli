@@ -42,12 +42,14 @@
 open Support
 open Beluga_syntax
 
-(** {1 Configuration Files} *)
+(** {1 Parsing Configuration Files} *)
 
 module Config_parser = Config_parser
 
 (** {1 Lexing} *)
 
+module Token = Token
+module Located_token = Located_token
 module Lexer = Lexer
 
 (** {1 Parsing} *)
@@ -55,8 +57,6 @@ module Lexer = Lexer
 module type PARSER_STATE = Parser_combinator.PARSER_STATE
 
 module Parser_combinator = Parser_combinator
-module Token = Token
-module Located_token = Located_token
 module Common_parser = Common_parser
 module Lf_parser = Lf_parser
 module Clf_parser = Clf_parser

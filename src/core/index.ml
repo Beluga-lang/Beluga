@@ -1341,8 +1341,8 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
     | Synext.Comp.Kind.Arrow { location; domain; range } ->
         let domain' = index_meta_type state domain in
         let range' =
-          with_bound_omittable_meta_variable state Option.none domain
-            (fun state -> index_comp_kind state range)
+          with_shifted_meta_context state (fun state ->
+              index_comp_kind state range)
         in
         let x = fresh_identifier state in
         let x' = Name.make_from_identifier x in

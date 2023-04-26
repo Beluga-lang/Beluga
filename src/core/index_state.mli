@@ -23,10 +23,11 @@ open Beluga_syntax
     variables. While such meta-level pattern variables shadow previous
     bindings, no de Bruijn variables may be computed for them during
     indexing. In those cases, functions like
-    {!val:index_of_meta_variable_opt} return [Option.None], like for unbound
-    identifiers, meaning that the meta-level variable whose binder is in a
-    meta-object pattern will be indexed like a free meta-variable.
-    Abstraction will rewrite it to a bound meta-variable afterwards. *)
+    {!val:INDEXING_STATE.index_of_meta_variable_opt} return [Option.None],
+    for unbound identifiers, meaning that the meta-level variable whose
+    binder is in a meta-object pattern will be indexed like a free
+    meta-variable. Abstraction will rewrite it to a bound meta-variable
+    afterwards. *)
 module type INDEXING_STATE = sig
   (** @closed *)
   include Imperative_state.IMPERATIVE_STATE

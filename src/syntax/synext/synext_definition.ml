@@ -221,7 +221,7 @@ end
     - {m x} ranges over variables
     - {m c} ranges over term-level constants
     - {m a} ranges over type-level constants
-    - {m s} ranges over substitutions
+    - {m \$s} ranges over substitutions
     - {m g} ranges over contexts
     - {m \mathsf{id}} ranges over identifiers
     - {m n} ranges over integers
@@ -239,7 +239,6 @@ end
       c
       \mid x
       \mid \#x
-      \mid \$x
       \mid \_
       \mid \lambda x {:} A. M
       \mid M \; N_1 \; N_2 \; \dots \; N_n \\&&&
@@ -255,7 +254,7 @@ end
       \char`\^
       \mid \dots
       \mid \sigma, M
-      \mid s[\sigma]\\
+      \mid \$s[\sigma]\\
 
       &\text{Contextual LF contexts} &\Psi &\Coloneqq
       \char`\^
@@ -266,7 +265,6 @@ end
       c
       \mid x
       \mid \#x
-      \mid \$x
       \mid \_
       \mid \lambda x {:} A. M_p
       \mid M_p \; N_{p,1} \; N_{p,2} \; \dots \; N_{p_n} \\&&&
@@ -280,7 +278,7 @@ end
       \char`\^
       \mid \dots
       \mid \sigma_p, M_p
-      \mid s[\sigma]\\
+      \mid \$s[\sigma]\\
 
       &\text{Contextual LF context patterns} &\Psi_p &\Coloneqq
       \char`\^

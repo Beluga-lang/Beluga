@@ -1,3 +1,8 @@
+(** Reader for configuration files for Beluga signatures.
+
+    A configuration file is a list of Beluga source files, or nested
+    configuration files. *)
+
 open Beluga_syntax
 
 (** [read_configuration ~filename] is the list of Beluga file paths to load

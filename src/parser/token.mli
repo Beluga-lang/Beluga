@@ -1,3 +1,5 @@
+(** Token definition for lexing. *)
+
 open Support
 
 (** Tokens *)
@@ -37,40 +39,40 @@ type t =
   | DOLLAR  (** [$] *)
   | PLUS  (** [+] *)
   (* Keywords *)
-  | KW_AND
-  | KW_BLOCK
-  | KW_CASE
-  | KW_IF
-  | KW_THEN
-  | KW_ELSE
-  | KW_IMPOSSIBLE
-  | KW_LET
-  | KW_IN
-  | KW_OF
-  | KW_REC
-  | KW_SCHEMA
-  | KW_SOME
-  | KW_FN
-  | KW_MLAM
-  | KW_MODULE
-  | KW_STRUCT
-  | KW_END
-  | KW_TOTAL
-  | KW_TRUST
-  | KW_TYPE
-  | KW_CTYPE
-  | KW_PROP
-  | KW_INDUCTIVE
-  | KW_COINDUCTIVE
-  | KW_STRATIFIED
-  | KW_LF
-  | KW_FUN
-  | KW_TYPEDEF
-  | KW_PROOF
-  | KW_BY
-  | KW_AS
-  | KW_SUFFICES
-  | KW_TOSHOW
+  | KW_AND  (** [and] *)
+  | KW_BLOCK  (** [block] *)
+  | KW_CASE  (** [case] *)
+  | KW_IF  (** [if] *)
+  | KW_THEN  (** [then]*)
+  | KW_ELSE  (** [else] *)
+  | KW_IMPOSSIBLE  (** [impossible] *)
+  | KW_LET  (** [let] *)
+  | KW_IN  (** [in] *)
+  | KW_OF  (** [of] *)
+  | KW_REC  (** [rec] *)
+  | KW_SCHEMA  (** [schema] *)
+  | KW_SOME  (** [some] *)
+  | KW_FN  (** [fn] *)
+  | KW_MLAM  (** [mlam] *)
+  | KW_MODULE  (** [module] *)
+  | KW_STRUCT  (** [struct] *)
+  | KW_END  (** [end] *)
+  | KW_TOTAL  (** [total] *)
+  | KW_TRUST  (** [trust] *)
+  | KW_TYPE  (** [type] *)
+  | KW_CTYPE  (** [ctype] *)
+  | KW_PROP  (** [prop] *)
+  | KW_INDUCTIVE  (** [inductive] *)
+  | KW_COINDUCTIVE  (** [coinductive] *)
+  | KW_STRATIFIED  (** [stratified] *)
+  | KW_LF  (** [LF] *)
+  | KW_FUN  (** [fun] *)
+  | KW_TYPEDEF  (** [typedef] *)
+  | KW_PROOF  (** [proof] *)
+  | KW_BY  (** [by] *)
+  | KW_AS  (** [as] *)
+  | KW_SUFFICES  (** [suffices] *)
+  | KW_TOSHOW  (** [toshow] *)
   | STRING of string
       (** [STRING s] is a string literal ["\"" ^ String.escaped s ^ "\""]. *)
   | IDENT of string

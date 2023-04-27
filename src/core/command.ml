@@ -11,18 +11,26 @@ open Synint
 open Beluga_parser
 module P = Prettyint.DefaultPrinter
 
-[@@@warning "-A-4-44"] (* FIXME: *)
+[@@@warning "+A-4-44"]
 
 exception Duplicate_command_name of String.t
+
+exception Unknown_command of String.t
 
 exception Line_parse_error
 
 exception Column_parse_error
 
+exception No_load_to_redo
+
 (** The exception variant signaling a recoverable failure to executing a
     command in the interpreter. If this exception is raised during the
     evaluation of a command, then the command has failed, but the interpreter
-    is not in an invalid state. *)
+    is not in an invalid state.
+
+    For instance, if a command requires that we parse an integer, and the
+    input token is not a valid integer, then the command has failed, but the
+    interpreter should not crash. *)
 exception Command_execution_error of exn
 
 let () =
@@ -31,9 +39,12 @@ let () =
         Format.dprintf
           "There is already a registered command with name \"%s\"."
           command_name
+    | Unknown_command name ->
+        Format.dprintf "Unrecognized command with name \"%s\"." name
     | Line_parse_error -> Format.dprintf "Failed to parse the line number."
     | Column_parse_error ->
         Format.dprintf "Failed to parse the column number."
+    | No_load_to_redo -> Format.dprintf "No load command to repeat."
     | Command_execution_error cause ->
         let cause_printer = Error.find_printer cause in
         Format.dprintf "@[<v>- Failed to execute command.@,%t@]"
@@ -41,22 +52,15 @@ let () =
     | cause -> Error.raise_unsupported_exception_printing cause)
 
 let raise_command_execution_error cause =
-  Error.raise (Command_execution_error cause)
+  Error.re_raise (Command_execution_error cause)
 
-let parse_int ~on_error token =
-  match int_of_string_opt token with
-  | Option.None -> on_error ()
-  | Option.Some line -> line
+(** [run_safe f] evaluates [f ()], and if that raises an exception [exn],
+    then [Command_execution_error exn] is raised instead. *)
+let run_safe f =
+  try f () with
+  | cause -> raise_command_execution_error cause
 
-let parse_line_number =
-  parse_int ~on_error:(fun () ->
-      raise_command_execution_error Line_parse_error)
-
-let parse_column_number =
-  parse_int ~on_error:(fun () ->
-      raise_command_execution_error Column_parse_error)
-
-module type COMMAND_STATE = sig
+module type INTERPRETER_STATE = sig
   include Imperative_state.IMPERATIVE_STATE
 
   type command
@@ -73,7 +77,7 @@ module type COMMAND_STATE = sig
 
   val register_command : state -> command -> Unit.t
 
-  val find_command_opt : state -> name:String.t -> command Option.t
+  val find_command : state -> name:String.t -> command
 
   val iter_commands :
     state -> (command_name:String.t -> command:command -> Unit.t) -> Unit.t
@@ -92,6 +96,17 @@ module type COMMAND_STATE = sig
        * Identifier.t Option.t
        * (LF.typ * Int.t)
 
+  val read_line_number : state -> ?location:Location.t -> String.t -> Int.t
+
+  val read_column_number : state -> ?location:Location.t -> String.t -> Int.t
+
+  val read_identifier :
+    state -> ?location:Location.t -> String.t -> Identifier.t
+    [@@warning "-32"]
+
+  val read_qualified_identifier :
+    state -> ?location:Location.t -> String.t -> Qualified_identifier.t
+
   (** [index_of_lf_type_constant state identifier] is the constant ID of
       [identifier] in [state] if it is bound to an LF type-level constant. If
       [identifier] is bound to any other entry, then an exception is raised. *)
@@ -102,9 +117,17 @@ module type COMMAND_STATE = sig
 
   val index_of_comp_type_constant :
     state -> Qualified_identifier.t -> Id.cid_comp_typ
+
+  val maximum_lf_hole_solutions : state -> Int.t
+
+  val maximum_lf_hole_search_depth : state -> Int.t
+
+  val load : state -> filename:String.t -> Synint.Sgn.sgn
+
+  val reload : state -> Synint.Sgn.sgn
 end
 
-module Make_command_state
+module Make_interpreter_state
     (Disambiguation_state : Beluga_parser.DISAMBIGUATION_STATE)
     (Disambiguation : Beluga_parser.DISAMBIGUATION
                         with type state = Disambiguation_state.state)
@@ -127,25 +150,52 @@ struct
 
   type state =
     { ppf : Format.formatter
+          (** The pretty-printing state for outputting strings. *)
     ; commands : command String.Hashtbl.t
+          (** The map of registered commands by command name. *)
     ; disambiguation_state : Disambiguation_state.state
+          (** The disambiguation state for parsing new expressions. *)
     ; index_state : Indexing_state.state
+          (** The indexing state for indexing new expressions. *)
     ; signature_reconstruction_state : Signature_reconstruction_state.state
+          (** The signature reconstruction state to reconstruct loaded
+              signatures. *)
+    ; mutable maximum_lf_hole_solutions : Int.t
+          (** The maximum number of solutions to search for LF holes. *)
+    ; mutable maximum_lf_hole_search_depth : Int.t
+          (** The maximum depth of the search for solutions to LF holes. *)
+    ; load_state : Load_state.state
+    ; mutable last_load : String.t Option.t
+          (** The latest Beluga signature configuration file to have been
+              loaded. *)
     }
+  [@@warning "-69"]
 
   and command =
-    { name : String.t
+    { name : String.t  (** The command's name. *)
     ; help : String.t
+          (** The command's help message, which describes how to use the
+              command. *)
     ; run : state -> input:String.t -> Unit.t
+          (** The command's stateful runner function for executing it for a
+              given input. *)
     }
 
   let create_state ppf disambiguation_state index_state
       signature_reconstruction_state =
+    let load_state =
+      Load_state.create_state disambiguation_state
+        signature_reconstruction_state
+    in
     { ppf
     ; commands = String.Hashtbl.create 20
     ; disambiguation_state
     ; index_state
     ; signature_reconstruction_state
+    ; maximum_lf_hole_solutions = 10 (* Arbitrary value *)
+    ; maximum_lf_hole_search_depth = 100 (* Arbitrary value *)
+    ; load_state
+    ; last_load = Option.none
     }
 
   include (
@@ -164,22 +214,21 @@ struct
     String.Hashtbl.mem state.commands command_name
 
   let register_command state command =
-    if String.Hashtbl.mem state.commands command.name then
+    if is_command state command.name then
       Error.raise (Duplicate_command_name command.name)
     else String.Hashtbl.add state.commands command.name command
 
-  let find_command_opt state ~name =
-    String.Hashtbl.find_opt state.commands name
-
-  let get_commands state =
-    String.Hashtbl.fold String.Map.add state.commands String.Map.empty
+  let find_command state ~name =
+    match String.Hashtbl.find_opt state.commands name with
+    | Option.Some command -> command
+    | Option.None -> raise_command_execution_error (Unknown_command name)
 
   let iter_commands state f =
     String.Hashtbl.iter
       (fun command_name command -> f ~command_name ~command)
       state.commands
 
-  let fprintf state = Format.fprintf state.ppf
+  let fprintf state fmt = Format.fprintf state.ppf (fmt ^^ "@.")
 
   let comp_expression_parser = Parser.Parsing.(only comp_expression)
 
@@ -190,25 +239,32 @@ struct
 
   let read_comp_expression_and_infer_type state ?(location = Location.ghost)
       input =
-    let token_sequence = Lexer.lex_string ~initial_location:location input in
-    let parsing_state =
-      Parser_state.initial ~initial_location:location token_sequence
-    in
-    let parser_state =
-      Parser.make_state ~parser_state:parsing_state
-        ~disambiguation_state:state.disambiguation_state
-    in
-    let exp =
-      Parser.eval
-        (Parser.parse_and_disambiguate ~parser:comp_expression_parser
-           ~disambiguator:comp_expression_disambiguator)
-        parser_state
-    in
     let apx_exp =
-      Indexing_state.with_bindings_checkpoint state.index_state (fun state ->
-          Indexer.index_comp_expression state exp)
+      run_safe (fun () ->
+          let token_sequence =
+            Lexer.lex_string ~initial_location:location input
+          in
+          let parsing_state =
+            Parser_state.initial ~initial_location:location token_sequence
+          in
+          let parser_state =
+            Parser.make_state ~parser_state:parsing_state
+              ~disambiguation_state:state.disambiguation_state
+          in
+          let exp =
+            Parser.eval
+              (Parser.parse_and_disambiguate ~parser:comp_expression_parser
+                 ~disambiguator:comp_expression_disambiguator)
+              parser_state
+          in
+          let apx_exp =
+            Indexing_state.with_bindings_checkpoint state.index_state
+              (fun state -> Indexer.index_comp_expression state exp)
+          in
+          apx_exp)
     in
-    (* FIXME: The following elaboration steps need checkpoints *)
+    (* FIXME: The following elaboration steps need checkpoints to rollback to
+       in case of failure *)
     let exp, ttau = Reconstruct.elExp' LF.Empty LF.Empty apx_exp in
     let tau = Whnf.cnormCTyp ttau in
     (exp, tau)
@@ -234,28 +290,36 @@ struct
           (expected_arguments, maximum_tries, identifier_opt, typ')))
 
   let read_query state ?(location = Location.ghost) input =
-    let token_sequence = Lexer.lex_string ~initial_location:location input in
-    let parsing_state =
-      Parser_state.initial ~initial_location:location token_sequence
-    in
-    let parser_state =
-      Parser.make_state ~parser_state:parsing_state
-        ~disambiguation_state:state.disambiguation_state
-    in
-    Parser.eval
-      (Parser.parse_and_disambiguate ~parser:query_parser
-         ~disambiguator:query_disambiguator)
-      parser_state
+    run_safe (fun () ->
+        let token_sequence =
+          Lexer.lex_string ~initial_location:location input
+        in
+        let parsing_state =
+          Parser_state.initial ~initial_location:location token_sequence
+        in
+        let parser_state =
+          Parser.make_state ~parser_state:parsing_state
+            ~disambiguation_state:state.disambiguation_state
+        in
+        Parser.eval
+          (Parser.parse_and_disambiguate ~parser:query_parser
+             ~disambiguator:query_disambiguator)
+          parser_state)
 
   let read_checked_query state ?(location = Location.ghost) input =
-    let expected, tries, identifier, extT =
-      read_query state ~location input
+    let expected, tries, identifier, apxT =
+      run_safe (fun () ->
+          let expected, tries, identifier, extT =
+            read_query state ~location input
+          in
+          let apxT =
+            Indexing_state.with_bindings_checkpoint state.index_state
+              (fun state -> Indexer.index_open_lf_typ state extT)
+          in
+          (expected, tries, identifier, apxT))
     in
-    let apxT =
-      Indexing_state.with_bindings_checkpoint state.index_state (fun state ->
-          Indexer.index_open_lf_typ state extT)
-    in
-    (* FIXME: The following reconstruction steps need checkpoints *)
+    (* FIXME: The following reconstruction steps need checkpoints to rollback
+       to in case of failure *)
     Store.FVar.clear ();
     let tA = Reconstruct.typ Lfrecon.Pi apxT in
     Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -266,17 +330,82 @@ struct
     Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id);
     (expected, tries, identifier, (tA', i))
 
+  let parse_int ~on_error token =
+    match int_of_string_opt token with
+    | Option.None -> on_error ()
+    | Option.Some line -> line
+
+  let parse_line_number =
+    parse_int ~on_error:(fun () -> Error.raise Line_parse_error)
+
+  let parse_column_number =
+    parse_int ~on_error:(fun () -> Error.raise Column_parse_error)
+
+  let read_line_number _state ?location:_ input =
+    run_safe (fun () -> parse_line_number input)
+
+  let read_column_number _state ?location:_ input =
+    run_safe (fun () -> parse_column_number input)
+
+  let read_identifier _state ?(location = Location.ghost) input =
+    run_safe (fun () ->
+        let token_sequence =
+          Lexer.lex_string ~initial_location:location input
+        in
+        let parsing_state =
+          Parser_state.initial ~initial_location:location token_sequence
+        in
+        let _parsing_state', result =
+          Parser.Parsing.run_exn
+            Parser.Parsing.(only identifier)
+            parsing_state
+        in
+        result)
+
+  let read_qualified_identifier _state ?(location = Location.ghost) input =
+    run_safe (fun () ->
+        let token_sequence =
+          Lexer.lex_string ~initial_location:location input
+        in
+        let parsing_state =
+          Parser_state.initial ~initial_location:location token_sequence
+        in
+        let _parsing_state', result =
+          Parser.Parsing.run_exn
+            Parser.Parsing.(only qualified_identifier)
+            parsing_state
+        in
+        result)
+
   let index_of_lf_type_constant state identifier =
-    Indexing_state.index_of_lf_type_constant state.index_state identifier
+    run_safe (fun () ->
+        Indexing_state.index_of_lf_type_constant state.index_state identifier)
 
   let index_of_comp_program state identifier =
-    Indexing_state.index_of_comp_program state.index_state identifier
+    run_safe (fun () ->
+        Indexing_state.index_of_comp_program state.index_state identifier)
 
   let index_of_comp_type_constant state identifier =
-    Indexing_state.index_of_comp_type_constant state.index_state identifier
+    run_safe (fun () ->
+        Indexing_state.index_of_comp_type_constant state.index_state
+          identifier)
+
+  let maximum_lf_hole_solutions state = state.maximum_lf_hole_solutions
+
+  let maximum_lf_hole_search_depth state = state.maximum_lf_hole_search_depth
+
+  let load state ~filename =
+    let _all_paths, sgn = Load.load state.load_state filename in
+    state.last_load <- Option.some filename;
+    sgn
+
+  let reload state =
+    match state.last_load with
+    | Option.None -> raise_command_execution_error No_load_to_redo
+    | Option.Some filename -> load state ~filename
 end
 
-module Make (State : COMMAND_STATE) = struct
+module Make_interpreter (State : INTERPRETER_STATE) = struct
   include State
 
   (* The built-in commands *)
@@ -286,11 +415,15 @@ module Make (State : COMMAND_STATE) = struct
       This function checks the length of the argument list against the given
       number, and in case of success runs the given command body function. *)
   let command_with_arguments n f state ~input =
-    let arguments = String.split_on_char ' ' input in
+    let arguments =
+      match String.split_on_char ' ' input with
+      | [ "" ] (* [input = ""] *) -> []
+      | arguments -> arguments
+    in
     let n' = List.length arguments in
     if n = n' then f state arguments
     else
-      fprintf state "- Command requires %d arguments, but %d were given;\n" n
+      fprintf state "- Command requires %d arguments, but %d were given;" n
         n'
 
   let command0 f =
@@ -305,21 +438,21 @@ module Make (State : COMMAND_STATE) = struct
 
   let countholes =
     make_command ~name:"countholes" ~help:"Print the total number of holes"
-      ~run:(command0 (fun state -> fprintf state "%d;\n" (Holes.count ())))
+      ~run:(command0 (fun state -> fprintf state "%d;" (Holes.count ())))
 
   let chatteron =
     make_command ~name:"chatteron" ~help:"Turn on the chatter"
       ~run:
         (command0 (fun state ->
              Chatter.level := 1;
-             fprintf state "The chatter is on now;\n"))
+             fprintf state "The chatter is on now;"))
 
   let chatteroff =
     make_command ~name:"chatteroff" ~help:"Turn off the chatter"
       ~run:
         (command0 (fun state ->
              Chatter.level := 0;
-             fprintf state "The chatter is off now;\n"))
+             fprintf state "The chatter is off now;"))
 
   let types =
     make_command ~name:"types" ~help:"Print out all types currently defined"
@@ -329,7 +462,7 @@ module Make (State : COMMAND_STATE) = struct
                List.map Pair.snd (Store.Cid.Typ.current_entries ())
              in
              let dctx = Synint.LF.Null in
-             fprintf state "@[<v>%a@];\n"
+             fprintf state "@[<v>%a@];"
                (Format.pp_print_list ~pp_sep:Format.pp_print_cut
                   (fun state x ->
                     Format.fprintf state "%a : %a" Name.pp
@@ -345,40 +478,25 @@ module Make (State : COMMAND_STATE) = struct
              Store.clear ();
              Typeinfo.clear_all ();
              Holes.clear ();
-             fprintf state "Reset successful;\n"))
+             fprintf state "Reset successful;"))
 
   let clearholes =
     make_command ~name:"clearholes" ~help:"Clear all computation level holes"
       ~run:(command0 (fun _state -> Holes.clear ()))
 
-  let reload, load =
-    let do_load state path =
-      ignore
-        (Load.load
-           (Obj.magic () (* TODO: *))
-           (Obj.magic () (* TODO: *))
-           path);
-      fprintf state "The file %s has been successfully loaded;\n" path
-    and last_load : string option ref = ref Option.none in
-    let reload =
-      make_command ~name:"reload"
-        ~help:
-          "Clears the interpreter state and repeats the last load command."
-        ~run:
-          (command0 (fun state ->
-               match !last_load with
-               | Option.None -> fprintf state "- No load to repeat;"
-               | Option.Some path -> do_load state path))
-    and load =
-      make_command ~name:"load"
-        ~help:"Clears the interpreter state and loads the file \"filename\"."
-        ~run:
-          (command1 (fun state path ->
-               (* .bel or .cfg *)
-               do_load state path;
-               last_load := Option.some path))
-    in
-    (reload, load)
+  let reload =
+    make_command ~name:"reload"
+      ~help:"Clears the interpreter state and repeats the last load command."
+      ~run:(command0 (fun state -> ignore (reload state : Synint.Sgn.sgn)))
+
+  let load =
+    make_command ~name:"load"
+      ~help:"Clears the interpreter state and loads the file \"filename\"."
+      ~run:
+        (command1 (fun state filename ->
+             ignore (load state ~filename : Synint.Sgn.sgn);
+             fprintf state "The file %s has been successfully loaded;"
+               filename))
 
   (** Parses the given hole lookup strategy string, and retrieves a hole
       using that strategy.
@@ -390,12 +508,12 @@ module Make (State : COMMAND_STATE) = struct
       (f : HoleId.t * Holes.some_hole -> unit) : unit =
     match Holes.parse_lookup_strategy strat with
     | Option.None ->
-        fprintf state "- Failed to parse hole identifier `%s';\n" strat
+        fprintf state "- Failed to parse hole identifier `%s';" strat
     | Option.Some s -> (
         match Holes.get s with
         | Option.Some id_and_hole -> f id_and_hole
         | Option.None ->
-            fprintf state "- No such hole %s;\n"
+            fprintf state "- No such hole %s;"
               (Holes.string_of_lookup_strategy s))
 
   let requiring_hole_satisfies (check : Holes.some_hole -> bool)
@@ -422,7 +540,7 @@ module Make (State : COMMAND_STATE) = struct
   let check_is_unsolved state =
     ( Holes.is_unsolved
     , fun (id, Holes.Exists (_, h)) ->
-        fprintf state "- Hole %s is already solved;\n"
+        fprintf state "- Hole %s is already solved;"
           (string_of_id_hole (id, h)) )
 
   let requiring_computation_hole state
@@ -435,7 +553,7 @@ module Make (State : COMMAND_STATE) = struct
         match w with
         | CompInfo -> f (id, h)
         | _ ->
-            fprintf state "- Hole %s is not a computational hole;\n"
+            fprintf state "- Hole %s is not a computational hole;"
               (string_of_id_hole (id, h)))
       p
 
@@ -449,7 +567,7 @@ module Make (State : COMMAND_STATE) = struct
         match w with
         | LFInfo -> f (id, h)
         | _ ->
-            fprintf state "- Hole %s is not an LF hole;\n"
+            fprintf state "- Hole %s is not an LF hole;"
               (string_of_id_hole (id, h)))
       p
 
@@ -461,7 +579,7 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state s ->
              with_hole_from_strategy_string state s
-               (fprintf state "%a;\n" Interactive.fmt_ppr_hole)))
+               (fprintf state "%a;" Interactive.fmt_ppr_hole)))
 
   let lochole =
     make_command ~name:"lochole"
@@ -479,7 +597,7 @@ module Make (State : COMMAND_STATE) = struct
                  let stop_line = Location.stop_line location in
                  let stop_bol = Location.stop_bol location in
                  let stop_off = Location.stop_offset location in
-                 fprintf state "(\"%s\" %d %d %d %d %d %d);\n" file_name
+                 fprintf state "(\"%s\" %d %d %d %d %d %d);" file_name
                    start_line start_bol start_off stop_line stop_bol stop_off)))
 
   let solvelfhole =
@@ -502,41 +620,41 @@ module Make (State : COMMAND_STATE) = struct
                     (* Count the solutions that are found so we only emit a
                        maximum number of them. Raise the "Done" exception to
                        stop the search. *)
+                    let maximum_lf_hole_solutions =
+                      maximum_lf_hole_solutions state
+                    in
+                    let maximum_lf_hole_search_depth =
+                      maximum_lf_hole_search_depth state
+                    in
                     (try
-                       let n =
-                         ref 0
-                         (* FIXME: Why are we restricting the logic search by
-                            some arbitrary number of iterations? *)
-                       in
+                       let solutions_found = ref 0 in
                        Logic.Solver.solve cD cPsi query
                          (fun (ctx, norm) ->
                            fprintf state "%a@\n"
                              (P.fmt_ppr_lf_normal cD ctx P.l0)
                              norm;
-                           incr n;
-                           if !n = 10 then raise Logic.Frontend.Done)
-                         (Option.some 100)
+                           incr solutions_found;
+                           if !solutions_found = maximum_lf_hole_solutions
+                           then raise Logic.Frontend.Done)
+                         (Option.some maximum_lf_hole_search_depth)
                      with
                     | Logic.Frontend.Done -> ()
-                    | e -> raise e);
-                    fprintf state ";\n"))))
+                    | e -> Error.re_raise e);
+                    fprintf state ";"))))
 
   let constructors =
     make_command ~name:"constructors"
       ~help:"Print all constructors of a given type passed as a parameter"
       ~run:
         (command1 (fun state arg ->
-             let name =
-               Qualified_identifier.make_simple (Identifier.make arg)
-               (* TODO: Parse [arg] as a qualified identifier *)
-             in
+             let name = read_qualified_identifier state arg in
              let cid = index_of_lf_type_constant state name in
              let entry = Store.Cid.Typ.get cid in
              let termlist =
                List.map Store.Cid.Term.get
                  !(entry.Store.Cid.Typ.Entry.constructors)
              in
-             fprintf state "@[<v>%a@]@\n;@\n"
+             fprintf state "@[<v>%a@]@\n;"
                (Format.pp_print_list ~pp_sep:Format.pp_print_cut
                   (fun state x ->
                     Format.fprintf state "%a : [%d] %a" Name.pp
@@ -549,7 +667,7 @@ module Make (State : COMMAND_STATE) = struct
   let print_helpme state =
     iter_commands state (fun ~command_name ~command ->
         let help = command_help command in
-        fprintf state "%%:%20s\t %s\n" command_name help)
+        fprintf state "%%:%20s\t %s" command_name help)
 
   let helpme =
     make_command ~name:"help"
@@ -562,12 +680,12 @@ module Make (State : COMMAND_STATE) = struct
   let do_split state (hi : HoleId.t * Holes.comp_hole_info Holes.hole)
       (var : string) : unit =
     match Interactive.split var hi with
-    | Option.None -> fprintf state "- No variable %s found;\n" var
+    | Option.None -> fprintf state "- No variable %s found;" var
     | Option.Some exp ->
         let _, h = hi in
         let { Holes.cG; _ } = h.Holes.info in
         Printer.with_normal true (fun () ->
-            fprintf state "%a;\n" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp)
+            fprintf state "%a;" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp)
 
   let split =
     make_command ~name:"split"
@@ -589,9 +707,10 @@ module Make (State : COMMAND_STATE) = struct
                (requiring_computation_hole state (fun (_, h) ->
                     let exp = Interactive.intro h in
                     let Holes.{ cD; info = { Holes.cG; _ }; _ } = h in
-                    Printer.Control.printNormal := true;
-                    fprintf state "%a;\n" (P.fmt_ppr_cmp_exp cD cG P.l0) exp;
-                    Printer.Control.printNormal := false))))
+                    Printer.with_normal true (fun () ->
+                        fprintf state "%a;"
+                          (P.fmt_ppr_cmp_exp cD cG P.l0)
+                          exp)))))
 
   let compconst =
     make_command ~name:"constructors-comp"
@@ -600,10 +719,7 @@ module Make (State : COMMAND_STATE) = struct
          a parameter"
       ~run:
         (command1 (fun state arg ->
-             let name =
-               Qualified_identifier.make_simple (Identifier.make arg)
-               (* TODO: Parse [arg] as a qualified identifier *)
-             in
+             let name = read_qualified_identifier state arg in
              try
                let cid = index_of_comp_type_constant state name in
                let entry = Store.Cid.CompTyp.get cid in
@@ -611,7 +727,7 @@ module Make (State : COMMAND_STATE) = struct
                  List.map Store.Cid.CompConst.get
                    !(entry.Store.Cid.CompTyp.Entry.constructors)
                in
-               fprintf state "@[<v>%a@]@\n;@\n"
+               fprintf state "@[<v>%a@]@\n;"
                  (Format.pp_print_list ~pp_sep:Format.pp_print_cut
                     (fun state x ->
                       Format.fprintf state "%s : [%d] %a"
@@ -621,8 +737,7 @@ module Make (State : COMMAND_STATE) = struct
                         x.Store.Cid.CompConst.Entry.typ))
                  termlist
              with
-             | Not_found ->
-                 fprintf state "- The type %s does not exist;\n" arg))
+             | Not_found -> fprintf state "- The type %s does not exist;" arg))
 
   let signature =
     make_command ~name:"fsig"
@@ -632,18 +747,15 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state arg ->
              try
-               let name =
-                 Qualified_identifier.make_simple (Identifier.make arg)
-                 (* TODO: Parse [arg] as a qualified identifier *)
-               in
+               let name = read_qualified_identifier state arg in
                let cid = index_of_comp_program state name in
                let entry = Store.Cid.Comp.get cid in
-               fprintf state "%a : %a;@\n" Name.pp
+               fprintf state "%a : %a;" Name.pp
                  entry.Store.Cid.Comp.Entry.name
                  (P.fmt_ppr_cmp_typ LF.Empty P.l0)
                  entry.Store.Cid.Comp.Entry.typ
              with
-             | Not_found -> fprintf state "- The function does not exist;\n"))
+             | Not_found -> fprintf state "- The function does not exist;"))
 
   let printfun =
     make_command ~name:"fdef"
@@ -651,34 +763,20 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state arg ->
              try
-               let name =
-                 Qualified_identifier.make_simple (Identifier.make arg)
-                 (* TODO: Parse [arg] as a qualified identifier *)
-               in
+               let name = read_qualified_identifier state arg in
                let cid = index_of_comp_program state name in
                let entry = Store.Cid.Comp.get cid in
                match entry.Store.Cid.Comp.Entry.prog with
-               | Option.Some (Synint.Comp.ThmValue (cid, body, _ms, _env)) ->
-                   (* FIXME: No need to construct [d] to print the
-                      function *)
-                   let d =
-                     Synint.Sgn.Theorem
-                       { identifier = Qualified_identifier.name name
-                       ; cid
-                       ; typ = entry.Store.Cid.Comp.Entry.typ
-                       ; body
-                       ; location = Location.ghost
-                       }
-                   in
-                   fprintf state "%a@\n" P.fmt_ppr_sgn_decl
-                     (Synint.Sgn.Recursive_declarations
-                        { location = Location.ghost
-                        ; declarations = List1.singleton d
-                        })
-               | _ -> fprintf state "- %s is not a function.;@\n" arg
+               | Option.Some (Synint.Comp.ThmValue (_cid, body, _ms, _env))
+                 ->
+                   let identifier = Qualified_identifier.name name in
+                   let typ = entry.Store.Cid.Comp.Entry.typ in
+                   fprintf state "%a@\n" P.fmt_ppr_theorem
+                     (identifier, body, typ)
+               | _ -> fprintf state "- %s is not a function.;" arg
              with
              | Not_found ->
-                 fprintf state "- The function %s does not exist;@\n" arg))
+                 fprintf state "- The function %s does not exist;" arg))
 
   let read_comp_expression_and_print_type state input =
     let location = Beluga_syntax.Location.initial "<interactive>" in
@@ -699,7 +797,7 @@ module Make (State : COMMAND_STATE) = struct
   let quit =
     make_command ~name:"quit" ~help:"Exit interactive mode"
       ~run:(fun state ~input:_ ->
-        fprintf state "Bye bye@\n";
+        fprintf state "Bye bye;";
         exit 0)
 
   let query =
@@ -714,10 +812,9 @@ module Make (State : COMMAND_STATE) = struct
           let name_opt = Option.map Name.make_from_identifier identifier in
           Logic.storeQuery name_opt (tA', i) Synint.LF.Empty expected tries;
           Logic.runLogic ();
-          fprintf state ";\n"
+          fprintf state ";"
         with
-        | e ->
-            fprintf state "- Error in query : %s;\n" (Printexc.to_string e))
+        | e -> fprintf state "- Error in query : %s;" (Printexc.to_string e))
 
   let get_type =
     make_command ~name:"get-type"
@@ -726,10 +823,10 @@ module Make (State : COMMAND_STATE) = struct
          emacs)"
       ~run:
         (command2 (fun state line_token column_token ->
-             let line = parse_line_number line_token in
-             let column = parse_column_number column_token in
+             let line = read_line_number state line_token in
+             let column = read_column_number state column_token in
              let typ = Typeinfo.type_of_position line column in
-             fprintf state "%s;\n" typ))
+             fprintf state "%s;" typ))
 
   let lookup_hole =
     make_command ~name:"lookuphole"
@@ -737,45 +834,47 @@ module Make (State : COMMAND_STATE) = struct
       ~run:
         (command1 (fun state strat ->
              with_hole_from_strategy_string state strat (fun (i, _) ->
-                 fprintf state "%s;\n" (HoleId.string_of_hole_id i))))
+                 fprintf state "%s;" (HoleId.string_of_hole_id i))))
 
-  let is_command str =
-    let str' = String.trim str in
-    let l = String.length str' in
-    if l >= 2 && String.equal (String.sub str' 0 2) "%:" then
-      let cmd = String.sub str' 2 (l - 2) in
-      `Cmd (String.trim cmd)
-    else `Input str
-
-  let do_command state input =
+  let parse_command input =
     let trimmed_input = String.trim input in
-    if String.is_empty trimmed_input then ()
-    else
+    let l = String.length trimmed_input in
+    if l >= 2 && String.equal (String.sub trimmed_input 0 2) "%:" then
+      let command_token = String.sub trimmed_input 2 (l - 2) in
       let command, arguments_input =
-        match String.index_from_opt trimmed_input 0 ' ' with
-        | Option.None -> (trimmed_input, "")
+        match String.index_from_opt command_token 0 ' ' with
+        | Option.None -> (command_token, "")
         | Option.Some i ->
-            let command = String.sub trimmed_input 0 i in
+            let command = String.sub command_token 0 i in
             let arguments_input =
-              String.sub trimmed_input
+              String.sub command_token
                 (i + 1 (* Discard [' '] *))
-                (String.length trimmed_input - i - 1)
+                (String.length command_token - i - 1)
             in
             (command, arguments_input)
       in
-      let command_runner =
-        match find_command_opt state ~name:command with
-        | Option.Some command ->
-            fun ~input -> run_command state command ~input
-        | Option.None ->
-            (* Default command *)
-            fun ~input -> read_comp_expression_and_print_type state input
-      in
-      try command_runner ~input:arguments_input with
-      | Command_execution_error _ as e ->
-          fprintf state "%s" (Printexc.to_string e)
-      | e ->
-          fprintf state "- Unhandled exception: %s;\n" (Printexc.to_string e)
+      `Command (command, arguments_input)
+    else if l > 0 then `Input trimmed_input
+    else `Empty
+
+  let do_command state input =
+    match parse_command input with
+    | `Input input -> (
+        try read_comp_expression_and_print_type state input with
+        | Command_execution_error _ as e ->
+            fprintf state "%s" (Printexc.to_string e)
+        | e ->
+            fprintf state "- Unhandled exception: %s;" (Printexc.to_string e)
+        )
+    | `Command (command, arguments_input) -> (
+        let command = find_command state ~name:command in
+        try run_command state command ~input:arguments_input with
+        | Command_execution_error _ as e ->
+            fprintf state "%s" (Printexc.to_string e)
+        | e ->
+            fprintf state "- Unhandled exception: %s;" (Printexc.to_string e)
+        )
+    | `Empty -> ()
 
   let print_usage state =
     fprintf state "Usage: \n";
@@ -810,25 +909,38 @@ module Make (State : COMMAND_STATE) = struct
   let register_commands state = List.iter (register_command state) commands
 end
 
-module Command_state =
-  Make_command_state (Parser.Disambiguation_state) (Parser.Disambiguation)
+module Interpreter_state =
+  Make_interpreter_state
+    (Parser.Disambiguation_state)
+    (Parser.Disambiguation)
     (Index_state.Indexing_state)
     (Index.Indexer)
     (Recsgn_state.Signature_reconstruction_state)
     (Recsgn.Signature_reconstruction)
-module Command = Make (Command_state)
+module Interpreter = Make_interpreter (Interpreter_state)
 
-let create_initial_state = Obj.magic () (* Command_state.create_state *)
+let create_initial_state () =
+  let disambiguation_state =
+    Parser.Disambiguation_state.create_initial_state ()
+  in
+  let indexing_state = Index_state.Indexing_state.create_initial_state () in
+  let signature_reconstruction_state =
+    Recsgn_state.Signature_reconstruction_state.create_initial_state
+      indexing_state
+  in
+  let state =
+    Interpreter_state.create_state Format.std_formatter disambiguation_state
+      indexing_state signature_reconstruction_state
+  in
+  Interpreter.register_commands state;
+  state
 
-(* TODO: *)
-(* TODO: Register commands *)
+type state = Interpreter.state
 
-type state = unit
+let fprintf = Interpreter.fprintf
 
-let fprintf = Obj.magic ()
+let print_usage = Interpreter.print_usage
 
-let print_usage = Obj.magic ()
+let interpret_command state ~input = Interpreter.do_command state input
 
-let interpret_command = Obj.magic ()
-
-let load = Obj.magic ()
+let load state ~filename = Interpreter_state.load state ~filename

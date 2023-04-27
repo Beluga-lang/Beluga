@@ -9,7 +9,7 @@ shopt -s nullglob
 declare FORCE_COLOR_OUTPUT=""
 declare RUN_EXAMPLES_TESTS="true"
 declare RUN_COMPILER_TESTS="true"
-declare RUN_INTERACTIVE_MODE_TESTS="" # TODO: Set to "true"
+declare RUN_INTERACTIVE_MODE_TESTS="true"
 declare RUN_HARPOON_MODE_TESTS="" # TODO: Set to "true"
 declare PRINT_HARPOON_OUTPUT_ON_FAILURE=""
 declare RESET_OUT_FILES=""

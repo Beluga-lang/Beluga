@@ -131,5 +131,6 @@ module Int = struct
 
     val fmt_ppr_cmp_thm : formatter -> Comp.thm -> unit
     val fmt_ppr_sgn_file : formatter -> Sgn.sgn_file -> unit
+    val fmt_ppr_theorem : formatter -> Identifier.t * Comp.thm * Comp.typ -> unit
   end
 end

@@ -21,5 +21,3 @@ let tuple (x : 'a) (y : 'b) : 'a * 'b = (x, y)
 (** Creates a constant function that raises the given exception. Useful when
     eliminating option-types. *)
 let throw (e : exn) : 'b -> 'a = fun _ -> raise e
-
-type void = { impossible : 'a. 'a }

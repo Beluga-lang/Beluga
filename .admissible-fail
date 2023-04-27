@@ -7,3 +7,6 @@
 ./t/interactive/test_split/meta_3.1.bel
 ./t/interactive/test_printhole-lf.bel
 ./t/interactive/test_split/deptypes.bel
+./t/interactive/test_split/sn2.bel
+./t/interactive/test_split/sn3.bel
+./t/interactive/test_split/sn-full.bel

@@ -23,8 +23,14 @@ module Make_load_state
                                       .SIGNATURE_RECONSTRUCTION_STATE)
     (Signature_reconstruction : Recsgn.SIGNATURE_RECONSTRUCTION
                                   with type state =
-                                    Signature_reconstruction_state.state) :
-  LOAD_STATE
+                                    Signature_reconstruction_state.state) : sig
+  include LOAD_STATE
+
+  val create_state :
+       Disambiguation_state.state
+    -> Signature_reconstruction_state.state
+    -> state
+end
 [@@warning "-67"]
 
 module type LOAD = sig

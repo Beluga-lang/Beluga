@@ -48,12 +48,12 @@ stratified Safe: {A: [⊢ tp]} (g: ctx) {M: [g ⊢ tm A[]]} ctype =
    | SafeT: ({S: [g ⊢ tm A[]]} [g ⊢ mstep M S] → [g ⊢ value S] → Val [⊢ A] [g ⊢ S]) → Safe [⊢ A] [g ⊢ M]
 ;
 
-inductive SafeSub: {g: ctx} (g': ctx) {$S: [g' ⊢ g]} ctype =
-  | SNil: SafeSub [] [g' ⊢ ^]
-  | SCons: SafeSub [g] [g' ⊢ $S] → Safe [⊢ A] [g' ⊢ M] → SafeSub [g, x: tm A[]] [g' ⊢ $S, M]
+inductive SafeSub: {g: ctx} (g': ctx) {$S: $[g' ⊢ g]} ctype =
+  | SNil: SafeSub [] $[g' ⊢ ^]
+  | SCons: SafeSub [g] $[g' ⊢ $S] → Safe [⊢ A] [g' ⊢ M] → SafeSub [g, x: tm A[]] $[g' ⊢ $S, M]
 ;
 
-rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {$S: [g' ⊢ g]} SafeSub [g] [g' ⊢ $S]
+rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {$S: $[g' ⊢ g]} SafeSub [g] $[g' ⊢ $S]
                          → Safe [⊢ A] [g' ⊢ M[$S]] =
 / total a (main_lemma g g' a m s rs) /
     ?;
@@ -62,5 +62,5 @@ The file input.bel has been successfully loaded;
 %:countholes
 1;
 %:intro 0
-mlam g => mlam g' => mlam A => mlam M => mlam $S => fn x9 =>
+mlam g => mlam g' => mlam A => mlam M => mlam $S => fn z1 =>
 ?;

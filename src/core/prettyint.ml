@@ -2014,6 +2014,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       Format.pp_print_newline ppf ()) entries
 
   let fmt_ppr_sgn ppf sgn = List1.iter (fmt_ppr_sgn_file ppf) sgn
+
+  let fmt_ppr_theorem ppf (identifier, body, typ) =
+    fprintf ppf "%a %a : %a =@ @[<v2>%a;@]"
+      fmt_ppr_cmp_thm_prefix body
+      Identifier.pp identifier
+      (fmt_ppr_cmp_typ LF.Empty 0) typ
+      fmt_ppr_cmp_thm body
 end (* Int.Make *)
 
 (* Default Error Pretty Printer Functor Instantiation *)

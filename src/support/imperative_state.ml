@@ -24,14 +24,11 @@ module type IMPERATIVE_STATE = sig
   val traverse_list2 :
     state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 
-  val traverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+  val iter_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
-  val traverse_list1_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
+  val iter_list1 : state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
 
-  val traverse_list2_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
+  val iter_list2 : state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
 
   val traverse_reverse_list :
     state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
@@ -42,26 +39,24 @@ module type IMPERATIVE_STATE = sig
   val traverse_reverse_list2 :
     state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 
-  val traverse_reverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+  val iter_rev_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
-  val traverse_reverse_list1_void :
+  val iter_rev_list1 :
     state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
 
-  val traverse_reverse_list2_void :
+  val iter_rev_list2 :
     state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
 
   val traverse_option :
     state -> (state -> 'a -> 'b) -> 'a Option.t -> 'b Option.t
 
-  val traverse_option_void :
-    state -> (state -> 'a -> Unit.t) -> 'a Option.t -> Unit.t
+  val iter_option : state -> (state -> 'a -> Unit.t) -> 'a Option.t -> Unit.t
 
   val seq_list : state -> (state -> 'a) List.t -> 'a List.t
 
   val seq_list1 : state -> (state -> 'a) List1.t -> 'a List1.t
 
-  val seq_list_void : state -> (state -> Unit.t) list -> unit
+  val iter_seq : state -> (state -> Unit.t) list -> unit
 end
 
 module Make (State : sig
@@ -99,21 +94,21 @@ end) : IMPERATIVE_STATE with type state = State.state = struct
     let ys = traverse_list state f (List2.tail l) in
     List2.from y1 y2 ys
 
-  let rec traverse_list_void state f l =
+  let rec iter_list state f l =
     match l with
     | [] -> ()
     | x :: xs ->
         f state x;
-        traverse_list_void state f xs
+        iter_list state f xs
 
-  let traverse_list1_void state f l =
+  let iter_list1 state f l =
     f state (List1.head l);
-    traverse_list_void state f (List1.tail l)
+    iter_list state f (List1.tail l)
 
-  let traverse_list2_void state f l =
+  let iter_list2 state f l =
     f state (List2.first l);
     f state (List2.second l);
-    traverse_list_void state f (List2.tail l)
+    iter_list state f (List2.tail l)
 
   let rec traverse_reverse_list state f l =
     match l with
@@ -134,19 +129,19 @@ end) : IMPERATIVE_STATE with type state = State.state = struct
     let y1 = f state (List2.first l) in
     List2.from y1 y2 ys
 
-  let rec traverse_reverse_list_void state f l =
+  let rec iter_rev_list state f l =
     match l with
     | [] -> ()
     | x :: xs ->
-        traverse_reverse_list_void state f xs;
+        iter_rev_list state f xs;
         f state x
 
-  let traverse_reverse_list1_void state f l =
-    traverse_reverse_list_void state f (List1.tail l);
+  let iter_rev_list1 state f l =
+    iter_rev_list state f (List1.tail l);
     f state (List1.head l)
 
-  let traverse_reverse_list2_void state f l =
-    traverse_list_void state f (List2.tail l);
+  let iter_rev_list2 state f l =
+    iter_list state f (List2.tail l);
     f state (List2.second l);
     f state (List2.first l)
 
@@ -157,7 +152,7 @@ end) : IMPERATIVE_STATE with type state = State.state = struct
         Option.some y
     | Option.None -> Option.none
 
-  let traverse_option_void state f o =
+  let iter_option state f o =
     match o with
     | Option.Some x -> f state x
     | Option.None -> ()
@@ -175,10 +170,10 @@ end) : IMPERATIVE_STATE with type state = State.state = struct
     let ys = seq_list state (List1.tail l) in
     List1.from y ys
 
-  let rec seq_list_void state xs =
+  let rec iter_seq state xs =
     match xs with
     | [] -> ()
     | x :: xs ->
         x state;
-        seq_list_void state xs
+        iter_seq state xs
 end

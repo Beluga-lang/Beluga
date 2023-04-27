@@ -158,7 +158,7 @@ struct
     | [] -> pp_identifier state name
     | _ ->
         pp_hovbox state ~indent (fun state ->
-            traverse_list_void state
+            iter_list state
               (fun state namespace ->
                 pp_identifier state namespace;
                 pp_cut state;
@@ -2254,7 +2254,7 @@ struct
             pp_semicolon state);
         add_schema_constant state identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
-        traverse_list1_void state pre_add_declaration declarations;
+        iter_list1 state pre_add_declaration declarations;
         match group_recursive_declarations declarations with
         | List1.T (first, []) ->
             pp_vbox state ~indent:0 (fun state ->

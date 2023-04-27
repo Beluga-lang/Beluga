@@ -34,14 +34,13 @@ module type IMPERATIVE_STATE = sig
   val traverse_list2 :
     state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 
-  val traverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+  (** [iter_list state f \[x1; x2; ...; xn\]] is
+      [f state x1; f state x2; ...; f state xn]. *)
+  val iter_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
-  val traverse_list1_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
+  val iter_list1 : state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
 
-  val traverse_list2_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
+  val iter_list2 : state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
 
   (** [traverse_reverse_list state f \[x1; x2; ...; xn\]] is
       [\[y1; y2; ...; yn\]] where [yi = f state xi], and [y1], [y2], ...,
@@ -56,26 +55,24 @@ module type IMPERATIVE_STATE = sig
   val traverse_reverse_list2 :
     state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 
-  val traverse_reverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+  val iter_rev_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
-  val traverse_reverse_list1_void :
+  val iter_rev_list1 :
     state -> (state -> 'a -> Unit.t) -> 'a List1.t -> Unit.t
 
-  val traverse_reverse_list2_void :
+  val iter_rev_list2 :
     state -> (state -> 'a -> Unit.t) -> 'a List2.t -> Unit.t
 
   val traverse_option :
     state -> (state -> 'a -> 'b) -> 'a Option.t -> 'b Option.t
 
-  val traverse_option_void :
-    state -> (state -> 'a -> Unit.t) -> 'a Option.t -> Unit.t
+  val iter_option : state -> (state -> 'a -> Unit.t) -> 'a Option.t -> Unit.t
 
   val seq_list : state -> (state -> 'a) List.t -> 'a List.t
 
   val seq_list1 : state -> (state -> 'a) List1.t -> 'a List1.t
 
-  val seq_list_void : state -> (state -> Unit.t) List.t -> Unit.t
+  val iter_seq : state -> (state -> Unit.t) List.t -> Unit.t
 end
 
 (** Functor building an implementation of {!IMPERATIVE_STATE} for a given

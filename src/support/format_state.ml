@@ -78,8 +78,7 @@ module type S = sig
 
   val traverse_list : state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
 
-  val traverse_list_void :
-    state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
+  val iter_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
   val traverse_list1 :
     state -> (state -> 'a -> 'b) -> 'a List1.t -> 'b List1.t

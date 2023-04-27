@@ -41,6 +41,4 @@ let tuple (x : 'a) (y : 'b) : 'a * 'b = (x, y)
     eliminating option-types. *)
 let throw (e : exn) : 'b -> 'a = fun _ -> raise e
 
-let on f : ('b -> 'b -> 'c) -> 'a -> 'a -> 'c = fun g x y -> g (f x) (f y)
-
 type void = { impossible : 'a. 'a }

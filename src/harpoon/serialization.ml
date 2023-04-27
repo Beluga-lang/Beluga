@@ -53,7 +53,7 @@ let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) 
            dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
-           |> List.sort (Misc.on Pair.fst Location.compare_start)
+           |> List.sort (fun (l1, _) (l2, _) -> Location.compare_start l1 l2)
            |> List.iter
                 begin fun (loc, printer) ->
                 let start_offset = Location.start_offset loc in

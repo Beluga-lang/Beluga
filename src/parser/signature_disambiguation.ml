@@ -442,7 +442,7 @@ struct
           { location; arguments = arguments' }
 
   and disambiguate_mutually_recursive_declarations state declarations =
-    traverse_list1_void state add_declaration declarations;
+    iter_list1 state add_declaration declarations;
     let declarations =
       traverse_list1 state disambiguate_declaration declarations
     in

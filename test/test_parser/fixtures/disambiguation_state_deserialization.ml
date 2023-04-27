@@ -72,7 +72,7 @@ let rec add_json_entries state json =
   let open Disambiguation_state in
   let open Yojson.Safe.Util in
   let entries = json |> member "entries" |> to_list in
-  traverse_list_void state add_json_entry entries
+  iter_list state add_json_entry entries
 
 and add_json_entry state json =
   let open Disambiguation_state in

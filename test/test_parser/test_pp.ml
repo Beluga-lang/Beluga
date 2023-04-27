@@ -59,7 +59,7 @@ let save_signature_files_pp (List1.T (x, xs)) =
         save_signature_file_pp state x;
         state)
   in
-  traverse_list_void state save_signature_file_pp xs
+  iter_list state save_signature_file_pp xs
 
 let pp_and_parse_signature_files (List1.T (x, xs)) =
   let buffer = Buffer.create 1024 in

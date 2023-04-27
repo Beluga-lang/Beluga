@@ -21,7 +21,7 @@ let pp_signature_to_files ~directory signature =
         Format.pp_print_newline ppf ();
         state)
   in
-  traverse_list_void state
+  iter_list state
     (fun state signature_file ->
       let html_page =
         location_html_filename signature_file.Synext.Signature.location

@@ -4,9 +4,6 @@ include module type of Stdlib.Option
     [Some v], and [none_handler ()] otherwise. *)
 val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a t -> 'b
 
-(** [get' exn o] is [v] if [o] is [Some v], and otherwise [exn] is raised. *)
-val get' : exn -> 'a t -> 'a
-
 (** [get_or_else f o] is [f ()] if [o] is [None] and [v] if [o] is [Some v]. *)
 val get_or_else : (unit -> 'a) -> 'a t -> 'a
 

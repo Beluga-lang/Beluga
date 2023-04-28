@@ -45,7 +45,11 @@ let init filename =
       init_formatter (Format.formatter_of_out_channel out_channel)
 
 let print' f =
-  let ppf = Option.get' Debug_not_initialized !out in
+  let ppf =
+    match !out with
+    | Option.None -> raise Debug_not_initialized
+    | Option.Some out -> out
+  in
   let fmt x = Format.fprintf ppf (x ^^ "@\n") in
   (try f { fmt } with
   | exn ->

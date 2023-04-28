@@ -1524,20 +1524,17 @@ let prefixSchElem (SchElem (cSome1, typRec1)) (SchElem (cSome2, typRec2)) =
 (* ************************************************* *)
 
 let mctxLookupDep cD k =
-  Context.lookup' cD k
-  |> Option.get'
-       (Error.Violation
-          (Format.asprintf
-            "Meta-variable out of bounds -- looking for %d in context of length %d"
-            k
-            (Context.length cD)
-          )
-       )
-  |> function
-    | Decl (u, mtyp, plicity, inductivity) ->
-       (u, cnormMTyp (mtyp, MShift k), plicity, inductivity)
-    | DeclOpt _ ->
-       Error.raise_violation "Expected declaration to have a type"
+  match Context.lookup' cD k with
+  | Option.None ->
+      Error.raise_violation
+        (Format.asprintf
+           "Meta-variable out of bounds -- looking for %d in context of \
+            length %d"
+           k (Context.length cD))
+  | Option.Some (Decl (u, mtyp, plicity, inductivity)) ->
+      (u, cnormMTyp (mtyp, MShift k), plicity, inductivity)
+  | Option.Some (DeclOpt _) ->
+      Error.raise_violation "Expected declaration to have a type"
 
 let mctxLookup cD k =
   let (u, tp, _, _) = mctxLookupDep cD k in

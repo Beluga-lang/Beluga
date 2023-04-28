@@ -72,19 +72,6 @@ module type S = sig
   val pp_utf_8 : state -> String.t -> Unit.t
 
   val pp_utf_8_text : state -> String.t -> Unit.t
-
-  val traverse_option :
-    state -> (state -> 'a -> 'b) -> 'a Option.t -> 'b Option.t
-
-  val traverse_list : state -> (state -> 'a -> 'b) -> 'a List.t -> 'b List.t
-
-  val iter_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
-
-  val traverse_list1 :
-    state -> (state -> 'a -> 'b) -> 'a List1.t -> 'b List1.t
-
-  val traverse_list2 :
-    state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 end
 
 module Make (State : sig

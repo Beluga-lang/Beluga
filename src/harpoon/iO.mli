@@ -47,6 +47,6 @@ val default_prompt_source : string
  *)
 val parsed_prompt : ?source : string ->
                     t ->
-                    string -> string option ->
+                    msg:string -> history_file:string option ->
                     'a Beluga_parser.Parser.t ->
                     'a

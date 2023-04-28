@@ -232,8 +232,8 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
     IO.printf io "Configuring theorem #%d@\n" i;
     (* prompt for name, and allow using empty to signal we're done. *)
     match
-      IO.parsed_prompt io "  Name of theorem (:quit or empty to finish): "
-        None
+      IO.parsed_prompt io ~msg:"  Name of theorem (:quit or empty to finish): "
+        ~history_file:None
         (Obj.magic ()) (* TODO: Parse [":quit"] or [<identifier>] *)
     with
     | None | Some `quit -> []
@@ -245,7 +245,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          Reconstruct.reset_fvarCnstr ();
          Store.FCVar.clear ();
          (* Now prompt for the statement, and disallow empty to signal we're done. *)
-         IO.parsed_prompt io "  Statement of theorem: " None
+         IO.parsed_prompt io ~msg:"  Statement of theorem: " ~history_file:None
            (Obj.magic ())
        in
        dprintf begin fun p ->

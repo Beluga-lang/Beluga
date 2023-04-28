@@ -377,4 +377,9 @@ module Indexing_state : sig
 
   (** [clear_state state] resets [state] to its initial state. *)
   val clear_state : state -> Unit.t
+
+  (** [snapshot_state state] is a surface copy of [state], meaning that it is
+      effectively a frozen copy of [state]. Only the latest bindings in
+      [state] are kept. *)
+  val snapshot_state : state -> state
 end

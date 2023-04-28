@@ -213,6 +213,15 @@ let rec mem_nested namespaces identifier tree =
 let mem qualified_identifier tree =
   with_namespaces_and_identifier qualified_identifier mem_nested tree
 
+let rec snapshot tree =
+  let tree' = Identifier.Hashtbl.create (Identifier.Hashtbl.length tree) in
+  Identifier.Hashtbl.iter
+    (fun key { entry; subtree } ->
+      let subtree' = snapshot subtree in
+      Identifier.Hashtbl.add tree' key { entry; subtree = subtree' })
+    tree;
+  tree'
+
 let size =
   let rec size_tl tree acc =
     Identifier.Hashtbl.fold

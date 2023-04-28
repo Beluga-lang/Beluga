@@ -141,6 +141,22 @@ val replace :
 
 val mem : Qualified_identifier.t -> 'a t -> Bool.t
 
+(** [snapshot tree] is a duplicate of [tree] that only retains the latest
+    bindings. The values are kept as is. Snapshots of the subtrees in [tree]
+    are also taken. A snapshot is not a deep copy precisely because the old
+    bindings in the hashtables are not carried over.
+
+    A snapshot of a binding tree is essentially a frozen duplicate of it.
+    This means that bindings in the snapshot cannot be removed in the same
+    way that they are in the original tree because the previous bindings for
+    any key are not copied over to the snapshot.
+
+    This is used to produce snapshots of the referencing environment during a
+    traversal of a Beluga signature at the point of declaration of Harpoon
+    programs, so that we may revisit the referencing environment at those
+    points later. *)
+val snapshot : 'a t -> 'a t
+
 (** [size tree] is the total number of key-value pairs in [tree]. *)
 val size : 'a t -> Int.t
 

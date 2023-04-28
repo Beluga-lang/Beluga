@@ -67,11 +67,14 @@ module type INTERPRETER_STATE = sig
 
   val make_command :
        name:String.t
-    -> help:String.t
+    -> usage:String.t
+    -> description:String.t
     -> run:(state -> input:String.t -> Unit.t)
     -> command
 
-  val command_help : command -> String.t
+  val command_usage : command -> String.t
+
+  val command_description : command -> String.t
 
   val run_command : state -> command -> input:String.t -> Unit.t
 
@@ -79,8 +82,7 @@ module type INTERPRETER_STATE = sig
 
   val find_command : state -> name:String.t -> command
 
-  val iter_commands :
-    state -> (command_name:String.t -> command:command -> Unit.t) -> Unit.t
+  val iter_commands : state -> (command -> Unit.t) -> Unit.t
 
   val fprintf : state -> ('a, Format.formatter, Unit.t) format -> 'a
 
@@ -173,7 +175,9 @@ struct
 
   and command =
     { name : String.t  (** The command's name. *)
-    ; help : String.t
+    ; usage : String.t
+          (** An example usage of the command to show its syntax. *)
+    ; description : String.t
           (** The command's help message, which describes how to use the
               command. *)
     ; run : state -> input:String.t -> Unit.t
@@ -204,9 +208,12 @@ struct
     end) :
       Imperative_state.IMPERATIVE_STATE with type state := state)
 
-  let make_command ~name ~help ~run = { name; help; run }
+  let make_command ~name ~usage ~description ~run =
+    { name; usage; description; run }
 
-  let command_help command = command.help
+  let command_usage command = command.usage
+
+  let command_description command = command.description
 
   let run_command state command ~input = command.run state ~input
 
@@ -225,7 +232,7 @@ struct
 
   let iter_commands state f =
     String.Hashtbl.iter
-      (fun command_name command -> f ~command_name ~command)
+      (fun _command_name command -> f command)
       state.commands
 
   let fprintf state fmt = Format.fprintf state.ppf (fmt ^^ "@.")
@@ -437,25 +444,29 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
         f state a1 a2)
 
   let countholes =
-    make_command ~name:"countholes" ~help:"Print the total number of holes"
+    make_command ~name:"countholes" ~usage:"countholes"
+      ~description:"Print the total number of holes"
       ~run:(command0 (fun state -> fprintf state "%d;" (Holes.count ())))
 
   let chatteron =
-    make_command ~name:"chatteron" ~help:"Turn on the chatter"
+    make_command ~name:"chatteron" ~usage:"chatteron"
+      ~description:"Turn on the chatter"
       ~run:
         (command0 (fun state ->
              Chatter.level := 1;
              fprintf state "The chatter is on now;"))
 
   let chatteroff =
-    make_command ~name:"chatteroff" ~help:"Turn off the chatter"
+    make_command ~name:"chatteroff" ~usage:"chatteroff"
+      ~description:"Turn off the chatter"
       ~run:
         (command0 (fun state ->
              Chatter.level := 0;
              fprintf state "The chatter is off now;"))
 
   let types =
-    make_command ~name:"types" ~help:"Print out all types currently defined"
+    make_command ~name:"types" ~usage:"types"
+      ~description:"Print out all types currently defined"
       ~run:
         (command0 (fun state ->
              let entrylist =
@@ -472,7 +483,7 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
                entrylist))
 
   let reset =
-    make_command ~name:"reset" ~help:"Reset the store"
+    make_command ~name:"reset" ~usage:"reset" ~description:"Reset the store."
       ~run:
         (command0 (fun state ->
              Store.clear ();
@@ -481,17 +492,19 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
              fprintf state "Reset successful;"))
 
   let clearholes =
-    make_command ~name:"clearholes" ~help:"Clear all computation level holes"
+    make_command ~name:"clearholes" ~usage:"clearholes"
+      ~description:"Clear all computation level holes."
       ~run:(command0 (fun _state -> Holes.clear ()))
 
   let reload =
-    make_command ~name:"reload"
-      ~help:"Clears the interpreter state and repeats the last load command."
+    make_command ~name:"reload" ~usage:"reload"
+      ~description:
+        "Clear the interpreter state and repeat the last load command."
       ~run:(command0 (fun state -> ignore (reload state : Synint.Sgn.sgn)))
 
   let load =
-    make_command ~name:"load"
-      ~help:"Clears the interpreter state and loads the file \"filename\"."
+    make_command ~name:"load" ~usage:"load FILE"
+      ~description:"Clear the interpreter state and loads the file."
       ~run:
         (command1 (fun state filename ->
              ignore (load state ~filename : Synint.Sgn.sgn);
@@ -572,20 +585,20 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
       p
 
   let printhole =
-    make_command ~name:"printhole"
-      ~help:
+    make_command ~name:"printhole" ~usage:"printhole N"
+      ~description:
         "Print out all the information of the i-th hole passed as a \
-         parameter"
+         parameter."
       ~run:
         (command1 (fun state s ->
              with_hole_from_strategy_string state s
                (fprintf state "%a;" Interactive.fmt_ppr_hole)))
 
   let lochole =
-    make_command ~name:"lochole"
-      ~help:
-        "Print out the location information of the i-th hole passed as a \
-         parameter"
+    make_command ~name:"lochole" ~usage:"lochole N"
+      ~description:
+        "Print out the location information of the N-th hole passed as a \
+         parameter."
       ~run:
         (command1 (fun state s ->
              with_hole_from_strategy_string state s
@@ -601,8 +614,8 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
                    start_line start_bol start_off stop_line stop_bol stop_off)))
 
   let solvelfhole =
-    make_command ~name:"solve-lf-hole"
-      ~help:"Use logic programming to solve an LF hole"
+    make_command ~name:"solve-lf-hole" ~usage:"solve-lf-hole N"
+      ~description:"Use logic programming to solve an LF hole."
       ~run:
         (command1 (fun state name ->
              with_hole_from_strategy_string state name
@@ -643,8 +656,9 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
                     fprintf state ";"))))
 
   let constructors =
-    make_command ~name:"constructors"
-      ~help:"Print all constructors of a given type passed as a parameter"
+    make_command ~name:"constructors" ~usage:"constructors IDENTIFIER"
+      ~description:
+        "Print all constructors of a given type passed as a parameter."
       ~run:
         (command1 (fun state arg ->
              let name = read_qualified_identifier state arg in
@@ -665,13 +679,14 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
                termlist))
 
   let print_helpme state =
-    iter_commands state (fun ~command_name ~command ->
-        let help = command_help command in
-        fprintf state "%%:%20s\t %s" command_name help)
+    iter_commands state (fun command ->
+        let usage = command_usage command in
+        let description = command_description command in
+        fprintf state "%%:%30s\t %s" usage description)
 
   let helpme =
-    make_command ~name:"help"
-      ~help:"list all available commands with a short description"
+    make_command ~name:"help" ~usage:"help"
+      ~description:"List all available commands with a short description."
       ~run:(command0 print_helpme)
 
   (** Actually does a split on a variable in a hole.
@@ -688,10 +703,9 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
             fprintf state "%a;" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp)
 
   let split =
-    make_command ~name:"split"
-      ~help:
-        "`split H V` tries to split on variable V in hole H (specified by \
-         name or number)"
+    make_command ~name:"split" ~usage:"split H V"
+      ~description:
+        "Try to split on variable V in hole H (specified by name or number)."
       ~run:
         (command2 (fun state strat_s var ->
              with_hole_from_strategy_string state strat_s
@@ -699,8 +713,8 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
                     do_split state hi var))))
 
   let intro =
-    make_command ~name:"intro"
-      ~help:"- intro n tries to introduce variables in the nth hole"
+    make_command ~name:"intro" ~usage:"intro N"
+      ~description:"Try to introduce variables in the N-th hole."
       ~run:
         (command1 (fun state strat ->
              with_hole_from_strategy_string state strat
@@ -714,9 +728,10 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
 
   let compconst =
     make_command ~name:"constructors-comp"
-      ~help:
+      ~usage:"constructors-comp IDENTIFIER"
+      ~description:
         "Print all constructors of a given computational datatype passed as \
-         a parameter"
+         a parameter."
       ~run:
         (command1 (fun state arg ->
              let name = read_qualified_identifier state arg in
@@ -739,11 +754,11 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
              with
              | Not_found -> fprintf state "- The type %s does not exist;" arg))
 
-  let signature =
-    make_command ~name:"fsig"
-      ~help:
-        "fsig e : Prints the signature of the function e, if such function \
-         is currently defined"
+  let function_signature =
+    make_command ~name:"fsig" ~usage:"fsig IDENTIFIER"
+      ~description:
+        "Print the signature of the function if such a function is \
+         currently defined."
       ~run:
         (command1 (fun state arg ->
              try
@@ -758,8 +773,8 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
              | Not_found -> fprintf state "- The function does not exist;"))
 
   let printfun =
-    make_command ~name:"fdef"
-      ~help:"Print the type of the function with the given name"
+    make_command ~name:"fdef" ~usage:"fdef IDENTIFIER"
+      ~description:"Print the type of the function with the given name."
       ~run:
         (command1 (fun state arg ->
              try
@@ -790,19 +805,20 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
       tau
 
   let print_type =
-    make_command ~name:"type"
-      ~help:"Print the type of the input computation-level expression"
+    make_command ~name:"type" ~usage:"print EXP"
+      ~description:
+        "Print the type of the input computation-level expression."
       ~run:(command1 read_comp_expression_and_print_type)
 
   let quit =
-    make_command ~name:"quit" ~help:"Exit interactive mode"
-      ~run:(fun state ~input:_ ->
+    make_command ~name:"quit" ~usage:"quit"
+      ~description:"Exit interactive mode" ~run:(fun state ~input:_ ->
         fprintf state "Bye bye;";
         exit 0)
 
   let query =
-    make_command ~name:"query"
-      ~help:"%:query EXPECTED TRIES TYP.\tQuery solutions to a given type"
+    make_command ~name:"query" ~usage:"query EXPECTED TRIES TYP"
+      ~description:"Query solutions to a given type."
       ~run:(fun state ~input ->
         try
           let location = Location.initial "<query>" in
@@ -817,10 +833,8 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
         | e -> fprintf state "- Error in query : %s;" (Printexc.to_string e))
 
   let get_type =
-    make_command ~name:"get-type"
-      ~help:
-        "get-type [line] [column] Get the type at a location (for use in \
-         emacs)"
+    make_command ~name:"get-type" ~usage:"get-type LINE COLUMN"
+      ~description:"Get the type at a location (for use in emacs)."
       ~run:
         (command2 (fun state line_token column_token ->
              let line = read_line_number state line_token in
@@ -829,8 +843,8 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
              fprintf state "%s;" typ))
 
   let lookup_hole =
-    make_command ~name:"lookuphole"
-      ~help:"looks up a hole's number by its name"
+    make_command ~name:"lookuphole" ~usage:"lookuphole N"
+      ~description:"Look up a hole's number by its name."
       ~run:
         (command1 (fun state strat ->
              with_hole_from_strategy_string state strat (fun (i, _) ->
@@ -895,7 +909,7 @@ module Make_interpreter (State : INTERPRETER_STATE) = struct
     ; split
     ; intro
     ; compconst
-    ; signature
+    ; function_signature
     ; printfun
     ; query
     ; get_type

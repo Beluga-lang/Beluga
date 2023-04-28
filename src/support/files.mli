@@ -1,8 +1,4 @@
-(** Miscellaneous file-handling utilities *)
-
-(** [read_lines filename] is the list of ['\n'] separated lines read from the
-    file at [filename]. *)
-val read_lines : string -> string list
+(** File-handling utilities *)
 
 (** [with_temp_file temp_dir basename f] opens a temporary file [basename] in
     directory [temp_dir] and runs [f] with the path and output channel to

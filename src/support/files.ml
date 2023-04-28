@@ -1,7 +1,3 @@
-let read_lines file =
-  let contents = In_channel.with_open_bin file In_channel.input_all in
-  String.split_on_char '\n' contents
-
 let with_temp_file temp_dir basename f =
   let path, out = Filename.open_temp_file ~temp_dir basename "" in
   Fun.protect

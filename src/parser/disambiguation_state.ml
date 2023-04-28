@@ -1461,4 +1461,33 @@ module Disambiguation_state = struct
     | (exception Unbound_namespace _)
     | (exception Unbound_qualified_identifier _) ->
         Option.none
+
+  let snapshot_scope = function
+    | Plain_scope { bindings } ->
+        let bindings' = Binding_tree.snapshot bindings in
+        Plain_scope { bindings = bindings' }
+    | Pattern_scope
+        { pattern_bindings; pattern_variables_rev; expression_bindings } ->
+        let pattern_bindings' = Binding_tree.snapshot pattern_bindings in
+        let expression_bindings' =
+          Binding_tree.snapshot expression_bindings
+        in
+        Pattern_scope
+          { pattern_bindings = pattern_bindings'
+          ; pattern_variables_rev (* Immutable *)
+          ; expression_bindings = expression_bindings'
+          }
+    | Module_scope { bindings; declarations } ->
+        let bindings' = Binding_tree.snapshot bindings in
+        let declarations' = Binding_tree.snapshot declarations in
+        Module_scope { bindings = bindings'; declarations = declarations' }
+
+  let snapshot_scopes scopes = List1.map snapshot_scope scopes
+
+  let snapshot_state { scopes; default_associativity; default_precedence } =
+    let scopes' = snapshot_scopes scopes in
+    { scopes = scopes'
+    ; default_associativity (* Immutable *)
+    ; default_precedence (* Immutable *)
+    }
 end

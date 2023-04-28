@@ -55,6 +55,8 @@ module type IMPERATIVE_STATE = sig
   val traverse_reverse_list2 :
     state -> (state -> 'a -> 'b) -> 'a List2.t -> 'b List2.t
 
+  (** [iter_rev_list state f \[x1; x2; ...; xn\]] is
+      [f state xn; f state x(n-1); ...; f state x1]. *)
   val iter_rev_list : state -> (state -> 'a -> Unit.t) -> 'a List.t -> Unit.t
 
   val iter_rev_list1 :

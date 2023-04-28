@@ -9,6 +9,7 @@ module type BASE_PRECEDENCE = sig
 end
 
 module type PRECEDENCE_STATE = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   val lookup_operator_precedence :
@@ -16,6 +17,7 @@ module type PRECEDENCE_STATE = sig
 end
 
 module Make_precedences (S : PRECEDENCE_STATE) : sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE with type state = S.state
 
   (** {1 Precedence of LF Syntax} *)

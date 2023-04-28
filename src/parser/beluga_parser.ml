@@ -89,6 +89,7 @@ end
 
 module type DISAMBIGUATION_STATE = Disambiguation_state.DISAMBIGUATION_STATE
 
+module Disambiguation_state = Disambiguation_state
 module Application_disambiguation = Application_disambiguation
 module Lf_disambiguation = Lf_disambiguation
 module Clf_disambiguation = Clf_disambiguation

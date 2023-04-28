@@ -2,6 +2,7 @@ open Support
 open Beluga_syntax.Syncom
 
 module type SIGNATURE_RECONSTRUCTION_STATE = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   val get_leftover_vars :

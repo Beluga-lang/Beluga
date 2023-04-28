@@ -47,7 +47,7 @@ let read_configuration_file ~filename =
       let tokens_seq =
         Seq.of_gen (fun () -> tokenize_configuration_file lexer_buffer)
       in
-      (* Consume the token sequence *)
+      (* Consume the entire token sequence while the input channel is open *)
       Seq.to_list tokens_seq)
 
 let read_configuration_file_paths ~filename =

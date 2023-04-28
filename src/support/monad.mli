@@ -1,3 +1,8 @@
+(** Definition of monadic types, which are abstract descriptors of
+    computations.
+
+    For better performance, avoid using monads. *)
+
 (** The abstract datatype of actions.
 
     Instances of {!MONAD} should satisfy the following laws for

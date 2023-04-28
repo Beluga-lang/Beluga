@@ -212,7 +212,7 @@ end
 
     Additionally, free contextual LF variables occurring in a
     computation-level pattern are considered as pattern variables. That is,
-    free variables occuring in a type annotation to a computation-level
+    free variables occurring in a type annotation to a computation-level
     pattern count as pattern variables, and are added to the case analysis
     branch's meta-context.
 
@@ -531,7 +531,7 @@ module CLF = struct
         - [m1, m2, ..., mn] if [head = Head.None] and
           [terms = \[m1; m2; ...; mn\]]
         - [..] if [head = Head.Identity _] and [terms = \[\]]
-        - [.., m1, m2, ..., mn] if [head = Head.Identitiy _] and
+        - [.., m1, m2, ..., mn] if [head = Head.Identity _] and
           [terms = \[m1; m2; ...; mn\]]
         - [$S] if
           [head = Head.Substitution_variable { identifier = "$S"; closure = Option.None; _ }]
@@ -1018,7 +1018,7 @@ module Comp = struct
               If
               [applicand = Typ.Inductive_typ_constant | Typ.Stratified_typ_constant _ | Typ.Coinductive_typ_constant _ | Typ.Abbreviation_typ_constant _]
               with resolved operator description [operator], then
-              [List1.leis:issue is:open ngth arguments = Operator.arity operator]. *)
+              [List1.nth arguments = Operator.arity operator]. *)
   end =
     Typ
 
@@ -1114,7 +1114,7 @@ module Comp = struct
           ; label : Identifier.t Option.t
           }
           (** [Hole { label = Option.Some "x"; _ }] is the hole [?x] ranging
-              over computatiion-level expressions. *)
+              over computation-level expressions. *)
       | Box_hole of { location : Location.t }
           (** [Box_hole _] is the hole [_] ranging over meta-objects. *)
       | Application of
@@ -1867,7 +1867,7 @@ type signature_global_pragma = Signature.Global_pragma.t
 (** @canonical Synext.signature_totality_declaration *)
 type signature_totality_declaration = Signature.Totality.Declaration.t
 
-(** @canonical Synext.'argument *)
+(** @canonical Synext.signature_totality_order *)
 type 'argument signature_totality_order =
   'argument Signature.Totality.Order.t
 

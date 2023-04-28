@@ -1,3 +1,5 @@
+(** Utilities for raising and catching exceptions. *)
+
 open Support
 
 (** [raise exn] raises [exn]. *)

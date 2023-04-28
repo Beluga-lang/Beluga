@@ -1,3 +1,6 @@
+(** Self-contained syntactic elements common to one or more of Beluga's
+    syntaxes. *)
+
 (** {1 Operators} *)
 
 module Associativity = Associativity

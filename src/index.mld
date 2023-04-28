@@ -1,11 +1,31 @@
 {0 Beluga}
 
+At a surface level, the Beluga implementation produces two executables:
+
++ The Beluga CLI
++ The Harpoon CLI
+
+The Beluga CLI includes a legacy interactive mode interpreter. This is used
+by the [replay] executable to interactively test some of the functionalities
+of the core Beluga system. This interactive system is mostly superseded by
+Harpoon.
+
 {1 Private Libraries}
 
-- {!module:Beluga}
-- {!module:Beluga_syntax}
-- {!module:Beluga_parser}
-- {!module:Beluga_html}
-- {!module:Harpoon}
-- {!module:Support}
-- {!module:Optparser}
+The Beluga system is comprised of multiple private libraries. These are listed
+below in topological order of dependency.
+
+- {!module:Support} is the library of miscellaneous utility functions, data
+  structures, and extensions to imported libraries.
+- {!module:Optparser} is a library for parsing CLI arguments using combinators.
+- {!module:Beluga_syntax} is the library defining the data types for the
+  various syntaxes and common syntactic elements of Beluga and Harpoon.
+- {!module:Beluga_parser} is the library for parsing Beluga signatures and
+  Harpoon commands.
+- {!module:Beluga_html} is a library for pretty-printing external Beluga
+  signatures to HTML.
+- {!module:Beluga} is the core library of Beluga, which deals with signature
+  reconstruction, type-checking, coverage-checking and termination-checking.
+  It also features modules handling the legacy interactive mode for Beluga, as
+  well as proof search using logic programming.
+- {!module:Harpoon} is the new interactive frontend to Beluga.

@@ -23,6 +23,7 @@ open Support
 open Beluga_syntax
 
 module type INDEXER = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   (** [index_open_lf_kind state kind] is [kind] with bound variables and

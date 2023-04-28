@@ -1,3 +1,10 @@
+(** Constant IDs for referring to constants in the global mutable store.
+
+    These are essentially primary keys in a relational database. *)
+
+(** Definition of IDs as an abstract integer.
+
+    This prevents mixing up the various ID types. *)
 module type ID = sig
   type t
 

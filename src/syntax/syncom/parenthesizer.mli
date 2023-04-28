@@ -14,6 +14,7 @@ open Support
 (** Module type for stateful helper printers for parenthesizing applications
     with user-defined operators. *)
 module type PARENTHESIZER = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   type precedence
@@ -133,12 +134,12 @@ module type PARENTHESIZER = sig
       arguments.
 
       - [~guard_operator state applicand] is [`Operator operator] if
-        [applicand] is a prefixed operator, and [`Operand] otherwise.
+        [applicand] is an operator, and [`Operand] otherwise.
       - [~guard_operator_application state argument] is
         [`Operator_application operator] if [argument] is the application of
-        a prefixed operator, [`Operator operator] if [operator] is an
-        operator in prefix notation (which requires parentheses), and
-        [`Operand] otherwise.
+        an operator, [`Operator operator] if [operator] is an operator in
+        forced prefix notation (which requires parentheses), and [`Operand]
+        otherwise.
       - [~precedence_of_applicand state applicand] is the precedence of
         [applicand].
       - [~precedence_of_argument state argument] is the precedence of

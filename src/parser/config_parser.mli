@@ -1,7 +1,24 @@
 (** Reader for configuration files for Beluga signatures.
 
-    A configuration file is a list of Beluga source files, or nested
-    configuration files. *)
+    A configuration file is a list of Beluga source file names (with file
+    extension [.bel]) or configuration file names (with file extension
+    [.cfg]). Configuration files are read recursively.
+
+    For instance, the following is a valid configuration file:
+
+    {v
+      % Definitions
+      syntax.bel
+      join.bel
+
+      % Theorems
+      context_functions.bel
+      lemma1.bel
+      substitution.bel
+      judgments.bel
+      substitution_functions.bel
+      subst_split.bel
+    v} *)
 
 open Beluga_syntax
 

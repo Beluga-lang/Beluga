@@ -1,3 +1,6 @@
+(** Definition and implementation of the state required to disambiguate the
+    Beluga syntax from the parser AST to the external AST. *)
+
 open Support
 open Beluga_syntax.Syncom
 
@@ -111,6 +114,7 @@ module type DISAMBIGUATION_STATE = sig
   (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
+  (** Recorded data on bindings in Beluga signatures. *)
   module Entry : ENTRY
 
   (** {1 Variables} *)
@@ -198,19 +202,26 @@ module type DISAMBIGUATION_STATE = sig
       running [m] in the local state derived from [state] having [identifier]
       as a bound LF variable.
 
-      When disambiguating a pattern, [identifier] is additionally added as an
-      inner pattern binding.
+      When disambiguating a pattern, [identifier] is also added as an inner
+      pattern binding.
 
       For example, the disambiguation of an LF term-level lambda-abstraction
       [\x. m] requires that the parameter [x] is locally added in scope when
       disambiguating the body [m]. This is achieved like this:
 
       {[
-        with_bound_lf_variable x (disambiguate_lf_term m)
+        with_bound_lf_variable state x (fun state ->
+            disambiguate_lf_term state m)
       ]} *)
   val with_bound_lf_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_meta_variable state ?location identifier m] is like
+      {!val:with_bound_lf_variable}, except that [identifier] is added to the
+      state as a bound meta-variable.
+
+      When disambiguating a pattern, [identifier] is also added as an inner
+      pattern binding. *)
   val with_bound_meta_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
@@ -223,9 +234,24 @@ module type DISAMBIGUATION_STATE = sig
   val with_bound_context_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_contextual_variable state ?location identifier m] is like
+      {!val:with_bound_lf_variable}, except that [identifier] is added to the
+      state as a bound contextual variable. This is different from
+      {!val:with_bound_meta_variable}, {!val:with_bound_parameter_variable},
+      {!with_bound_substitution_variable} and
+      {!val:with_bound_context_variable} in that it is unknown whether
+      [identifier] should be a meta-variable, parameter variable,
+      substitution variable or context variable. This is used in particular
+      for [mlam] expressions.
+
+      When disambiguating a pattern, [identifier] is also added as an inner
+      pattern binding. *)
   val with_bound_contextual_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_computation_variable state ?location identifier m] is like
+      {!val:with_bound_lf_variable}, except that [identifier] is added to the
+      state as a bound computation-level variable. *)
   val with_bound_computation_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
@@ -305,7 +331,14 @@ module type DISAMBIGUATION_STATE = sig
   val with_parent_scope : state -> (state -> 'a) -> 'a
 
   (** [with_bindings_checkpoint state m] runs [m] with a checkpoint on the
-      bindings' state to backtrack to in case [m] raises an exception. *)
+      bindings' state to backtrack to in case [m] raises an exception.
+
+      This is used for backtracking when disambiguating old-style LF
+      type-level and term-level declarations (i.e., [x : X] where [X] may be
+      an LF kind or an LF type).
+
+      This is also used in REPLs to safely run parsing functions and recover
+      the state in case of a raised exception during disambiguation. *)
   val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
   (** {1 Constants} *)
@@ -484,6 +517,8 @@ module type DISAMBIGUATION_STATE = sig
     -> Unit.t
 end
 
+(** Concrete implementation of {!module-type:DISAMBIGUATION_STATE} backed by
+    a mutable data structure. *)
 module Disambiguation_state : sig
   (** @closed *)
   include DISAMBIGUATION_STATE

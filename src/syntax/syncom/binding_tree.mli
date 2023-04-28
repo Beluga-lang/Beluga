@@ -1,12 +1,14 @@
 (** Mutable map data structure from namespaced identifiers to values.
 
     A binding tree is a tree of identifiers mapped to values, like in a map
-    data structure. Identifiers may be used as keys for toplevel entries in
-    the tree, and qualified identifiers may be used as keys for all entries
-    in the tree (toplevel or nested in namespaces). Hence, a lookup in a
-    binding tree traverses the tree from the root to an internal node or leaf
-    by sequentially traversing the list of identifier segments in the
-    qualified identifier. *)
+    data structure. Entries in a binding tree are toplevel if they are direct
+    children of the tree root (i.e., they are not entries nested in
+    namespaces). Identifiers may be used as keys for toplevel entries in the
+    tree, and qualified identifiers may be used as keys for all entries in
+    the tree (toplevel or nested in namespaces). Hence, a lookup in a binding
+    tree traverses the tree from the root to an internal node or leaf by
+    sequentially traversing the list of identifier segments in the qualified
+    identifier. *)
 
 open Support
 

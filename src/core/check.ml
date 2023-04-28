@@ -1593,6 +1593,11 @@ module Comp = struct
           | None ->
              Error.raise_violation "[check] [proof] no cid to register subgoal with"
           | Some cid ->
+             (* FIXME(Marc-Antoine): The proof state in the signature
+                somehow differs from the one during this type-checking
+                function. In particular, some variable names are different,
+                and some induction annotations are missing in the signature's
+                proof state. This should not be the case. *)
              let g =
                { g with
                  context = { cD; cG; cIH };

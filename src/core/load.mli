@@ -3,6 +3,7 @@ open Beluga_syntax
 open Beluga_parser
 
 module type LOAD_STATE = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   val read_signature_file :
@@ -34,6 +35,7 @@ end
 [@@warning "-67"]
 
 module type LOAD = sig
+  (** @closed *)
   include Imperative_state.IMPERATIVE_STATE
 
   val load : state -> String.t -> String.t List.t * Synint.Sgn.sgn

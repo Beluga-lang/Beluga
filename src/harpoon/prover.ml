@@ -4,7 +4,7 @@ open Beluga
 open Beluga_syntax
 open Synint
 
-module E = Beluga_syntax.Error
+module E = Error
 module S = Substitution
 module P = Prettyint.DefaultPrinter
 
@@ -30,9 +30,9 @@ module Error = struct
          Name.pp name
 
   let () =
-    Beluga_syntax.Error.register_exception_printer (function
+    Error.register_exception_printer (function
       | E e -> error_printer e
-      | exn -> Beluga_syntax.Error.raise_unsupported_exception_printing exn)
+      | exn -> Error.raise_unsupported_exception_printing exn)
 end
 
 (** High-level elaboration from external to internal syntax. *)

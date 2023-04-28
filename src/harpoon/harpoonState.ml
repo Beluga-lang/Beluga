@@ -31,7 +31,7 @@ type t =
   ; all_paths : string list (* paths to the resolved loaded files *)
   }
 
-(* open beluga here because we need to refer to Harpoon's Options
+(* open beluga here because we need to refer to Harpoon's [Options]
    module earlier. *)
 open Beluga
 
@@ -50,8 +50,8 @@ let recover_theorem ppf hooks (cid, gs) =
     in
     let prf =
       match e.Store.Cid.Comp.Entry.prog with
-      | Some (ThmValue (_, Proof p, _, _)) -> p
-      | _ -> Beluga_syntax.Error.raise_violation "recovered theorem not a proof"
+      | Option.Some (ThmValue (_, Proof p, _, _)) -> p
+      | _ -> Error.raise_violation "recovered theorem not a proof"
     in
     dprintf begin fun p ->
       p.fmt "[recover_theorem] @[<v>proof =@,@[%a@]@]"
@@ -181,28 +181,28 @@ let select_theorem s name =
       s.sessions
       F.(Option.is_some ++ flip Session.lookup_theorem name)
   with
-  | None -> false
-  | Some (i, c) ->
+  | Option.None -> false
+  | Option.Some (i, c) ->
      select_session s i c;
      (* select the desired theorem within the session;
             this should be guaranteed to succeed due to the
             lookup_theorem having succeeded in this case *)
      if Bool.not (Session.select_theorem c name) then
-      Beluga_syntax.Error.raise_violation
+      Error.raise_violation
          "[select_theorem] selected session does not contain the theorem";
      true
 
 (** Gets the next state triple from the prover. *)
 let next_triple (s : t) =
   match next_session s with
-  | None -> Either.left `no_session
-  | Some c ->
+  | Option.None -> Either.left `no_session
+  | Option.Some c ->
      match Session.next_theorem c with
-     | None -> Either.left (`no_theorem c)
-     | Some t ->
+     | Option.None -> Either.left (`no_theorem c)
+     | Option.Some t ->
         match Theorem.next_subgoal t with
-        | None -> Either.left (`no_subgoal (c, t))
-        | Some g -> Either.right (c, t, g)
+        | Option.None -> Either.left (`no_subgoal (c, t))
+        | Option.Some g -> Either.right (c, t, g)
 
 (** Drops all state and reloads from the signature.
     Typically, this is called after serialization reflects the
@@ -235,14 +235,14 @@ let keeping_focus s (c, t, g) f =
   let curr_sg_label = g.Comp.label in
   f ();
   if Bool.not (select_theorem s curr_thm_name) then
-    Beluga_syntax.Error.raise_violation
+    Error.raise_violation
       "[reset] reloaded signature does not contain the theorem \
        we were working on";
   let t =
     match next_triple s with
     | Either.Right (_, t, _) -> t
     | _ ->
-      Beluga_syntax.Error.raise_violation
+      Error.raise_violation
          "[reset] next_triple didn't give a triple."
   in
   match
@@ -252,7 +252,7 @@ let keeping_focus s (c, t, g) f =
       end
   with
   | None ->
-      Beluga_syntax.Error.raise_violation
+      Error.raise_violation
        "[reset] select_subgoal_satisfying returned None"
   | Some _ -> ()
 
@@ -292,8 +292,8 @@ let completeness s = match DynArray.length s.sessions with
   | 0 -> `complete
   | _ -> `incomplete
 
-let parsed_prompt s ?(source = IO.default_prompt_source) msg use_history p =
-  IO.parsed_prompt s.io ~source: source msg use_history p
+let parsed_prompt s ?(source = IO.default_prompt_source) ~msg ~history_file p =
+  IO.parsed_prompt s.io ~source ~msg ~history_file p
 
 let session_configuration_wizard s =
   let open Option in
@@ -308,12 +308,12 @@ let on_session_completed s c =
   | `no_save_back ->
      remove_current_session s
 
-let serialize s ctg = keeping_focus s ctg (fun _ -> save s; reset s)
+let serialize s ctg = keeping_focus s ctg (fun () -> save s; reset s)
 
 let fmt_ppr_session_list ppf s =
   let session_list = session_list s in
   let print_list f ppf x =
-    Format.(pp_print_list ~pp_sep: pp_print_cut f ppf x)
+    Format.pp_print_list ~pp_sep:Format.pp_print_cut f ppf x
   in
   let print_indexed_session ppf (i, c) =
     Format.fprintf ppf "%d. @[<v>%a@]"

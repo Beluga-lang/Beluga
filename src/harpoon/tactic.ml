@@ -434,7 +434,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
             match cPsi with
             | LF.Null -> EmptyContext Beluga_syntax.Location.ghost
             | LF.(DDec _) -> ExtendedBy (Beluga_syntax.Location.ghost, k)
-            | _ -> Beluga_syntax.Error.raise_violation "[get_context_branch] pattern not a context"
+            | _ -> Error.raise_violation "[get_context_branch] pattern not a context"
           in
           let label =
             Comp.SubgoalPath.build_context_split i case_label
@@ -464,7 +464,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
                         @,tM = @[%a@]@]"
                    P.(fmt_ppr_cmp_pattern cD cG l0) pat
                  end;
-                 Beluga_syntax.Error.raise_violation
+                 Error.raise_violation
                  "[make_meta_branch] head neither pvar (proj) nor const"
           in
           let label = Comp.SubgoalPath.build_meta_split i c in
@@ -474,7 +474,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
           , meta_branch c (cG_p, pat) theta context p
           )
 
-       | _ -> Beluga_syntax.Error.raise_violation "[make_meta_branch] pattern not a meta object"
+       | _ -> Error.raise_violation "[make_meta_branch] pattern not a meta object"
      in
      let make_comp_branch (context, theta, new_state, (cG_p, pat)) =
        match pat with
@@ -488,7 +488,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
           , comp_branch cid (cG_p, pat) theta context p
           )
        | _ ->
-          Beluga_syntax.Error.raise_violation "[get_context_branch] pattern not a constant"
+          Error.raise_violation "[get_context_branch] pattern not a constant"
      in
 
      let decide_split_kind =
@@ -496,7 +496,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
        | _, (_, PatMetaObj (_, LF.(_, CObj _)), _), _ -> `context
        | _, (_, PatMetaObj (_, LF.(_, ClObj (_, _))), _), _ -> `meta
        | _, (_, PatConst (_, _, _), _), _ -> `comp
-       | _ -> Beluga_syntax.Error.raise_violation "unhandled pattern type for split"
+       | _ -> Error.raise_violation "unhandled pattern type for split"
      in
      match
        List.map decide_split_kind cgs
@@ -510,7 +510,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
         |> apply t
 
      | Some None ->
-        Beluga_syntax.Error.raise_violation "mixed cases in split (bug in coverage?)"
+        Error.raise_violation "mixed cases in split (bug in coverage?)"
 
      | Some (Some k) ->
         let finish f g =

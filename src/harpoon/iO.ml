@@ -1,4 +1,5 @@
 open Support
+open Beluga_syntax
 
 module Error = struct
   type t =
@@ -11,40 +12,35 @@ module Error = struct
        Format.dprintf "End of input."
 
   let () =
-    Beluga_syntax.Error.register_exception_printer (function
+    Error.register_exception_printer (function
       | E e -> error_printer e
-      | exn -> Beluga_syntax.Error.raise_unsupported_exception_printing exn)
+      | exn -> Error.raise_unsupported_exception_printing exn)
 
   let throw e = raise (E e)
 end
 
 type t =
   { prompt : InputPrompt.t
-  ; prompt_number : int ref
+  ; mutable prompt_number : int
   ; ppf : Format.formatter
   }
 
-let prompt_number io = !(io.prompt_number)
+let prompt_number io = io.prompt_number
 
 let formatter io = io.ppf
 
 let printf io x = Format.fprintf io.ppf x
 
-let make prompt' ppf =
-  let prompt_number = ref 0 in
-  (* instrument the InputPrompt.t so that every successful call
-     increments the prompt number *)
-  let prompt x y () =
-    let open Option in
-    prompt' x y () $> fun x -> incr prompt_number; x
-  in
-  { prompt; ppf; prompt_number }
+let make prompt ppf =
+  { prompt; ppf; prompt_number = 0 }
 
-let[@warning "-32"] next_prompt_number io = incr io.prompt_number; !(io.prompt_number)
+let[@warning "-32"] next_prompt_number io =
+  io.prompt_number <- io.prompt_number + 1;
+  io.prompt_number
 
 let default_prompt_source = "<prompt>"
 
-let[@warning "-39"] rec parsed_prompt ?(source = default_prompt_source) io msg use_history p =
-  match io.prompt msg use_history () with
-  | None -> Error.(throw EndOfInput)
-  | Some line -> Obj.magic () (* TODO: Parse only [p] on [line] *)
+let[@warning "-39"] rec parsed_prompt ?(source = default_prompt_source) io ~msg ~history_file p =
+  match io.prompt ~msg ~history_file () with
+  | Option.None -> Error.(throw EndOfInput)
+  | Option.Some line -> Obj.magic () (* TODO: Parse only [p] on [line] *)

@@ -44,7 +44,7 @@ let auto_intros : t =
        | LF.Empty -> ()
        | cG ->
           Format.fprintf ppf "@,  @[<v 2>Computational assumptions:";
-          fmt_ppr_ctx (fun ppf _ v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_cmp_ctyp_decl cD P.l0) v) ppf cG;
+          fmt_ppr_ctx (fun ppf _cG v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_cmp_ctyp_decl cD P.l0) v) ppf cG;
           Format.fprintf ppf "@]"
      in
      let goal = (tau', theta) in

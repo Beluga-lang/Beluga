@@ -4,10 +4,11 @@ module Associativity = Associativity
 module Fixity = Fixity
 module Operator = Operator
 
-(** {1 Parameter Annotations} *)
+(** {1 Annotations} *)
 
-module Plicity = Plicity
+module Depend = Depend
 module Inductivity = Inductivity
+module Plicity = Plicity
 
 (** {1 Pretty-Printing} *)
 

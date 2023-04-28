@@ -6,10 +6,24 @@ module type ID = sig
   val of_int : int -> t
 
   val to_int : t -> int
+
+  module Set : Set.S with type elt = t
+
+  module Map : Map.S with type key = t
+
+  module Hashtbl : Hashtbl.S with type key = t
+
+  include Eq.EQ with type t := t
+
+  include Ord.ORD with type t := t
+
+  include Hash.HASH with type t := t
+
+  include Show.SHOW with type t := t
 end
 
 module Id_base = struct
-  type t = int
+  include Int
 
   let of_int = Fun.id
 

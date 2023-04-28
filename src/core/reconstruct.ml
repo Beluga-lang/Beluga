@@ -496,7 +496,7 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
        Int.LF.Nil
 
-    | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
+    | (Int.LF.(PiKind ((TypDecl (u, tA1), depend, plicity), kK), s)) ->
        let tA1_norm = Whnf.normTyp (tA1, s) in
        let tA1' = Whnf.normTyp (tA1_norm,  s_tup) in
        (*       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in *)
@@ -543,10 +543,10 @@ let rec mgTyp cD cPsi =
   | Int.LF.Sigma trec ->
      Int.LF.Sigma (mgTypRec cD cPsi trec)
 
-  | Int.LF.PiTyp ((tdecl, plicity), tA) ->
+  | Int.LF.PiTyp ((tdecl, depend, plicity), tA) ->
      let tdecl' = mgTypDecl cD cPsi tdecl in
      Int.LF.PiTyp
-       ( (tdecl', plicity)
+       ( (tdecl', depend, plicity)
        , mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA
        )
 

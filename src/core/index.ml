@@ -180,7 +180,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let x = fresh_identifier state in
         let x' = Name.make_from_identifier x in
         Synapx.LF.PiKind
-          ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range')
+          ((Synapx.LF.TypDecl (x', domain'), Depend.no, Plicity.explicit), range')
     | Synext.LF.Kind.Pi
         { parameter_identifier; parameter_type; plicity; body; location }
       -> (
@@ -196,7 +196,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let x = fresh_identifier_opt state parameter_identifier in
             let x' = Name.make_from_identifier x in
             Synapx.LF.PiKind
-              ((Synapx.LF.TypDecl (x', domain'), plicity), range'))
+              ((Synapx.LF.TypDecl (x', domain'), Depend.maybe, plicity), range'))
 
   and index_lf_typ state = function
     | Synext.LF.Typ.Constant { identifier; location } ->
@@ -231,7 +231,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let x = fresh_identifier state in
         let x' = Name.make_from_identifier x in
         Synapx.LF.PiTyp
-          ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range')
+          ((Synapx.LF.TypDecl (x', domain'), Depend.no, Plicity.explicit), range')
     | Synext.LF.Typ.Pi
         { parameter_identifier; parameter_type; plicity; body; location }
       -> (
@@ -247,7 +247,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
             let x = fresh_identifier_opt state parameter_identifier in
             let x' = Name.make_from_identifier x in
             Synapx.LF.PiTyp
-              ((Synapx.LF.TypDecl (x', domain'), plicity), range'))
+              ((Synapx.LF.TypDecl (x', domain'), Depend.maybe, plicity), range'))
 
   and index_lf_term state = function
     | Synext.LF.Term.Variable { location; identifier } -> (
@@ -367,7 +367,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         let x = fresh_identifier state in
         let x' = Name.make_from_identifier x in
         Synapx.LF.PiTyp
-          ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range')
+          ((Synapx.LF.TypDecl (x', domain'), Depend.no, Plicity.explicit), range')
     | Synext.CLF.Typ.Pi
         { parameter_identifier; parameter_type; body; plicity; location = _ }
       ->
@@ -378,7 +378,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         in
         let x = fresh_identifier_opt state parameter_identifier in
         let x' = Name.make_from_identifier x in
-        Synapx.LF.PiTyp ((Synapx.LF.TypDecl (x', domain'), plicity), range')
+        Synapx.LF.PiTyp ((Synapx.LF.TypDecl (x', domain'), Depend.maybe, plicity), range')
     | Synext.CLF.Typ.Block { elements; location = _ } -> (
         match elements with
         | `Unnamed typ ->
@@ -1346,6 +1346,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         in
         let x = fresh_identifier state in
         let x' = Name.make_from_identifier x in
+        (* TODO: Annotate with [Depend.no] *)
         Synapx.Comp.PiKind
           (location, Synapx.LF.Decl (x', domain', Plicity.explicit), range')
     | Synext.Comp.Kind.Pi
@@ -1357,6 +1358,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
         in
         let x = fresh_identifier_opt state parameter_identifier in
         let x' = Name.make_from_identifier x in
+        (* TODO: Annotate with [Depend.maybe] *)
         Synapx.Comp.PiKind
           (location, Synapx.LF.Decl (x', parameter_type', plicity), body')
 

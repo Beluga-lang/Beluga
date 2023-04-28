@@ -207,7 +207,7 @@ let eta_expand (tH, tA) =
   let rec eta (tA, s) tS =
     match tA with
     | LF.Atom _ -> LF.Root (Location.ghost, tH, tS, Plicity.explicit)
-    | LF.PiTyp ((LF.TypDecl (x, tB0), _), tB) ->
+    | LF.PiTyp ((LF.TypDecl (x, tB0), _, _), tB) ->
        let tM = eta (tB0, s) LF.Nil in
        LF.Lam (Location.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS)))
   in
@@ -685,8 +685,8 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
     end;
   match (tM, tN) with
   | (LF.Lam (_, x, tM), LF.Lam (_, _, tN)) ->
-     let LF.PiTyp ((tdecl, _), tB), s = Whnf.whnfTyp sA in
-     let LF.PiTyp ((tdecl', _), tB'), s' = Whnf.whnfTyp sA' in
+     let LF.PiTyp ((tdecl, _, _), tB), s = Whnf.whnfTyp sA in
+     let LF.PiTyp ((tdecl', _, _), tB'), s' = Whnf.whnfTyp sA' in
      let covGoal' =
        CovGoal
          ( LF.DDec (cPsi, S.LF.decSub tdecl s)
@@ -734,8 +734,8 @@ and pre_match_spine cD cD_p (cPsi, tS, sA) (cPsi', tS', sA') matchCands splitCan
   match (tS, tS') with
   | (LF.Nil, LF.Nil) -> (matchCands, splitCands)
   | (LF.App (tM, tS), LF.App (tM', tS')) ->
-     let LF.PiTyp ((LF.TypDecl (_, tB1), _), tB2), s = Whnf.whnfTyp sA in
-     let LF.PiTyp ((LF.TypDecl (_, tC1), _), tC2), s' = Whnf.whnfTyp sA' in
+     let LF.PiTyp ((LF.TypDecl (_, tB1), _, _), tB2), s = Whnf.whnfTyp sA in
+     let LF.PiTyp ((LF.TypDecl (_, tC1), _, _), tC2), s' = Whnf.whnfTyp sA' in
      let covGoal1 = CovGoal (cPsi, tM, (tB1, s)) in
      let patt1 = MetaPatt (cPsi', tM', (tC1, s')) in
      let sB2' = (tB2, LF.Dot (LF.Obj (tM), s)) in
@@ -829,8 +829,8 @@ and pre_match_typ_spine cD cD_p (cPsi, tS1, sK1) (cPsi', tS2, sK2) matchCands sp
   | ((LF.Nil, (LF.Typ, _)), (LF.Nil, (LF.Typ, _))) ->
      (matchCands, splitCands)
   | ((LF.App (tM, tS), sK), (LF.App (tM', tS'), sK')) ->
-     let LF.PiKind ((LF.TypDecl (_, tB), _), tK1), s = sK in
-     let LF.PiKind ((LF.TypDecl (_, tC), _), tK2), s' = sK' in
+     let LF.PiKind ((LF.TypDecl (_, tB), _, _), tK1), s = sK in
+     let LF.PiKind ((LF.TypDecl (_, tC), _, _), tK2), s' = sK' in
      let covGoal1 = CovGoal (cPsi, tM, (tB, s)) in
      let patt1 = MetaPatt (cPsi', tM', (tC, s')) in
      let sK1' = (tK1, LF.Dot (LF.Obj tM, s)) in
@@ -867,7 +867,7 @@ and pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
          matchCands
          splitCands
      else raise (Error (loc, MatchError "Type Head mismatch"))
-  | ((LF.PiTyp ((LF.TypDecl (x, tA1), _), tA2), s1), (LF.PiTyp ((LF.TypDecl (y, tB1), _), tB2), s2)) ->
+  | ((LF.PiTyp ((LF.TypDecl (x, tA1), _, _), tA2), s1), (LF.PiTyp ((LF.TypDecl (y, tB1), _, _), tB2), s2)) ->
      let (matchCands', splitCands') =
        pre_match_typ
          cD
@@ -1178,7 +1178,7 @@ let getSchemaElems cD cPsi =
  *)
 let rec genSpine k names cD cPsi sA tP =
   match Whnf.whnfTyp sA with
-  | (LF.PiTyp ((LF.TypDecl (u, tA), _), tB), s) ->
+  | (LF.PiTyp ((LF.TypDecl (u, tA), _, _), tB), s) ->
      (* cPsi' |- Pi x:A.B <= typ
         cPsi  |- s <= cPsi'
         cPsi  |- tN <= [s]tA
@@ -1467,7 +1467,7 @@ let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
      (* I *think* Atom and Sigma can be treated identically here, since
         they're both the base types, essentially. -je
       *)
-  | LF.PiTyp ((tdecl, plicity), tA) ->
+  | LF.PiTyp ((tdecl, depend, plicity), tA) ->
      let x =
        match tdecl with
        | LF.TypDecl (x, _) -> x
@@ -1479,7 +1479,7 @@ let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
        let cg' =
          ( cPsi'
          , LF.Lam (Location.ghost, x, tM)
-         , (LF.PiTyp ((tdecl', plicity), LF.TClo (sA)), S.LF.id)
+         , (LF.PiTyp ((tdecl', depend, plicity), LF.TClo (sA)), S.LF.id)
          )
        in
        (cD', cg', ms)
@@ -1531,7 +1531,7 @@ let rec genCovGoals ((cD, cPsi, tA) as cov_problem : (LF.mctx * LF.dctx * LF.typ
        end;
      g_pv @ g_bv @ g_cv
 
-  | LF.PiTyp ((tdecl, plicity), tB) ->
+  | LF.PiTyp ((tdecl, depend, plicity), tB) ->
      let LF.TypDecl (x, _) = tdecl in
      let cov_goals = genCovGoals (cD, LF.DDec (cPsi, tdecl), tB) in
      List.map
@@ -1539,7 +1539,7 @@ let rec genCovGoals ((cD, cPsi, tA) as cov_problem : (LF.mctx * LF.dctx * LF.typ
        ( cD'
        , ( cPsi'
          , LF.Lam (Location.ghost, x, tM)
-         , (LF.PiTyp ((tdecl', plicity), LF.TClo (sA)), S.LF.id))
+         , (LF.PiTyp ((tdecl', depend, plicity), LF.TClo (sA)), S.LF.id))
        , t
        )
        end

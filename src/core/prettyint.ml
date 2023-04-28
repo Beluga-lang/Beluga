@@ -260,7 +260,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_spine cD cPsi 2) ms
          (r_paren_if cond)
 
-    | LF.PiTyp ((LF.TypDecl (x, a), Plicity.Explicit), b) when is_name_syntactically_valid x ->
+    | LF.PiTyp ((LF.TypDecl (x, a), (Depend.Yes | Depend.Maybe), Plicity.Explicit), b) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
        fprintf ppf "@[<1>%s{%a : %a}@ %a%s@]"
@@ -270,7 +270,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
          (r_paren_if cond)
 
-    | LF.PiTyp ((LF.TypDecl (x, a), _), b) ->
+    | LF.PiTyp ((LF.TypDecl (x, a), (Depend.Yes | Depend.Maybe), Plicity.Implicit), b) ->
+       (* FIXME(Marc-Antoine): There is technically no syntax for implicit Pi-types *)
+       let x = fresh_name_dctx cPsi x in
+       let cond = lvl > 0 in
+       fprintf ppf "@[<1>%s(%a : %a)@ %a%s@]"
+         (l_paren_if cond)
+         Name.pp x
+         (fmt_ppr_lf_typ cD cPsi 0) a
+         (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
+         (r_paren_if cond)
+
+    | LF.PiTyp ((LF.TypDecl (x, a), Depend.No, _), b) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
        fprintf ppf "@[<1>%s%a -> %a%s@]"
@@ -954,7 +965,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Typ ->
        fprintf ppf "type"
 
-    | LF.PiKind ((LF.TypDecl (x, a), Plicity.Implicit), k) ->
+    | LF.PiKind ((LF.TypDecl (x, a), (Depend.Yes | Depend.Maybe), Plicity.Explicit), k) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
        fprintf ppf "@[<2>%s{@[%a :@ @[%a@]@]}@ @[%a@]%s@]"
@@ -964,7 +975,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) k
          (r_paren_if cond)
 
-    | LF.PiKind ((LF.TypDecl (x, a), Plicity.Explicit), k) ->
+    | LF.PiKind ((LF.TypDecl (x, a), (Depend.Yes | Depend.Maybe), Plicity.Implicit), k) ->
+      (* FIXME(Marc-Antoine): There is technically no syntax for implicit Pi-types *)
+       let x = fresh_name_dctx cPsi x in
+       let cond = lvl > 0 in
+       fprintf ppf "@[<2>%s(@[%a :@ @[%a@]@])@ @[%a@]%s@]"
+         (l_paren_if cond)
+         Name.pp x
+         (fmt_ppr_lf_typ LF.Empty cPsi 0) a
+         (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) k
+         (r_paren_if cond)
+
+    | LF.PiKind ((LF.TypDecl (x, a), Depend.No, _), k) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
        fprintf ppf "%s@[<2>@[%a@] ->@ @[%a@]%s@]"

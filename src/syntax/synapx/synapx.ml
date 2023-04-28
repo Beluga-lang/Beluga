@@ -18,7 +18,7 @@ module LF = struct
 
   type kind =
     | Typ
-    | PiKind of (typ_decl * Plicity.t) * kind
+    | PiKind of (typ_decl * Depend.t * Plicity.t) * kind
 
   and typ_decl =
     | TypDecl of Name.t * typ
@@ -34,12 +34,12 @@ module LF = struct
     | CTyp of cid_schema
 
   and ctyp_decl =
-    | Decl of Name.t * ctyp * Plicity.t
-    | DeclOpt of Name.t
+    | Decl of Name.t * ctyp * Plicity.t (* TODO: Annotate with [Depend.t] *)
+    | DeclOpt of Name.t (* TODO: Annotate with [Depend.t] *)
 
   and typ =
     | Atom of Location.t * cid_typ * spine
-    | PiTyp of (typ_decl * Plicity.t) * typ
+    | PiTyp of (typ_decl * Depend.t * Plicity.t) * typ
     | Sigma of typ_rec
 
   and typ_rec =

@@ -362,7 +362,7 @@ let getSchema cD ctxvar loc =
 let rec addPrefix loc m =
   function
   | Int.LF.Atom _ -> m
-  | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _), tA) ->
+  | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _, _), tA) ->
      dprint (fun () -> "eta FMV - add Lam ");
      Apx.LF.Lam (loc, x, addPrefix loc m tA)
 
@@ -404,7 +404,7 @@ let etaExpandHead loc h tA =
   let rec etaExpPrefix loc (tM, tA) =
     match tA with
     | Int.LF.Atom _ -> tM
-    | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _), tA') ->
+    | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _, _), tA') ->
        Int.LF.Lam (loc, x, etaExpPrefix loc (tM, tA'))
   in
 
@@ -454,7 +454,7 @@ let etaExpandApxTerm loc h tS tA =
   let rec etaExpApxPrefix loc (tM, tA) =
     match tA with
     | Int.LF.Atom _ -> tM
-    | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _), tA') ->
+    | Int.LF.PiTyp ((Int.LF.TypDecl (x, _), _, _), tA') ->
        dprint (fun () -> "eta - add Lam ");
        Apx.LF.Lam (loc, x, etaExpApxPrefix loc (tM, tA'))
   in
@@ -874,11 +874,11 @@ exception SubTypingFailure
 let rec elKind cD cPsi =
   function
   | Apx.LF.Typ -> Int.LF.Typ
-  | Apx.LF.PiKind ((Apx.LF.TypDecl (x, a), plicity), k) ->
+  | Apx.LF.PiKind ((Apx.LF.TypDecl (x, a), depend, plicity), k) ->
      let tA = elTyp Pi (*cD=*)Int.LF.Empty cPsi a in
      let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) in
      let tK = elKind cD cPsi' k in
-     Int.LF.PiKind ((Int.LF.TypDecl (x, tA), plicity), tK)
+     Int.LF.PiKind ((Int.LF.TypDecl (x, tA), depend, plicity), tK)
 
 (* elTyp recT cD cPsi a = A
  *
@@ -905,11 +905,11 @@ and elTyp recT cD cPsi =
      let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
      Int.LF.Atom (loc, a, tS)
 
-  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), plicity), b) ->
+  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), depend, plicity), b) ->
      let tA = elTyp recT cD cPsi a in
      let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) in
      let tB = elTyp recT cD cPsi' b in
-     Int.LF.PiTyp ((Int.LF.TypDecl (x, tA), plicity), tB)
+     Int.LF.PiTyp ((Int.LF.TypDecl (x, tA), depend, plicity), tB)
 
   | Apx.LF.Sigma typRec ->
      let typRec' = elTypRec recT cD cPsi typRec in
@@ -966,7 +966,7 @@ and elTerm recT cD cPsi m sA = elTermW recT cD (Whnf.normDCtx cPsi) m (Whnf.whnf
 
 and elTermW recT cD cPsi m sA =
   match (m, sA) with
-  | (Apx.LF.Lam (loc, x, m), (Int.LF.PiTyp ((Int.LF.TypDecl _ as decl, _), tB), s)) ->
+  | (Apx.LF.Lam (loc, x, m), (Int.LF.PiTyp ((Int.LF.TypDecl _ as decl, _, _), tB), s)) ->
      (* cPsi' = cPsi, x:tA *)
      let cPsi' = Int.LF.DDec (cPsi, S.LF.decSub decl s) in
      let tM = elTerm recT cD cPsi' m (tB, S.LF.dot1 s) in
@@ -2600,7 +2600,7 @@ and elSpineIW loc recT cD cPsi spine i sA =
   then elSpine loc recT cD cPsi spine sA
   else
     match (sA, recT) with
-    | ((Int.LF.PiTyp ((Int.LF.TypDecl (n, tA), _), tB), s), Pi) ->
+    | ((Int.LF.PiTyp ((Int.LF.TypDecl (n, tA), _, _), tB), s), Pi) ->
        (* cPsi' |- tA <= typ
         * cPsi  |- s  <= cPsi'      cPsi |- tN <= [s]A
         *
@@ -2613,7 +2613,7 @@ and elSpineIW loc recT cD cPsi spine i sA =
        let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
        (Int.LF.App (tN, spine'), sP)
 
-    | ((Int.LF.PiTyp ((Int.LF.TypDecl (n, tA), _), tB), s), Pibox) ->
+    | ((Int.LF.PiTyp ((Int.LF.TypDecl (n, tA), _, _), tB), s), Pibox) ->
        (* cPsi' |- tA <= typ
         * cPsi  |- s  <= cPsi'      cPsi |- tN <= [s]A
         *
@@ -2685,7 +2685,7 @@ and elSpine loc recT cD cPsi spine sA =
     | (Apx.LF.Nil, sP) ->
        (Int.LF.Nil, sP) (* errors are postponed to reconstruction phase *)
 
-    | (Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _), tB), s)) ->
+    | (Apx.LF.App (m, spine), (Int.LF.PiTyp ((Int.LF.TypDecl (_, tA), _, _), tB), s)) ->
        let tM = elTerm recT cD cPsi m (tA, s) in
        let (tS, sP) = elSpine loc recT cD cPsi spine (tB, Int.LF.Dot (Int.LF.Obj tM, s)) in
        (Int.LF.App (tM, tS), sP)
@@ -2698,13 +2698,13 @@ and elKSpineI loc recT cD cPsi spine i sK =
   then elKSpine loc recT cD cPsi spine sK
   else
     match (sK, recT) with
-    | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pi) ->
+    | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _, _), tK), s), Pi) ->
        (* let sshift = mkShift recT cPsi in *)
        (* let tN = Whnf.etaExpandMV Int.LF.Null (tA, s) sshift in *)
        let tN = Whnf.etaExpandMV cPsi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive in
        let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
        Int.LF.App (tN, spine')
-    | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
+    | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _, _), tK), s), Pibox) ->
        (* let sshift = mkShift recT cPsi in *)
        (* let tN = Whnf.etaExpandMMV Location.ghost cD cPsi (tA, s) n S.LF.id in*)
        let tN =
@@ -2746,7 +2746,7 @@ and elKSpine loc recT cD cPsi spine sK =
     | (Apx.LF.Nil, (Int.LF.Typ, _)) ->
        Int.LF.Nil (* errors are postponed to reconstruction phase *)
 
-    | Apx.(LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _), tK), s)) ->
+    | Apx.(LF.App (m, spine), (Int.LF.PiKind ((Int.LF.TypDecl (_, tA), _, _), tK), s)) ->
        let tM = elTerm recT cD cPsi m (tA, s) in
        let tS = elKSpine loc recT cD cPsi spine (tK, Int.LF.Dot (Int.LF.Obj tM, s)) in
        Int.LF.App (tM, tS)
@@ -2811,6 +2811,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
      let tB' =
        Int.LF.PiTyp
          ( ( Int.LF.TypDecl (Name.mk_name (Name.BVarName (Store.Cid.Typ.gen_var_name tA')), tA')
+           , Depend.maybe
            , Plicity.implicit
            )
          , tB

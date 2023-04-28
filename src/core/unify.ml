@@ -1473,14 +1473,14 @@ let rec blockdeclInDctx =
   and pruneTypW cD0 cPsi phat sA (mss, ss) rOccur =
     match sA with
     | (Atom (loc, a, tS), s) -> Atom (loc, a, pruneSpine cD0 cPsi phat (tS, s) (mss, ss) rOccur)
-    | (PiTyp ((TypDecl (x, tA), plicity), tB), s) ->
+    | (PiTyp ((TypDecl (x, tA), depend, plicity), tB), s) ->
        let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in
        let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in
-       PiTyp ((TypDecl (x, tA'), plicity), tB')
+       PiTyp ((TypDecl (x, tA'), depend, plicity), tB')
 
-    | (PiTyp ((TypDeclOpt x, plicity), tB), s) ->
+    | (PiTyp ((TypDeclOpt x, depend, plicity), tB), s) ->
        let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in
-       PiTyp ((TypDeclOpt x, plicity), tB')
+       PiTyp ((TypDeclOpt x, depend, plicity), tB')
 
     | (Sigma typ_rec, s) ->
        let typ_rec' = pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur in
@@ -1692,7 +1692,7 @@ let rec blockdeclInDctx =
 
        let rec genSpine cD1 cPsi1 sA =
          match Whnf.whnfTyp sA with
-         | (LF.PiTyp ((LF.TypDecl (n, tA), _), tB), s) ->
+         | (LF.PiTyp ((LF.TypDecl (n, tA), _, _), tB), s) ->
             (* cPsi' |- Pi x:A.B <= typ
                cPsi  |- s <= cPsi'
                cPsi  |- tN <= [s]tA
@@ -1714,7 +1714,7 @@ let rec blockdeclInDctx =
     let ClTyp (MTyp tB, cPsi1) = mmvar.typ in
     let rec genSpine cD1 cPsi1 sA =
       match Whnf.whnfTyp sA with
-      | (LF.PiTyp ((LF.TypDecl (n, tA), _), tB), s) ->
+      | (LF.PiTyp ((LF.TypDecl (n, tA), _, _), tB), s) ->
          (* cPsi' |- Pi x:A.B <= typ
             cPsi  |- s <= cPsi'
             cPsi  |- tN <= [s]tA
@@ -2608,7 +2608,7 @@ let rec blockdeclInDctx =
          end;
        raise (Failure "Type constant clash")
 
-    | ((PiTyp ((TypDecl (x, tA1), _), tA2), s1), (PiTyp ((TypDecl (_, tB1), _), tB2), s2)) ->
+    | ((PiTyp ((TypDecl (x, tA1), _, _), tA2), s1), (PiTyp ((TypDecl (_, tB1), _, _), tB2), s2)) ->
        unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2);
        unifyTyp mflag cD0 (DDec (cPsi, TypDecl (x, tA1))) (tA2, dot1 s1) (tB2, dot1 s2)
 

@@ -92,17 +92,17 @@ let rec relevant tA basis =
           end basis
      then [a]
      else []
-  | PiTyp ((TypDecl (_, tA1), _), tA2) ->
+  | PiTyp ((TypDecl (_, tA1), _, _), tA2) ->
      (* extract_pos returns all types which are in a positive position *)
      let rec extract_pos =
        function
        | Atom _ -> [tA]
-       | PiTyp ((TypDecl (_, tA1), _), tA2) ->
+       | PiTyp ((TypDecl (_, tA1), _, _), tA2) ->
           extract_neg tA1 @ extract_pos tA2
      and extract_neg =
        function
        | Atom _ -> []
-       | PiTyp ((TypDecl (_, tA1), _), tA2) ->
+       | PiTyp ((TypDecl (_, tA1), _, _), tA2) ->
           extract_pos tA1 @ extract_neg tA2
      in
      (* (relevant tA1 basis) @

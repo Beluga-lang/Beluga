@@ -44,7 +44,7 @@ let ctxShift cPsi = EmptySub (* match cPsi with *)
 
 let rec lowerMVar cPsi sA' =
   match sA' with
-  | (PiTyp ((decl, _), tA'), s') ->
+  | (PiTyp ((decl, _, _), tA'), s') ->
      let (tM , sAmv) =
        lowerMVar
          (DDec (cPsi, Substitution.LF.decSub decl s'))

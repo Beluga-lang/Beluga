@@ -1,3 +1,5 @@
+open Support
+
 (** Constant IDs for referring to constants in the global mutable store.
 
     These are essentially primary keys in a relational database. *)
@@ -8,9 +10,31 @@
 module type ID = sig
   type t
 
+  (** {1 Constructors} *)
+
   val of_int : int -> t
 
+  (** {1 Destructors} *)
+
   val to_int : t -> int
+
+  (** {1 Collections} *)
+
+  module Set : Set.S with type elt = t
+
+  module Map : Map.S with type key = t
+
+  module Hashtbl : Hashtbl.S with type key = t
+
+  (** {1 Instances} *)
+
+  include Eq.EQ with type t := t
+
+  include Ord.ORD with type t := t
+
+  include Hash.HASH with type t := t
+
+  include Show.SHOW with type t := t
 end
 
 module Module : ID

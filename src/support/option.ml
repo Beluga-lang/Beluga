@@ -18,10 +18,6 @@ let eliminate default f = function
   | None -> default ()
   | Some x -> f x
 
-let get' e = function
-  | Some x -> x
-  | None -> raise e
-
 let get_or_else default = function
   | None -> default ()
   | Some x -> x

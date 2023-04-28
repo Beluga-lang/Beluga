@@ -1631,19 +1631,18 @@ let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp) : bool =
   let open Id in
   let open Comp in
   let is_inductive_comp_variable (k : offset) : bool =
-    Context.lookup' cG k
-    |> Option.get' (Failure "Computational variable out of bounds")
-    |> function
+    match Context.lookup' cG k with
+    | Option.None -> Error.raise (Failure "Computational variable out of bounds")
+    | Option.Some r ->
       (* Either it's a TypInd or the WF flag is true *)
+      match r with
       | CTypDecl (u, tau, true) -> true
       | CTypDecl (u, TypInd _, _) -> true
       | _ -> false
   in
-  let open Option in
-  variable_of_exp m
-  $> is_inductive_comp_variable
-  >>= of_bool
-  |> is_some
+  match variable_of_exp m with
+  | Option.None -> false
+  | Option.Some var -> is_inductive_comp_variable var
 
 (** Decides whether an index object is something we're doing
     induction on, i.e. it's a metavariable with the Inductive flag set
@@ -1653,34 +1652,27 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   let open Id in
   let open LF in
   let is_inductive_meta_variable (k : offset) : bool =
-    Context.lookup_inductivity cD k
-    |> Option.get' (Failure "Metavariable out of bounds or missing type")
-    |> function
-       | (_, Inductivity.Inductive) -> true
-       | _ -> false
+    match Context.lookup_inductivity cD k with
+    | Option.None ->
+        Error.raise (Failure "Metavariable out of bounds or missing type")
+    | Option.Some (_, Inductivity.Inductive) -> true
+    | Option.Some _ -> false
   in
-  let open Option in
-  variable_of_mfront mf
-  $> Pair.fst
-  (* this `Pair.fst` is possibly sketchy because of projected parameter
-     variables, but I don't think parameter variables can ever be
-     inductive, so I don't *think* it's a problem.
-     -je *)
-  $> is_inductive_meta_variable
-  >>= of_bool
-  |> is_some
+  match variable_of_mfront mf with
+  | Option.None -> false
+  | Option.Some (var, _) ->
+      (* this left projection is possibly sketchy because of projected
+         parameter variables, but I don't think parameter variables can ever
+         be inductive, so I don't *think* it's a problem. -je *)
+      is_inductive_meta_variable var
 
 (** Checks if the scrutinee of a case is on an inductive computational
     variable or an inductive meta-variable. *)
 let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp) : bool =
-  is_comp_inductive cG i
-  || begin
-      let open Option in
-      Comp.is_meta_obj i
-      $> Pair.snd
-      $> is_meta_inductive cD
-      |> is_some
-    end
+  if is_comp_inductive cG i then true else
+  match Comp.is_meta_obj i with
+  | Option.None -> false
+  | Option.Some (e, cM) -> is_meta_inductive cD cM
 
 (** Decides, in the context of a given list of totality declarations,
     whether the given function (name) requires totality checking.
@@ -1690,21 +1682,23 @@ let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp) : bool =
  *)
 let requires_checking f ds =
   match lookup_dec f ds with
-  | Some d -> None <> Comp.(d.order |> option_of_total_dec_kind)
-  | None -> false
+  | Option.Some d -> Option.is_some (Comp.option_of_total_dec_kind d.Comp.order)
+  | Option.None -> false
 
 (** Applies the given induction order to produce an annotated type. *)
 let annotate loc order tau =
   let error e = E (loc, e) in
   match Comp.option_of_total_dec_kind order with
-  | Some order ->
-     Order.list_of_order order
-     |> Option.get'
-          (error (NotImplemented "lexicographic order not fully supported"))
-     |> annotate' tau
-     |> Option.get'
-          (error TooManyArg)
-  | None -> tau
+  | Option.Some order -> (
+      match Order.list_of_order order with
+      | Option.None ->
+          Error.raise
+            (error (NotImplemented "lexicographic order not fully supported"))
+      | Option.Some order_list -> (
+          match annotate' tau order_list with
+          | Option.None -> Error.raise (error TooManyArg)
+          | Option.Some tau -> tau))
+  | Option.None -> tau
 
 (** Filters an ihctx to contain only those IHs for the given function
     name. *)

@@ -16,10 +16,10 @@ let realMain () =
   let open Options in
   let options = parse_arguments args in
 
+  if Debug.is_enabled () then Debug.init (Option.some "debug.out");
+
   let open B in
   let all_paths, _sgn' = Load.load_fresh options.path in
-
-  if Debug.is_enabled () then Debug.init (Some "debug.out");
 
   let ppf = Format.std_formatter in
   let stubs =

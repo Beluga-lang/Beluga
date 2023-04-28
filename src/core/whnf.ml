@@ -36,7 +36,7 @@ let rec raiseType cPsi tA =
   match cPsi with
   | Null -> tA
   | DDec (cPsi', decl) ->
-     raiseType cPsi' (PiTyp ((decl, Plicity.implicit), tA))
+     raiseType cPsi' (PiTyp ((decl, Depend.maybe, Plicity.implicit), tA))
 
 (* Eta-contract elements in substitutions *)
 let etaContract =
@@ -132,7 +132,7 @@ let newMVar n (cPsi, tA) plicity inductivity = Inst (newMMVar' n (Empty, ClTyp (
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
 let rec lowerMVar' cPsi sA' plicity inductivity =
   match sA' with
-  | (PiTyp ((decl, _), tA'), s') ->
+  | (PiTyp ((decl, _, _), tA'), s') ->
      let (u', tM) =
        lowerMVar'
          (DDec (cPsi, LF.decSub decl s'))
@@ -564,8 +564,8 @@ and normTyp (tA, sigma) =
   | Atom (loc, a, tS) ->
      Atom (loc, a, normSpine (tS, sigma))
 
-  | PiTyp ((TypDecl _ as decl, plicity), tB) ->
-     PiTyp ((normDecl (decl, sigma), plicity), normTyp (tB, LF.dot1 sigma))
+  | PiTyp ((TypDecl _ as decl, depend, plicity), tB) ->
+     PiTyp ((normDecl (decl, sigma), depend, plicity), normTyp (tB, LF.dot1 sigma))
 
   | TClo (tA, s) ->
      normTyp (tA, LF.comp s sigma)
@@ -795,8 +795,8 @@ and cnormTyp (tA, t) =
   | Atom (loc, a, tS) ->
      Atom (loc, a, cnormSpine (tS, t))
 
-  | PiTyp ((TypDecl _ as decl, plicity), tB) ->
-     PiTyp ((cnormDecl (decl, t), plicity), cnormTyp (tB, t))
+  | PiTyp ((TypDecl _ as decl, depend, plicity), tB) ->
+     PiTyp ((cnormDecl (decl, t), depend, plicity), cnormTyp (tB, t))
 
   | TClo (tA, s) -> normTyp (cnormTyp (tA, t), cnormSub (s, t))
 
@@ -877,8 +877,8 @@ and cnormMSub =
 and normKind =
   function
   | (Typ, _) -> Typ
-  | (PiKind ((decl, plicity), tK), s) ->
-     PiKind ((normDecl (decl, s), plicity), normKind (tK, LF.dot1 s))
+  | (PiKind ((decl, depend, plicity), tK), s) ->
+     PiKind ((normDecl (decl, s), depend, plicity), normKind (tK, LF.dot1 s))
 
 and normDCtx =
   function
@@ -1377,7 +1377,7 @@ and convTyp' sA sB =
      else false
   (*      a1 = a2 && convSpine (spine1, s1) (spine2, s2)*)
 
-  | ((PiTyp ((TypDecl (_, tA1), _), tB1), s1), (PiTyp ((TypDecl (_, tA2), _), tB2), s2)) ->
+  | ((PiTyp ((TypDecl (_, tA1), _, _), tB1), s1), (PiTyp ((TypDecl (_, tA2), _, _), tB2), s2)) ->
      (* G |- A1[s1] = A2[s2] by typing invariant *)
      convTyp (tA1, s1) (tA2, s2) && convTyp (tB1, LF.dot1 s1) (tB2, LF.dot1 s2)
 
@@ -2095,7 +2095,7 @@ and etaExpandMV' cPsi sA n s' plicity inductivity =
      let u = newMVar (Some n) (cPsi, tclo tP s) plicity inductivity in
      Root (loc, MVar (u, s'), Nil, plicity)
 
-  | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
+  | (PiTyp ((TypDecl (x, _) as decl, _, _), tB), s) ->
      Lam
        ( Name.location x
        , x
@@ -2120,7 +2120,7 @@ and etaExpandMMV' loc cD cPsi sA n s' plicity inductivity =
      let u = newMMVar (Some n) (cD, cPsi, tclo tP s) plicity inductivity in
      Root (loc, MMVar ((u, m_id), s'), Nil, plicity)
 
-  | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
+  | (PiTyp ((TypDecl (x, _) as decl, _, _), tB), s) ->
      Lam
        ( loc
        , x
@@ -2182,7 +2182,7 @@ let rec closedTyp sA = closedTypW (whnfTyp sA)
 and closedTypW (tA, s) =
   match tA with
   | Atom (_, _, tS) -> closedSpine (tS, s)
-  | PiTyp ((t_dec, _), tA) ->
+  | PiTyp ((t_dec, _, _), tA) ->
      closedDecl (t_dec, s)
      && closedTyp (tA, LF.dot1 s)
   | Sigma recA -> closedTypRec (recA, s)
@@ -2415,7 +2415,7 @@ let convMCtx cD1 cD2 =
 let rec lowerTyp cPsi =
   function
   | (Atom _, _) as sA -> (cPsi, whnfTyp sA)
-  | (PiTyp ((decl, _), tB), s) -> lowerTyp (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s)
+  | (PiTyp ((decl, _, _), tB), s) -> lowerTyp (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s)
 
 let mmVarToClObj loc' (mV : mm_var) : cltyp -> clobj =
   function

@@ -510,7 +510,7 @@ module Comp = struct
   and fmv_typ (cD : I.mctx) =
     function
     | I.Atom (_, _, tS) -> fmv_spine cD tS
-    | I.PiTyp ((decl, _), tA) -> fmv_typ (fmv_decl cD decl) tA
+    | I.PiTyp ((decl, _, _), tA) -> fmv_typ (fmv_decl cD decl) tA
     | I.Sigma trec -> fmv_trec cD trec
 
   and fmv_trec (cD : I.mctx) =

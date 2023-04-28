@@ -16,30 +16,32 @@ module LF = struct
 
   type kind =
     | Typ
-    | PiKind of (typ_decl * Plicity.t) * kind
+    | PiKind of (typ_decl * Depend.t * Plicity.t) * kind
 
   and typ_decl =                                (* LF Declarations                *)
     | TypDecl of Name.t * typ                   (* D ::= x:A                      *)
     | TypDeclOpt of Name.t                      (*   |  x:_                       *)
 
+  (** Right-hand side of the turnstile for meta-types *)
   and cltyp =
     | MTyp of typ
     | PTyp of typ
     | STyp of svar_class * dctx
 
+  (** Meta-types *)
   and ctyp =
     | ClTyp of cltyp * dctx
     | CTyp of cid_schema option
 
   and ctyp_decl =                               (* Contextual Declarations        *)
-    | Decl of Name.t * ctyp * Plicity.t * Inductivity.t
-    | DeclOpt of Name.t * Plicity.t
+    | Decl of Name.t * ctyp * Plicity.t * Inductivity.t (* TODO: Annotate with [Depend.t]*)
+    | DeclOpt of Name.t * Plicity.t (* TODO: Annotate with [Depend.t]*)
 
-  and typ =                                     (* LF level                       *)
-    | Atom of Location.t * cid_typ * spine      (* A ::= a M1 ... Mn              *)
-    | PiTyp of (typ_decl * Plicity.t) * typ     (*   | Pi x:A.B                   *)
+  and typ =                                                (* LF level                       *)
+    | Atom of Location.t * cid_typ * spine                 (* A ::= a M1 ... Mn              *)
+    | PiTyp of (typ_decl * Depend.t * Plicity.t) * typ     (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
-    | TClo of (typ * sub)                       (*   | TClo(A,s)                  *)
+    | TClo of (typ * sub)                                  (*   | TClo(A,s)                  *)
 
 
   (* The plicity annotation is set to `implicit when reconstructing an

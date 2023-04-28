@@ -156,19 +156,19 @@ let rec raiseType cPsi tA =
   | I.Null -> (None, tA)
   | I.CtxVar psi -> (Some psi, tA)
   | I.DDec (cPsi', decl) ->
-     raiseType cPsi' (I.PiTyp ((decl, Plicity.implicit), tA))
+     raiseType cPsi' (I.PiTyp ((decl, Depend.maybe, Plicity.implicit), tA))
 
 let rec raiseType' cPsi tA =
   match cPsi with
   | I.Empty -> (None, tA)
   | I.Dec (cPsi', decl) ->
-     raiseType' cPsi' (I.PiTyp ((decl, Plicity.implicit), tA))
+     raiseType' cPsi' (I.PiTyp ((decl, Depend.maybe, Plicity.implicit), tA))
 
 let rec raiseKind cPsi tK =
   match cPsi with
   | I.Empty -> tK
   | I.Dec (cPsi', decl) ->
-     raiseKind cPsi' (I.PiKind ((decl, Plicity.implicit), tK))
+     raiseKind cPsi' (I.PiKind ((decl, Depend.maybe, Plicity.implicit), tK))
 
 let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
   let open Format in
@@ -259,7 +259,7 @@ let etaExpandHead loc h tA =
   let rec etaExpPrefix loc (tM, tA) =
     match tA with
     | I.Atom _ -> tM
-    | I.PiTyp ((I.TypDecl (x, _), _), tA') ->
+    | I.PiTyp ((I.TypDecl (x, _), _, _), tA') ->
        I.Lam (loc, x, etaExpPrefix loc (tM, tA'))
   in
   let (k, tS') = etaExpSpine 1 I.Nil tA in
@@ -648,10 +648,10 @@ and collectTyp p cQ ((cvar, offset) as phat) =
      let (cQ', tS') = collectSpine p cQ phat (tS, s) in
      (cQ', I.Atom (loc, a, tS'))
 
-  | (I.PiTyp ((I.TypDecl (x, tA), plicity), tB), s) ->
+  | (I.PiTyp ((I.TypDecl (x, tA), depend, plicity), tB), s) ->
      let (cQ', tA') = collectTyp p cQ phat (tA, s) in
      let (cQ'', tB') = collectTyp p cQ' (cvar, offset + 1) (tB, LF.dot1 s) in
-     (cQ'', I.PiTyp ((I.TypDecl (x, tA'), plicity), tB'))
+     (cQ'', I.PiTyp ((I.TypDecl (x, tA'), depend, plicity), tB'))
 
   | (I.TClo (tA, s'), s) ->
      collectTyp p cQ phat (tA, LF.comp s' s)
@@ -675,10 +675,10 @@ and collectTypRec p cQ ((cvar, offset) as phat) =
 and collectKind p cQ ((cvar, offset) as phat) =
   function
   | (I.Typ, _) -> (cQ, I.Typ)
-  | (I.PiKind ((I.TypDecl (x, tA), plicity), tK), s) ->
+  | (I.PiKind ((I.TypDecl (x, tA), depend, plicity), tK), s) ->
      let (cQ', tA') = collectTyp p cQ phat (tA, s) in
      let (cQ'', tK') = collectKind p cQ' (cvar, offset + 1) (tK, LF.dot1 s) in
-     (cQ'', I.PiKind ((I.TypDecl (x, tA'), plicity), tK'))
+     (cQ'', I.PiKind ((I.TypDecl (x, tA'), depend, plicity), tK'))
 
 
 and collectCVar loc p cQ =
@@ -773,9 +773,9 @@ let rec collectMctx cQ =
 let rec abstractKind cQ offset =
   function
   | (I.Typ, _) -> I.Typ
-  | (I.PiKind ((I.TypDecl (x, tA), plicity), tK), s) ->
+  | (I.PiKind ((I.TypDecl (x, tA), depend, plicity), tK), s) ->
      I.PiKind
-       ( (I.TypDecl (x, abstractTyp cQ offset (tA, s)), plicity)
+       ( (I.TypDecl (x, abstractTyp cQ offset (tA, s)), depend, plicity)
        , abstractKind cQ (offset + 1) (tK, LF.dot1 s)
        )
 
@@ -786,9 +786,9 @@ and abstractTypW cQ offset =
   | (I.Atom (loc, a, tS), s (* id *)) ->
      I.Atom (loc, a, abstractSpine cQ offset (tS, s))
 
-  | (I.PiTyp ((I.TypDecl (x, tA), plicity), tB), s) ->
+  | (I.PiTyp ((I.TypDecl (x, tA), depend, plicity), tB), s) ->
      I.PiTyp
-       ( (I.TypDecl (x, abstractTyp cQ offset (tA, s)), plicity)
+       ( (I.TypDecl (x, abstractTyp cQ offset (tA, s)), depend, plicity)
        , abstractTyp cQ (offset + 1) (tB, LF.dot1 s)
        )
 
@@ -920,9 +920,9 @@ and abstractMVarTypW cQ offset =
   function
   | (I.Atom (loc, a, tS), s (* id *)) ->
      I.Atom (loc, a, abstractMVarSpine cQ offset (tS, s))
-  | (I.PiTyp ((I.TypDecl (x, tA), plicity), tB), s) ->
+  | (I.PiTyp ((I.TypDecl (x, tA), depend, plicity), tB), s) ->
      I.PiTyp
-       ( (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), plicity)
+       ( (I.TypDecl (x, abstractMVarTyp cQ offset (tA, s)), depend, plicity)
        , abstractMVarTyp cQ offset (tB, LF.dot1 s)
        )
   | (I.Sigma typRec, s) ->

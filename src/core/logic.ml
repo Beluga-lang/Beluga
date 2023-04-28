@@ -239,9 +239,9 @@ module Convert = struct
   *)
   let rec typToClause' eV cG tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tD, Plicity.Implicit), tA') ->
+    | LF.PiTyp ((tD, Depend.No, _), tA') ->
        typToClause' (LF.DDec (eV, tD)) cG tA' (cS, dS, dR)
-    | LF.PiTyp ((LF.TypDecl (_, tA), Plicity.Explicit), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), (Depend.Yes | Depend.Maybe), _), tB) ->
        typToClause' eV (Conjunct (cG, typToGoal tA (cS, dS, dR)))
          tB (cS + 1, dS, dR)
     | LF.Atom _ ->
@@ -295,9 +295,9 @@ module Convert = struct
    *)
   and typToGoal tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tdec, Plicity.Implicit), tA') ->
+    | LF.PiTyp ((tdec, Depend.No, _), tA') ->
        All (tdec, typToGoal tA' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, Plicity.Explicit), tB) ->
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, (Depend.Yes | Depend.Maybe), _), tB) ->
        Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tA (-cS, -dS, dR))
@@ -307,9 +307,9 @@ module Convert = struct
 
   and typToRes tM (cS, dS, dR) =
     match tM with
-    | LF.PiTyp ((tD, Plicity.Implicit), tM') ->
+    | LF.PiTyp ((tD, Depend.No, _), tM') ->
        Exists (tD, typToRes tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (_, tA), Plicity.Explicit), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), (Depend.Yes | Depend.Maybe), _), tB) ->
        And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
     | LF.Atom _ ->
        Head (Shift.shiftAtom tM (-cS, -dS, dR))
@@ -435,7 +435,7 @@ module Convert = struct
     | LF.Atom _ ->
        let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) Plicity.implicit Inductivity.not_inductive) in
        LF.Root (Location.ghost, LF.MVar (u, S.id), LF.Nil, Plicity.explicit)
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _, _), tB) ->
        LF.Lam
          ( Location.ghost
          , x
@@ -641,7 +641,7 @@ module Convert = struct
   let typToQuery cD cPsi (tA, i) =
     let rec typToQuery' (tA, i) s xs =
       match tA with
-      | LF.PiTyp ((LF.TypDecl (x, tA), Plicity.Implicit), tB) when i > 0 ->
+      | LF.PiTyp ((LF.TypDecl (x, tA), Depend.No, _), tB) when i > 0 ->
          let tN' = etaExpand cD cPsi (tA, s) in
          typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
       | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
@@ -2470,8 +2470,8 @@ module CSolver = struct
       match tA with
       | LF.Atom (l, cid, sp) ->
          LF.Atom (l, cid, remove_sp sp)
-      | LF.PiTyp ((td, dep), tA') ->
-         LF.PiTyp ((td, dep), remove_typ tA)
+      | LF.PiTyp ((td, depend, plicity), tA') ->
+         LF.PiTyp ((td, depend, plicity), remove_typ tA)
       | LF.TClo (tA', s) ->
          LF.TClo (remove_typ tA', s)
     in
@@ -3948,13 +3948,13 @@ module CSolver = struct
 
       and find_explicit tau spine =
         match (tau, spine) with
-        | (LF.PiTyp ((LF.TypDecl (name, _), plicity), tau'),
-           LF.App (norm, spine')) when plicity == Plicity.explicit ->
+        | (LF.PiTyp ((LF.TypDecl (name, _), depend, Plicity.Explicit), tau'),
+           LF.App (norm, spine')) ->
            List.append (collect_from_norm norm) (find_explicit tau' spine')
-        | (LF.PiTyp ((LF.TypDeclOpt name, plicity), tau'),
-           LF.App (norm, spine')) when plicity == Plicity.explicit ->
+        | (LF.PiTyp ((LF.TypDeclOpt name, depend, Plicity.Explicit), tau'),
+           LF.App (norm, spine')) ->
            List.append (collect_from_norm norm) (find_explicit tau' spine')
-        | (LF.PiTyp ((_, _), tau'), LF.App (_, spine')) ->
+        | (LF.PiTyp ((_, _, _), tau'), LF.App (_, spine')) ->
            find_explicit tau' spine'
         | _ -> []
 
@@ -5888,7 +5888,7 @@ module Frontend = struct
       match tA with
       | LF.Atom (l, cid, spine) ->
          LF.Atom (l, cid, (remove_spine_mvars spine))
-      | LF.PiTyp ((td, d), tA') -> LF.PiTyp ((td, d), remove_typ_mvars tA')
+      | LF.PiTyp ((td, d, p), tA') -> LF.PiTyp ((td, d, p), remove_typ_mvars tA')
       | LF.Sigma (_) -> tA
       | LF.TClo (tA', s) -> raise NotImplementedYet
     in

@@ -164,10 +164,10 @@ and strans_typW cD cPsi (tA, s) conv_list =
   | LF.Atom (loc, a, tS ) ->
      LF.Atom (loc, a, strans_spine cD cPsi (tS, s) conv_list )
 
-  | LF.PiTyp ((LF.TypDecl (x, tA), plicity), tB) ->
+  | LF.PiTyp ((LF.TypDecl (x, tA), depend, plicity), tB) ->
      let tA' = strans_typ cD cPsi (tA, s) conv_list in
      let tB' = strans_typ cD cPsi (tB, S.LF.dot1 s) (1 :: conv_list) in
-     LF.PiTyp ((LF.TypDecl (x, tA'), plicity), tB')
+     LF.PiTyp ((LF.TypDecl (x, tA'), depend, plicity), tB')
 
   (* no sigma types allowed *)
 
@@ -422,7 +422,7 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA plicity n names =
         , Plicity.explicit
         )
 
-  | (LF.PiTyp ((LF.TypDecl (x, tA), _), tB), s) ->
+  | (LF.PiTyp ((LF.TypDecl (x, tA), _, _), tB), s) ->
      let x = NameGen.renumber names x in
      let decl = LF.TypDecl (x, tA) in
      let cPsi' = LF.DDec (cPsi, S.LF.decSub decl s) in

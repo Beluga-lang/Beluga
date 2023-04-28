@@ -18,6 +18,11 @@ let[@inline] json_of_plicity = function
   | Plicity.Explicit -> json_of_string "explicit"
   | Plicity.Implicit -> json_of_string "implicit"
 
+let[@inline] json_of_depend = function
+  | Depend.Yes -> json_of_string "yes"
+  | Depend.Maybe -> json_of_string "maybe"
+  | Depend.No -> json_of_string "no"
+
 let json_of_name name =
   json_of_association
     [ ("modules", json_of_list json_of_string (Name.get_module name))
@@ -73,10 +78,11 @@ let json_of_lf_svar_class = function
 
 let rec json_of_lf_kind = function
   | Synapx.LF.Typ -> json_of_variant ~name:"Synapx.LF.Typ" ~data:[]
-  | Synapx.LF.PiKind ((declaration, plicity), tK) ->
+  | Synapx.LF.PiKind ((declaration, depend, plicity), tK) ->
       json_of_variant ~name:"Synapx.LF.PiKind"
         ~data:
           [ ("declaration", json_of_lf_typ_decl declaration)
+          ; ("depend", json_of_depend depend)
           ; ("plicity", json_of_plicity plicity)
           ; ("body", json_of_lf_kind tK)
           ]
@@ -132,10 +138,11 @@ and json_of_lf_typ = function
           ; ("cid_typ", json_of_typ_id cid)
           ; ("spine", json_of_lf_spine spine)
           ]
-  | Synapx.LF.PiTyp ((declaration, plicity), tA) ->
+  | Synapx.LF.PiTyp ((declaration, depend, plicity), tA) ->
       json_of_variant ~name:"Synapx.LF.PiTyp"
         ~data:
           [ ("declaration", json_of_lf_typ_decl declaration)
+          ; ("depend", json_of_depend depend)
           ; ("plicity", json_of_plicity plicity)
           ; ("body", json_of_lf_typ tA)
           ]

@@ -213,7 +213,7 @@ module Cid = struct
       | Int.LF.Atom(_, b, _) ->
          List.iter (fun a -> addSubord a b) acc ; [b]
 
-      | Int.LF.PiTyp((Int.LF.TypDecl(_, tA1), _), tA2) ->
+      | Int.LF.PiTyp((Int.LF.TypDecl(_, tA1), _, _), tA2) ->
          inspect (acc @ (inspect [] tA1)) tA2
     (*  | Sigma _ -> *)
 
@@ -222,7 +222,7 @@ module Cid = struct
       function
       | Int.LF.Typ ->
          List.iter (fun a -> addSubord a cid_tp) acc
-      | Int.LF.PiKind((Int.LF.TypDecl(_, tA1), _), tK2) ->
+      | Int.LF.PiKind((Int.LF.TypDecl(_, tA1), _, _), tK2) ->
          inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
 
 

@@ -243,7 +243,7 @@ let rec ctxToSub' cPhi =
  *)
 let rec checkW cD cPsi sM sA =
   match (sM, sA) with
-  | ((Lam (loc, name, tM), s1), (PiTyp ((TypDecl _ as tX, _), tB), s2)) -> (* Offset by 1 *)
+  | ((Lam (loc, name, tM), s1), (PiTyp ((TypDecl _ as tX, _, _), tB), s2)) -> (* Offset by 1 *)
      check cD
        (DDec (cPsi, S.LF.decSub tX s2))
        (tM, S.LF.dot1 s1)
@@ -363,7 +363,7 @@ and syn cD cPsi (Root (loc, h, tS, _), s (* id *)) =
     | ((SClo (tS, s'), s), sA) ->
        syn (tS, S.LF.comp s' s) sA
 
-    | ((App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2)) ->
+    | ((App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _, _), tB2), s2)) ->
        check cD cPsi (tM, s1) (tA1, s2);
        let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
        syn (tS, s1) tB2
@@ -646,7 +646,7 @@ and synKSpine cD cPsi sS1 sK =
   | (SClo (tS, s'), s), sK ->
     synKSpine cD cPsi (tS, S.LF.comp s' s) sK
 
-  | (App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _), kK), s2) ->
+  | (App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _, _), kK), s2) ->
     check cD cPsi (tM, s1) (tA1, s2);
     synKSpine cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
@@ -673,7 +673,7 @@ and checkTyp' cD cPsi (tA, s) =
          raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, S.LF.id)))))
      end
 
-  | PiTyp ((TypDecl (x, tA), _), tB) ->
+  | PiTyp ((TypDecl (x, tA), _, _), tB) ->
      checkTyp cD cPsi (tA, s);
      checkTyp cD (DDec (cPsi, TypDecl (x, TClo (tA, s)))) (tB, S.LF.dot1 s)
 
@@ -708,7 +708,7 @@ and checkTypRec cD cPsi (typRec, s) =
 and checkKind cD cPsi =
   function
   | Typ -> ()
-  | PiKind ((TypDecl (x, tA), _), kind) ->
+  | PiKind ((TypDecl (x, tA), _, _), kind) ->
      checkTyp cD cPsi (tA, S.LF.id);
      checkKind cD (DDec (cPsi, TypDecl (x, tA))) kind
 

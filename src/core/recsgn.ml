@@ -537,7 +537,7 @@ module Make
     Store.FCVar.clear ();
     let rec get_type_family = function
       | Synapx.LF.Atom (_loc, a, _spine) -> a
-      | Synapx.LF.PiTyp ((_, _), t) -> get_type_family t
+      | Synapx.LF.PiTyp ((_, _, _), t) -> get_type_family t
       | Synapx.LF.Sigma _ ->
           Error.raise_violation ~location
             (Format.asprintf "[%s] unsupported sigma type" __FUNCTION__)

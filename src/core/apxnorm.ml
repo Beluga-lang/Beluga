@@ -230,10 +230,10 @@ let rec cnormApxTyp cD delta a (cD'', t) =
   | Apx.LF.Atom (loc, c, spine) ->
      Apx.LF.Atom (loc, c, cnormApxSpine cD delta spine (cD'', t))
 
-  | Apx.LF.PiTyp ((t_decl, plicity), a) ->
+  | Apx.LF.PiTyp ((t_decl, depend, plicity), a) ->
      let t_decl' = cnormApxTypDecl cD delta t_decl (cD'', t) in
      let a' = cnormApxTyp cD delta a (cD'', t) in
-     Apx.LF.PiTyp ((t_decl', plicity), a')
+     Apx.LF.PiTyp ((t_decl', depend, plicity), a')
 
   | Apx.LF.Sigma typ_rec ->
      let typ_rec' = cnormApxTypRec cD delta typ_rec (cD'', t) in
@@ -487,7 +487,7 @@ and collectApxSpine fMVs =
 and collectApxTyp fMVs =
   function
   | Apx.LF.Atom (_, _, spine) -> collectApxSpine fMVs spine
-  | Apx.LF.PiTyp ((tdecl, _), a) ->
+  | Apx.LF.PiTyp ((tdecl, _, _), a) ->
      let fMVs' = collectApxTypDecl fMVs tdecl in
      collectApxTyp fMVs' a
   | Apx.LF.Sigma t_rec -> collectApxTypRec fMVs t_rec
@@ -556,7 +556,7 @@ let rec collectApxTyp fMVd =
   function
   | Apx.LF.Atom (loc, c, tS) ->
      collectApxSpine fMVd tS
-  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, tA), _ ), tB) ->
+  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, tA), _, _ ), tB) ->
      let fMVd1 = collectApxTyp fMVd tA in
      collectApxTyp fMVd1 tB
   | Apx.LF.Sigma trec ->
@@ -756,10 +756,10 @@ let rec fmvApxTyp fMVs cD d_param =
   | Apx.LF.Atom (loc, c, spine) ->
      Apx.LF.Atom (loc, c, fmvApxSpine fMVs cD d_param spine)
 
-  | Apx.LF.PiTyp ((t_decl, plicity), a) ->
+  | Apx.LF.PiTyp ((t_decl, depend, plicity), a) ->
      let t_decl' = fmvApxTypDecl fMVs cD d_param t_decl in
      let a' = fmvApxTyp fMVs cD d_param a in
-     Apx.LF.PiTyp ((t_decl', plicity), a')
+     Apx.LF.PiTyp ((t_decl', depend, plicity), a')
 
   | Apx.LF.Sigma typ_rec ->
      let typ_rec' = fmvApxTypRec fMVs cD d_param typ_rec in

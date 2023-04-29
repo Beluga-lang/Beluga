@@ -24,7 +24,7 @@ let realMain () =
   let ppf = Format.std_formatter in
   let stubs =
     if options.load_holes then
-      B.Holes.get_harpoon_subgoals () |> List.map Pair.snd
+      B.Holes.get_harpoon_subgoals ()
     else []
   in
   let io =

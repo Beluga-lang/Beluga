@@ -97,9 +97,17 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
      - group theorems by mutual group
      - construct a session for each mutual group
    *)
-  List1.group_by Pair.fst gs
-  |> List.map (Pair.map_right (List1.map Pair.snd))
-  |> List1.group_by F.(Pair.fst >> Store.Cid.Comp.mutual_group)
+  List1.group_by (fun (_location, theorem_cid, _state) -> theorem_cid) gs
+  |> List.map
+       (fun (theorem_cid, subgoals) ->
+          let subgoals' =
+            List1.map
+              (fun (_location, _cid, proof_state) -> proof_state)
+              subgoals
+          in
+          (theorem_cid, subgoals'))
+  |> List1.group_by (fun (theorem_cid, _) ->
+        Store.Cid.Comp.mutual_group theorem_cid)
   |> List.map (recover_session ppf hooks)
 
 (** Drops all sessions from the prover, replacing with the given
@@ -213,7 +221,7 @@ let next_triple (s : t) =
     To preserve focus, combine this with `keeping_focus`. *)
 let reset s : unit =
   let (_all_paths, _sgn') = Load.load_fresh s.sig_path in
-  let gs = Holes.get_harpoon_subgoals () |> List.map Pair.snd in
+  let gs = Holes.get_harpoon_subgoals () in
   let hooks = [run_automation s.automation_state] in
   let cs =
     recover_sessions (IO.formatter s.io) hooks gs
@@ -262,10 +270,7 @@ let keeping_focus s (c, t, g) f =
     `reset`.
  *)
 let save s =
-  let existing_holes =
-    Holes.get_harpoon_subgoals ()
-    |> List.map (fun (loc, (_, g)) -> (loc, g))
-  in
+  let existing_holes = Holes.get_harpoon_subgoals () in
   let new_mutual_rec_thmss =
     DynArray.to_list s.sessions
     |> List.filter
@@ -279,7 +284,7 @@ let save s =
   in
   Serialization.update_existing_holes existing_holes;
   Serialization.append_sessions
-    (ExtList.List.last s.all_paths)
+    (List.last s.all_paths)
     new_mutual_rec_thmss
 
 let automation_state s = s.automation_state

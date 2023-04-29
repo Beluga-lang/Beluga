@@ -180,7 +180,7 @@ let unsafe_get (s : lookup_strategy) : HoleId.t * some_hole =
   | None -> Error.raise (No_such_hole s)
   | Some h -> h
 
-let harpoon_subgoals : (Location.t * Comp.open_subgoal) DynArray.t =
+let harpoon_subgoals : Comp.open_subgoal DynArray.t =
   DynArray.create ()
 
 let add_harpoon_subgoal = DynArray.add harpoon_subgoals

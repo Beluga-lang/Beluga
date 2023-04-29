@@ -107,7 +107,7 @@ let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) 
 let update_existing_holes existing_holes =
   existing_holes
   |> List.filter_map
-      begin fun (loc, ps) ->
+      begin fun (loc, _cid, ps) ->
         let open Option in
         let open Comp in
         !(ps.solution)

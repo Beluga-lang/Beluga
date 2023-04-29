@@ -10,4 +10,4 @@ open Int
  *)
 val append_sessions : string -> Theorem.t list list -> unit
 
-val update_existing_holes : (Beluga_syntax.Location.t * Comp.proof_state) list -> unit
+val update_existing_holes : Comp.open_subgoal list -> unit

@@ -1604,7 +1604,7 @@ module Comp = struct
                  goal = ttau
                }
              in
-             Holes.add_harpoon_subgoal (loc, (cid, g))
+             Holes.add_harpoon_subgoal (loc, cid, g)
           end
        end
 

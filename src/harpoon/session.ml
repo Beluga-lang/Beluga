@@ -101,7 +101,7 @@ let get_session_kind c : [`introduced | `loaded] =
     |> List.exists
          begin fun thm ->
          existing_holes
-         |> List.map F.(Pair.fst ++ Pair.snd)
+         |> List.map (fun (_location, cid, _state) -> cid)
          |> List.exists (Theorem.has_cid_of thm)
          end
   in

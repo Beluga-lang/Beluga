@@ -180,7 +180,10 @@ let revisit_disambiguation sgn =
   in
   let snapshots = Id.Prog.Hashtbl.create 10 in
   Disambiguation_visitor.revisit_sgn state snapshots sgn;
-  snapshots
+  let last_snapshot =
+    Disambiguation_state.Disambiguation_state.snapshot_state state
+  in
+  (snapshots, last_snapshot)
 
 (** Functor creating a visitor for rebuilding the indexing state, and take
     snapshots of it at each Harpoon proof. *)
@@ -314,4 +317,5 @@ let revisit_indexing sgn =
   let state = Index_state.Indexing_state.create_initial_state () in
   let snapshots = Id.Prog.Hashtbl.create 10 in
   Indexing_visitor.revisit_sgn state snapshots sgn;
-  snapshots
+  let final_snapshot = Index_state.Indexing_state.snapshot_state state in
+  (snapshots, final_snapshot)

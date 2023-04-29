@@ -2,4 +2,4 @@
  (name replay)
  (public_name replay)
  (package beluga)
- (libraries support beluga))
+ (libraries unix support beluga))

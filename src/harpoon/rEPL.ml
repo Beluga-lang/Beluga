@@ -19,11 +19,11 @@ let run_safe (f : unit -> 'a) : 'a e =
   try
     Either.right (f ())
   with
-  | IO.Error.E e ->
+  | IO.Io_error e ->
      Either.left
        begin fun ppf () ->
        Format.fprintf ppf "@[<v>%t@]@\n"
-         (IO.Error.error_printer e)
+         (Error.find_printer e)
        end
   | Prover.Error.E e ->
      Either.left

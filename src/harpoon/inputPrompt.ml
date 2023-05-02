@@ -49,3 +49,5 @@ let make test_file test_start : t =
   match test_file with
   | Option.None -> terminal
   | Option.Some f -> create_file f test_start
+
+let next_line_opt prompt ~msg ~history_file = prompt ~msg ~history_file ()

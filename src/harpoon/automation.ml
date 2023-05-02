@@ -1,12 +1,13 @@
 open Support
 
 module B = Beluga
+open Beluga_syntax
 
 module P = B.Prettyint.DefaultPrinter
-module Command = Beluga_syntax.Ext.Harpoon
-module Comp = Beluga_syntax.Synint.Comp
-module LF = Beluga_syntax.Synint.LF
-module Location = Beluga_syntax.Location
+module Command = Synext.Harpoon
+module Comp = Synint.Comp
+module LF = Synint.LF
+module Location = Location
 module Context = B.Context
 module Whnf = B.Whnf
 module S = B.Substitution
@@ -95,7 +96,7 @@ let auto_solve_trivial : t =
     | LF.Decl (_, mtyp, _, _) ->
        Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
-      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] Unexpected DeclOpt"
+      Error.raise_violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
@@ -104,7 +105,7 @@ let auto_solve_trivial : t =
        let t = LF.MShift idx in
        let LF.ClTyp (_, cPsi) as cU = Whnf.cnormMTyp (cU, t) in
        let head = MVar (Offset idx, S.LF.id) in
-       let clobj = MObj (Root (Location.ghost, head, Nil, Beluga_syntax.Plicity.explicit)) in
+       let clobj = MObj (Root (Location.ghost, head, Nil, Plicity.explicit)) in
        let psi_hat = Context.dctxToHat cPsi in
        Box
          ( Location.ghost
@@ -115,9 +116,9 @@ let auto_solve_trivial : t =
        will never return true for a DeclOpt.
      *)
     | LF.DeclOpt _, _ ->
-      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] DeclOpt impossible"
+      Error.raise_violation "[auto_solve_trivial] DeclOpt impossible"
     | _ ->
-      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] impossible case"
+      Error.raise_violation "[auto_solve_trivial] impossible case"
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
@@ -129,7 +130,7 @@ let auto_solve_trivial : t =
     | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
-      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
+      Error.raise_violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
   in
   let build_cwitness (_, idx) = Var (Location.ghost, idx)
   in

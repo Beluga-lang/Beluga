@@ -298,7 +298,8 @@ let completeness s = match DynArray.length s.sessions with
   | _ -> `incomplete
 
 let parsed_prompt s ?(source = IO.default_prompt_source) ~msg ~history_file p =
-  IO.parsed_prompt s.io ~source ~msg ~history_file p
+  let (_location, _line) = IO.read_line s.io ~source ~msg ~history_file in
+  Obj.magic ()
 
 let session_configuration_wizard s =
   let open Option in

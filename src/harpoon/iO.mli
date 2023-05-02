@@ -1,22 +1,16 @@
 (** Centralizes high-level Harpoon input-output capabilities. *)
 
-module Error : sig
-  type t =
-    | EndOfInput (** Any prompt is subject to raising this. *)
+open Beluga_syntax
 
-  (** Formats an error. *)
-  val error_printer : t -> Format.formatter -> unit
-
-  exception E of t
-end
+type exn += private Io_error of exn
 
 (** Type of IO capabilities. Includes:
+
     - prompting the user for input,
     - displaying a message to the user.
 
-    When a function needs user interactivity, pass this object to it.
-    If it only needs an output capability, see {!formatter}.
-  *)
+    When a function needs user interactivity, pass this object to it. If it
+    only needs an output capability, see {!type:Format.formatter}. *)
 type t
 
 (** Constructs an IO capability. *)
@@ -31,22 +25,17 @@ val prompt_number : t -> int
 (** Displays a formatted message. *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a
 
-(** Default value used for the filename when displaying parse
-    errors. *)
+(** Default value used for the filename when displaying parse errors. *)
 val default_prompt_source : string
 
-(** Prompts the user for input by displaying the given message.
-    The response is parsed using the given parser.
-    In case of parse errors, the prompt is repeated.
-
-    To allow the user to abort the loop, use a parser that accepts the
-    empty string. See {!Parser.maybe}.
+(** Prompts the user for input by displaying the given message. The input
+    line is output.
 
     The default value of the optional `source` parameter is
-    {!default_source_prompt}.
- *)
-val parsed_prompt : ?source : string ->
-                    t ->
-                    msg:string -> history_file:string option ->
-                    'a Beluga_parser.Parser.t ->
-                    'a
+    {!default_source_prompt}. *)
+val read_line :
+     ?source:string
+  -> t
+  -> msg:string
+  -> history_file:string option
+  -> Location.t * string

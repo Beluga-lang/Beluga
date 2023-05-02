@@ -107,7 +107,7 @@ module Elab = struct
             let cPsi = LF.(CtxVar (CtxOffset k)) in
             CObj cPsi
        in
-       let i = Comp.AnnBox (Beluga_syntax.Location.ghost, (loc, mF), cT)
+       let i = Comp.AnnBox (Location.ghost, (loc, mF), cT)
        and tau = Comp.TypBox (loc, cT) in
        (i, tau)
     | _ -> E.raise_violation "[harpoon] [Elab] [mvar] cD decl has no type"

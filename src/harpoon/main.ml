@@ -36,7 +36,7 @@ let realMain () =
 let main () =
   try realMain () with
   | e ->
-      print_string (Printexc.to_string e);
+      prerr_string (Printexc.to_string e);
       exit 1
 
 let () = main ()

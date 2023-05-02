@@ -1,23 +1,17 @@
 open Support
 open Beluga_syntax
 
-module Error = struct
-  type t =
-    | EndOfInput (** Any user prompt is subject to raise this error *)
+exception End_of_input
 
-  exception E of t
+exception Io_error of exn
 
-  let error_printer = function
-    | EndOfInput ->
-       Format.dprintf "End of input."
+let () =
+  Error.register_exception_printer (function
+    | End_of_file -> Format.dprintf "End of input."
+    | Io_error e -> Error.find_printer e
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
-  let () =
-    Error.register_exception_printer (function
-      | E e -> error_printer e
-      | exn -> Error.raise_unsupported_exception_printing exn)
-
-  let throw e = raise (E e)
-end
+let raise_io_error e = Error.raise (Io_error e)
 
 type t =
   { prompt : InputPrompt.t
@@ -31,16 +25,20 @@ let formatter io = io.ppf
 
 let printf io x = Format.fprintf io.ppf x
 
-let make prompt ppf =
-  { prompt; ppf; prompt_number = 0 }
+let make prompt ppf = { prompt; ppf; prompt_number = 0 }
 
-let[@warning "-32"] next_prompt_number io =
+let next_prompt_number io =
   io.prompt_number <- io.prompt_number + 1;
   io.prompt_number
 
 let default_prompt_source = "<prompt>"
 
-let[@warning "-39"] rec parsed_prompt ?(source = default_prompt_source) io ~msg ~history_file p =
-  match io.prompt ~msg ~history_file () with
-  | Option.None -> Error.(throw EndOfInput)
-  | Option.Some line -> Obj.magic () (* TODO: Parse only [p] on [line] *)
+let read_line ?(source = default_prompt_source) io ~msg ~history_file =
+  match InputPrompt.next_line_opt ~msg ~history_file io.prompt with
+  | Option.None -> raise_io_error End_of_input
+  | Option.Some line ->
+      let prompt_number = next_prompt_number io in
+      let location =
+        Location.set_start_line prompt_number (Location.initial source)
+      in
+      (location, line)

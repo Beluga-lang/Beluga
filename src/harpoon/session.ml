@@ -224,6 +224,31 @@ let check_translated_proofs c : translation_check_result =
      with
      | exc -> `check_error exc
 
+let parse_quit_or_theorem_identifier_opt location input =
+  let open Beluga_parser in
+  let open Parser in
+  let token_sequence = Lexer.lex_string ~initial_location:location input in
+  let parsing_state =
+    Parser_state.initial ~initial_location:location token_sequence
+  in
+  let quit =
+    Parsing.(
+      colon &> keyword "quit" $> (fun _ -> `quit) |> labelled "`:quit'")
+  in
+  let theorem_name =
+    Parsing.(
+      identifier
+      $> (fun identifier -> `theorem_name identifier)
+      |> labelled "Theorem identifier")
+  in
+  let parser = Parsing.(only (maybe (alt quit theorem_name))) in
+  let _parsing_state', result = Parsing.(run_exn parser parsing_state) in
+  result
+
+let prompt_quit_or_theorem_identifier_opt io =
+  IO.prompt_input io ~msg:"  Name of theorem (:quit or empty to finish): "
+    ~history_file:None parse_quit_or_theorem_identifier_opt
+
 (** Runs the theorem configuration prompt to construct a mutual
     group of theorems.
  *)
@@ -235,9 +260,10 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
       IO.read_line io ~msg:"  Name of theorem (:quit or empty to finish): "
         ~history_file:None
     in
-    match Obj.magic () (* TODO: Parse [":quit"] or [<identifier>] *) with
-    | None | Some `quit -> []
-    | Some (`next name) ->
+    match prompt_quit_or_theorem_identifier_opt io with
+    | Option.None (* Blank input *)
+    | Option.Some `quit (* [`:quit'] input *) -> []
+    | Option.Some (`theorem_name name) (* Theorem name input *) ->
        let tau, k =
          (* FIXME: These calls are sketchy as hell.
                 There must be a better place to put them -je
@@ -267,7 +293,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        in
        let conf =
          Theorem.Conf.make
-           name
+           (Name.make_from_identifier name)
            total_dec_kind
            tau
            k

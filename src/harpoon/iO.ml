@@ -34,11 +34,27 @@ let next_prompt_number io =
 let default_prompt_source = "<prompt>"
 
 let read_line ?(source = default_prompt_source) io ~msg ~history_file =
+  let prompt_number = next_prompt_number io in
   match InputPrompt.next_line_opt ~msg ~history_file io.prompt with
   | Option.None -> raise_io_error End_of_input
   | Option.Some line ->
-      let prompt_number = next_prompt_number io in
       let location =
         Location.set_start_line prompt_number (Location.initial source)
       in
       (location, line)
+
+let rec prompt_input ?(source = default_prompt_source) io ~msg ~history_file
+    f =
+  try
+    let location, line = read_line ~source io ~msg ~history_file in
+    f location line
+  with
+  | Io_error End_of_input ->
+      (* End of the input, any subsequent prompt fails in the same way. *)
+      Option.none
+  | cause ->
+      (* Suppress the exception raised by [f location line] and re-prompt for
+         an input *)
+      let cause_printer = Error.find_printer cause in
+      printf io "%t" cause_printer;
+      prompt_input ~source io ~msg ~history_file f

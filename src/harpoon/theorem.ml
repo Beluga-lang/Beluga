@@ -20,7 +20,7 @@ end
 type 'a subgoal_hook = Comp.proof_state -> 'a
 
 module Action = struct
-  (** A invertible action applied to a theorem. Used to implement
+  (** An invertible action applied to a theorem. Used to implement
       history/undo. *)
   type t =
     { target : Comp.proof_state
@@ -33,12 +33,6 @@ module Action = struct
     { name; target; children; solution }
 
   let name_of_action a = a.name
-end
-
-module Direction = struct
-  include History.Direction
-  let forward = `forward
-  let backward = `backward
 end
 
 (** A single theorem. *)
@@ -123,33 +117,34 @@ let validate_action_inverse t a : unit =
    *)
   () (* TODO *)
 
-type apply_mode = History.Direction.t
+let apply_forward theorem_state action =
+  validate_action theorem_state action;
+  solve action.Action.target action.Action.solution;
+  remove_subgoal theorem_state action.Action.target;
+  add_subgoals theorem_state action.Action.children
 
-let apply' (mode : apply_mode) t (a : Action.t) =
-  let open Action in
-  match mode with
-  | `forward ->
-     validate_action t a;
-     solve a.target a.solution;
-     remove_subgoal t a.target;
-     add_subgoals t a.children;
-  | `backward ->
-     validate_action_inverse t a;
-     unsolve a.target;
-     remove_subgoals t a.children;
-     add_subgoal' t a.target
+let apply_backward theorem_state action =
+  validate_action_inverse theorem_state action;
+  unsolve action.Action.target;
+  remove_subgoals theorem_state action.Action.children;
+  add_subgoal' theorem_state action.Action.target
 
-let record_action t a = History.add t.history a
+let record_action theorem_state action =
+  History.add theorem_state.history action
 
-let apply t a =
-  apply' `forward t a;
-  record_action t a
+let apply theorem_state action =
+  apply_forward theorem_state action;
+  record_action theorem_state action
 
-let history_step t d : bool =
-  let open Option in
-  History.step d t.history
-  $> apply' d t
-  |> is_some
+let history_step_backward theorem_state =
+  match History.step_backward theorem_state.history with
+  | Option.Some x -> apply_backward theorem_state x; true
+  | Option.None -> false
+
+let history_step_forward theorem_state =
+  match History.step_forward theorem_state.history with
+  | Option.Some x -> apply_forward theorem_state x; true
+  | Option.None -> false
 
 (** Alias to be used when this module is open. *)
 type theorem = t

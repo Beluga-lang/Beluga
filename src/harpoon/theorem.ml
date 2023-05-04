@@ -373,16 +373,8 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
   in
   (mutual_group, List.map configure confs)
 
-type completeness =
-  [ `incomplete
-  | `complete
-  ]
-
-let completeness (t : t) =
-  if DynArray.length t.remaining_subgoals = 0 then
-    `complete
-  else
-    `incomplete
+let is_complete t =
+  DynArray.length t.remaining_subgoals = 0
 
 let subgoals t = DynArray.to_list t.remaining_subgoals
 

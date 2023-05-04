@@ -156,8 +156,6 @@ let start
      then (it must have been empty so) we need to create the default
      session and configure it. *)
   Gensym.reset ();
-  match HarpoonState.completeness s with
-  | `complete ->
-    if HarpoonState.session_configuration_wizard s then
-      loop s
-  | `incomplete -> loop s
+  if HarpoonState.is_complete s then
+    (if HarpoonState.session_configuration_wizard s then loop s)
+  else loop s

@@ -315,9 +315,9 @@ let configuration_wizard io automation_state : t option =
 let fmt_ppr_theorem_list ppf c =
   let theorem_list = full_theorem_list c in
   let fmt_ppr_theorem_completeness ppf t =
-    match Theorem.completeness t with
-    | `complete -> Format.fprintf ppf " (finished)"
-    | _ -> ()
+    if Theorem.is_complete t
+    then Format.fprintf ppf " (finished)"
+    else ()
   in
   let fmt_ppr_indexed_theorem ppf (i, t) =
     Format.fprintf ppf "%d. %a%a" (i + 1)

@@ -20,9 +20,6 @@ val make : Options.save_mode -> Options.interaction_mode ->
            Comp.open_subgoal list ->
            t
 
-(** Wraps {!IO.parsed_prompt}. *)
-val parsed_prompt : t -> ?source:string -> msg:string -> history_file:string option -> 'a Beluga_parser.Parser.t -> 'a
-
 (** Prints a message to the user. *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a
 
@@ -49,7 +46,7 @@ val interaction_mode : t -> Options.interaction_mode
 val next_triple : t -> triple_status
 
 (** Decides whether there are any sessions in the theorem. *)
-val completeness : t -> [ `complete | `incomplete ]
+val is_complete : t -> bool
 
 (** To be called by the REPL when a session is completed.
     This function analyzes the current save_mode and proceeds

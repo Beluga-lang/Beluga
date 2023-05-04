@@ -54,15 +54,14 @@ module Annot = struct
     output_string pp tp;
     output_string pp "\n)\n"
 
-  let print_annot pp (name : string) : unit =
+  let print_annot out_channel (name : string) : unit =
     let sorted =
       let cmp l1 l2 = Location.start_offset l1 - Location.start_offset l2 in
       let l = Hashtbl.fold (fun k v acc -> (k, v) :: acc) store [] in
       List.sort (fun (key1, _) (key2, _) -> cmp key1 key2) l
     in
-    let f = print_one pp name in
-    List.iter f sorted;
-    close_out pp
+    let f = print_one out_channel name in
+    List.iter f sorted
 end
 
 module LF = struct
@@ -162,8 +161,10 @@ let clear_all () : unit =
   Annot.clear ()
 
 let print_annot (name : string) : unit =
-  let pp = open_out (String.sub name 0 (String.rindex name '.') ^ ".annot") in
-  Annot.print_annot pp name
+  let output_filename = (Filename.remove_extension name) ^ ".annot" in
+  Out_channel.with_open_bin
+    output_filename
+    (fun out_channel -> Annot.print_annot out_channel name)
 
 let type_of_position (line : int) (col : int) : string =
   let sorted =

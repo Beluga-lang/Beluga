@@ -39,7 +39,8 @@ let init filename =
   | Option.None ->
       let out_channel =
         match filename with
-        | Option.Some name -> open_out name
+        | Option.Some name ->
+            open_out name (* This output channel is never closed *)
         | Option.None -> stderr
       in
       init_formatter (Format.formatter_of_out_channel out_channel)

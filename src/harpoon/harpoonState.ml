@@ -293,13 +293,7 @@ let interaction_mode s = s.stop
 
 let save_mode s = s.save_back
 
-let completeness s = match DynArray.length s.sessions with
-  | 0 -> `complete
-  | _ -> `incomplete
-
-let parsed_prompt s ?(source = IO.default_prompt_source) ~msg ~history_file p =
-  let (_location, _line) = IO.read_line s.io ~source ~msg ~history_file in
-  Obj.magic ()
+let is_complete s = DynArray.length s.sessions = 0
 
 let session_configuration_wizard s =
   let open Option in

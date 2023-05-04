@@ -1,3 +1,4 @@
+open Support
 open Beluga
 open Beluga_syntax.Syncom
 open Synint.Comp
@@ -26,13 +27,6 @@ module Action : sig
              t
 
   val name_of_action : t -> string
-end
-
-module Direction : sig
-  type t
-
-  val forward : t
-  val backward : t
 end
 
 type t
@@ -94,10 +88,15 @@ val count_subgoals : t -> int
     to the theorem's history. *)
 val apply : t -> Action.t -> unit
 
-(** Inverts the last action recorded in the history.
-    Returns false if the history is empty and no action can be
-    inverted. *)
-val history_step : t -> Direction.t -> bool
+(** [history_step_forward theorem_state] steps forward in the theorem state's
+    action history, redoing the latest undone action. Returns [false] if no
+    action was redone. *)
+val history_step_forward : t -> bool
+
+(** [history_step_backward theorem_state] steps backward in the theorem
+    state's action history, undoing the latest done action. Returns [false]
+    if no action was undone. *)
+val history_step_backward : t -> bool
 
 (** Replaces the subgoal with another, solving it by transforming an
     incomplete proof for the new subgoal.

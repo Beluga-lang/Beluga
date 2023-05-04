@@ -315,11 +315,11 @@ let process_command
        Translate.fmt_ppr_result (Translate.entry e)
 
   | Synext.Harpoon.Repl.Command.Undo _ ->
-     if Bool.not Theorem.(history_step t Direction.backward) then
+     if Bool.not (Theorem.history_step_backward t) then
        HarpoonState.printf s "Nothing to undo in the current theorem's timeline."
 
   | Synext.Harpoon.Repl.Command.Redo _ ->
-     if Bool.not Theorem.(history_step t Direction.forward) then
+     if Bool.not (Theorem.history_step_forward t) then
        HarpoonState.printf s "Nothing to redo in the current theorem's timeline."
 
   | Synext.Harpoon.Repl.Command.History _ ->

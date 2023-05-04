@@ -9,27 +9,18 @@ let add { past; future } x =
   Stack.push x past;
   Stack.clear future
 
-module Direction = struct
-  type t =
-    [ `forward
-    | `backward
-    ]
-
-  let inverse = function
-    | `forward -> `backward
-    | `backward -> `forward
-end
-
-let step d { past; future } =
-  let open Option in
-  match d with
-  | `forward ->
-      Stack.pop_opt future $> fun x ->
+let step_forward { past; future } =
+  match Stack.pop_opt future with
+  | Option.Some x as r ->
       Stack.push x past;
-      x
-  | `backward ->
-      Stack.pop_opt past $> fun x ->
+      r
+  | r -> r
+
+let step_backward { past; future } =
+  match Stack.pop_opt past with
+  | Option.Some x as r ->
       Stack.push x future;
-      x
+      r
+  | r -> r
 
 let to_lists { past; future } = Pair.both Stack.to_list_rev (past, future)

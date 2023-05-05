@@ -502,7 +502,7 @@ module Convert = struct
     in
     let rec find_cPsi lst k =
       match lst with
-      | (dctx, k') :: lst' when k == k' -> dctx
+      | (dctx, k') :: lst' when k = k' -> dctx
       | x :: lst' -> find_cPsi lst' k
       | _ -> raise NotImplementedYet
     in
@@ -1290,13 +1290,13 @@ module Solver = struct
   let uninstantiated hd =
       match hd with
     | LF.MMVar ((mmvar, ms'), s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        true
     | LF.MVar (LF.Inst mmvar, s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        true
     | LF.MPVar ((mmvar, ms'), s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        true
     | _ -> false
 
@@ -1335,7 +1335,7 @@ module Solver = struct
   let rec fix_sub s cD =
     let rec get_plicity cD k =
       match cD with
-      | LF.Dec (_, LF.Decl (_, _, plic, _)) when k == 1 -> plic
+      | LF.Dec (_, LF.Decl (_, _, plic, _)) when k = 1 -> plic
       | LF.Dec (cD', _) -> get_plicity cD' (k-1)
     in
     match s with
@@ -1343,7 +1343,7 @@ module Solver = struct
                                ((LF.MVar (LF.Inst mmvar, s)) as hd), sP, _1))
             , s') ->
        let plicity =
-         match mmvar.LF.instantiation.contents with
+         match !(mmvar.LF.instantiation) with
          | Some (LF.INorm (LF.Root (_, LF.MVar (LF.Offset k, _), _, _))) ->
             get_plicity cD k
          | Some (LF.IHead (LF.MVar (LF.Offset k, _))) -> get_plicity cD k
@@ -1358,7 +1358,7 @@ module Solver = struct
   (* Instantiate the nth position of sub s with the front ft. *)
   let rec instantiate_sub (n, s) ft curr =
     match s with
-    | LF.Dot (_, s') when n == curr ->
+    | LF.Dot (_, s') when n = curr ->
        LF.Dot (ft, s')
     | LF.Dot (ft', s') -> LF.Dot (ft', instantiate_sub (n, s) ft (curr + 1))
     | _ -> s
@@ -2042,13 +2042,13 @@ module CSolver = struct
   let cnormHd (hd, ms) =
     match hd with
     | LF.MMVar ((mmvar, ms'), s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        hd
     | LF.MPVar ((mmvar, ms'), s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        hd
     | LF.MVar (LF.Inst mmvar, s)
-         when mmvar.LF.instantiation.contents == None ->
+         when Option.is_none !(mmvar.LF.instantiation) ->
        hd
     | _ -> Whnf.cnormHead (hd, ms)
 
@@ -2258,7 +2258,7 @@ module CSolver = struct
   (* Returns the name of the variable declaration at position k in cG *)
   let rec get_name k cG =
     match cG with
-    | LF.Dec (cG', Comp.CTypDecl (name, _, _)) when k == 1 -> name
+    | LF.Dec (cG', Comp.CTypDecl (name, _, _)) when k = 1 -> name
     | LF.Dec (cG', Comp.CTypDecl (name, _, _)) ->
        get_name (k-1) cG'
 
@@ -2531,19 +2531,19 @@ module CSolver = struct
       let rec list_of_mvars_norm normal =
         match normal with
         | LF.Root (_, LF.MVar (LF.Inst mmvar,_), spine, _) ->
-           if mmvar.LF.instantiation.contents == None
+           if Option.is_none !(mmvar.LF.instantiation)
            then
              normal :: (list_of_mvars_spine spine)
            else
              list_of_mvars_spine spine
         | LF.Root(_, LF.MMVar ((mmvar,_),_), spine, _) ->
-           if mmvar.LF.instantiation.contents == None
+           if Option.is_none !(mmvar.LF.instantiation)
            then
              normal :: (list_of_mvars_spine spine)
            else
              list_of_mvars_spine spine
         | LF.Root(_, LF.MPVar ((mmvar,_),_), spine, _) ->
-           if mmvar.LF.instantiation.contents == None
+           if Option.is_none !(mmvar.LF.instantiation)
            then
              normal :: (list_of_mvars_spine spine)
            else
@@ -2612,11 +2612,11 @@ module CSolver = struct
         let rec is_in_lst cid lst =
           match lst with
           | (LF.Root(_, LF.MMVar(((mmvar, _),_)), _, _)) :: xs
-               when mmvar.LF.mmvar_id == cid -> true
+               when mmvar.LF.mmvar_id = cid -> true
           | (LF.Root(_, LF.MPVar(((mmvar, _),_)), _, _)) :: xs
-               when mmvar.LF.mmvar_id == cid -> true
+               when mmvar.LF.mmvar_id = cid -> true
           | (LF.Root(_, LF.MVar(LF.Inst mmvar,_), _, _)) :: xs
-               when mmvar.LF.mmvar_id == cid -> true
+               when mmvar.LF.mmvar_id = cid -> true
           | x :: xs -> is_in_lst cid xs
           | [] -> false
         in
@@ -2693,7 +2693,7 @@ module CSolver = struct
                                (_, LF.MVar
                                      (LF.Inst mmvar,_), _, _)))
                              as norm))), _) :: lst'
-           when mmvar.LF.instantiation.contents == None ->
+           when Option.is_none !(mmvar.LF.instantiation) ->
          let xs = get_mvars lst' in
          norm :: xs
       | Comp.M ((
@@ -2702,7 +2702,7 @@ module CSolver = struct
                             (((LF.Root
                                  (_, LF.MMVar ((mmvar,_),_), _, _))
                               as norm)))), _) :: lst'
-           when mmvar.LF.instantiation.contents == None ->
+           when Option.is_none !(mmvar.LF.instantiation) ->
          let xs = get_mvars lst' in
          norm :: xs
       | Comp.M ((
@@ -2710,7 +2710,7 @@ module CSolver = struct
                (dctx_hat, LF.PObj
                             (((LF.MPVar ((mmvar,_),_))
                               as hd)))), _) :: lst'
-           when mmvar.LF.instantiation.contents == None ->
+           when Option.is_none !(mmvar.LF.instantiation) ->
          let xs = get_mvars lst' in
          (LF.head hd) :: xs
       | _ :: lst' -> get_mvars lst'
@@ -2727,7 +2727,7 @@ module CSolver = struct
                                (_, LF.MVar
                                      (LF.Inst mmvar,_), _, plicity)))), mT)
          :: lst'
-        , y :: ys) when mmvar.LF.instantiation.contents == None ->
+        , y :: ys) when Option.is_none !(mmvar.LF.instantiation) ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
            Whnf.newMMVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
@@ -2748,7 +2748,7 @@ module CSolver = struct
                                      ((mmvar, _),_), _, plicity)))), mT)
          :: lst'
         , y :: ys)
-           when mmvar.LF.instantiation.contents == None ->
+           when Option.is_none !(mmvar.LF.instantiation) ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
            Whnf.newMMVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
@@ -2767,7 +2767,7 @@ module CSolver = struct
                             (LF.MPVar
                                      ((mmvar, _),_)))), mT) :: lst'
         , y :: ys)
-           when mmvar.LF.instantiation.contents == None ->
+           when Option.is_none !(mmvar.LF.instantiation) ->
          let LF.ClTyp (LF.PTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
            Whnf.newMPVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
@@ -2793,7 +2793,7 @@ module CSolver = struct
     let rec generate_new_typ tau sub =
       let rec find_sub id sub =
         match sub with
-        | (id', norm) :: _ when id' == id -> norm
+        | (id', norm) :: _ when id' = id -> norm
         | _ :: xs -> find_sub id xs
         | _ ->
            dprintf
@@ -2805,13 +2805,13 @@ module CSolver = struct
       let rec sub_norm norm sub =
         match norm with
         | LF.Root (_, LF.MVar (LF.Inst mmvar,_), spine, _)
-             when mmvar.LF.instantiation.contents == None ->
+             when Option.is_none !(mmvar.LF.instantiation) ->
            find_sub mmvar.LF.mmvar_id sub
         | LF.Root(_, LF.MMVar ((mmvar,_),_), spine, _)
-             when mmvar.LF.instantiation.contents == None ->
+             when Option.is_none !(mmvar.LF.instantiation) ->
            find_sub mmvar.LF.mmvar_id sub
         | LF.Root(_, LF.MPVar ((mmvar,_),_), spine, _)
-             when mmvar.LF.instantiation.contents == None ->
+             when Option.is_none !(mmvar.LF.instantiation) ->
            find_sub mmvar.LF.mmvar_id sub
         | LF.Root (loc, hd, spine, plicity) ->
            LF.Root (loc, hd, sub_spine spine sub, plicity)
@@ -3091,7 +3091,7 @@ module CSolver = struct
       match cD with
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
                                 plicity, ind)) as tdecl))
-           when is_in name cD_a && plicity == Plicity.explicit ->
+           when is_in name cD_a && Plicity.is_explicit plicity ->
          let (LF.Decl (_, tau2, _, induc), _, con, pos, thm, bool) =
            retrieve name cD_a in
          let (con', bool') =
@@ -3119,7 +3119,7 @@ module CSolver = struct
          update cD' (x :: ret')
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
                                 plicity, induc)) as tdecl))
-           when plicity == Plicity.explicit->
+           when Plicity.is_explicit plicity ->
          let (con', bool') =
             try
               (consOfLFTyp cltyp, true)
@@ -3143,7 +3143,7 @@ module CSolver = struct
          update cD' (x :: ret')
       | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, cPsi),
                                 plicity, induc)) as tdecl))
-           when plicity == Plicity.implicit ->
+           when Plicity.is_implicit plicity ->
          (* Do not split on implict vars *)
          let (con, bool) = (0, false) in
          let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
@@ -3278,7 +3278,7 @@ module CSolver = struct
         k
       k'
       end;
-         if k == k' then Some name else  find_var k cG_a'
+         if k = k' then Some name else  find_var k cG_a'
       | x :: cG_a' ->
          find_var k cG_a'
       | [] -> None
@@ -3288,7 +3288,7 @@ module CSolver = struct
     let rec find_mvar k cD_a =
       match cD_a with
       | (LF.Decl (name, _, _, _), _, _, _, Some k', true) :: cD_a'
-           when k == k' ->
+           when k = k' ->
          Some name
       | c :: cD_a' -> find_mvar k cD_a'
       | [] -> None
@@ -3323,9 +3323,8 @@ module CSolver = struct
         "[choose_split] Split (m)var given explicitly. Index = %d"
          k
       end;
-       let name = find_var k cG_a in
-       if name == None
-       then
+       match find_var k cG_a with
+       | Option.None ->
          (dprintf
            begin fun p ->
            p.fmt
@@ -3334,14 +3333,13 @@ module CSolver = struct
          let (Some n) = find_mvar k cD_a in
          let (tau, i, thm_var, cD_a') = remove_mvar n cD_a in
          (tau, i, thm_var, cD_a', cG_a, 0))
-       else
+       | Option.Some name ->
          (dprintf
            begin fun p ->
            p.fmt
              "[choose_split] var to split."
            end;
-         let (Some n) = name in
-         let (tau, i, thm_var, cG_a', pos) = remove_var n cG_a in
+         let (tau, i, thm_var, cG_a', pos) = remove_var name cG_a in
          (tau, i, thm_var, cD_a, cG_a', pos))
 
   (* Shifts the tdecls in cG_a by 1 *)
@@ -3808,7 +3806,7 @@ module CSolver = struct
     match cD with
     | LF.Dec (_, LF.Decl (_, _, plicity, _))
       | LF.Dec (_, LF.DeclOpt (_, plicity))
-         when k == 1 -> plicity
+         when k = 1 -> plicity
     | LF.Dec (cD', _) -> get_plicity cD' (k-1)
     | _ ->
        dprintf begin fun p -> p.fmt "[get_plicity] INDEX OUT OF BOUNDS" end;
@@ -3853,7 +3851,7 @@ module CSolver = struct
     | LF.ClObj (_1, LF.MObj (LF.Root (_2, LF.MMVar ((mmvar, _3), _4),
                                       spine, _5))) ->
        let plicity =
-       match mmvar.LF.instantiation.contents with
+       match !(mmvar.LF.instantiation) with
        | Some (LF.INorm (LF.Root (_2, LF.MVar (LF.Offset k, _3),
                                   spine, _4))) ->
           get_plicity cD k
@@ -3900,17 +3898,17 @@ module CSolver = struct
       end;
     let rec find_name cD k =
       match cD with
-      | LF.Dec (_, LF.Decl (name, _, _, _)) when k == 1 -> name
+      | LF.Dec (_, LF.Decl (name, _, _, _)) when k = 1 -> name
       | LF.Dec (cD', _) -> find_name cD' (k-1)
     in
     let collect_explicit_mvars =
       let rec collect_from_cD cD =
         match cD with
         | LF.Dec (cD', LF.Decl (name, _, plicity, _))
-             when plicity == Plicity.explicit ->
+             when Plicity.is_explicit plicity ->
            name :: (collect_from_cD cD')
         | LF.Dec (cD', LF.DeclOpt (name, plicity))
-             when plicity == Plicity.explicit ->
+             when Plicity.is_explicit plicity ->
            name :: (collect_from_cD cD')
         | LF.Dec (cD', _) ->
            collect_from_cD cD'
@@ -3921,16 +3919,16 @@ module CSolver = struct
         | LF.Lam (_, _, norm') | LF.Clo (norm', _) ->
            collect_from_norm norm'
         | LF.Root (_, LF.Const cid, spine, plicity)
-             when plicity == Plicity.explicit ->
+             when Plicity.is_explicit plicity ->
            let tau = (Store.Cid.Term.get cid).Store.Cid.Term.Entry.typ in
            find_explicit tau spine
-        | LF.Root (_, hd, LF.Nil, plicity) when plicity == Plicity.explicit ->
+        | LF.Root (_, hd, LF.Nil, plicity) when Plicity.is_explicit plicity ->
            collect_from_hd hd
         | LF.Root (_1, hd, LF.SClo (spine, _), plicity)
-             when plicity == Plicity.explicit ->
+             when Plicity.is_explicit plicity ->
            collect_from_norm (LF.Root (_1, hd, spine, plicity))
         | LF.Root (_1, hd, LF.App (norm', spine), plicity)
-             when plicity == Plicity.explicit ->
+             when Plicity.is_explicit plicity ->
            List.append
              (collect_from_norm norm')
              (collect_from_norm (LF.Root (_1, hd, spine, Plicity.explicit)))
@@ -4016,7 +4014,7 @@ module CSolver = struct
     in
     match cD with
     | LF.Dec (cD', LF.Decl (_, ctyp, plicity, _))
-         when plicity == Plicity.explicit ->
+         when Plicity.is_explicit plicity ->
        (* We do not want to instantiate with implict mvars,
           this can cause issues when we reconstruct the type *)
        (
@@ -4073,9 +4071,9 @@ module CSolver = struct
       | LF.PObj LF.MPVar ((mmvar, _), _)
       | LF.PObj LF.MMVar ((mmvar, _), _) -> mmvar.LF.typ in
     let (k, lst') = find_assumption typ cD cD cG 1 lst in
-    if k == None then (cG, cG_a, cPool, sc, cIH, cIH_all)
-    else
-      let Some k = k in
+    match k with
+    | Option.None -> (cG, cG_a, cPool, sc, cIH, cIH_all)
+    | Option.Some k ->
       inst mobj k;
       let cPool' = Full (shift_cPool cPool 1,
                          ({cHead=hd;
@@ -4603,7 +4601,7 @@ module CSolver = struct
 
     let rec find_comp_assumption cG k =
       match cG with
-      | LF.Dec (_, Comp.CTypDecl (_, tau, _)) when k == 1 -> tau
+      | LF.Dec (_, Comp.CTypDecl (_, tau, _)) when k = 1 -> tau
       | LF.Dec (cG', _) -> find_comp_assumption cG' (k-1)
     in
 
@@ -5008,18 +5006,17 @@ module CSolver = struct
            focusIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH) cg ms sc
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (thm, td, thm_cid);
-           if (* If no split bound given, the most we do is invert. *)
-             maxSplitDepth == None
-           then
-             (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
-                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-                (ind, thm, td, thm_cid);
-             raise End_Of_Search)
-           else
-             if maxSplitDepth == Some 0
-             then (* No splitting if explicitly told not to. *)
+           match maxSplitDepth with
+           | Option.None ->
+               (* If no split bound given, the most we do is invert. *)
+               (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
+                   (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                   (ind, thm, td, thm_cid);
+               raise End_Of_Search)
+           | Option.Some 0 ->
+               (* No splitting if explicitly told not to. *)
                raise End_Of_Search
-             else
+           | Option.Some _ ->
                split (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                  (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                  (ind, thm, td, thm_cid);
@@ -5054,18 +5051,17 @@ module CSolver = struct
           focusIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH) cg ms sc
             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
             (thm, td, thm_cid);
-          if (* If no split bound given, the most we do is invert. *)
-            maxSplitDepth == None
-          then
-            (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
-              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-              (ind, thm, td, thm_cid);
-            raise End_Of_Search)
-          else
-            if maxSplitDepth == Some 0
-            then (* No splitting if explicitly told not to. *)
+          match maxSplitDepth with
+          | Option.None ->
+              (* If no split bound given, the most we do is invert. *)
+              (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
+                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                (ind, thm, td, thm_cid);
+              raise End_Of_Search)
+          | Option.Some 0 ->
+              (* No splitting if explicitly told not to. *)
               raise End_Of_Search
-            else
+          | Option.Some _ ->
               split (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                 (ind, thm, td, thm_cid);
@@ -5080,18 +5076,17 @@ module CSolver = struct
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (thm, td, thm_cid);
        focusIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH) cg ms sc
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (thm, td, thm_cid);
-       if (* If no split bound given, the most we do is invert. *)
-         maxSplitDepth == None
-       then
-         (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
+       match maxSplitDepth with
+       | Option.None ->
+           (* If no split bound given, the most we do is invert. *)
+           (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
               (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
               (ind, thm, td, thm_cid);
-         raise End_Of_Search)
-       else
-         if maxSplitDepth == Some 0
-         then (* No splitting if explicitly told not to. *)
+           raise End_Of_Search)
+       | Option.Some 0 ->
+           (* No splitting if explicitly told not to. *)
            raise End_Of_Search
-         else
+       | Option.Some _ ->
            split (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (ind, thm, td, thm_cid);
@@ -5325,9 +5320,8 @@ module CSolver = struct
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
                (ind, thm, td, thm_cid)
     | Full (cPool',({cHead = hd;
-                     cMVars;
-                     cSubGoals = (Solve (_,_)) as sg}, k', Boxed))
-         when cMVars == LF.Empty ->
+                     cMVars = LF.Empty;
+                     cSubGoals = (Solve (_,_)) as sg}, k', Boxed)) ->
        let fS = (fun s -> s) in
        let n = Name.mk_name Name.NoName in
        let name =
@@ -5806,17 +5800,17 @@ module Frontend = struct
         end;
       match hd with
       | LF.MMVar ((mmvar, ms), s) ->
-         let Some iterm = mmvar.LF.instantiation.contents in
+         let Some iterm = !(mmvar.LF.instantiation) in
          (match iterm with
          | LF.IHead hd -> hd
          | _ -> raise NotImplementedYet)
       | LF.MPVar ((mmvar, ms), s) ->
-         let Some iterm = mmvar.LF.instantiation.contents in
+         let Some iterm = !(mmvar.LF.instantiation) in
          (match iterm with
          | LF.IHead hd -> hd
          | _ -> raise NotImplementedYet)
       | LF.MVar (LF.Inst mmvar, s) ->
-         let Some iterm = mmvar.LF.instantiation.contents in
+         let Some iterm = !(mmvar.LF.instantiation) in
          (match iterm with
          | LF.IHead hd -> hd
          | _ -> raise NotImplementedYet)
@@ -5845,13 +5839,13 @@ module Frontend = struct
       let remove_head_mvars hd =
         match hd with
         | LF.MMVar ((mmvar, ms), s) ->
-           let Some iterm = mmvar.LF.instantiation.contents in
+           let Some iterm = !(mmvar.LF.instantiation) in
            iterm
         | LF.MPVar ((mmvar, ms), s) ->
-           let Some iterm = mmvar.LF.instantiation.contents in
+           let Some iterm = !(mmvar.LF.instantiation) in
            iterm
         | LF.MVar (LF.Inst mmvar, s) ->
-           let Some iterm = mmvar.LF.instantiation.contents in
+           let Some iterm = !(mmvar.LF.instantiation) in
            iterm
         | _ -> LF.IHead hd
       in
@@ -6080,7 +6074,7 @@ module Frontend = struct
       let rec ind_index tau n =
         match tau with
         | Comp.TypPiBox(_, LF.Decl(_, _, _, inductive), _)
-             when inductive == Inductivity.inductive -> Some n
+             when Inductivity.is_inductive inductive -> Some n
         | Comp.TypPiBox(_, _, tau') -> ind_index tau' (n + 1)
         | Comp.TypInd(_) -> Some n
         | Comp.TypBox(_, _) -> None

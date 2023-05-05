@@ -258,7 +258,7 @@ let elNumericOrder (tau : I.typ) (order : I.order)
     match tau, n with
     | _, 0 -> 0
     | I.TypPiBox (_, Int.LF.Decl (u, cU, _, Inductivity.Inductive), tau), n ->
-      Error.raise_violation "[elNumericOrder] impossible LF.Inductive"
+      Error.raise_violation (Format.asprintf "[%s] impossible LF.Inductive" __FUNCTION__)
     | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Implicit, _), tau), n ->
       1 + skip tau n (* implicits are free *)
     | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Explicit, _), tau), n ->

@@ -25,11 +25,11 @@ let run_safe (f : unit -> 'a) : 'a e =
        Format.fprintf ppf "@[<v>%t@]@\n"
          (Error.find_printer e)
        end
-  | Prover.Error.E e ->
+  | Prover.Prover_error e ->
      Either.left
        begin fun ppf () ->
        Format.fprintf ppf "@[<v>%t@]@\n"
-         (Prover.Error.error_printer e)
+         (Error.find_printer e)
        end
   | e ->
      let s = Printexc.to_string e in
@@ -41,7 +41,7 @@ let run_safe (f : unit -> 'a) : 'a e =
        end
 
 (** Parses the user input string and executes it in the given state
-    triple.
+    substate.
     The input command sequence must be fully executable in the
     current theorem.
     Returns:
@@ -51,7 +51,7 @@ let run_safe (f : unit -> 'a) : 'a e =
     - `error: an error occurred. Commands beyond the failed one were
       not executed.
  *)
-let[@warning "-32"] process_command_sequence s (c, t, g) cmds =
+let[@warning "-32"] process_command_sequence (index_state, s, substate) cmds =
   let printf x = HarpoonState.printf s x in
   (* Idea:
      - count the commands to run
@@ -65,12 +65,12 @@ let[@warning "-32"] process_command_sequence s (c, t, g) cmds =
         List.fold_left
           begin fun (k, g) cmd ->
           match g with
-          | None -> (k, g)
-          | Some g ->
-             Prover.process_command s (c, t, g) cmd;
-             (k + 1, Theorem.next_subgoal t)
+          | Option.None -> (k, g)
+          | Option.Some g ->
+             Prover.process_command (index_state, s, { substate with HarpoonState.proof_state = g }) cmd;
+             (k + 1, Theorem.next_subgoal substate.HarpoonState.theorem)
           end
-          (0, Some g)
+          (0, Option.some substate.HarpoonState.proof_state)
           cmds
       in
       n = k
@@ -86,13 +86,13 @@ let[@warning "-32"] process_command_sequence s (c, t, g) cmds =
 
 let rec loop (s : HarpoonState.t) : unit =
   let printf x = HarpoonState.printf s x in
-  match HarpoonState.next_triple s with
-  | Either.Left `no_session ->
+  match HarpoonState.next_substate s with
+  | exception HarpoonState.No_session ->
      if HarpoonState.session_configuration_wizard s then
        loop s
      else
        printf "@,Harpoon terminated.@,"
-  | Either.Left (`no_theorem c) ->
+  | exception HarpoonState.No_theorem c ->
      printf "@,No theorems left. Checking translated proofs.@,";
      begin match Session.check_translated_proofs c with
      | `ok ->
@@ -114,7 +114,7 @@ let rec loop (s : HarpoonState.t) : unit =
      printf "@,@[<v>Proof complete! (No theorems left.)@,@]";
      HarpoonState.on_session_completed s c;
      loop s
-  | Either.Left (`no_subgoal (c, t)) ->
+  | exception HarpoonState.No_subgoal { session = c; theorem = t } ->
      (* TODO: record the proof into the Store *)
      let e_trans = Translate.entry (Theorem.get_entry t) in
      printf
@@ -126,7 +126,7 @@ let rec loop (s : HarpoonState.t) : unit =
        Translate.fmt_ppr_result e_trans;
      Session.mark_current_theorem_as_proven c (Either.to_option e_trans);
      loop s
-  | Either.Right (c, t, g) ->
+  | { HarpoonState.session = c; theorem = t; proof_state = g } ->
     (* Show the proof state and the prompt *)
     printf "@,@[<v>@,Theorem: %a@,%a@,@]@?"
       Name.pp (Theorem.get_name t)

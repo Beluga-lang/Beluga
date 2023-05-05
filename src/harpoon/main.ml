@@ -19,7 +19,14 @@ let realMain () =
   if Debug.is_enabled () then Debug.init (Option.some "debug.out");
 
   let open B in
-  let all_paths, _sgn' = Load.load_fresh options.path in
+  let all_paths, sgn' = Load.load_fresh options.path in
+
+  let _disambiguation_states, _last_disambiguation_state =
+    Revisit.revisit_disambiguation sgn'
+  in
+  let _indexing_states, _last_indexing_state =
+    Revisit.revisit_indexing sgn'
+  in
 
   let ppf = Format.std_formatter in
   let stubs =

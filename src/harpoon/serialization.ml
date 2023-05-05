@@ -27,7 +27,7 @@ let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) 
   |> Hashtbl.iter
        begin fun file_name replacees ->
        dprintf begin fun p ->
-         p.fmt "[replace_locs] opening file %s" file_name
+         p.fmt "[%s] opening file %s" __FUNCTION__ file_name
          end;
        In_channel.with_open_bin file_name
          begin fun in_ch ->
@@ -47,10 +47,10 @@ let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) 
               else indentation := 0;
               f v
          in
-         dprintf (fun p -> p.fmt "[replace_locs] opening temp file beluga_harpoon");
+         dprintf (fun p -> p.fmt "[%s] opening temp file beluga_harpoon" __FUNCTION__);
          Filename.(Files.with_temp_file (dirname file_name) (basename file_name))
            begin fun temp_file_name out_ch ->
-           dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
+           dprintf (fun p -> p.fmt "[%s] opened %s" __FUNCTION__ temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
            |> List.sort (fun (l1, _) (l2, _) -> Location.compare_start l1 l2)
@@ -97,7 +97,7 @@ let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) 
                end
              end;
            dprintf begin fun p ->
-             p.fmt "[replace_locs] moving %s -> %s" temp_file_name file_name
+             p.fmt "[%s] moving %s -> %s" __FUNCTION__ temp_file_name file_name
              end;
            Sys.rename temp_file_name file_name
            end

@@ -9,15 +9,17 @@ module P = Beluga.Prettyint.DefaultPrinter
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [14]))
 open Debug.Fmt
 
-type triple = Session.t * Theorem.t * Comp.proof_state
+type substate =
+  { session: Session.t
+  ; theorem: Theorem.t
+  ; proof_state: Comp.proof_state
+  }
 
-type triple_error =
-  [ `no_session
-  | `no_theorem of Session.t
-  | `no_subgoal of Session.t * Theorem.t
-  ]
+exception No_session
 
-type triple_status = (triple_error, triple) Either.t
+exception No_theorem of Session.t
+
+exception No_subgoal of { session: Session.t; theorem: Theorem.t }
 
 type t =
   { sessions : Session.t DynArray.t
@@ -54,7 +56,8 @@ let recover_theorem ppf hooks (cid, gs) =
       | _ -> Error.raise_violation "recovered theorem not a proof"
     in
     dprintf begin fun p ->
-      p.fmt "[recover_theorem] @[<v>proof =@,@[%a@]@]"
+      p.fmt "[%s] @[<v>proof =@,@[%a@]@]"
+        __FUNCTION__
         P.(fmt_ppr_cmp_proof LF.Empty LF.Empty) prf
       end;
     s.solution := Some prf;
@@ -78,8 +81,9 @@ let recover_session ppf hooks (mutual_group, thm_confs) =
     List1.map f thm_confs |> List1.to_list
   in
   dprintf begin fun p ->
-    p.fmt "[recover_session] @[<v>recovered a session with the following theorems:\
+    p.fmt "[%s] @[<v>recovered a session with the following theorems:\
            @,  @[<hv>%a@]@]"
+      __FUNCTION__
       (Format.pp_print_list ~pp_sep: Format.comma
          (fun ppf t -> Format.fprintf ppf "%a" Name.pp (Theorem.get_name t)))
       theorems
@@ -201,16 +205,16 @@ let select_theorem s name =
      true
 
 (** Gets the next state triple from the prover. *)
-let next_triple (s : t) =
+let next_substate (s : t) =
   match next_session s with
-  | Option.None -> Either.left `no_session
+  | Option.None -> Error.raise_notrace No_session
   | Option.Some c ->
      match Session.next_theorem c with
-     | Option.None -> Either.left (`no_theorem c)
+     | Option.None -> Error.raise_notrace (No_theorem c)
      | Option.Some t ->
         match Theorem.next_subgoal t with
-        | Option.None -> Either.left (`no_subgoal (c, t))
-        | Option.Some g -> Either.right (c, t, g)
+        | Option.None -> Error.raise_notrace (No_subgoal { session = c; theorem = t })
+        | Option.Some g -> { session = c; theorem = t; proof_state = g }
 
 (** Drops all state and reloads from the signature.
     Typically, this is called after serialization reflects the
@@ -238,7 +242,7 @@ let reset s : unit =
     and subgoal.  This is used by the serialize function to make sure
     that after serializing the Harpoon state, we're back in the same
     subgoal we were in before. *)
-let keeping_focus s (c, t, g) f =
+let keeping_focus s { session = c; theorem = t; proof_state = g } f =
   let curr_thm_name = Theorem.get_name t in
   let curr_sg_label = g.Comp.label in
   f ();
@@ -246,22 +250,17 @@ let keeping_focus s (c, t, g) f =
     Error.raise_violation
       "[reset] reloaded signature does not contain the theorem \
        we were working on";
-  let t =
-    match next_triple s with
-    | Either.Right (_, t, _) -> t
-    | _ ->
-      Error.raise_violation
-         "[reset] next_triple didn't give a triple."
-  in
   match
-    Theorem.select_subgoal_satisfying t
+    Theorem.select_subgoal_satisfying (next_substate s).theorem
       begin fun g ->
       Whnf.conv_subgoal_path_builder g.Comp.label curr_sg_label
       end
   with
   | None ->
       Error.raise_violation
-       "[reset] select_subgoal_satisfying returned None"
+       (Format.asprintf
+         "[%s] [select_subgoal_satisfying] returned [None]"
+         __FUNCTION__)
   | Some _ -> ()
 
 (** Reflects the current prover state back into the loaded signature

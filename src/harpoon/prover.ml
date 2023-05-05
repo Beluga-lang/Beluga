@@ -4,157 +4,151 @@ open Beluga
 open Beluga_syntax
 open Synint
 
+module F = Fun
 module E = Error
 module S = Substitution
 module P = Prettyint.DefaultPrinter
+module Indexing_state = Index_state.Indexing_state
+module Indexer = Index.Indexer
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
-module Error = struct
-  type t =
-    | NoSuchVariable of Name.t * [ `meta | `comp ]
+exception No_such_variable of Name.t * [ `meta | `comp ]
 
-  exception E of t
+exception Prover_error of exn
 
-  let throw e = raise (E e)
+let throw e = Error.raise (Prover_error e)
 
-  let error_printer = function
-    | NoSuchVariable (name, level) ->
-       let format_variable_kind ppf = function
-         | `meta -> Format.fprintf ppf "metavariable"
-         | `comp -> Format.fprintf ppf "computational variable"
-       in
-       Format.dprintf "No such %a %a."
-         format_variable_kind level
-         Name.pp name
+let () =
+  Error.register_exception_printer (function
+    | No_such_variable (name, `meta) ->
+      Format.dprintf "No such metavariable %a." Name.pp name
+    | No_such_variable (name, `comp) ->
+      Format.dprintf "No such computational variable %a." Name.pp name
+    | Prover_error e -> Error.find_printer e
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
-  let () =
-    Error.register_exception_printer (function
-      | E e -> error_printer e
-      | exn -> Error.raise_unsupported_exception_printing exn)
-end
-
-(** High-level elaboration from external to internal syntax. *)
-module Elab = struct
-  (** Elaborates a synthesizable expression in the given contexts. *)
-  let exp' mcid cIH cD cG mfs t =
-    let (hs, (i, tau)) =
-      Holes.catch
-        begin fun _ ->
-        let (i, (tau, theta)) =
-          (* TODO: Interactive.elaborate_exp' *) (fun _ _ _ -> Obj.magic ()) cD cG t
-        in
-        dprintf
-          begin fun p ->
-          p.fmt "[elaborate_exp'] @[<v>done:@,\
-                 i = @[%a@] (internal)@]"
-            P.(fmt_ppr_cmp_exp cD cG l0) i
-          end;
-        let i = Whnf.cnormExp (i, Whnf.m_id) in
-        let _ = Check.Comp.syn mcid ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
-        (i, Whnf.cnormCTyp (tau, theta))
-        end
-    in
-    (hs, i, tau)
-
-  (** Elaborates a checkable expression in the given contexts against the given type. *)
-  let exp mcid cIH cD cG mfs t ttau =
+(** Elaborates a synthesizable expression in the given contexts. *)
+let elaborate_synthesizing_expression state mcid cIH cD cG mfs t =
+  let (hs, (i, tau)) =
     Holes.catch
-      begin fun _ ->
-      let e = (* TODO: Interactive.elaborate_exp *) (fun _ _ _ _ -> Obj.magic ()) cD cG t (Pair.map_left Total.strip ttau) in
-      let e = Whnf.cnormExp (e, Whnf.m_id) in
-      Check.Comp.check mcid ~cIH: cIH cD cG mfs e ttau;
-      e
-      end
-
-  let typ cD tau =
-    let (tau, k) = (* TODO: Interactive.elaborate_typ *) (fun _ _ -> Obj.magic ()) cD tau in
-    tau
-
-  (** Elaborates a metavariable. *)
-  let mvar cD loc name =
-    (* This is kind of sketchy since we don't parse a head, but rather
-       just a name (or a hash_name), and we do all the elaboration "by
-       hand" here instead of using Lfrecon and Index.
-     *)
-    let p (d, _) = Name.(LF.name_of_ctyp_decl d = name) in
-    match Context.find_with_index_rev' cD p with
-    | None -> Lfrecon.(throw loc (UnboundName name))
-    | Some LF.(Decl (_, cT, _, _), k) ->
-       let cT = Whnf.cnormMTyp (cT, LF.MShift k) in
-       dprintf
-         begin fun p ->
-         p.fmt "[harpoon] [Elab.mvar] @[<v>found index %d for metavariable@,\
-                @[<hov 2>%a :@ @[%a@]@]@]"
-           k
-           Name.pp name
-           P.(fmt_ppr_cmp_meta_typ cD) cT
-         end;
-       let mF =
-         let open LF in
-         match cT with
-         | ClTyp (mT, cPsi) ->
-            let psi_hat = Context.dctxToHat cPsi in
-            let obj =
-              match mT with
-              | MTyp _ -> MObj (MVar (Offset k, S.LF.id) |> head)
-              | PTyp _ -> PObj (PVar (k, S.LF.id))
-              | STyp _ -> SObj (SVar (k, 0, S.LF.id)) (* FIXME: not sure about 0 -je *)
-            in
-            ClObj (psi_hat, obj)
-         | LF.CTyp _ ->
-            let cPsi = LF.(CtxVar (CtxOffset k)) in
-            CObj cPsi
-       in
-       let i = Comp.AnnBox (Location.ghost, (loc, mF), cT)
-       and tau = Comp.TypBox (loc, cT) in
-       (i, tau)
-    | _ -> E.raise_violation "[harpoon] [Elab] [mvar] cD decl has no type"
-
-end
-
-(*
-  (** Removes the theorem with a given name from the list of theorems. *)
-  let remove_theorem s name =
-    let n = DynArray.length s.theorems in
-    let rec loop = function
-      | i when i >= n -> ()
-      | i when Name.equal name (DynArray.get s.theorems i).Theorem.name ->
-         DynArray.delete s.theorems i
-      | i -> loop (i + 1)
-    in
-    loop 0
- *)
-
-let dump_proof t path =
-  let out = open_out path in
-  let ppf = Format.formatter_of_out_channel out in
-  Theorem.dump_proof ppf t;
-  Format.pp_print_newline ppf ();
-  close_out out
-
-let process_command
-      (s : HarpoonState.t)
-      ( (c, t, g) : HarpoonState.triple)
-      (cmd : Synext.harpoon_repl_command)
-    : unit =
-  let mfs =
-    lazy
-      begin
-        let ds = Session.get_mutual_decs c in
-        dprintf
-          begin fun p ->
-          p.fmt "[harpoon] [mfs] @[<v>got mutual decs:\
-                 @,-> @[<v>%a@]@]"
-            (Format.pp_print_list ~pp_sep: Format.pp_print_cut
-               P.fmt_ppr_cmp_total_dec)
-            ds
-          end;
-        ds
+      begin fun () ->
+      let (i, (tau, theta)) =
+        let apx_exp =
+          Indexing_state.with_bindings_checkpoint state (fun state ->
+              Indexing_state.add_all_mctx state cD;
+              Indexing_state.add_all_gctx state cG;
+              Indexer.index_comp_expression state t)
+        in
+        (* FIXME: The following elaboration step needs a checkpoint *)
+        Reconstruct.elExp' cD cG apx_exp
+      in
+      dprintf
+        begin fun p ->
+        p.fmt "[%s] @[<v>done:@,\
+                i = @[%a@] (internal)@]"
+          __FUNCTION__
+          P.(fmt_ppr_cmp_exp cD cG l0) i
+        end;
+      let i' = Whnf.cnormExp (i, Whnf.m_id) in
+      let _ = Check.Comp.syn mcid ~cIH: cIH cD cG mfs i' in  (* (tau, theta); *)
+      (i', Whnf.cnormCTyp (tau, theta))
       end
   in
+  (hs, i, tau)
 
+(** Elaborates a checkable expression in the given contexts against the given type. *)
+let elaborate_checkable_expression state mcid cIH cD cG mfs t ttau =
+  Holes.catch
+    begin fun () ->
+    let ttau' = Pair.map_left Total.strip ttau in
+    let e =
+      let apx_exp =
+        Indexing_state.with_bindings_checkpoint state (fun state ->
+            Indexing_state.add_all_mctx state cD;
+            Indexing_state.add_all_gctx state cG;
+            Indexer.index_comp_expression state t)
+      in
+      (* FIXME: The following elaboration step needs a checkpoint *)
+      Reconstruct.elExp cD cG apx_exp ttau'
+    in
+    let e' = Whnf.cnormExp (e, Whnf.m_id) in
+    Check.Comp.check mcid ~cIH: cIH cD cG mfs e' ttau;
+    e'
+    end
+
+let elaborate_typ state cD tau =
+  let (tau, _k) =
+    let apx_tau =
+        Indexing_state.with_bindings_checkpoint state (fun state ->
+            Indexing_state.add_all_mctx state cD;
+            Indexer.index_open_comp_typ state tau)
+      in
+      (* FIXME: The following elaboration steps need checkpoints *)
+      apx_tau
+      |> Reconstruct.comptyp_cD cD
+      |> Abstract.comptyp
+      |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
+      |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
+  in
+  tau
+
+(** Elaborates a metavariable. *)
+let elaborate_mvar state cD loc name =
+  (* This is kind of sketchy since we don't parse a head, but rather
+      just a name (or a hash_name), and we do all the elaboration "by
+      hand" here instead of using Lfrecon and Index.
+    *)
+  let p (d, _) = Name.(LF.name_of_ctyp_decl d = name) in
+  match Context.find_with_index_rev' cD p with
+  | None -> Lfrecon.(throw loc (UnboundName name))
+  | Some LF.(Decl (_, cT, _, _), k) ->
+      let cT = Whnf.cnormMTyp (cT, LF.MShift k) in
+      dprintf
+        begin fun p ->
+        p.fmt "[%s] @[<v>found index %d for metavariable@,\
+              @[<hov 2>%a :@ @[%a@]@]@]"
+          __FUNCTION__
+          k
+          Name.pp name
+          P.(fmt_ppr_cmp_meta_typ cD) cT
+        end;
+      let mF =
+        let open LF in
+        match cT with
+        | ClTyp (mT, cPsi) ->
+          let psi_hat = Context.dctxToHat cPsi in
+          let obj =
+            match mT with
+            | MTyp _ -> MObj (MVar (Offset k, S.LF.id) |> head)
+            | PTyp _ -> PObj (PVar (k, S.LF.id))
+            | STyp _ -> SObj (SVar (k, 0, S.LF.id)) (* FIXME: not sure about 0 -je *)
+          in
+          ClObj (psi_hat, obj)
+        | LF.CTyp _ ->
+          let cPsi = LF.(CtxVar (CtxOffset k)) in
+          CObj cPsi
+      in
+      let i = Comp.AnnBox (Location.ghost, (loc, mF), cT)
+      and tau = Comp.TypBox (loc, cT) in
+      (i, tau)
+  | _ -> E.raise_violation
+          (Format.asprintf "[%s] cD decl has no type" __FUNCTION__)
+
+
+let dump_proof t path =
+  Out_channel.with_open_bin path (fun out_channel ->
+    let ppf = Format.formatter_of_out_channel out_channel in
+    Theorem.dump_proof ppf t;
+    Format.pp_print_newline ppf ())
+
+let process_command
+      ((index_state),
+      (s : HarpoonState.t),
+      ({ HarpoonState.session = c; theorem = t; proof_state = g } as substate))
+      (cmd : Synext.harpoon_repl_command)
+    : unit =
   let open Comp in
 
   let solve_hole (id, Holes.Exists (w, h)) =
@@ -174,7 +168,8 @@ let process_command
         let typ = Whnf.cnormCTyp compGoal in
         dprintf
           begin fun p ->
-          p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
+          p.fmt "[%s] @[<v>goal: @[%a@]@]"
+            __FUNCTION__
             (P.fmt_ppr_cmp_typ cDh P.l0) typ
           end;
         Logic.prepare ();
@@ -182,6 +177,11 @@ let process_command
           let (typ', k) = Abstract.comptyp typ in
           Logic.Convert.comptypToMQuery (typ', k)
         in
+        let mfs = Session.get_mutual_decs c in
+        let maximum_search_depth = Option.some 999 in
+        let induction_argument_index = Option.none in
+        let maximum_split_depth = 2 in
+        let thm_cid = Option.none in
         try
           Logic.CSolver.cgSolve cDh cGh LF.Empty mquery
             begin
@@ -191,7 +191,8 @@ let process_command
               h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
             end
-            (Some 999, None, 2) (skinnyCTyp, None, Lazy.force mfs)
+            (maximum_search_depth, induction_argument_index, maximum_split_depth)
+            (skinnyCTyp, thm_cid, mfs)
         with
           | Logic.Frontend.Done ->
             HarpoonState.printf s "logic programming finished@,@?"
@@ -202,7 +203,8 @@ let process_command
        let typ = Whnf.normTyp lfGoal in
        dprintf
          begin fun p ->
-         p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
+         p.fmt "[%s] @[<v>goal: @[%a@]@]"
+           __FUNCTION__
            (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
          end;
        Logic.prepare ();
@@ -256,7 +258,7 @@ let process_command
           HarpoonState.fmt_ppr_session_list s
      | `defer -> HarpoonState.defer_session s
      | `create -> ignore (HarpoonState.session_configuration_wizard s)
-     | `serialize -> HarpoonState.serialize s (c, t, g)
+     | `serialize -> HarpoonState.serialize s substate
      end
 
   | Synext.Harpoon.Repl.Command.Subgoal { subcommand = cmd; _ } ->
@@ -280,7 +282,7 @@ let process_command
      let x_src = Name.make_from_identifier rename_from
      and x_dst = Name.make_from_identifier rename_to in
      if Bool.not (Theorem.rename_variable x_src x_dst level t g) then
-       Error.(throw (NoSuchVariable (x_src, level)))
+       throw (No_such_variable (x_src, level))
 
   | Synext.Harpoon.Repl.Command.Toggle_automation { kind; change; _ } ->
      Automation.toggle
@@ -289,9 +291,11 @@ let process_command
        change
 
   | Synext.Harpoon.Repl.Command.Type { scrutinee; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, i, tau) =
-       Elab.exp' (Some (Theorem.get_cid t))
-         cIH cD cG (Lazy.force mfs) scrutinee
+       elaborate_synthesizing_expression index_state (Some cid)
+         cIH cD cG mfs scrutinee
      in
      HarpoonState.printf s
        "- @[<hov 2>@[%a@] :@ @[%a@]@]"
@@ -301,7 +305,7 @@ let process_command
   | Synext.Harpoon.Repl.Command.Info { kind; object_identifier; _ } ->
      begin match kind with
      | `prog ->
-        let cid = (fun _ _ -> Obj.magic ()) (* index_of_comp_program *) s object_identifier in
+        let cid = Indexing_state.index_of_comp_program index_state object_identifier in
         let e = Store.Cid.Comp.get cid in
         HarpoonState.printf s
           "- @[%a@]"
@@ -309,7 +313,7 @@ let process_command
      end
 
   | Synext.Harpoon.Repl.Command.Translate { theorem; _ } ->
-     let cid = (fun _ _ -> Obj.magic ()) (* index_of_comp_program *) s theorem in
+     let cid = Indexing_state.index_of_comp_program index_state theorem in
      let e = Store.Cid.Comp.get cid in
      HarpoonState.printf s "%a"
        Translate.fmt_ppr_result (Translate.entry e)
@@ -323,18 +327,17 @@ let process_command
        HarpoonState.printf s "Nothing to redo in the current theorem's timeline."
 
   | Synext.Harpoon.Repl.Command.History _ ->
-     let open Format in
      let (past, future) = Theorem.get_history_names t in
      let future = List.rev future in
      let line ppf = function
        | _ when List.nonempty future ->
-          fprintf ppf "@,-----@,"
+          Format.fprintf ppf "@,-----@,"
        | _ -> ()
      in
      let future_remark ppf = function
        | _ when List.nonempty future ->
-          fprintf ppf "- @[%a@]"
-            pp_print_string
+          Format.fprintf ppf "- @[%a@]"
+            Format.pp_print_string
             "Commands below the line would be undone. \
              Commands above the line would be redone."
        | _ -> ()
@@ -342,10 +345,10 @@ let process_command
      HarpoonState.printf s
        "@[<v 2>History:\
         @,@[<v>%a@]%a@[<v>%a@]@]@,%a@,"
-       (pp_print_list ~pp_sep: pp_print_cut pp_print_string)
+       (Format.pp_print_list ~pp_sep:Format.pp_print_cut Format.pp_print_string)
        future
        line ()
-       (pp_print_list ~pp_sep: pp_print_cut pp_print_string)
+       (Format.pp_print_list ~pp_sep:Format.pp_print_cut Format.pp_print_string)
        past
        future_remark ()
 
@@ -359,9 +362,10 @@ let process_command
     { expression
     ; assignee = assignee, _modifier
     ; modifier; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, m, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) expression
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs expression
      in
      let name = Name.make_from_identifier assignee in
      Tactic.unbox m tau name modifier t g
@@ -373,35 +377,40 @@ let process_command
      Tactic.intros names t g
 
   | Synext.Harpoon.Repl.Command.Split { location; scrutinee; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, m, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs scrutinee
      in
-     Tactic.split `split m tau (Lazy.force mfs) t g
+     Tactic.split `split m tau mfs t g
 
   | Synext.Harpoon.Repl.Command.Invert { location; scrutinee; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, m, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs scrutinee
      in
-     Tactic.split `invert m tau (Lazy.force mfs) t g
+     Tactic.split `invert m tau mfs t g
 
   | Synext.Harpoon.Repl.Command.Impossible { location; scrutinee; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, m, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs scrutinee
      in
-     Tactic.split `impossible m tau (Lazy.force mfs) t g
+     Tactic.split `impossible m tau mfs t g
 
   | Synext.Harpoon.Repl.Command.Msplit { location; identifier } ->
      let name = Name.make_from_identifier identifier in
-     let i, tau = Elab.mvar cD location name in
-     Tactic.split `split i tau (Lazy.force mfs) t g
+     let i, tau = elaborate_mvar index_state cD location name in
+     let mfs = Session.get_mutual_decs c in
+     Tactic.split `split i tau mfs t g
 
   | Synext.Harpoon.Repl.Command.By { expression; assignee; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, i, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) expression
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs expression
      in
      let name = Name.make_from_identifier assignee in
      dprintf
@@ -424,9 +433,10 @@ let process_command
          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
   | Synext.Harpoon.Repl.Command.Suffices { implication; goal_premises; _ } ->
+     let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, i, tau) =
-       let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) implication
+       elaborate_synthesizing_expression index_state (Some cid) cIH cD cG mfs implication
      in
      begin match Session.infer_invocation_kind c i with
      | `ih ->
@@ -437,7 +447,7 @@ let process_command
            Theorem.printf t "holes are not supported for `suffices by _ ...`"
         | [] ->
            let elab_suffices_typ tau_ext : suffices_typ =
-             map_suffices_typ (Elab.typ cD) tau_ext
+             map_suffices_typ (fun typ -> elaborate_typ index_state cD typ) tau_ext
            in
            let tau_list = List.map elab_suffices_typ goal_premises in
            Tactic.suffices i tau_list tau t g
@@ -446,14 +456,15 @@ let process_command
 
   | Synext.Harpoon.Repl.Command.Solve { solution = e; _ } ->
      let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let (hs, e) =
-       Elab.exp (Some cid) cIH cD cG (Lazy.force mfs) e g.goal
+       elaborate_checkable_expression index_state (Some cid) cIH cD cG mfs e g.goal
      in
      dprnt "[harpoon] [solve] elaboration finished";
      (* State.printf s "Found %d hole(s) in solution@\n" (List.length hs); *)
      List.iter solve_hole hs;
      dprnt "[harpoon] [solve] double-check!";
-     Check.Comp.check (Some cid) cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
+     Check.Comp.check (Some cid) cD cG mfs ~cIH: cIH e g.goal;
      dprnt "[harpoon] [solve] double-check DONE";
      let e = Whnf.cnormExp (e, Whnf.m_id) in
      if Whnf.closedExp e then
@@ -471,9 +482,10 @@ let process_command
      in
      let (theorem, _) = Theorem.get_statement t in
      let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let opt_witness = Logic.Frontend.msolve_tactic (cD, cG, cIH)
                          (mquery, tau, instMMVars) d
-                         (theorem, cid, 1, (Lazy.force mfs))
+                         (theorem, cid, 1, mfs)
      in
      begin
      match opt_witness with
@@ -497,9 +509,10 @@ let process_command
      in
      let (theorem, _) = Theorem.get_statement t in
      let cid = Theorem.get_cid t in
+     let mfs = Session.get_mutual_decs c in
      let opt_witness = Logic.Frontend.msolve_tactic (cD, cG, cIH)
                          (mquery, tau, instMMVars) d
-                         (theorem, cid, 2, (Lazy.force mfs))
+                         (theorem, cid, 2, mfs)
      in
      begin
      match opt_witness with

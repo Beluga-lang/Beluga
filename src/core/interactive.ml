@@ -12,123 +12,8 @@ module S = Substitution
 open Synint.Comp
 
 (*********************)
-(* helper functions *)
+(* helper functions  *)
 (*********************)
-
-module type INTERACTIVE_STATE = sig
-  include Imperative_state.IMPERATIVE_STATE
-
-  (** [with_indexer_checkpoint state f] marks the current indexer state, runs
-      [f state], then rolls back the indexer state, even if [f state] raises an
-      exception. This effectively means that a fresh scope is pushed on the
-      indexer state, then [f state] is run, and finally that scope is
-      discarded.
-
-      This is necessary to ensure that the indexing state is not polluted
-      with bindings introduced by [f] in the event that indexing of a
-      computation-level type or expression fails halfway through. *)
-  val with_indexer_checkpoint : state -> (state -> 'a) -> 'a
-
-  val add_meta_context_bindings : state -> LF.mctx -> Unit.t
-
-  val add_computation_context_bindings : state -> Comp.gctx -> Unit.t
-
-  val index_comp_expression :
-    state -> Synext.comp_expression -> Synapx.Comp.exp
-
-  val index_comp_typ : state -> Synext.comp_typ -> Synapx.Comp.typ
-end
-
-module Make_interactive_state
-    (Indexing_state : Index_state.INDEXING_STATE)
-    (Indexer : Index.INDEXER with type state = Indexing_state.state) :
-  INTERACTIVE_STATE = struct
-  type state = { indexing_state : Indexer.state }
-
-  include (
-    Imperative_state.Make (struct
-      type nonrec state = state
-    end) :
-      Imperative_state.IMPERATIVE_STATE with type state := state)
-
-  let with_indexer_checkpoint state f =
-    Indexing_state.with_bindings_checkpoint state.indexing_state (fun _ ->
-        f state)
-
-  let add_meta_context_bindings state mctx =
-    Indexing_state.add_all_mctx state.indexing_state mctx
-
-  let add_computation_context_bindings state gctx =
-    Indexing_state.add_all_gctx state.indexing_state gctx
-
-  let index_comp_expression state exp =
-    Indexer.index_comp_expression state.indexing_state exp
-
-  let index_comp_typ state typ =
-    Indexer.index_closed_comp_typ state.indexing_state typ
-end
-
-
-module type INTERACTIVE = sig
-  include Imperative_state.IMPERATIVE_STATE
-
-  val elaborate_typ : state -> LF.mctx -> Synext.comp_typ -> typ * int
-
-  val elaborate_exp :
-       state
-    -> LF.mctx
-    -> gctx
-    -> Synext.comp_expression
-    -> typ * LF.msub
-    -> exp
-
-  val elaborate_exp' :
-    state -> LF.mctx -> gctx -> Synext.comp_expression -> exp * tclo
-end
-
-module Make_interactive (State : INTERACTIVE_STATE) :
-  INTERACTIVE with type state = State.state = struct
-  include State
-
-  (** Elaborates an external syntax type into internal syntax, with
-      abstraction. The returned integer is the number of implicit parameters.
-
-      WARNING: elaboration of types as implemented here, by design, allows
-      access to implicit variables in the meta-context. This is so that types
-      given in the `suffices` Harpoon command can access implicit variables. *)
-  let elaborate_typ state cD tau =
-    let apx_tau =
-      with_indexer_checkpoint state (fun state ->
-          add_meta_context_bindings state cD;
-          index_comp_typ state tau)
-    in
-    (* FIXME: The following elaboration steps need checkpoints *)
-    apx_tau
-    |> Reconstruct.comptyp_cD cD
-    |> Abstract.comptyp
-    |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
-    |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
-
-  let elaborate_exp state cD cG exp tp =
-    let apx_exp =
-      with_indexer_checkpoint state (fun state ->
-          add_meta_context_bindings state cD;
-          add_computation_context_bindings state cG;
-          index_comp_expression state exp)
-    in
-    (* FIXME: The following elaboration step needs a checkpoint *)
-    Reconstruct.elExp cD cG apx_exp tp
-
-  let elaborate_exp' state cD cG exp =
-    let apx_exp =
-      with_indexer_checkpoint state (fun state ->
-          add_meta_context_bindings state cD;
-          add_computation_context_bindings state cG;
-          index_comp_expression state exp)
-    in
-    (* FIXME: The following elaboration step needs a checkpoint *)
-    Reconstruct.elExp' cD cG apx_exp
-end
 
 (* loc -> (LF.mctx * cov_goal * LF.msub) list -> (Comp.typ x LF.msub) -> Comp.branch list *)
 (*  branchCovGoals loc n cG0 tA cgs =
@@ -190,7 +75,7 @@ let matchFromPatterns l e bl =
 let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
 (** Traverses a computation-level type-checkable expression and
- * applies the given function to all computational holes. *)
+    applies the given function to all computational holes. *)
 let rec mapHoleExp f =
   function
   | Hole (l, id, name) -> f name l

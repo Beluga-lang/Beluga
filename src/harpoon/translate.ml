@@ -242,4 +242,4 @@ let entry { Store.Cid.Comp.Entry.prog; typ = tau; name; _ } =
       Error.raise_violation
          "Looked up theorem is not a theorem value."
   in
-  trap (fun _ -> theorem thm tau)
+  trap (fun () -> theorem thm tau)

@@ -1,14 +1,11 @@
+open Beluga
 open Beluga_syntax
 
-module Error : sig
-  type t
-
-  exception E of t
-
-  val error_printer : t -> Format.formatter -> unit
-end
+exception Prover_error of exn
 
 (** Executes a single Harpoon interactive command on the given state. May
-    raise {!Error.E}. *)
+    raise a {!exn:Prover_error}. *)
 val process_command :
-  HarpoonState.t -> HarpoonState.triple -> Synext.harpoon_repl_command -> unit
+     Index_state.Indexing_state.state * HarpoonState.t * HarpoonState.substate
+  -> Synext.harpoon_repl_command
+  -> unit

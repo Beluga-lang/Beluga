@@ -4,15 +4,17 @@ open Synint
 
 type t
 
-type triple = Session.t * Theorem.t * Comp.proof_state
+type substate =
+  { session: Session.t
+  ; theorem: Theorem.t
+  ; proof_state: Comp.proof_state
+  }
 
-type triple_error =
-  [ `no_session
-  | `no_theorem of Session.t
-  | `no_subgoal of Session.t * Theorem.t
-  ]
+exception No_session
 
-type triple_status = (triple_error, triple) Either.t
+exception No_theorem of Session.t
+
+exception No_subgoal of { session: Session.t; theorem: Theorem.t }
 
 val make : Options.save_mode -> Options.interaction_mode ->
            string -> string list ->
@@ -43,7 +45,7 @@ val automation_state : t -> Automation.State.t
 (** Gets the interaction mode of the prover. *)
 val interaction_mode : t -> Options.interaction_mode
 
-val next_triple : t -> triple_status
+val next_substate : t -> substate
 
 (** Decides whether there are any sessions in the theorem. *)
 val is_complete : t -> bool
@@ -55,8 +57,8 @@ val is_complete : t -> bool
 val on_session_completed : t -> Session.t -> unit
 
 (** Serializes the current state back to the loaded signature,
-    preserving prover focus on the given state triple. *)
-val serialize : t -> triple -> unit
+    preserving prover focus on the given state substate. *)
+val serialize : t -> substate -> unit
 
 (** Prints a vertical, enumerated list of all sessions in this state,
     together with every theorem within each session. *)

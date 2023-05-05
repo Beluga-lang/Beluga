@@ -256,10 +256,6 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
   let rec do_prompts i : Theorem.Conf.t list =
     IO.printf io "Configuring theorem #%d@\n" i;
     (* prompt for name, and allow using empty to signal we're done. *)
-    let (_location, _line) =
-      IO.read_line io ~msg:"  Name of theorem (:quit or empty to finish): "
-        ~history_file:None
-    in
     match prompt_quit_or_theorem_identifier_opt io with
     | Option.None (* Blank input *)
     | Option.Some `quit (* [`:quit'] input *) -> []
@@ -277,14 +273,14 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          in Obj.magic ()
        in
        dprintf begin fun p ->
-         p.fmt "@[<v 2>[harpoon] [configuration_wizard] elaborated type\
+         p.fmt "@[<v 2>[%s] elaborated type\
                 @,@[%a@]\
                 @,with %d implicit parameters@]"
+           __FUNCTION__
            P.(fmt_ppr_cmp_typ LF.Empty l0) tau
            k
          end;
        let order = Obj.magic () (* TODO: Parse an optional totality order *) in
-       IO.printf io "@]";
        let total_dec_kind =
          match order with
          | Some (`Numeric no) -> `inductive no

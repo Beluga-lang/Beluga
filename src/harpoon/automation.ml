@@ -89,14 +89,15 @@ let auto_solve_trivial : t =
   let m_is_witness ((m, idx) : LF.ctyp_decl * int) =
     dprintf
       begin fun p ->
-      p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+      p.fmt "@[<v>[%s] witness candidate = %a@]"
+        __FUNCTION__
         (P.fmt_ppr_lf_ctyp_decl cD) m
       end;
     match m with
     | LF.Decl (_, mtyp, _, _) ->
        Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
-      Error.raise_violation "[auto_solve_trivial] Unexpected DeclOpt"
+      Error.raise_violation (Format.asprintf "[%s] Unexpected DeclOpt" __FUNCTION__)
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
@@ -116,21 +117,22 @@ let auto_solve_trivial : t =
        will never return true for a DeclOpt.
      *)
     | LF.DeclOpt _, _ ->
-      Error.raise_violation "[auto_solve_trivial] DeclOpt impossible"
+      Error.raise_violation (Format.asprintf "[%s] DeclOpt impossible" __FUNCTION__)
     | _ ->
-      Error.raise_violation "[auto_solve_trivial] impossible case"
+      Error.raise_violation (Format.asprintf "[%s] impossible case" __FUNCTION__)
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
       begin fun p ->
-      p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+      p.fmt "@[<v>[%s] witness candidate = %a@]"
+        __FUNCTION__
         (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
       end;
     match c with
     | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
-      Error.raise_violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
+      Error.raise_violation (Format.asprintf "[%s] Unexpected CTypDeclOpt" __FUNCTION__)
   in
   let build_cwitness (_, idx) = Var (Location.ghost, idx)
   in
@@ -152,7 +154,8 @@ let auto_solve_trivial : t =
   | lazy None ->
      dprintf
        begin fun p ->
-       p.fmt "@[<v>[auto_solve_trivial] There are no witness in@,%a@,@]"
+       p.fmt "@[<v>[%s] There are no witness in@,%a@,@]"
+         __FUNCTION__
          P.fmt_ppr_cmp_proof_state g
        end;
      false

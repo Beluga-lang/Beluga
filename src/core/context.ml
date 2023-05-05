@@ -282,14 +282,11 @@ let find_with_index' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) optio
 let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a * int) option =
   let rec go (ctx : 'a LF.ctx) (idx : int) =
     match ctx with
-    | Empty -> None
+    | Empty -> Option.none
     | Dec (ctx', x) ->
-       (** The following does not use Option.(<|>) to be optimized by
-           TCO (Tail Call Optimzations)
-        *)
        if f ctx' (x, idx)
-       then Some (x, idx)
-       else go ctx' (idx + 1)
+       then Option.some (x, idx)
+       else (go [@tailcall]) ctx' (idx + 1)
   in
   go ctx 1
 

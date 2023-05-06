@@ -89,7 +89,7 @@ val check_translated_proofs : t -> translation_check_result
     session. Returns None if the user aborts the session
     configuration. Otherwise, returns the newly defined session.
  *)
-val configuration_wizard : IO.t -> (Theorem.t -> unit Theorem.subgoal_hook) list -> t option
+val configuration_wizard : IO.t -> (Theorem.t -> Theorem.subgoal_hook) list -> t option
 
 (** Prints a vertical, enumerated list of all theorems in this
     session.

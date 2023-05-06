@@ -32,7 +32,7 @@ end
 type t
 type theorem = t
 
-type 'a subgoal_hook = proof_state -> 'a
+type subgoal_hook = proof_state -> unit
 
 (**
    TODO
@@ -111,9 +111,9 @@ val apply_subgoal_replacement : t -> string -> proof_state -> (proof -> proof) -
  *)
 val rename_variable : Name.t -> Name.t -> [ `comp | `meta ] -> t -> proof_state -> bool
 
-val configure : Id.cid_prog -> Format.formatter -> (t -> unit subgoal_hook) list ->
+val configure : Id.cid_prog -> Format.formatter -> (t -> subgoal_hook) list ->
                 proof_state -> proof_state list -> t
-val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
+val configure_set : Format.formatter -> (t -> subgoal_hook) list -> Conf.t list ->
                     Id.cid_mutual_group * t list
 
 val is_complete : t -> bool

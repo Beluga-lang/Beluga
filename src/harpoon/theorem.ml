@@ -17,7 +17,7 @@ module Conf = struct
     ({ Comp.name; order; tau}, implicit_parameters)
 end
 
-type 'a subgoal_hook = Comp.proof_state -> 'a
+type subgoal_hook = Comp.proof_state -> unit
 
 module Action = struct
   (** An invertible action applied to a theorem. Used to implement
@@ -50,7 +50,7 @@ type t =
   ; remaining_subgoals : Comp.proof_state DynArray.t
 
   (* A list of hooks to run on every new subgoal that is added to this theorem. *)
-  ; subgoal_hooks : unit subgoal_hook DynArray.t
+  ; subgoal_hooks : subgoal_hook DynArray.t
 
   (* So tactics can print messages. *)
   ; ppf : Format.formatter

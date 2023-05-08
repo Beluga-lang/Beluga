@@ -393,6 +393,9 @@ module Make
     | Synext.Signature.Pragma.Name
         { location; constant; meta_variable_base; computation_variable_base }
       ->
+        (* FIXME(Marc-Antoine): Name generation conventions should not be in
+           the store. They should only be recorded in a pretty-printer
+           state. *)
         set_name_generation_bases state ~location ~meta_variable_base
           ?computation_variable_base constant;
         Synint.Sgn.NamePrag

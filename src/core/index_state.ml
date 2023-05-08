@@ -3,6 +3,14 @@ open Beluga_syntax.Syncom
 
 [@@@warning "+A-4-44"]
 
+exception Unbound_identifier = Identifier.Unbound_identifier
+
+exception
+  Unbound_qualified_identifier = Qualified_identifier
+                                 .Unbound_qualified_identifier
+
+exception Unbound_namespace = Qualified_identifier.Unbound_namespace
+
 exception Bound_lf_type_constant of Qualified_identifier.t
 
 exception Bound_lf_term_constant of Qualified_identifier.t
@@ -797,7 +805,7 @@ module Indexing_state = struct
     state.generated_fresh_variables_count <- i + 1;
     (* ['"'] is a reserved character, so ["\"i1"], ["\"i2"], ..., etc. are
        syntactically invalid identifiers, which are guaranteed to not clash
-       with free variables *)
+       with free variables. *)
     Identifier.make ("\"i" ^ string_of_int i)
 
   let fresh_identifier_opt state = function
@@ -822,6 +830,8 @@ module Indexing_state = struct
         state.scopes <- List1.from x2 xs;
         x1
     | List1.T (_x, []) ->
+        (* This suggests a mismanaged scopes state, where there are more
+           [pop_scope] operations than there are [push_scope] operations. *)
         Error.raise_violation
           (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
 
@@ -858,15 +868,37 @@ module Indexing_state = struct
   let lookup_toplevel_in_scopes scopes query =
     List.find_map (fun scope -> lookup_toplevel_in_scope scope query) scopes
 
-  let lookup_toplevel_declaration_in_scope scope query =
-    Binding_tree.lookup_toplevel_filter_opt query entry_is_not_variable
-      (get_scope_bindings scope)
+  let rec lookup_toplevel_declaration_in_scopes scopes query =
+    match scopes with
+    | [] -> (* Exhausted the list of scopes to check. *) Option.none
+    | scope :: scopes -> (
+        let scope_bindings = get_scope_bindings scope in
+        match Binding_tree.lookup_toplevel_opt query scope_bindings with
+        | Option.Some (entry, subtree) when entry_is_not_variable entry ->
+            (* [query] is bound to a declaration in [scope]. *)
+            Option.some (entry, subtree)
+        | Option.Some _ ->
+            (* [query] is bound to a variable in [scope], so any declaration
+               in [scopes] bound to [query] is shadowed. *)
+            Option.none
+        | Option.None ->
+            (* [query] is unbound in [scope], so check in the parent
+               scopes. *)
+            lookup_toplevel_declaration_in_scopes scopes query)
 
-  let lookup_toplevel_declaration_in_scopes scopes query =
-    List.find_map
-      (fun scope -> lookup_toplevel_declaration_in_scope scope query)
-      scopes
+  (** [lookup_toplevel_opt state query] is the entry and subtree bound to the
+      identifier [query] in [state]. The "toplevel" here refers to [query]
+      not being a qualified identifier, meaning that we do not have to
+      perform traversals in namespaces. To lookup qualified identifiers, see
+      {!val:lookup}.
 
+      The entry bound to [query] in [state] is the first entry found in a
+      scope in the stack of scopes in [state].
+
+      Exceptionally for pattern scopes, we ignore bound variables in outer
+      scopes. This means that in the computation-level Beluga expression
+      [let x = ? in case ? of p => ?], the pattern [p] may not refer to [x].
+      The name [x] can be used in [p], but it is considered a free variable. *)
   let lookup_toplevel_opt state query =
     match state.scopes with
     | List1.T ((Pattern_scope _ as scope), scopes) -> (
@@ -880,7 +912,7 @@ module Indexing_state = struct
     match scopes with
     | [] ->
         Error.raise
-          (Qualified_identifier.Unbound_qualified_identifier
+          (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
     | scope :: scopes -> (
         match
@@ -892,7 +924,7 @@ module Indexing_state = struct
             , (identifier, _entry, _subtree)
             , _unbound_segments ) ->
             Error.raise
-              (Qualified_identifier.Unbound_namespace
+              (Unbound_namespace
                  (Qualified_identifier.make ~namespaces:bound_segments
                     identifier))
         | `Unbound _ -> lookup_in_scopes scopes identifiers)
@@ -901,25 +933,41 @@ module Indexing_state = struct
     match scopes with
     | [] ->
         Error.raise
-          (Qualified_identifier.Unbound_qualified_identifier
+          (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
     | scope :: scopes -> (
-        match
-          Binding_tree.maximum_lookup_filter identifiers
-            entry_is_not_variable
-            (get_scope_bindings scope)
-        with
-        | `Bound result -> result
+        let scope_bindings = get_scope_bindings scope in
+        match Binding_tree.maximum_lookup identifiers scope_bindings with
+        | `Bound (entry, subtree) when entry_is_not_variable entry ->
+            (* [query] is bound to a declaration in [scope]. *)
+            (entry, subtree)
+        | `Bound _result ->
+            (* [query is bound to a variable in [scope], so any declaration
+               in [scopes] bound to [query] is shadowed. *)
+            assert (List1.length identifiers = 1)
+            (* Variables can't be in namespaces *);
+            Error.raise
+              (Unbound_qualified_identifier
+                 (Qualified_identifier.from_list1 identifiers))
         | `Partially_bound
             ( bound_segments
             , (identifier, _entry, _subtree)
             , _unbound_segments ) ->
             Error.raise
-              (Qualified_identifier.Unbound_namespace
+              (Unbound_namespace
                  (Qualified_identifier.make ~namespaces:bound_segments
                     identifier))
         | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
 
+  (** [lookup state query] is the entry and subtree bound to the qualified
+      identifier [query] in [state]. To lookup simple identifiers, see
+      {!val:lookup_toplevel}.
+
+      The entry bound to [query] in [state] is the first entry found in a
+      scope in the stack of scopes in [state]. If a scope has [entry] as
+      partially bound (meaning that only the first few namespaces of [query]
+      are bound in that scope), then [query] is considered to be unbound
+      because one of its namespaces is unbound. *)
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
     match state.scopes with
@@ -933,7 +981,7 @@ module Indexing_state = struct
             , (identifier, _entry, _subtree)
             , _unbound_segments ) ->
             Error.raise
-              (Qualified_identifier.Unbound_namespace
+              (Unbound_namespace
                  (Qualified_identifier.make ~namespaces:bound_segments
                     identifier))
         | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
@@ -975,11 +1023,12 @@ module Indexing_state = struct
     match get_current_scope state with
     | Plain_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope disambiguation state"
-             __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid plain scope, expected a module scope" __FUNCTION__)
     | Pattern_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope disambiguation state"
+          (Format.asprintf
+             "[%s] invalid pattern scope, expected a module scope"
              __FUNCTION__)
     | Module_scope { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings.bindings;
@@ -1277,7 +1326,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let index_of_lf_variable_opt state identifier =
     match lookup_toplevel_opt state identifier with
@@ -1316,7 +1365,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let index_of_meta_variable_opt state identifier =
     match lookup_toplevel_opt state identifier with
@@ -1329,7 +1378,7 @@ module Indexing_state = struct
         , _ ) -> (
         match meta_level with
         | Option.Some meta_level ->
-            Option.Some (index_of_meta_level state meta_level)
+            Option.some (index_of_meta_level state meta_level)
         | Option.None -> Option.none)
     | Option.Some _
     | Option.None ->
@@ -1360,7 +1409,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let index_of_parameter_variable_opt state identifier =
     match lookup_toplevel_opt state identifier with
@@ -1404,7 +1453,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let index_of_substitution_variable_opt state identifier =
     match lookup_toplevel_opt state identifier with
@@ -1448,7 +1497,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let index_of_context_variable_opt state identifier =
     match lookup_toplevel_opt state identifier with
@@ -1488,7 +1537,7 @@ module Indexing_state = struct
     | Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          (Identifier.Unbound_identifier identifier)
+          (Unbound_identifier identifier)
 
   let open_namespace state identifier =
     let _entry, subtree = lookup state identifier in
@@ -1723,10 +1772,14 @@ module Indexing_state = struct
           scope.expression_bindings.meta_context_size + 1
     | Plain_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid plain scope, expected a pattern scope"
+             __FUNCTION__)
     | Module_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid module scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid module scope, expected a pattern scope"
+             __FUNCTION__)
 
   let add_bound_pattern_meta_variable state ?location identifier =
     add_bound_pattern_meta_level_variable state ?location identifier
@@ -1894,10 +1947,13 @@ module Indexing_state = struct
     (match get_current_scope state with
     | Plain_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid plain scope, expected a module scope" __FUNCTION__)
     | Pattern_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid pattern scope, expected a module scope"
+             __FUNCTION__)
     | Module_scope { declarations; _ } ->
         ignore (pop_scope state);
         add_declaration state ~subtree:declarations identifier
@@ -1960,10 +2016,14 @@ module Indexing_state = struct
     match pop_scope state with
     | Module_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid module scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid module scope, expected a pattern scope"
+             __FUNCTION__)
     | Plain_scope _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope" __FUNCTION__)
+          (Format.asprintf
+             "[%s] invalid plain scope, expected a pattern scope"
+             __FUNCTION__)
     | Pattern_scope { pattern_variables_rev; expression_bindings; _ } -> (
         match
           Identifier.find_duplicates (List.rev pattern_variables_rev)
@@ -1981,10 +2041,19 @@ module Indexing_state = struct
   let rec add_all_mctx state cD =
     (* [cD] is a stack, so traverse it from tail to head *)
     match cD with
-    | Synint.LF.Dec (cD', Synint.LF.Decl (u, _, _, _))
-    | Synint.LF.Dec (cD', Synint.LF.DeclOpt (u, _)) ->
+    | Synint.LF.Dec (cD', decl) -> (
         add_all_mctx state cD';
-        add_contextual_variable state (Name.to_identifier u)
+        match decl with
+        | Synint.LF.Decl (u, Synint.LF.CTyp _, _, _) ->
+            add_context_variable state (Name.to_identifier u)
+        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.MTyp _, _), _, _) ->
+            add_meta_variable state (Name.to_identifier u)
+        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.PTyp _, _), _, _) ->
+            add_parameter_variable state (Name.to_identifier u)
+        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.STyp _, _), _, _) ->
+            add_substitution_variable state (Name.to_identifier u)
+        | Synint.LF.DeclOpt (u, _) ->
+            add_contextual_variable state (Name.to_identifier u))
     | Synint.LF.Empty -> ()
 
   let rec add_all_gctx state cG =

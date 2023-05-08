@@ -1032,14 +1032,23 @@ module Disambiguation_state = struct
   let lookup_toplevel_in_scopes scopes query =
     List.find_map (fun scope -> lookup_toplevel_in_scope scope query) scopes
 
-  let lookup_toplevel_declaration_in_scope scope query =
-    Binding_tree.lookup_toplevel_filter_opt query entry_is_not_variable
-      (get_scope_bindings scope)
-
-  let lookup_toplevel_declaration_in_scopes scopes query =
-    List.find_map
-      (fun scope -> lookup_toplevel_declaration_in_scope scope query)
-      scopes
+  let rec lookup_toplevel_declaration_in_scopes scopes query =
+    match scopes with
+    | [] -> (* Exhausted the list of scopes to check. *) Option.none
+    | scope :: scopes -> (
+        let scope_bindings = get_scope_bindings scope in
+        match Binding_tree.lookup_toplevel_opt query scope_bindings with
+        | Option.Some (entry, subtree) when entry_is_not_variable entry ->
+            (* [query] is bound to a declaration in [scope]. *)
+            Option.some (entry, subtree)
+        | Option.Some _ ->
+            (* [query] is bound to a variable in [scope], so any declaration
+               in [scopes] bound to [query] is shadowed. *)
+            Option.none
+        | Option.None ->
+            (* [query] is unbound in [scope], so check in the parent
+               scopes. *)
+            lookup_toplevel_declaration_in_scopes scopes query)
 
   let lookup_toplevel_opt state query =
     match state.scopes with
@@ -1074,16 +1083,24 @@ module Disambiguation_state = struct
   let rec lookup_declaration_in_scopes scopes identifiers =
     match scopes with
     | [] ->
+        (* Exhausted the list of scopes to check. *)
         Error.raise
           (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
     | scope :: scopes -> (
-        match
-          Binding_tree.maximum_lookup_filter identifiers
-            entry_is_not_variable
-            (get_scope_bindings scope)
-        with
-        | `Bound result -> result
+        let scope_bindings = get_scope_bindings scope in
+        match Binding_tree.maximum_lookup identifiers scope_bindings with
+        | `Bound (entry, subtree) when entry_is_not_variable entry ->
+            (* [query] is bound to a declaration in [scope]. *)
+            (entry, subtree)
+        | `Bound _result ->
+            (* [query is bound to a variable in [scope], so any declaration
+               in [scopes] bound to [query] is shadowed. *)
+            assert (List1.length identifiers = 1)
+            (* Variables can't be in namespaces *);
+            Error.raise
+              (Unbound_qualified_identifier
+                 (Qualified_identifier.from_list1 identifiers))
         | `Partially_bound
             ( bound_segments
             , (identifier, _entry, _subtree)

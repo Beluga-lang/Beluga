@@ -45,7 +45,10 @@ module type INDEXING_STATE = sig
       ['#'] is a positive integer. Ideally, fresh name generation would not
       be needed, but that would require that every AST node in the concrete
       syntax is directly expressible in the approximate and internal
-      syntaxes. *)
+      syntaxes.
+
+      FIXME: The indexing phase should not have to generate fresh
+      identifiers. *)
   val fresh_identifier : state -> Identifier.t
 
   (** [fresh_identifier_opt state identifier_opt] is [fresh_identifier state]
@@ -190,7 +193,7 @@ module type INDEXING_STATE = sig
 
   (** [with_bound_contextual_variable state identifier m] runs [m] in a state
       where [identifier] is either a bound meta, parameter, substitution or
-      context variable. This is necessary for [mlam]-expressions
+      context variable. This is necessary for [mlam]-expressions.
 
       If [state] is a pattern state, then [identifier] is additionally
       considered as an inner bound variable. *)

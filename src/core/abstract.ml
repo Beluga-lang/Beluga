@@ -1433,7 +1433,8 @@ let rec abstractMVarCompKind cQ (l, offset) =
      Comp.PiKind (loc, cdecl', cK')
 
 let rec abstractMVarMetaObj cQ offset (loc, cM) =
-  (loc, abstrMObj cQ offset cM)
+  let cM' = abstrMObj cQ offset cM in
+  (loc, cM')
 
 and abstractMVarMetaSpine cQ offset =
   function
@@ -1455,11 +1456,9 @@ let rec abstractMVarCompTyp cQ ((l, d) as offset) =
   | Comp.TypBox (loc, mtyp) ->
      Comp.TypBox (loc, abstractMVarMTyp cQ mtyp offset)
   | Comp.TypArr (loc, tau1, tau2) ->
-     Comp.TypArr
-       ( loc
-       , abstractMVarCompTyp cQ offset tau1
-       , abstractMVarCompTyp cQ offset tau2
-       )
+     let tau1' = abstractMVarCompTyp cQ offset tau1 in
+     let tau2' = abstractMVarCompTyp cQ offset tau2 in
+     Comp.TypArr (loc, tau1', tau2')
 
   | Comp.TypCross (loc, taus) ->
      let taus' = List2.map (abstractMVarCompTyp cQ offset) taus in
@@ -1705,6 +1704,7 @@ let abstrCodataTyp cD tau tau' =
     then I.Empty
     else (* thus, l_cD1 > l_cD2 *)
       begin
+        assert (l_cD1 > l_cD2);
         let I.Dec (cD1', decl) = cD1 in
         let cD = subtract cD1' cD2 in
         I.Dec (cD, decl)

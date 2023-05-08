@@ -12,8 +12,8 @@ module type ENTRY = sig
       variable. *)
   val is_lf_variable : t -> Bool.t
 
-  (** [is_meta_variable entry] is [true] if [entry] describes an
-      meta-variable or a contextual variable.
+  (** [is_meta_variable entry] is [true] if [entry] describes a meta-variable
+      or a contextual variable.
 
       Contextual variables exist only because [mlam]-expressions ambiguously
       introduce either a meta-variable, a parameter variable, a substitution

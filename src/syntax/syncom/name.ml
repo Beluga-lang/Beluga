@@ -131,13 +131,12 @@ let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
      where two entries appear to refer to the same name because [None =
      None]. *)
   | MVarName (Some vGen)
-  | SVarName (Some vGen)
-  | PVarName (Some vGen)
   | BVarName (Some vGen) ->
       mk_name_helper (vGen ())
-  | MVarName None
-  | SVarName None ->
-      mk_name_helper (Gensym.MVarData.gensym ())
+  | SVarName (Some vGen) -> mk_name_helper ("$" ^ vGen ())
+  | PVarName (Some vGen) -> mk_name_helper ("#" ^ vGen ())
+  | MVarName None -> mk_name_helper (Gensym.MVarData.gensym ())
+  | SVarName None -> mk_name_helper ("$" ^ Gensym.MVarData.gensym ())
   | PVarName None -> mk_name_helper ("#" ^ Gensym.VarData.gensym ())
   | BVarName None
   | NoName ->

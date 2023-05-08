@@ -251,6 +251,13 @@ module type PARSER = sig
       fails. *)
   val run_exn : 'a t -> state -> state * 'a
 
+  (** [eval_exn p state] runs [p] on [state] like {!val:run_exn}, and
+      discards the output parser state. This is used whenever we do not
+      resume parsing from the final parser state, particularly when using the
+      {!val:only} combinator since we expect the end of the input stream to
+      be reached. *)
+  val eval_exn : 'a t -> state -> 'a
+
   (** [catch p] runs [p] and invokes the given handler to modify the outcome.
       Despite being called "catch", this parser is actually a kind of [map],
       and is used to implement "low-level" parser transformations. *)

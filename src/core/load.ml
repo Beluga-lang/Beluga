@@ -59,12 +59,9 @@ struct
           let parsing_state =
             Parser_state.initial ~initial_location token_sequence
           in
-          let _parsing_state', signature_file =
-            Parser.Parsing.run_exn
-              Parser.Parsing.(only signature_file)
-              parsing_state
-          in
-          signature_file)
+          Parser.Parsing.eval_exn
+            Parser.Parsing.(only signature_file)
+            parsing_state)
     in
     Disambiguation.disambiguate_signature_file state.disambiguation_state
       signature_file

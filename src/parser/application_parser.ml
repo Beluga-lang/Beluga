@@ -396,7 +396,7 @@ struct
       Location.start_position_as_location (source_location e1)
     in
     let state = initial ~initial_location (Seq.of_list expressions_list) in
-    match eval (run_exn (only parser)) state with
+    match eval_exn (only parser) state with
     | Atom _expression -> assert false
     | Application { applicand; arguments; _ } -> (applicand, arguments)
 

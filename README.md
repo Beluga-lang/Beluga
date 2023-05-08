@@ -42,7 +42,7 @@ beluga path/to/program.bel
 harpoon --sig path/to/program.bel
 ```
 
-Use `make uninstall` to uninstall the executables.
+Use `opam remove beluga` to uninstall the executables.
 
 ### Installation from the source
 

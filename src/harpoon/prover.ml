@@ -8,6 +8,7 @@ module F = Fun
 module E = Error
 module S = Substitution
 module P = Prettyint.DefaultPrinter
+
 module Indexing_state = Index_state.Indexing_state
 module Indexer = Index.Indexer
 
@@ -28,6 +29,8 @@ let () =
       Format.dprintf "No such computational variable %a." Name.pp name
     | Prover_error e -> Error.find_printer e
     | exn -> Error.raise_unsupported_exception_printing exn)
+
+let beluga_lang_read_the_docs_url = "https://beluga-lang.readthedocs.io/"
 
 (** Elaborates a synthesizable expression in the given contexts. *)
 let elaborate_synthesizing_expression state mcid cIH cD cG mfs t =
@@ -144,13 +147,13 @@ let dump_proof t path =
     Format.pp_print_newline ppf ())
 
 let process_command
-      ((index_state),
-      (s : HarpoonState.t),
+      (disambiguation_state,
+      index_state,
+      s,
       ({ HarpoonState.session = c; theorem = t; proof_state = g } as substate))
-      (cmd : Synext.harpoon_repl_command)
+      location
+      input
     : unit =
-  let open Comp in
-
   let solve_hole (id, Holes.Exists (w, h)) =
     let open Holes in
     dprintf
@@ -164,7 +167,7 @@ let process_command
       begin
         let { compGoal; Holes.cG = cGh; compSolution } = h.info
         in
-        assert (compSolution = None);
+        assert (Option.is_none compSolution);
         let typ = Whnf.cnormCTyp compGoal in
         dprintf
           begin fun p ->
@@ -225,7 +228,56 @@ let process_command
           HarpoonState.printf s "logic programming finished@,@?"
   in
 
+  let open Comp in
   let { cD; cG; cIH } = g.context in
+
+  let cmd =
+    let open Beluga_parser in
+    let open Parser in
+    let token_sequence = Lexer.lex_string ~initial_location:location input in
+    let parsing_state =
+      Parser_state.initial ~initial_location:location token_sequence
+    in
+    let parser = Parsing.(only (maybe interactive_harpoon_command)) in
+    let result = Parsing.(eval_exn parser parsing_state) in
+    Option.map
+      (fun command -> (Disambiguation_state.with_bindings_checkpoint disambiguation_state (fun disambiguation_state ->
+        let rec add_all_mctx state cD =
+          (* [cD] is a stack, so traverse it from tail to head *)
+          match cD with
+          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.CTyp _, _, _)) ->
+            add_all_mctx state cD';
+            Disambiguation_state.add_context_variable state (Name.to_identifier u)
+          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.MTyp _, _), _, _)) ->
+            add_all_mctx state cD';
+            Disambiguation_state.add_meta_variable state (Name.to_identifier u)
+          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.PTyp _, _), _, _)) ->
+            add_all_mctx state cD';
+            Disambiguation_state.add_parameter_variable state (Name.to_identifier u)
+          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.STyp _, _), _, _)) ->
+            add_all_mctx state cD';
+            Disambiguation_state.add_substitution_variable state (Name.to_identifier u)
+          | Synint.LF.Dec (cD', Synint.LF.DeclOpt (u, _)) ->
+              add_all_mctx state cD';
+              Disambiguation_state.add_contextual_variable state (Name.to_identifier u)
+          | Synint.LF.Empty -> () in
+        let rec add_all_gctx state cG =
+          (* [cG] is a stack, so traverse it from tail to head *)
+          match cG with
+          | Synint.LF.Dec (cG', Synint.Comp.CTypDecl (x, _, _))
+          | Synint.LF.Dec (cG', Synint.Comp.CTypDeclOpt x) ->
+              add_all_gctx state cG';
+              Disambiguation_state.add_computation_variable state (Name.to_identifier x)
+          | Synint.LF.Empty -> () in
+        add_all_mctx disambiguation_state cD;
+        add_all_gctx disambiguation_state cG;
+        Disambiguation.disambiguate_harpoon_repl_command disambiguation_state command
+        ))) result
+  in
+
+  match cmd with
+  | Option.None -> ()
+  | Option.Some cmd ->
 
   match cmd with
   (* Administrative commands: *)
@@ -329,18 +381,18 @@ let process_command
   | Synext.Harpoon.Repl.Command.History _ ->
      let (past, future) = Theorem.get_history_names t in
      let future = List.rev future in
-     let line ppf = function
-       | _ when List.nonempty future ->
+     let line ppf () =
+       if List.nonempty future then
           Format.fprintf ppf "@,-----@,"
-       | _ -> ()
+       else ()
      in
-     let future_remark ppf = function
-       | _ when List.nonempty future ->
+     let future_remark ppf () =
+      if List.nonempty future then
           Format.fprintf ppf "- @[%a@]"
             Format.pp_print_string
             "Commands below the line would be undone. \
              Commands above the line would be redone."
-       | _ -> ()
+      else ()
      in
      HarpoonState.printf s
        "@[<v 2>History:\
@@ -355,7 +407,8 @@ let process_command
   | Synext.Harpoon.Repl.Command.Help _ ->
      HarpoonState.printf s
        "@[<v>Built-in help is not implemented.\
-        @,See online documentation: https://beluga-lang.readthedocs.io/@]"
+        @,See online documentation: %s@]"
+        beluga_lang_read_the_docs_url
 
   (* Real tactics: *)
   | Synext.Harpoon.Repl.Command.Unbox

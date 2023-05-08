@@ -21,24 +21,22 @@ let realMain () =
   let open B in
   let all_paths, sgn' = Load.load_fresh options.path in
 
-  let _disambiguation_states, _last_disambiguation_state =
+  let disambiguation_states, last_disambiguation_state =
     Revisit.revisit_disambiguation sgn'
   in
-  let _indexing_states, _last_indexing_state =
-    Revisit.revisit_indexing sgn'
-  in
+  let indexing_states, last_indexing_state = Revisit.revisit_indexing sgn' in
 
   let ppf = Format.std_formatter in
   let stubs =
-    if options.load_holes then
-      B.Holes.get_harpoon_subgoals ()
-    else []
+    if options.load_holes then B.Holes.get_harpoon_subgoals () else []
   in
   let io =
     IO.make (InputPrompt.make options.test_file options.test_start) ppf
   in
-  REPL.start options.save_back options.test_stop options.path all_paths stubs
-    io
+  REPL.start
+    (disambiguation_states, last_disambiguation_state)
+    (indexing_states, last_indexing_state)
+    options.save_back options.test_stop options.path all_paths stubs io
 
 let main () =
   try realMain () with

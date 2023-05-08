@@ -150,6 +150,13 @@ module type DISAMBIGUATION_STATE = sig
   val add_context_variable :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 
+  (** [add_contextual_variable] is like {!add_lf_variable}, but the
+      identifier is added as a bound contextual variable, meaning that it is
+      ambiguously bound as either a meta, parameter, substitution or context
+      variable. *)
+  val add_contextual_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
   (** [add_computation_variable] is like {!add_lf_variable}, but the
       identifier is added as a bound computation-level variable. *)
   val add_computation_variable :

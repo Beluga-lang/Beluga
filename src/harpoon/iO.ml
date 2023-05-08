@@ -49,9 +49,9 @@ let rec prompt_input ?(source = default_prompt_source) io ~msg ~history_file
     let location, line = read_line ~source io ~msg ~history_file in
     f location line
   with
-  | Io_error End_of_input ->
+  | Io_error End_of_input as cause ->
       (* End of the input, any subsequent prompt fails in the same way. *)
-      Option.none
+      Error.re_raise cause
   | cause ->
       (* Suppress the exception raised by [f location line] and re-prompt for
          an input *)

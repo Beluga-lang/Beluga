@@ -241,6 +241,8 @@ module type PARSER = sig
 
   val run_exn : 'a t -> state -> state * 'a
 
+  val eval_exn : 'a t -> state -> 'a
+
   val catch :
     'a t -> (state * ('a, exn) result -> state * ('b, exn) result) -> 'b t
 
@@ -441,6 +443,8 @@ module Make (State : PARSER_STATE with type location = Location.t) = struct
     | _s', Result.Error cause ->
         let cause' = restructure_parser_exception cause in
         Error.raise cause'
+
+  let[@inline] eval_exn p = eval (run_exn p)
 
   let catch p handler s = run p s |> handler
 

@@ -237,13 +237,10 @@ module Parser = struct
   let read_and_parse_signature filename =
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
-        let _parser_state', signature =
-          Parsing.run_exn
-            (Parsing.only Parsing.signature_file)
-            (make_initial_parser_state_from_channel ~initial_location
-               in_channel)
-        in
-        signature)
+        Parsing.eval_exn
+          (Parsing.only Parsing.signature_file)
+          (make_initial_parser_state_from_channel ~initial_location
+             in_channel))
 
   let read_multi_file_signature files =
     let signature =

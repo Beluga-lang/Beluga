@@ -362,12 +362,9 @@ struct
         let parsing_state =
           Parser_state.initial ~initial_location:location token_sequence
         in
-        let _parsing_state', result =
-          Parser.Parsing.run_exn
-            Parser.Parsing.(only identifier)
-            parsing_state
-        in
-        result)
+        Parser.Parsing.eval_exn
+          Parser.Parsing.(only identifier)
+          parsing_state)
 
   let read_qualified_identifier _state ?(location = Location.ghost) input =
     run_safe (fun () ->
@@ -377,12 +374,9 @@ struct
         let parsing_state =
           Parser_state.initial ~initial_location:location token_sequence
         in
-        let _parsing_state', result =
-          Parser.Parsing.run_exn
-            Parser.Parsing.(only qualified_identifier)
-            parsing_state
-        in
-        result)
+        Parser.Parsing.eval_exn
+          Parser.Parsing.(only qualified_identifier)
+          parsing_state)
 
   let index_of_lf_type_constant state identifier =
     run_safe (fun () ->

@@ -6,6 +6,9 @@ module F = Fun
 
 module P = Beluga.Prettyint.DefaultPrinter
 
+module Disambiguation_state = Beluga_parser.Disambiguation_state.Disambiguation_state
+module Indexing_state = Beluga.Index_state.Indexing_state
+
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [14]))
 open Debug.Fmt
 
@@ -25,6 +28,8 @@ type t =
   { sessions : Session.t DynArray.t
   (* ^ The theorem sets currently being proven. *)
 
+  ; disambiguation_state : Disambiguation_state.state
+  ; indexing_state : Indexing_state.state
   ; automation_state : Automation.State.t
   ; io : IO.t
   ; save_back : Options.save_mode
@@ -70,32 +75,32 @@ let recover_theorem ppf hooks (cid, gs) =
     initial_state
     (List1.to_list gs)
 
-let recover_session ppf hooks (mutual_group, thm_confs) =
+let recover_session disambiguation_states indexing_states ppf hooks (mutual_group, thm_confs) =
   let theorems =
-    let f = recover_theorem ppf hooks in
-    (* FIXME: to_list -> of_list later is inefficient
-           It would be best to add a function to obtain a Seq.t from
-           an List1.t, lazily map the sequence, and the force the
-           sequence with DynArray.of_seq
-     *)
-    List1.map f thm_confs |> List1.to_list
+    List1.map
+      (fun (cid, proof_state) -> recover_theorem ppf hooks (cid, proof_state))
+      thm_confs
   in
+  let first_theorem_conf = List1.head theorems in
+  let first_theorem_cid = Theorem.get_cid first_theorem_conf in
+  let disambiguation_state = Id.Prog.Hashtbl.find disambiguation_states first_theorem_cid in
+  let indexing_state = Id.Prog.Hashtbl.find indexing_states first_theorem_cid in
   dprintf begin fun p ->
     p.fmt "[%s] @[<v>recovered a session with the following theorems:\
            @,  @[<hv>%a@]@]"
       __FUNCTION__
-      (Format.pp_print_list ~pp_sep: Format.comma
+      (List1.pp ~pp_sep:Format.comma
          (fun ppf t -> Format.fprintf ppf "%a" Name.pp (Theorem.get_name t)))
       theorems
     end;
-  Session.make mutual_group theorems
+  Session.make disambiguation_state indexing_state mutual_group (List1.to_list theorems)
 
 (** Constructs a list of sessions from a list of open subgoals.
     Subgoals are grouped into theorems according to their
     associated cid, and theorems are grouped into sessions
     according to their mutual group.
  *)
-let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
+let recover_sessions disambiguation_states indexing_states ppf hooks (gs : Comp.open_subgoal list) =
   (* idea:
      - first group subgoals by theorem
      - group theorems by mutual group
@@ -112,7 +117,7 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
           (theorem_cid, subgoals'))
   |> List1.group_by (fun (theorem_cid, _) ->
         Store.Cid.Comp.mutual_group theorem_cid)
-  |> List.map (recover_session ppf hooks)
+  |> List.map (recover_session disambiguation_states indexing_states ppf hooks)
 
 (** Drops all sessions from the prover, replacing with the given
         list.
@@ -145,6 +150,8 @@ let run_automation auto_state (t : Theorem.t) (g : Comp.proof_state) =
         Use an empty list to generate a prover state with no sessions.
  *)
 let make
+      (disambiguation_states, disambiguation_state)
+      (indexing_states, indexing_state)
       save_back
       stop
       (sig_path : string)
@@ -155,9 +162,11 @@ let make
   let automation_state = Automation.State.make () in
   let hooks = [run_automation automation_state] in
   let sessions =
-    recover_sessions (IO.formatter io) hooks gs
+    recover_sessions disambiguation_states indexing_states (IO.formatter io) hooks gs
   in
-  { sessions = DynArray.of_list sessions
+  { disambiguation_state
+  ; indexing_state
+  ; sessions = DynArray.of_list sessions
   ; automation_state
   ; io
   ; save_back
@@ -224,11 +233,17 @@ let next_substate (s : t) =
     different subgoal, possibly in a different session/theorem.
     To preserve focus, combine this with `keeping_focus`. *)
 let reset s : unit =
-  let (_all_paths, _sgn') = Load.load_fresh s.sig_path in
+  let (all_paths, sgn') = Load.load_fresh s.sig_path in
+  let disambiguation_states, _last_disambiguation_state =
+    Revisit.revisit_disambiguation sgn'
+  in
+  let indexing_states, _last_indexing_state =
+    Revisit.revisit_indexing sgn'
+  in
   let gs = Holes.get_harpoon_subgoals () in
   let hooks = [run_automation s.automation_state] in
   let cs =
-    recover_sessions (IO.formatter s.io) hooks gs
+    recover_sessions disambiguation_states indexing_states (IO.formatter s.io) hooks gs
   in
   dprintf begin fun p ->
     p.fmt "[reset] recovered %d sessions from %d subgoals"
@@ -296,7 +311,7 @@ let is_complete s = DynArray.length s.sessions = 0
 
 let session_configuration_wizard s =
   let open Option in
-  Session.configuration_wizard s.io
+  Session.configuration_wizard s.disambiguation_state s.indexing_state s.io
     [run_automation s.automation_state]
   $> add_session s
   |> is_some

@@ -8,6 +8,9 @@ open Synint
 
 module P = Prettyint.DefaultPrinter
 
+module Disambiguation_state = Beluga_parser.Disambiguation_state.Disambiguation_state
+module Indexing_state = Beluga.Index_state.Indexing_state
+
 (** A computed value of type 'a or a function to print an error. *)
 type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
 
@@ -15,74 +18,23 @@ type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
     and converting the exception to a function that prints the
     error with a given formatter.
  *)
-let run_safe (f : unit -> 'a) : 'a e =
+let[@warning "-32"] run_safe (f : unit -> 'a) : 'a e =
   try
     Either.right (f ())
   with
   | IO.Io_error e ->
-     Either.left
-       begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%t@]@\n"
-         (Error.find_printer e)
-       end
+     let s = Printexc.to_string e in
+     Either.left (fun ppf () -> Format.fprintf ppf "%s@\n" s)
   | Prover.Prover_error e ->
-     Either.left
-       begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%t@]@\n"
-         (Error.find_printer e)
-       end
+     let s = Printexc.to_string e in
+     Either.left (fun ppf () -> Format.fprintf ppf "%s@\n" s)
   | e ->
      let s = Printexc.to_string e in
      let bt = Printexc.get_backtrace () in
-     Either.left
-       begin fun ppf () ->
-       Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@,%s@]"
-         s bt
-       end
-
-(** Parses the user input string and executes it in the given state
-    substate.
-    The input command sequence must be fully executable in the
-    current theorem.
-    Returns:
-    - `ok: all commands were executed in the current theorem
-    - `stopped_short: some commands were not executed because the
-      current theorem is over.
-    - `error: an error occurred. Commands beyond the failed one were
-      not executed.
- *)
-let[@warning "-32"] process_command_sequence (index_state, s, substate) cmds =
-  let printf x = HarpoonState.printf s x in
-  (* Idea:
-     - count the commands to run
-     - count the commands we were able to process
-   *)
-  let n = List.length cmds in
-  match
-    run_safe
-      begin fun () ->
-      let (k, _) =
-        List.fold_left
-          begin fun (k, g) cmd ->
-          match g with
-          | Option.None -> (k, g)
-          | Option.Some g ->
-             Prover.process_command (index_state, s, { substate with HarpoonState.proof_state = g }) cmd;
-             (k + 1, Theorem.next_subgoal substate.HarpoonState.theorem)
-          end
-          (0, Option.some substate.HarpoonState.proof_state)
-          cmds
-      in
-      n = k
-      end
-  with
-  | Either.Left f ->
-     printf "%a" f ();
-     if HarpoonState.interaction_mode s = `stop then
-       exit 1;
-     `error
-  | Either.Right b ->
-     if b then `ok else `stopped_short
+     Either.left (fun ppf () ->
+       Format.fprintf ppf
+         "@[<v>Internal error. (State may be undefined.)@,%s@,%s@]"
+         s bt)
 
 let rec loop (s : HarpoonState.t) : unit =
   let printf x = HarpoonState.printf s x in
@@ -138,12 +90,14 @@ let rec loop (s : HarpoonState.t) : unit =
      *)
 
     (* Parse the input and run the command *)
-    match Obj.magic () (* TODO: Parse, elaborate and process commands *) with
+    match Obj.magic () (* TODO: Parse, elaborate and process command using the session's disambiguation/indexing states *) with
     | `ok | `error -> loop s
     | `stopped_short ->
        printf "@,Warning: theorem proven before all commands were processed.@,"
 
 let start
+      (disambiguation_states, disambiguation_state)
+      (indexing_states, indexing_state)
       save_back
       (stop : O.interaction_mode)
       (sig_path : string)
@@ -151,7 +105,17 @@ let start
       (gs : Comp.open_subgoal list)
       (io : IO.t)
     : unit =
-  let s = HarpoonState.make save_back stop sig_path all_paths io gs in
+  let s =
+    HarpoonState.make
+      (disambiguation_states, disambiguation_state)
+      (indexing_states, indexing_state)
+      save_back
+      stop
+      sig_path
+      all_paths
+      io
+      gs
+  in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)

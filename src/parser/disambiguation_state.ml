@@ -579,6 +579,9 @@ module type DISAMBIGUATION_STATE = sig
   val add_context_variable :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 
+  val add_contextual_variable :
+    state -> ?location:Location.t -> Identifier.t -> Unit.t
+
   val add_computation_variable :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 

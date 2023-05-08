@@ -56,5 +56,5 @@ val prompt_input :
   -> t
   -> msg:string
   -> history_file:string option
-  -> (Location.t -> string -> 'a option)
-  -> 'a option
+  -> (Location.t -> string -> 'a)
+  -> 'a

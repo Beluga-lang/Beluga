@@ -1,7 +1,10 @@
 (** A Harpoon session represents a set of mutually proven theorems. *)
-
+open Beluga
 open Beluga_syntax.Syncom
 open Synint
+
+module Disambiguation_state = Beluga_parser.Disambiguation_state.Disambiguation_state
+module Indexing_state = Index_state.Indexing_state
 
 type t
 
@@ -9,7 +12,11 @@ type t
 
     Requirement: the mutual group identified by the given cid must
     indeed contain every given theorem. *)
-val make : Id.cid_mutual_group -> Theorem.t list -> t
+val make : Disambiguation_state.state -> Indexing_state.state -> Id.cid_mutual_group -> Theorem.t list -> t
+
+val with_disambiguation_state : t -> (Disambiguation_state.state -> 'a) -> 'a
+
+val with_indexing_state : t -> (Indexing_state.state -> 'a) -> 'a
 
 (** Retrieves the mutual declarations associated to this session's
     mutual group. *)
@@ -89,7 +96,7 @@ val check_translated_proofs : t -> translation_check_result
     session. Returns None if the user aborts the session
     configuration. Otherwise, returns the newly defined session.
  *)
-val configuration_wizard : IO.t -> (Theorem.t -> Theorem.subgoal_hook) list -> t option
+val configuration_wizard : Disambiguation_state.state -> Indexing_state.state -> IO.t -> (Theorem.t -> Theorem.subgoal_hook) list -> t option
 
 (** Prints a vertical, enumerated list of all theorems in this
     session.

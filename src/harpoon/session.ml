@@ -6,20 +6,35 @@ open Beluga_syntax.Synint
 module F = Fun
 module P = Prettyint.DefaultPrinter
 
+module Disambiguation_state = Beluga_parser.Parser.Disambiguation_state
+module Disambiguation = Beluga_parser.Parser.Disambiguation
+module Indexing_state = Index_state.Indexing_state
+module Indexer = Index.Indexer
+
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [15]))
 open Debug.Fmt
 
 type t =
-  { theorems : Theorem.t DynArray.t
+  { disambiguation_state : Disambiguation_state.state
+  ; indexing_state : Indexing_state.state
+  ; theorems : Theorem.t DynArray.t
   ; finished_theorems: (Theorem.t * Comp.exp option) DynArray.t
   ; mutual_group : Id.cid_mutual_group
   }
 
-let make mutual_group thms =
-  { theorems = DynArray.of_list thms
+let make disambiguation_state indexing_state mutual_group thms =
+  { disambiguation_state
+  ; indexing_state
+  ; theorems = DynArray.of_list thms
   ; finished_theorems = DynArray.make 32
   ; mutual_group
   }
+
+let with_disambiguation_state state f =
+  Disambiguation_state.with_bindings_checkpoint state.disambiguation_state f
+
+let with_indexing_state state f =
+  Indexing_state.with_bindings_checkpoint state.indexing_state f
 
 (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
@@ -233,7 +248,7 @@ let parse_quit_or_theorem_identifier_opt location input =
   in
   let quit =
     Parsing.(
-      colon &> keyword "quit" $> (fun _ -> `quit) |> labelled "`:quit'")
+      colon &> keyword "quit" $> (fun () -> `quit) |> labelled "`:quit'")
   in
   let theorem_name =
     Parsing.(
@@ -241,20 +256,92 @@ let parse_quit_or_theorem_identifier_opt location input =
       $> (fun identifier -> `theorem_name identifier)
       |> labelled "Theorem identifier")
   in
-  let parser = Parsing.(only (maybe (alt quit theorem_name))) in
-  let _parsing_state', result = Parsing.(run_exn parser parsing_state) in
-  result
+  Parsing.(eval_exn (only (maybe (alt quit theorem_name))) parsing_state)
 
 let prompt_quit_or_theorem_identifier_opt io =
   IO.prompt_input io ~msg:"  Name of theorem (:quit or empty to finish): "
     ~history_file:None parse_quit_or_theorem_identifier_opt
 
+let parse_harpoon_totality_declaration_opt location input =
+  let open Beluga_parser in
+  let open Parser in
+  let token_sequence = Lexer.lex_string ~initial_location:location input in
+  let parsing_state =
+    Parser_state.initial ~initial_location:location token_sequence
+  in
+  Parsing.(eval_exn (only (maybe (alt trust_totality_declaration numeric_totality_declaration))) parsing_state)
+
+let disambiguate_harpoon_totality_declaration disambiguation_state totality_declaration =
+  Disambiguation_state.with_bindings_checkpoint disambiguation_state
+    (fun disambiguation_state -> Disambiguation.disambiguate_totality_declaration disambiguation_state totality_declaration)
+
+let read_harpoon_totality_declaration_opt disambiguation_state location input =
+  let totality_declaration_opt = parse_harpoon_totality_declaration_opt location input in
+  Option.map (fun totality_declaration -> disambiguate_harpoon_totality_declaration disambiguation_state totality_declaration) totality_declaration_opt
+
+let rec elaborate_totality_order :
+      'a.
+      'a Synext.signature_totality_order -> 'a Synint.Comp.generic_order =
+  function
+  | Synext.Signature.Totality.Order.Argument { argument; _ } ->
+      Synint.Comp.Arg argument
+  | Synext.Signature.Totality.Order.Lexical_ordering { arguments; _ } ->
+      let arguments' = List1.map elaborate_totality_order arguments in
+      Synint.Comp.Lex (List1.to_list arguments')
+  | Synext.Signature.Totality.Order.Simultaneous_ordering { arguments; _ }
+    ->
+      let arguments' = List1.map elaborate_totality_order arguments in
+      Synint.Comp.Simul (List1.to_list arguments')
+
+and elaborate_totality_declaration typ declaration =
+  match declaration with
+  | Synext.Signature.Totality.Declaration.Trust _ -> `trust
+  | Synext.Signature.Totality.Declaration.Numeric { order; _ } -> (
+      match order with
+      | Option.None -> `not_recursive
+      | Option.Some order ->
+          `inductive
+            (Reconstruct.numeric_order typ
+                (elaborate_totality_order order)))
+  | Synext.Signature.Totality.Declaration.Named _ ->
+    Error.raise_violation (Format.asprintf "[%s] unsupported named totality declaration" __FUNCTION__)
+
+let parse_harpoon_theorem_type location input =
+  let open Beluga_parser in
+  let open Parser in
+  let token_sequence = Lexer.lex_string ~initial_location:location input in
+  let parsing_state =
+    Parser_state.initial ~initial_location:location token_sequence
+  in
+  Parsing.(eval_exn (only comp_typ) parsing_state)
+
+let disambiguate_harpoon_theorem_type disambiguation_state typ =
+  Disambiguation_state.with_bindings_checkpoint disambiguation_state
+    (fun disambiguation_state -> Disambiguation.disambiguate_comp_typ disambiguation_state typ)
+
+let read_harpoon_theorem_typ disambiguation_state location input =
+  let typ = parse_harpoon_theorem_type location input in
+  disambiguate_harpoon_theorem_type disambiguation_state typ
+
+let elaborate_typ state cD tau =
+  let apx_tau =
+      Indexing_state.with_bindings_checkpoint state (fun state ->
+          Indexing_state.add_all_mctx state cD;
+          Indexer.index_open_comp_typ state tau)
+    in
+    (* FIXME: The following elaboration steps need checkpoints *)
+    apx_tau
+    |> Reconstruct.comptyp_cD cD
+    |> Abstract.comptyp
+    |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
+    |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
+
 (** Runs the theorem configuration prompt to construct a mutual
     group of theorems.
  *)
-let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t list =
-  let rec do_prompts i : Theorem.Conf.t list =
-    IO.printf io "Configuring theorem #%d@\n" i;
+let configuration_wizard' disambiguation_state indexing_state io automation_state : Id.cid_mutual_group * Theorem.t list =
+  let rec do_prompts ~theorem_number : Theorem.Conf.t list =
+    IO.printf io "Configuring theorem #%d@\n" theorem_number;
     (* prompt for name, and allow using empty to signal we're done. *)
     match prompt_quit_or_theorem_identifier_opt io with
     | Option.None (* Blank input *)
@@ -267,10 +354,11 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          Reconstruct.reset_fvarCnstr ();
          Store.FCVar.clear ();
          (* Now prompt for the statement, and disallow empty to signal we're done. *)
-         let (_location, _line) =
-           IO.read_line io ~msg:"  Statement of theorem: "
-             ~history_file:None
-         in Obj.magic ()
+         IO.prompt_input io ~msg:"  Statement of theorem: "
+           ~history_file:None (fun location line ->
+             let typ = read_harpoon_theorem_typ disambiguation_state location line in
+             elaborate_typ indexing_state LF.Empty typ
+           )
        in
        dprintf begin fun p ->
          p.fmt "@[<v 2>[%s] elaborated type\
@@ -280,32 +368,74 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
            P.(fmt_ppr_cmp_typ LF.Empty l0) tau
            k
          end;
-       let order = Obj.magic () (* TODO: Parse an optional totality order *) in
-       let total_dec_kind =
-         match order with
-         | Some (`Numeric no) -> `inductive no
-         | Some (`Trust _) -> `trust
-         | None -> `not_recursive
+       let order =
+         let (location, input) =
+           IO.read_line io ~msg:"  Induction order (empty for none): "
+             ~history_file:None in
+         let totality_declaration_opt = read_harpoon_totality_declaration_opt disambiguation_state location input in
+         match totality_declaration_opt with
+         | Option.Some declaration -> elaborate_totality_declaration tau declaration
+         | Option.None -> `not_recursive
        in
        let conf =
          Theorem.Conf.make
            (Name.make_from_identifier name)
-           total_dec_kind
+           order
            tau
            k
        in
-       conf :: do_prompts (i + 1)
+       conf :: do_prompts ~theorem_number:(theorem_number + 1)
   in
 
-  let confs = do_prompts 1 in
+  let confs = do_prompts ~theorem_number:1 in
   Theorem.configure_set (IO.formatter io) automation_state confs
 
-let configuration_wizard io automation_state : t option =
-  let mutual_group, thms = configuration_wizard' io automation_state in
+(** [snapshot_disambiguation_state_with_theorems disambiguation_state theorems]
+    is a snapshot of the disambiguation state obtained from
+    [disambiguation_state] by adding each theorem in [theorems]. *)
+let snapshot_disambiguation_state_with_theorems disambiguation_state theorems
+    =
+  Disambiguation_state.with_bindings_checkpoint disambiguation_state
+    (fun disambiguation_state ->
+      Disambiguation_state.iter_list disambiguation_state
+        (fun disambiguation_state theorem ->
+          let theorem_name = Theorem.get_name theorem in
+          let theorem_identifier = Name.to_identifier theorem_name in
+          Disambiguation_state.add_program_constant disambiguation_state
+            theorem_identifier)
+        theorems;
+      Disambiguation_state.snapshot_state disambiguation_state)
+
+(** [snapshot_indexing_state_with_theorems indexing_state theorems] is a
+    snapshot of the indexing state obtained from [indexing_state] by adding
+    each theorem in [theorems]. *)
+let snapshot_indexing_state_with_theorems indexing_state theorems =
+  Indexing_state.with_bindings_checkpoint indexing_state
+    (fun indexing_state ->
+      Indexing_state.iter_list indexing_state
+        (fun indexing_state theorem ->
+          let theorem_name = Theorem.get_name theorem in
+          let theorem_identifier = Name.to_identifier theorem_name in
+          let theorem_cid = Theorem.get_cid theorem in
+          Indexing_state.add_program_constant indexing_state
+            theorem_identifier theorem_cid)
+        theorems;
+      Indexing_state.snapshot_state indexing_state)
+
+let configuration_wizard disambiguation_state indexing_state io automation_state : t option =
+  let mutual_group, thms = configuration_wizard' disambiguation_state indexing_state io automation_state in
   (* c will be populated with theorems; if there are none it's
-     because the session is over. *)
+    because the session is over. *)
   match thms with
-  | _ :: _ -> Option.some (make mutual_group thms)
+  | _ :: _ ->
+    let disambiguation_state' =
+      snapshot_disambiguation_state_with_theorems disambiguation_state thms
+    in
+    let indexing_state' =
+      snapshot_indexing_state_with_theorems indexing_state thms
+    in
+    (* TODO: Update the disambiguation and indexing states at the end of the signature *)
+    Option.some (make disambiguation_state' indexing_state' mutual_group thms)
   | [] -> Option.none
 
 let fmt_ppr_theorem_list ppf c =

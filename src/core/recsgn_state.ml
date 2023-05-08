@@ -276,9 +276,9 @@ struct
   let with_disabled_lf_strengthening state ~location:_ m =
     let initial_strengthen = !Lfrecon.strengthen in
     Lfrecon.strengthen := false;
-    let x = m state in
-    Lfrecon.strengthen := initial_strengthen;
-    x
+    Fun.protect
+      (fun () -> m state)
+      ~finally:(fun () -> Lfrecon.strengthen := initial_strengthen)
 
   let with_warn_on_coverage_error state ~location:_ m =
     let initial_enableCoverage, initial_warningOnly =
@@ -286,17 +286,18 @@ struct
     in
     Coverage.enableCoverage := true;
     Coverage.warningOnly := true;
-    let x = m state in
-    Coverage.enableCoverage := initial_enableCoverage;
-    Coverage.warningOnly := initial_warningOnly;
-    x
+    Fun.protect
+      (fun () -> m state)
+      ~finally:(fun () ->
+        Coverage.enableCoverage := initial_enableCoverage;
+        Coverage.warningOnly := initial_warningOnly)
 
   let with_coverage_checking state ~location:_ m =
     let initial_enableCoverage = !Coverage.enableCoverage in
     Coverage.enableCoverage := true;
-    let x = m state in
-    Coverage.enableCoverage := initial_enableCoverage;
-    x
+    Fun.protect
+      (fun () -> m state)
+      ~finally:(fun () -> Coverage.enableCoverage := initial_enableCoverage)
 
   let[@inline] set_default_associativity state ?location:_
       default_associativity =
@@ -376,7 +377,10 @@ struct
     state.modules <- modules';
     Id.Module.of_int modules'
 
-  (* This implementation is incorrect. We need a deep copy of the state.
+  (* FIXME: This implementation is incorrect. We need a deep copy of all the
+     states involved in signature reconstruction. This includes states in
+     term reconstruction, abstraction, type-checking and unification, which
+     also includes meta-variable instantiations.
 
      This function should never be used by the end user. Currently, it is
      only used during the reconstruction of the signature-level [--not]
@@ -501,13 +505,13 @@ struct
   let index_harpoon_proof state proof =
     Index.index_harpoon_proof state.index_state proof
 
-  let freeze_unfrozen_declaration = function
-    | `Typ id -> Store.Cid.Typ.freeze id
-    | `Comp_typ id -> Store.Cid.CompTyp.freeze id
-    | `Comp_cotyp id -> Store.Cid.CompCotyp.freeze id
-
   let freeze_all_unfrozen_declarations state =
-    List.iter freeze_unfrozen_declaration state.unfrozen_declarations;
+    iter_list state
+      (fun _state -> function
+        | `Typ id -> Store.Cid.Typ.freeze id
+        | `Comp_typ id -> Store.Cid.CompTyp.freeze id
+        | `Comp_cotyp id -> Store.Cid.CompCotyp.freeze id)
+      state.unfrozen_declarations;
     state.unfrozen_declarations <- []
 end
 

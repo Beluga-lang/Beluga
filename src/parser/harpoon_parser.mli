@@ -1,4 +1,3 @@
-open Support
 open Beluga_syntax
 open Common_parser
 
@@ -9,11 +8,6 @@ module type HARPOON_PARSER = sig
   val harpoon_proof : Synprs.harpoon_proof t
 
   val interactive_harpoon_command : Synprs.harpoon_repl_command t
-
-  val interactive_harpoon_command_sequence :
-    Synprs.harpoon_repl_command List.t t
-
-  val next_theorem : [> `next of Identifier.t | `quit ] t
 end
 
 module Make

@@ -118,8 +118,8 @@ msplit T
 invert x
 invert x1
 suffices by LogArr toshow _
-by x2 _ [_ |- $R] _ _ x4 as q1
-by x3 _ [_ |- $R] _ _ (logEqTrans _ (logEqSym _ x4) x4) as q2
+by x2 _ $[_ |- $R] _ _ x4 as q1
+by x3 _ $[_ |- $R] _ _ (logEqTrans _ (logEqSym _ x4) x4) as q2
 solve logEqTrans _ q1 q2
 invert x
 invert x1
@@ -133,7 +133,7 @@ invert x1
 solve x3
 select wknLogSub
 split x
-by wknLogSub _ _ [_ |- $W] x1 as ih
+by wknLogSub _ _ $[_ |- $W] x1 as ih
 suffices by Dot ih toshow _
 suffices by logEq_Monotone toshow _
 solve Nil
@@ -159,11 +159,11 @@ suffices by x4 toshow _
 solve thm x3 x1
 solve lookup x2 x1
 suffices by LogArr toshow _
-by wknLogSub _ _ [_ |- $R] x1 as s
+by wknLogSub _ _ $[_ |- $R] x1 as s
 by Dot s x3 as s'
 solve thm x2 s'
 suffices by LogArr toshow _
-by Dot (wknLogSub _ _ [_ |- $R] x1) x3 as s
+by Dot (wknLogSub _ _ $[_ |- $R] x1) x3 as s
 by thm x2 s as q
 solve closed _ [_ |- trans1 beta refl] [_ |- trans1 beta refl] q
 by thm x2 (Dot x1 (thm x3 x1)) as q
@@ -173,7 +173,7 @@ split x
 by idLogSub x1 as q
 suffices by Dot toshow _, _
 solve reflect _ [g'1, b:block x:tm, y:algeqNeu x x T[] |- b.2]
-solve wknLogSub [g'1, b:block x:tm, a:algeqNeu x x T[]] [g'1] [g'1, b |- ..] q
+solve wknLogSub [g'1, b:block x:tm, a:algeqNeu x x T[]] [g'1] $[g'1, b |- ..] q
 solve Nil
 select completeness
 solve reify _ (thm x1 (idLogSub x))

@@ -33,7 +33,7 @@ LF halts : tm A -> type =
 ;
 --name halts H.
 
-stratified Reduce : {A : [⊢ tp]} {M : [ |- tm A] } → ctype =
+stratified Reduce : {A : [⊢ tp]} {M : [ |- tm A]} → ctype =
 | I : [ |- halts M] -> Reduce [ ⊢ b] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B] [ |- app M N])

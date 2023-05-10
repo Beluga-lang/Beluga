@@ -269,27 +269,41 @@ let parse_harpoon_totality_declaration_opt location input =
   let parsing_state =
     Parser_state.initial ~initial_location:location token_sequence
   in
-  Parsing.(eval_exn (only (maybe (alt trust_totality_declaration numeric_totality_declaration))) parsing_state)
+  Parsing.(
+    eval_exn
+      (only
+         (maybe
+            (alt trust_totality_declaration numeric_totality_declaration)))
+      parsing_state)
 
-let disambiguate_harpoon_totality_declaration disambiguation_state totality_declaration =
+let disambiguate_harpoon_totality_declaration disambiguation_state
+    totality_declaration =
   Disambiguation_state.with_bindings_checkpoint disambiguation_state
-    (fun disambiguation_state -> Disambiguation.disambiguate_totality_declaration disambiguation_state totality_declaration)
+    (fun disambiguation_state ->
+      Disambiguation.disambiguate_totality_declaration disambiguation_state
+        totality_declaration)
 
-let read_harpoon_totality_declaration_opt disambiguation_state location input =
-  let totality_declaration_opt = parse_harpoon_totality_declaration_opt location input in
-  Option.map (fun totality_declaration -> disambiguate_harpoon_totality_declaration disambiguation_state totality_declaration) totality_declaration_opt
+let read_harpoon_totality_declaration_opt disambiguation_state location input
+    =
+  let totality_declaration_opt =
+    parse_harpoon_totality_declaration_opt location input
+  in
+  Option.map
+    (fun totality_declaration ->
+      disambiguate_harpoon_totality_declaration disambiguation_state
+        totality_declaration)
+    totality_declaration_opt
 
 let rec elaborate_totality_order :
-      'a.
-      'a Synext.signature_totality_order -> 'a Synint.Comp.generic_order =
-  function
+          'a.
+          'a Synext.signature_totality_order -> 'a Synint.Comp.generic_order
+    = function
   | Synext.Signature.Totality.Order.Argument { argument; _ } ->
       Synint.Comp.Arg argument
   | Synext.Signature.Totality.Order.Lexical_ordering { arguments; _ } ->
       let arguments' = List1.map elaborate_totality_order arguments in
       Synint.Comp.Lex (List1.to_list arguments')
-  | Synext.Signature.Totality.Order.Simultaneous_ordering { arguments; _ }
-    ->
+  | Synext.Signature.Totality.Order.Simultaneous_ordering { arguments; _ } ->
       let arguments' = List1.map elaborate_totality_order arguments in
       Synint.Comp.Simul (List1.to_list arguments')
 
@@ -301,10 +315,11 @@ and elaborate_totality_declaration typ declaration =
       | Option.None -> `not_recursive
       | Option.Some order ->
           `inductive
-            (Reconstruct.numeric_order typ
-                (elaborate_totality_order order)))
+            (Reconstruct.numeric_order typ (elaborate_totality_order order)))
   | Synext.Signature.Totality.Declaration.Named _ ->
-    Error.raise_violation (Format.asprintf "[%s] unsupported named totality declaration" __FUNCTION__)
+      Error.raise_violation
+        (Format.asprintf "[%s] unsupported named totality declaration"
+           __FUNCTION__)
 
 let parse_harpoon_theorem_type location input =
   let open Beluga_parser in
@@ -317,7 +332,8 @@ let parse_harpoon_theorem_type location input =
 
 let disambiguate_harpoon_theorem_type disambiguation_state typ =
   Disambiguation_state.with_bindings_checkpoint disambiguation_state
-    (fun disambiguation_state -> Disambiguation.disambiguate_comp_typ disambiguation_state typ)
+    (fun disambiguation_state ->
+      Disambiguation.disambiguate_comp_typ disambiguation_state typ)
 
 let read_harpoon_theorem_typ disambiguation_state location input =
   let typ = parse_harpoon_theorem_type location input in
@@ -325,135 +341,110 @@ let read_harpoon_theorem_typ disambiguation_state location input =
 
 let elaborate_typ state cD tau =
   let apx_tau =
-      Indexing_state.with_bindings_checkpoint state (fun state ->
-          Indexing_state.add_all_mctx state cD;
-          Indexer.index_open_comp_typ state tau)
-    in
-    (* FIXME: The following elaboration steps need checkpoints *)
-    apx_tau
-    |> Reconstruct.comptyp_cD cD
-    |> Abstract.comptyp
-    |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
-    |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
+    Indexing_state.with_bindings_checkpoint state (fun state ->
+        Indexing_state.add_all_mctx state cD;
+        Indexer.index_open_comp_typ state tau)
+  in
+  (* FIXME: The following elaboration steps need checkpoints *)
+  (* FIXME: These calls are sketchy as hell. There must be a better place to
+     put them -je *)
+  Reconstruct.reset_fvarCnstr ();
+  Store.FCVar.clear ();
+  apx_tau
+  |> Reconstruct.comptyp_cD cD
+  |> Abstract.comptyp
+  |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
+  |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
 
-(** Runs the theorem configuration prompt to construct a mutual
-    group of theorems.
- *)
-let configuration_wizard' disambiguation_state indexing_state io automation_state : Id.cid_mutual_group * Theorem.t list =
+(** Runs the theorem configuration prompt to construct a mutual group of
+    theorems. *)
+let configuration_wizard' disambiguation_state indexing_state io
+    automation_state : Id.cid_mutual_group * Theorem.t list =
   let rec do_prompts ~theorem_number : Theorem.Conf.t list =
     IO.printf io "Configuring theorem #%d@\n" theorem_number;
     (* prompt for name, and allow using empty to signal we're done. *)
     match prompt_quit_or_theorem_identifier_opt io with
     | Option.None (* Blank input *)
-    | Option.Some `quit (* [`:quit'] input *) -> []
+    | Option.Some `quit (* [`:quit'] input *) ->
+        []
     | Option.Some (`theorem_name name) (* Theorem name input *) ->
-       let tau, k =
-         (* FIXME: These calls are sketchy as hell.
-                There must be a better place to put them -je
-          *)
-         Reconstruct.reset_fvarCnstr ();
-         Store.FCVar.clear ();
-         (* Now prompt for the statement, and disallow empty to signal we're done. *)
-         IO.prompt_input io ~msg:"  Statement of theorem: "
-           ~history_file:None (fun location line ->
-             let typ = read_harpoon_theorem_typ disambiguation_state location line in
-             elaborate_typ indexing_state LF.Empty typ
-           )
-       in
-       dprintf begin fun p ->
-         p.fmt "@[<v 2>[%s] elaborated type\
-                @,@[%a@]\
-                @,with %d implicit parameters@]"
-           __FUNCTION__
-           P.(fmt_ppr_cmp_typ LF.Empty l0) tau
-           k
-         end;
-       let order =
-         let (location, input) =
-           IO.read_line io ~msg:"  Induction order (empty for none): "
-             ~history_file:None in
-         let totality_declaration_opt = read_harpoon_totality_declaration_opt disambiguation_state location input in
-         match totality_declaration_opt with
-         | Option.Some declaration -> elaborate_totality_declaration tau declaration
-         | Option.None -> `not_recursive
-       in
-       let conf =
-         Theorem.Conf.make
-           (Name.make_from_identifier name)
-           order
-           tau
-           k
-       in
-       conf :: do_prompts ~theorem_number:(theorem_number + 1)
+        let tau, k =
+          (* Now prompt for the statement, and disallow empty to signal we're
+             done. *)
+          IO.prompt_input io ~msg:"  Statement of theorem: "
+            ~history_file:Option.none (fun location line ->
+              let typ =
+                read_harpoon_theorem_typ disambiguation_state location line
+              in
+              elaborate_typ indexing_state LF.Empty typ)
+        in
+        let order =
+          let totality_declaration_opt =
+            IO.prompt_input io ~msg:"  Induction order (empty for none): "
+              ~history_file:Option.none (fun location input ->
+                read_harpoon_totality_declaration_opt disambiguation_state
+                  location input)
+          in
+          match totality_declaration_opt with
+          | Option.Some declaration ->
+              elaborate_totality_declaration tau declaration
+          | Option.None -> `not_recursive
+        in
+        let conf =
+          Theorem.Conf.make (Name.make_from_identifier name) order tau k
+        in
+        conf :: do_prompts ~theorem_number:(theorem_number + 1)
   in
-
   let confs = do_prompts ~theorem_number:1 in
   Theorem.configure_set (IO.formatter io) automation_state confs
 
-(** [snapshot_disambiguation_state_with_theorems disambiguation_state theorems]
-    is a snapshot of the disambiguation state obtained from
-    [disambiguation_state] by adding each theorem in [theorems]. *)
-let snapshot_disambiguation_state_with_theorems disambiguation_state theorems
-    =
-  Disambiguation_state.with_bindings_checkpoint disambiguation_state
-    (fun disambiguation_state ->
-      Disambiguation_state.iter_list disambiguation_state
-        (fun disambiguation_state theorem ->
-          let theorem_name = Theorem.get_name theorem in
-          let theorem_identifier = Name.to_identifier theorem_name in
-          Disambiguation_state.add_program_constant disambiguation_state
-            theorem_identifier)
-        theorems;
-      Disambiguation_state.snapshot_state disambiguation_state)
+let add_theorems_to_disambiguation_state disambiguation_state theorems =
+  Disambiguation_state.iter_list disambiguation_state
+    (fun disambiguation_state theorem ->
+      let theorem_name = Theorem.get_name theorem in
+      let theorem_identifier = Name.to_identifier theorem_name in
+      Disambiguation_state.add_program_constant disambiguation_state
+        theorem_identifier)
+    theorems
 
-(** [snapshot_indexing_state_with_theorems indexing_state theorems] is a
-    snapshot of the indexing state obtained from [indexing_state] by adding
-    each theorem in [theorems]. *)
-let snapshot_indexing_state_with_theorems indexing_state theorems =
-  Indexing_state.with_bindings_checkpoint indexing_state
-    (fun indexing_state ->
-      Indexing_state.iter_list indexing_state
-        (fun indexing_state theorem ->
-          let theorem_name = Theorem.get_name theorem in
-          let theorem_identifier = Name.to_identifier theorem_name in
-          let theorem_cid = Theorem.get_cid theorem in
-          Indexing_state.add_program_constant indexing_state
-            theorem_identifier theorem_cid)
-        theorems;
-      Indexing_state.snapshot_state indexing_state)
+let add_theorems_to_indexing_state indexing_state theorems =
+  Indexing_state.iter_list indexing_state
+    (fun indexing_state theorem ->
+      let theorem_name = Theorem.get_name theorem in
+      let theorem_identifier = Name.to_identifier theorem_name in
+      let theorem_cid = Theorem.get_cid theorem in
+      Indexing_state.add_program_constant indexing_state theorem_identifier
+        theorem_cid)
+    theorems
 
-let configuration_wizard disambiguation_state indexing_state io automation_state : t option =
-  let mutual_group, thms = configuration_wizard' disambiguation_state indexing_state io automation_state in
-  (* c will be populated with theorems; if there are none it's
-    because the session is over. *)
+let configuration_wizard disambiguation_state indexing_state io
+    automation_state : t option =
+  let mutual_group, thms =
+    configuration_wizard' disambiguation_state indexing_state io
+      automation_state
+  in
+  (* c will be populated with theorems; if there are none it's because the
+     session is over. *)
   match thms with
   | _ :: _ ->
-    let disambiguation_state' =
-      snapshot_disambiguation_state_with_theorems disambiguation_state thms
-    in
-    let indexing_state' =
-      snapshot_indexing_state_with_theorems indexing_state thms
-    in
-    (* TODO: Update the disambiguation and indexing states at the end of the signature *)
-    Option.some (make disambiguation_state' indexing_state' mutual_group thms)
+      add_theorems_to_disambiguation_state disambiguation_state thms;
+      add_theorems_to_indexing_state indexing_state thms;
+      Option.some
+        (make disambiguation_state indexing_state mutual_group thms)
   | [] -> Option.none
 
 let fmt_ppr_theorem_list ppf c =
   let theorem_list = full_theorem_list c in
   let fmt_ppr_theorem_completeness ppf t =
-    if Theorem.is_complete t
-    then Format.fprintf ppf " (finished)"
-    else ()
+    if Theorem.is_complete t then Format.fprintf ppf " (finished)" else ()
   in
   let fmt_ppr_indexed_theorem ppf (i, t) =
-    Format.fprintf ppf "%d. %a%a" (i + 1)
-      Name.pp (Theorem.get_name t)
+    Format.fprintf ppf "%d. %a%a" (i + 1) Name.pp (Theorem.get_name t)
       fmt_ppr_theorem_completeness t
   in
   let fmt_ppr_indexed_theorems =
-    Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_theorem
+    Format.pp_print_list ~pp_sep:Format.pp_print_cut fmt_ppr_indexed_theorem
   in
   (* It may be better to add the current session name to this message *)
-  Format.fprintf ppf
-    "@[<v>%a@]"
-    fmt_ppr_indexed_theorems (List.index theorem_list)
+  Format.fprintf ppf "@[<v>%a@]" fmt_ppr_indexed_theorems
+    (List.index theorem_list)

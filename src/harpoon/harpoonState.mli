@@ -36,6 +36,8 @@ val make :
   -> Comp.open_subgoal list
   -> t
 
+val with_io : t -> (IO.t -> 'a) -> 'a
+
 (** Prints a message to the user. *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a
 

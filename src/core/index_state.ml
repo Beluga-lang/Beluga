@@ -1929,7 +1929,7 @@ module Indexing_state = struct
     add_declaration state identifier
       (Entry.make_program_constant_entry ?location identifier cid)
 
-  let add_module state ?location identifier cid m =
+  let push_new_module_scope state =
     let current_scope_bindings_state =
       get_current_scope_bindings_state state
     in
@@ -1942,7 +1942,10 @@ module Indexing_state = struct
         ; declarations = Binding_tree.create ()
         }
     in
-    push_scope state module_scope;
+    push_scope state module_scope
+
+  let add_module state ?location identifier cid m =
+    push_new_module_scope state;
     let x = m state in
     (match get_current_scope state with
     | Plain_scope _ ->
@@ -1973,7 +1976,7 @@ module Indexing_state = struct
     x
 
   let with_bindings_checkpoint state m =
-    push_new_plain_scope state;
+    push_new_module_scope state;
     let x =
       try m state with
       | cause ->

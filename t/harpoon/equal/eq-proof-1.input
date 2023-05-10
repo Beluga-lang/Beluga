@@ -18,9 +18,12 @@ by trans [_ |- Q1] [_ |- Q3] as P2 unboxed
 solve [_ |- eq_app P1 P2]
 select ceq
 split x
-by ceq [_ |- X] as e1; by ceq [_ |- X1] as e2; solve trans e1 e2
+by ceq [_ |- X] as e1
+by ceq [_ |- X1] as e2
+solve trans e1 e2
 solve ref _ _
-by ceq [_ |- X] as Q1 unboxed; by ceq [_ |- X1] as Q2 unboxed
+by ceq [_ |- X] as Q1 unboxed
+by ceq [_ |- X1] as Q2 unboxed
 solve [_ |- eq_app Q2 Q1]
 by ceq [_, b:block x:exp, u:equal x x, t:eq x x |- X[.., b.1, b.2]] as Q strengthened
 solve [_ |- eq_lam \x. \w. Q]

@@ -11,7 +11,8 @@ split x
 solve size' [|- X]
 solve [|- z]
 split x
-by size [|- X] as N1 unboxed; by size' [|- X1] as N2 unboxed
+by size [|- X] as N1 unboxed
+by size' [|- X1] as N2 unboxed
 suffices by add toshow _, _
 solve [|- N2]
 solve size [|- X]

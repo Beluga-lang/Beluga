@@ -38,6 +38,8 @@ type t =
   ; all_paths : string list (* paths to the resolved loaded files *)
   }
 
+let with_io s f = f s.io
+
 (* open beluga here because we need to refer to Harpoon's [Options]
    module earlier. *)
 open Beluga

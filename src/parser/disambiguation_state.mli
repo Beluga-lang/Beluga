@@ -42,8 +42,8 @@ module type ENTRY = sig
       This is used to discern between the following two cases when
       disambiguating identifiers in patterns:
 
-      - The case where an exception should be raised because the identifier a
-        bound variable of the wrong sort.
+      - The case where an exception should be raised because the identifier
+        is a bound variable of the wrong sort.
       - The case where the identifier should be a free variable shadowing a
         constant. *)
   val is_variable : t -> Bool.t

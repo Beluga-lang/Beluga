@@ -36,15 +36,15 @@ val associativity : t -> Associativity.t
 
 (** {1 Constructors} *)
 
-(** [make_prefix ~precedence] is a description for an operator with
+(** [make_prefix ~precedence] is a description for a prefix operator with
     [~precedence]. *)
 val make_prefix : precedence:int -> t
 
-(** [make_infix ~associativity ~precedence] is a description for an operator
-    with [~associativity] and [~precedence]. *)
+(** [make_infix ~associativity ~precedence] is a description for an infix
+    operator with [~associativity] and [~precedence]. *)
 val make_infix : associativity:Associativity.t -> precedence:int -> t
 
-(** [make_postfix ~precedence] is a description for an operator with
+(** [make_postfix ~precedence] is a description for a postfix operator with
     [~precedence]. *)
 val make_postfix : precedence:int -> t
 

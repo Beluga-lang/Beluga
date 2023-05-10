@@ -1,6 +1,6 @@
 t/harpoon/logrel/weak-norm-total.bel
 lookup
-{gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- #p[$S]]
+{gamma:ctx}{#p:#(gamma |- tm A[])}RedSub [gamma] $[|- $S[^]] -> Reduce [|- A] [|- #p[$S]]
 1
 
 split [gamma]
@@ -10,7 +10,7 @@ invert x
 by lookup [g] [g |- #p1] x1 as ih
 impossible [|- #p]
 main
-{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- M[$S]]
+{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] $[|- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
 rename comp x rs

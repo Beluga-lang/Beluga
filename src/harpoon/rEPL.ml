@@ -8,7 +8,7 @@ open Synint
 
 module P = Prettyint.DefaultPrinter
 
-module Disambiguation_state = Beluga_parser.Disambiguation_state.Disambiguation_state
+module Disambiguation_state = Beluga_parser.Parser.Disambiguation_state
 module Indexing_state = Beluga.Index_state.Indexing_state
 
 (** A computed value of type 'a or a function to print an error. *)
@@ -18,7 +18,7 @@ type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
     and converting the exception to a function that prints the
     error with a given formatter.
  *)
-let[@warning "-32"] run_safe (f : unit -> 'a) : 'a e =
+let run_safe (f : unit -> 'a) : 'a e =
   try
     Either.right (f ())
   with
@@ -78,22 +78,31 @@ let rec loop (s : HarpoonState.t) : unit =
        Translate.fmt_ppr_result e_trans;
      Session.mark_current_theorem_as_proven c (Either.to_option e_trans);
      loop s
-  | { HarpoonState.session = c; theorem = t; proof_state = g } ->
-    (* Show the proof state and the prompt *)
-    printf "@,@[<v>@,Theorem: %a@,%a@,@]@?"
-      Name.pp (Theorem.get_name t)
-      P.fmt_ppr_cmp_proof_state g;
-    (*
-      printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"
-      P.fmt_ppr_cmp_proof_state g
-      (Context.length Comp.(g.context.cIH));
-     *)
+  | { HarpoonState.session = c; theorem = t; proof_state = g } as substate -> (
+      (* Show the proof state and the prompt *)
+      printf "@,@[<v>@,Theorem: %a@,%a@,@]@?" Name.pp (Theorem.get_name t)
+        P.fmt_ppr_cmp_proof_state g;
 
-    (* Parse the input and run the command *)
-    match Obj.magic () (* TODO: Parse, elaborate and process command using the session's disambiguation/indexing states *) with
-    | `ok | `error -> loop s
-    | `stopped_short ->
-       printf "@,Warning: theorem proven before all commands were processed.@,"
+      (* Parse the input and run the command *)
+      match
+        run_safe (fun () ->
+            HarpoonState.with_io s (fun io ->
+                Session.with_disambiguation_state c
+                  (fun disambiguation_state ->
+                    Session.with_indexing_state c (fun indexing_state ->
+                        IO.prompt_input io ~msg:"> " ~history_file:None
+                          (fun location input ->
+                            Prover.process_command
+                              ( disambiguation_state
+                              , indexing_state
+                              , s
+                              , substate )
+                              location input)))))
+      with
+      | Either.Left f ->
+          printf "%a" f ();
+          if HarpoonState.interaction_mode s = `stop then exit 1
+      | Either.Right () -> loop s)
 
 let start
       (disambiguation_states, disambiguation_state)
@@ -121,5 +130,5 @@ let start
      session and configure it. *)
   Gensym.reset ();
   if HarpoonState.is_complete s then
-    (if HarpoonState.session_configuration_wizard s then loop s)
+    (if HarpoonState.session_configuration_wizard s then loop s else ())
   else loop s

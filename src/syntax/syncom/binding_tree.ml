@@ -218,7 +218,10 @@ let rec snapshot tree =
   Identifier.Hashtbl.iter
     (fun key { entry; subtree } ->
       let subtree' = snapshot subtree in
-      Identifier.Hashtbl.add tree' key { entry; subtree = subtree' })
+      if Identifier.Hashtbl.mem tree' key then
+        (* The latest binding in [tree] for [key] was already added to
+           [tree'] *) ()
+      else Identifier.Hashtbl.add tree' key { entry; subtree = subtree' })
     tree;
   tree'
 

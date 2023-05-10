@@ -1,8 +1,0 @@
-t/harpoon/command-sequence.bel
-command-sequence-test
-[|- tm] -> [|- tp]
-
-
-by x as test1; by test1 as test2
-solve [|- base]
-:quit

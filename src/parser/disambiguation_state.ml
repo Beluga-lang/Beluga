@@ -1405,7 +1405,7 @@ module Disambiguation_state = struct
     x
 
   let with_bindings_checkpoint state m =
-    let scope = create_empty_plain_scope () in
+    let scope = create_module_scope () in
     push_scope state scope;
     let x =
       try m state with

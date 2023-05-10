@@ -239,9 +239,9 @@ module Convert = struct
   *)
   let rec typToClause' eV cG tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tD, Depend.No, _), tA') ->
+    | LF.PiTyp ((tD, _, Plicity.Implicit), tA') ->
        typToClause' (LF.DDec (eV, tD)) cG tA' (cS, dS, dR)
-    | LF.PiTyp ((LF.TypDecl (_, tA), (Depend.Yes | Depend.Maybe), _), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), _, Plicity.Explicit), tB) ->
        typToClause' eV (Conjunct (cG, typToGoal tA (cS, dS, dR)))
          tB (cS + 1, dS, dR)
     | LF.Atom _ ->
@@ -295,9 +295,9 @@ module Convert = struct
    *)
   and typToGoal tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tdec, Depend.No, _), tA') ->
+    | LF.PiTyp ((tdec, _, Plicity.Implicit), tA') ->
        All (tdec, typToGoal tA' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, (Depend.Yes | Depend.Maybe), _), tB) ->
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, _, Plicity.Explicit), tB) ->
        Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tA (-cS, -dS, dR))
@@ -307,9 +307,9 @@ module Convert = struct
 
   and typToRes tM (cS, dS, dR) =
     match tM with
-    | LF.PiTyp ((tD, Depend.No, _), tM') ->
+    | LF.PiTyp ((tD, _, Plicity.Implicit), tM') ->
        Exists (tD, typToRes tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (_, tA), (Depend.Yes | Depend.Maybe), _), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), _, Plicity.Explicit), tB) ->
        And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
     | LF.Atom _ ->
        Head (Shift.shiftAtom tM (-cS, -dS, dR))
@@ -641,7 +641,7 @@ module Convert = struct
   let typToQuery cD cPsi (tA, i) =
     let rec typToQuery' (tA, i) s xs =
       match tA with
-      | LF.PiTyp ((LF.TypDecl (x, tA), Depend.No, _), tB) when i > 0 ->
+      | LF.PiTyp ((LF.TypDecl (x, tA), _, Plicity.Implicit), tB) when i > 0 ->
          let tN' = etaExpand cD cPsi (tA, s) in
          typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
       | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
@@ -3090,8 +3090,8 @@ module CSolver = struct
     let rec update cD ret =
       match cD with
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                plicity, ind)) as tdecl))
-           when is_in name cD_a && Plicity.is_explicit plicity ->
+                                Plicity.Explicit, ind)) as tdecl))
+           when is_in name cD_a ->
          let (LF.Decl (_, tau2, _, induc), _, con, pos, thm, bool) =
            retrieve name cD_a in
          let (con', bool') =
@@ -3104,7 +3104,7 @@ module CSolver = struct
          let clobj = match cltyp with
            | LF.MTyp tA ->
               LF.MObj (LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id),
-                                LF.Nil, plicity))
+                                LF.Nil, Plicity.explicit))
            | LF.PTyp tA ->
               LF.PObj (LF.PVar (1, S.id))
          in
@@ -3118,8 +3118,7 @@ module CSolver = struct
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                plicity, induc)) as tdecl))
-           when Plicity.is_explicit plicity ->
+                                Plicity.Explicit, induc)) as tdecl)) ->
          let (con', bool') =
             try
               (consOfLFTyp cltyp, true)
@@ -3128,7 +3127,7 @@ module CSolver = struct
          let clobj = match cltyp with
            | LF.MTyp tA ->
               LF.MObj (LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id),
-                                LF.Nil, plicity))
+                                LF.Nil, Plicity.explicit))
            | LF.PTyp tA ->
               LF.PObj (LF.PVar (1, S.id))
          in
@@ -3142,8 +3141,7 @@ module CSolver = struct
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
       | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, cPsi),
-                                plicity, induc)) as tdecl))
-           when Plicity.is_implicit plicity ->
+                                Plicity.Implicit, induc)) as tdecl)) ->
          (* Do not split on implict vars *)
          let (con, bool) = (0, false) in
          let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
@@ -3904,11 +3902,9 @@ module CSolver = struct
     let collect_explicit_mvars =
       let rec collect_from_cD cD =
         match cD with
-        | LF.Dec (cD', LF.Decl (name, _, plicity, _))
-             when Plicity.is_explicit plicity ->
+        | LF.Dec (cD', LF.Decl (name, _, Plicity.Explicit, _)) ->
            name :: (collect_from_cD cD')
-        | LF.Dec (cD', LF.DeclOpt (name, plicity))
-             when Plicity.is_explicit plicity ->
+        | LF.Dec (cD', LF.DeclOpt (name, Plicity.Explicit)) ->
            name :: (collect_from_cD cD')
         | LF.Dec (cD', _) ->
            collect_from_cD cD'
@@ -3918,17 +3914,14 @@ module CSolver = struct
         match norm with
         | LF.Lam (_, _, norm') | LF.Clo (norm', _) ->
            collect_from_norm norm'
-        | LF.Root (_, LF.Const cid, spine, plicity)
-             when Plicity.is_explicit plicity ->
+        | LF.Root (_, LF.Const cid, spine, Plicity.Explicit) ->
            let tau = (Store.Cid.Term.get cid).Store.Cid.Term.Entry.typ in
            find_explicit tau spine
-        | LF.Root (_, hd, LF.Nil, plicity) when Plicity.is_explicit plicity ->
+        | LF.Root (_, hd, LF.Nil, Plicity.Explicit) ->
            collect_from_hd hd
-        | LF.Root (_1, hd, LF.SClo (spine, _), plicity)
-             when Plicity.is_explicit plicity ->
-           collect_from_norm (LF.Root (_1, hd, spine, plicity))
-        | LF.Root (_1, hd, LF.App (norm', spine), plicity)
-             when Plicity.is_explicit plicity ->
+        | LF.Root (_1, hd, LF.SClo (spine, _), Plicity.Explicit) ->
+           collect_from_norm (LF.Root (_1, hd, spine, Plicity.explicit))
+        | LF.Root (_1, hd, LF.App (norm', spine), Plicity.Explicit) ->
            List.append
              (collect_from_norm norm')
              (collect_from_norm (LF.Root (_1, hd, spine, Plicity.explicit)))

@@ -32,11 +32,11 @@ val make :
   -> Options.interaction_mode
   -> string
   -> string list
-  -> IO.t
+  -> Io.t
   -> Comp.open_subgoal list
   -> t
 
-val with_io : t -> (IO.t -> 'a) -> 'a
+val with_io : t -> (Io.t -> 'a) -> 'a
 
 (** Prints a message to the user. *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a

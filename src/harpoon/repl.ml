@@ -22,7 +22,7 @@ let run_safe (f : unit -> 'a) : 'a e =
   try
     Either.right (f ())
   with
-  | IO.Io_error e ->
+  | Io.Io_error e ->
      let s = Printexc.to_string e in
      Either.left (fun ppf () -> Format.fprintf ppf "%s@\n" s)
   | Prover.Prover_error e ->
@@ -90,7 +90,7 @@ let rec loop (s : HarpoonState.t) : unit =
                 Session.with_disambiguation_state c
                   (fun disambiguation_state ->
                     Session.with_indexing_state c (fun indexing_state ->
-                        IO.prompt_input io ~msg:"> " ~history_file:None
+                        Io.prompt_input io ~msg:"> " ~history_file:None
                           (fun location input ->
                             Prover.process_command
                               ( disambiguation_state
@@ -112,7 +112,7 @@ let start
       (sig_path : string)
       (all_paths : string list)
       (gs : Comp.open_subgoal list)
-      (io : IO.t)
+      (io : Io.t)
     : unit =
   let s =
     HarpoonState.make

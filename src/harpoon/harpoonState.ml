@@ -31,7 +31,7 @@ type t =
   ; disambiguation_state : Disambiguation_state.state
   ; indexing_state : Indexing_state.state
   ; automation_state : Automation.State.t
-  ; io : IO.t
+  ; io : Io.t
   ; save_back : Options.save_mode
   ; stop : Options.interaction_mode
   ; sig_path : string (* path to the signature that was loaded *)
@@ -127,7 +127,7 @@ let recover_sessions disambiguation_states indexing_states ppf hooks (gs : Comp.
 let replace_sessions s ss =
   DynArray.(clear s.sessions; append_list s.sessions ss)
 
-let printf s x = IO.printf s.io x
+let printf s x = Io.printf s.io x
 
 let session_list s = DynArray.to_list s.sessions
 
@@ -158,13 +158,13 @@ let make
       stop
       (sig_path : string)
       (all_paths : string list)
-      (io : IO.t)
+      (io : Io.t)
       (gs : Comp.open_subgoal list)
     : t =
   let automation_state = Automation.State.make () in
   let hooks = [run_automation automation_state] in
   let sessions =
-    recover_sessions disambiguation_states indexing_states (IO.formatter io) hooks gs
+    recover_sessions disambiguation_states indexing_states (Io.formatter io) hooks gs
   in
   { disambiguation_state
   ; indexing_state
@@ -245,7 +245,7 @@ let reset s : unit =
   let gs = Holes.get_harpoon_subgoals () in
   let hooks = [run_automation s.automation_state] in
   let cs =
-    recover_sessions disambiguation_states indexing_states (IO.formatter s.io) hooks gs
+    recover_sessions disambiguation_states indexing_states (Io.formatter s.io) hooks gs
   in
   dprintf begin fun p ->
     p.fmt "[reset] recovered %d sessions from %d subgoals"

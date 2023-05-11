@@ -259,7 +259,7 @@ let parse_quit_or_theorem_identifier_opt location input =
   Parsing.(eval_exn (only (maybe (alt quit theorem_name))) parsing_state)
 
 let prompt_quit_or_theorem_identifier_opt io =
-  IO.prompt_input io ~msg:"  Name of theorem (:quit or empty to finish): "
+  Io.prompt_input io ~msg:"  Name of theorem (:quit or empty to finish): "
     ~history_file:None parse_quit_or_theorem_identifier_opt
 
 let parse_harpoon_totality_declaration_opt location input =
@@ -361,7 +361,7 @@ let elaborate_typ state cD tau =
 let configuration_wizard' disambiguation_state indexing_state io
     automation_state : Id.cid_mutual_group * Theorem.t list =
   let rec do_prompts ~theorem_number : Theorem.Conf.t list =
-    IO.printf io "Configuring theorem #%d@\n" theorem_number;
+    Io.printf io "Configuring theorem #%d@\n" theorem_number;
     (* prompt for name, and allow using empty to signal we're done. *)
     match prompt_quit_or_theorem_identifier_opt io with
     | Option.None (* Blank input *)
@@ -371,7 +371,7 @@ let configuration_wizard' disambiguation_state indexing_state io
         let tau, k =
           (* Now prompt for the statement, and disallow empty to signal we're
              done. *)
-          IO.prompt_input io ~msg:"  Statement of theorem: "
+          Io.prompt_input io ~msg:"  Statement of theorem: "
             ~history_file:Option.none (fun location line ->
               let typ =
                 read_harpoon_theorem_typ disambiguation_state location line
@@ -380,7 +380,7 @@ let configuration_wizard' disambiguation_state indexing_state io
         in
         let order =
           let totality_declaration_opt =
-            IO.prompt_input io ~msg:"  Induction order (empty for none): "
+            Io.prompt_input io ~msg:"  Induction order (empty for none): "
               ~history_file:Option.none (fun location input ->
                 read_harpoon_totality_declaration_opt disambiguation_state
                   location input)
@@ -396,7 +396,7 @@ let configuration_wizard' disambiguation_state indexing_state io
         conf :: do_prompts ~theorem_number:(theorem_number + 1)
   in
   let confs = do_prompts ~theorem_number:1 in
-  Theorem.configure_set (IO.formatter io) automation_state confs
+  Theorem.configure_set (Io.formatter io) automation_state confs
 
 let add_theorems_to_disambiguation_state disambiguation_state theorems =
   Disambiguation_state.iter_list disambiguation_state

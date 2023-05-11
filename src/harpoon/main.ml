@@ -31,9 +31,9 @@ let realMain () =
     if options.load_holes then B.Holes.get_harpoon_subgoals () else []
   in
   let io =
-    IO.make (InputPrompt.make options.test_file options.test_start) ppf
+    Io.make (InputPrompt.make options.test_file options.test_start) ppf
   in
-  REPL.start
+  Repl.start
     (disambiguation_states, last_disambiguation_state)
     (indexing_states, last_indexing_state)
     options.save_back options.test_stop options.path all_paths stubs io

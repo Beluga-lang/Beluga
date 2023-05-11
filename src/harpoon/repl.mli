@@ -20,6 +20,6 @@ val start :
   -> (* the resolved paths from the signature *)
      Synint.Comp.open_subgoal list
   -> (* the open subgoals to recover *)
-     IO.t
-  -> (* IO capabilities *)
+     Io.t
+  -> (* Io capabilities *)
      unit

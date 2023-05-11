@@ -61,7 +61,7 @@ suffices by Acc toshow _
 split [_ |- S]
 Sn-abs
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} Sn [g, x : tm A[] |- M] -> Sn [g |- abs \x. M]
-1
+trust
 
 suffices by Acc toshow _
 split [_ |- S]
@@ -83,7 +83,7 @@ suffices by Acc toshow _
 solve Sn-appr _ _ (x1 _ [_ |- rappr S])
 Sn-weak-head
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} {N : [g |- tm A[]]} Sn [g |- M[.., N]] -> Sn [g |- N] -> Sn [g |- app (abs \x. M) N]
-2
+trust
 
 
 suffices by Acc toshow _
@@ -94,7 +94,7 @@ by mstep-Sn _ _ ms x as sn
 solve Sn-weak-head [_ |- M] _ sn (x2 _ [_ |- X5])
 split [_ |- X5]
 split x
-solve Sn-weak-head [_ |- X9] _ (x2 _ [_ |- X10[.., N]]) x1
+solve Sn-weak-head _ _ (x2 _ [_ |- X10[.., N]]) x1
 neu-step
 (g : cxt) {R : [g |- tm A[]]} {R' : [g |- tm A[]]} [g |- step R R'] -> Neutral [g |- R] -> Neutral [g |- R']
 3
@@ -108,7 +108,7 @@ impossible x2
 impossible x
 Sn-neu
 (g : cxt) {R : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} Neutral [g |- R] -> Sn [g |- R] -> Sn [g |- N] -> Sn [g |- app R N]
-2
+trust
 
 suffices by Acc toshow _
 split [_ |- S]

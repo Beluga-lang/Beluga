@@ -113,7 +113,7 @@ module Make
         | <comp-sort-object4>
 
       <comp-sort-object4> ::=
-        | <comp-sort-object5> (<comp-sort-object5> | <comp-weak-prefix>)+
+        | <comp-sort-object5> <comp-sort-object5>+
         | <comp-sort-object5>
 
       <comp-sort-object5> ::=
@@ -205,9 +205,7 @@ module Make
         ]
 
     let comp_sort_object4 =
-      seq2 comp_sort_object5 (many (alt comp_sort_object5 comp_weak_prefix))
-      |> span
-      $> function
+      seq2 comp_sort_object5 (many comp_sort_object5) |> span $> function
       | _, (object_, []) -> object_
       | location, (o1, o2 :: os) ->
           let objects = List2.from o1 o2 os in

@@ -1371,11 +1371,14 @@ module Disambiguation_state = struct
     remove_binding state identifier;
     x
 
+  let push_new_module_scope state =
+    let module_scope = create_module_scope () in
+    push_scope state module_scope
+
   let add_module state ?location identifier m =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
-    let module_scope = create_module_scope () in
-    push_scope state module_scope;
+    push_new_module_scope state;
     let x = m state in
     match pop_scope state with
     | Plain_scope _ ->
@@ -1405,16 +1408,28 @@ module Disambiguation_state = struct
     x
 
   let with_bindings_checkpoint state m =
-    let scope = create_module_scope () in
-    push_scope state scope;
-    let x =
-      try m state with
-      | cause ->
-          ignore (pop_scope state);
-          Error.re_raise cause
-    in
-    ignore (pop_scope state);
-    x
+    let original_scopes_count = List1.length state.scopes in
+    (* Push a fresh module scope so that [m] may add declarations *)
+    push_new_module_scope state;
+    Fun.protect
+      ~finally:(fun () ->
+        let final_scopes_count = List1.length state.scopes in
+        if
+          final_scopes_count - original_scopes_count
+          >= 1 (* We expect there to at least be the new module scope *)
+        then
+          (* We have to count scopes because [m] may add new scopes. This is
+             not foolproof because [m] could have discarded too many scopes
+             and added some more. *)
+          Fun.repeat (final_scopes_count - original_scopes_count) (fun () ->
+              ignore (pop_scope state))
+        else
+          Error.raise_violation
+            (Format.asprintf
+               "[%s] invalid states, there are fewer scopes than there \
+                originally were"
+               __FUNCTION__))
+      (fun () -> m state)
 
   let actual_binding_exn identifier entry =
     Error.located_exception1

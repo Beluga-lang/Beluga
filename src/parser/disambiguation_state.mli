@@ -345,7 +345,11 @@ module type DISAMBIGUATION_STATE = sig
       an LF kind or an LF type).
 
       This is also used in REPLs to safely run parsing functions and recover
-      the state in case of a raised exception during disambiguation. *)
+      the state in case of a raised exception during disambiguation.
+
+      This checkpoint mechanism does not perform a copy or snapshot of the
+      referencing environment. You need to make sure that [m] does not pop
+      too many scopes. *)
   val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
   (** {1 Constants} *)

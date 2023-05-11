@@ -45,3 +45,6 @@ val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
 
 (** The fixpoint combinator. *)
 val fix : (('a -> 'b) -> 'a -> 'b) -> 'a -> 'b
+
+(** [repeat n f] calls [f] repeatedly [n] times. It is assumed that [n >= 0]. *)
+val repeat : int -> (unit -> unit) -> unit

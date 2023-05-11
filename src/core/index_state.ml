@@ -1976,15 +1976,28 @@ module Indexing_state = struct
     x
 
   let with_bindings_checkpoint state m =
+    let original_scopes_count = List1.length state.scopes in
+    (* Push a fresh module scope so that [m] may add declarations *)
     push_new_module_scope state;
-    let x =
-      try m state with
-      | cause ->
-          ignore (pop_scope state);
-          Error.re_raise cause
-    in
-    ignore (pop_scope state);
-    x
+    Fun.protect
+      ~finally:(fun () ->
+        let final_scopes_count = List1.length state.scopes in
+        if
+          final_scopes_count - original_scopes_count
+          >= 1 (* We expect there to at least be the new module scope *)
+        then
+          (* We have to count scopes because [m] may add new scopes. This is
+             not foolproof because [m] could have discarded too many scopes
+             and added some more. *)
+          Fun.repeat (final_scopes_count - original_scopes_count) (fun () ->
+              ignore (pop_scope state))
+        else
+          Error.raise_violation
+            (Format.asprintf
+               "[%s] invalid states, there are fewer scopes than there \
+                originally were"
+               __FUNCTION__))
+      (fun () -> m state)
 
   let allow_free_variables state m =
     let free_variables_state = are_free_variables_allowed state in

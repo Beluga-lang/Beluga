@@ -25,3 +25,9 @@ let[@inline] uncurry f (x, y) = f x y
 let fix f =
   let rec f' = lazy (f (fun t -> Lazy.force f' t)) in
   Lazy.force f'
+
+let rec repeat n f =
+  if n = 0 then ()
+  else (
+    f ();
+    repeat (n - 1) f)

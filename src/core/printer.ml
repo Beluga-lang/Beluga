@@ -65,7 +65,6 @@ module Int = struct
                                    LF.mctx -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec -> unit
     val fmt_ppr_lf_typ : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ -> unit
-    val fmt_ppr_lf_mtyp' : LF.mctx -> string * string -> formatter -> LF.ctyp -> unit
     val fmt_ppr_lf_mtyp : LF.mctx -> formatter -> LF.ctyp -> unit
     val fmt_ppr_lf_tuple : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.tuple -> unit
     val fmt_ppr_lf_normal : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit

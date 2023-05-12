@@ -7,7 +7,7 @@ exception Io_error of exn
 
 let () =
   Error.register_exception_printer (function
-    | End_of_file -> Format.dprintf "End of input."
+    | End_of_input -> Format.dprintf "End of input."
     | Io_error e -> Error.find_printer e
     | exn -> Error.raise_unsupported_exception_printing exn)
 
@@ -56,5 +56,5 @@ let rec prompt_input ?(source = default_prompt_source) io ~msg ~history_file
       (* Suppress the exception raised by [f location line] and re-prompt for
          an input *)
       let cause_printer = Error.find_printer cause in
-      printf io "%t" cause_printer;
+      printf io "%t@." cause_printer;
       prompt_input ~source io ~msg ~history_file f

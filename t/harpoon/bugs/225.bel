@@ -1,0 +1,26 @@
+LF term : type =;
+
+LF term-eq : term -> term -> type =
+| term-eq/i : term-eq M M
+;
+
+proof term-resp-term : { M : [ x : term |- term] } [ |- term-eq N N'] ->
+                         [ |- term-eq (M[N]) (M[N'])] =
+/ total /
+intros
+{ N : ( |- term), N' : ( |- term), M : (x : term |- term)
+| eq : [ |- term-eq N N']
+; split eq as
+  case term-eq/i:
+  { N' : ( |- term), M : (x : term |- term)
+  | eq : [ |- term-eq N' N']
+  ; ?
+  }
+}
+;
+
+LF term : type =;
+
+LF term-eq : term -> term -> type =
+| term-eq/i : term-eq E E
+;

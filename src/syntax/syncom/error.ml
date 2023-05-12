@@ -451,10 +451,12 @@ let located_exception_printer cause_printer locations =
   | _ ->
       (* An exception occurred while trying to read the snippets. Report the
          exception without the snippets. *)
-      Format.dprintf "@[<v 0>%a@,@[%t@]@]"
+      Format.dprintf "@[<v 0>%a@,%a @[%t@]@]"
         (List1.pp ~pp_sep:Format.pp_print_cut (fun ppf location ->
              Format.fprintf ppf "@[%a@]" Location.pp location))
-        locations cause_printer
+        locations
+        (bold_red Format.pp_print_string)
+        "Error:" cause_printer
 
 (** [find_printer_or_fallback cause] attempts to find a printer for [cause],
     and otherwise returns a printer using {!Printexc.to_string_default}. *)

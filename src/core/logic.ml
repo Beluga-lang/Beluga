@@ -6049,8 +6049,8 @@ module Frontend = struct
     in
 
     let (cgoal, ms) = mquery in
-    printf
-       "[msolve_tactic] \
+    dprintf (fun p ->
+      p.fmt "[msolve_tactic] \
               Goal = %a \
               cD = %a \
               cG = %a \
@@ -6058,8 +6058,7 @@ module Frontend = struct
         (Printer.fmt_ppr_cmp_goal cD) (cgoal, LF.Shift 0)
         (Printer.fmt_ppr_mctx) cD
         (Printer.fmt_ppr_gctx cD) cG
-        (Printer.fmt_ppr_cmp_typ cD) theorem
-    ;
+        (Printer.fmt_ppr_cmp_typ cD) theorem);
 
     (* We only specify an index if we are doing full proof search (inductive-auto-solve), otherwise none is given *)
     let get_ind_index tau invert =

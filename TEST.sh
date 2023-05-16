@@ -65,7 +65,7 @@ function main {
         set_colors
     fi
     print_paths
-    if [ ${SKIP_RSYNC} -eq 1 ] ; then
+    if [ ${SKIP_RSYNC} -eq 1 ]; then
         do_testing
     else
         rsync_test_artifacts
@@ -135,7 +135,7 @@ function do_testing {
     if [[ -n "${RUN_COMPILER_TESTS}" ]]; then
         echo "===== COMPILER TESTS ====="
 
-        for file_path in $(find_compiler_tests_in "${TESTDIR}") ; do
+        for file_path in $(find_compiler_tests_in "${TESTDIR}"); do
             start_test_case "${file_path}"
 
             check_compiler_test_case "${file_path}"
@@ -145,42 +145,21 @@ function do_testing {
     if [[ -n "${RUN_INTERACTIVE_MODE_TESTS}" ]]; then
         echo "===== INTERACTIVE MODE TESTS ====="
 
-        for file_path in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
+        for file_path in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n); do
             start_test_case "${file_path}"
 
-            local output exit_code
-            output=$("${REPLAY}" "${BELUGA}" "${file_path}")
-            exit_code=$?
-
-            if [ "${exit_code}" -eq 152 ] ; then
-                echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
-                (( TEST_RESULT_TIMEOUT+=1 ))
-            elif [ "${exit_code}" -eq 0 ] ; then
-                echo -e "${C_OK}OK${C_END}"
-                (( TEST_RESULT_SUCCESS+=1 ))
-            else
-                if grep -q "${file_path}" .admissible-fail ; then
-                    echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
-                    (( TEST_RESULT_ADMISSIBLE+=1 ))
-                else
-                    echo -e "${C_FAIL}FAIL${C_END}"
-                    (( TEST_RESULT_FAIL+=1 ))
-                    echo "${output}"
-
-                    stop_on_failure
-                fi
-            fi
+            check_interactive "${file_path}"
         done
     fi
 
     if [[ -n "${RUN_HARPOON_MODE_TESTS}" ]]; then
-      echo "===== HARPOON MODE TESTS ====="
+        echo "===== HARPOON MODE TESTS ====="
 
-      for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
-          start_test_case "${file_path}"
+        for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n); do
+            start_test_case "${file_path}"
 
-          check_harpoon "${file_path}"
-      done
+            check_harpoon "${file_path}"
+        done
     fi
 
     echo
@@ -223,7 +202,7 @@ function check_compiler_test_case {
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
     else
-        if grep -q "${file_path}" .admissible-fail ; then
+        if grep -q "${file_path}" .admissible-fail; then
             echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
             (( TEST_RESULT_ADMISSIBLE+=1 ))
         else
@@ -245,6 +224,34 @@ function check_compiler_test_case {
     fi
 }
 
+function check_interactive {
+    local -r file_path=$1
+
+    local output exit_code
+
+    output=$("${REPLAY}" "${BELUGA}" "${file_path}" 2>&1)
+    exit_code=$?
+
+    if [ "${exit_code}" -eq 152 ]; then
+        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+        (( TEST_RESULT_TIMEOUT+=1 ))
+    elif [ "${exit_code}" -eq 0 ]; then
+        echo -e "${C_OK}OK${C_END}"
+        (( TEST_RESULT_SUCCESS+=1 ))
+    else
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_FAIL}FAIL${C_END}"
+            (( TEST_RESULT_FAIL+=1 ))
+            echo "${output}"
+
+            stop_on_failure
+        fi
+    fi
+}
+
 function check_harpoon {
     local -r file_path=$1
 
@@ -256,14 +263,22 @@ function check_harpoon {
     output=$("${HARPOON}" --sig "${sig}" --test "${file_path}" --test-start 2 --no-save-back --stop 2>&1)
     exit_code=$?
 
-    if [ ${exit_code} -ne 0 ] ; then
-        echo -e "${C_FAIL}FAIL${C_END}"
-        (( TEST_RESULT_HARPOON_FAIL+=1 ))
-        print_harpoon_output_on_failure "${output}"
-        stop_on_failure
-    else
+    if [ "${exit_code}" -eq 152 ]; then
+        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+        (( TEST_RESULT_TIMEOUT+=1 ))
+    elif [ ${exit_code} -eq 0 ]; then
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
+    else
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_FAIL}FAIL${C_END}"
+            (( TEST_RESULT_HARPOON_FAIL+=1 ))
+            print_harpoon_output_on_failure "${output}"
+            stop_on_failure
+        fi
     fi
 }
 
@@ -291,7 +306,7 @@ function stop_on_failure {
 function find_compiler_tests_in {
     local -a tests
 
-    for dir in $(find "$1" -type d) ; do
+    for dir in $(find "$1" -type d); do
         tests=("${dir}/"*.cfg)
         if [ "${#tests[@]}" -eq 0 ]; then
             tests=("${dir}/"*.bel)
@@ -345,7 +360,8 @@ function set_colors {
     C_LEXER_FAIL="\x1b[01;36m"      # foreground bold cyan
     C_ADDED="\x1b[32m"              # foreground green
     C_REMOVED="\x1b[31m"            # foreground red
-    C_END="\x1b[00m"                     # reset colors
+
+    C_END="\x1b[00m"                # reset colors
 }
 
 function colorize_diff {

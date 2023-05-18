@@ -33,19 +33,27 @@ val max_usage : t list -> string -> max_usage
 (** Change the number of a variable. *)
 val modify_number : (int option -> int option) -> t -> t
 
-type name_guide =
-  | NoName
-  | MVarName of (unit -> string) option
-  | SVarName of (unit -> string) option
-  | PVarName of (unit -> string) option
-  | BVarName of (unit -> string) option
-  | SomeName of t
-  | SomeString of string
+(** [mk_bvar_name vGen_opt] generates a fresh name for an LF-bound variable. *)
+val mk_bvar_name : (unit -> string) option -> t
 
-(** Smart constructor for [t].
+(** [mk_mvar_name vGen_opt] generates a fresh name for a meta-variable. *)
+val mk_mvar_name : (unit -> string) option -> t
 
-    [mk_name] generates a [t] with a guaranteed unique [string]. *)
-val mk_name : name_guide -> t
+(** [mk_svar_name vGen_opt] generates a fresh name for a substitution
+    variable. *)
+val mk_svar_name : (unit -> string) option -> t
+
+(** [mk_pvar_name vGen_opt] generates a fresh name for a parameter variable. *)
+val mk_pvar_name : (unit -> string) option -> t
+
+(** [mk_no_name ()] generates a fresh name. *)
+val mk_no_name : unit -> t
+
+(** [mk_some_name name] generates a fresh name derived from [name]. *)
+val mk_some_name : t -> t
+
+(** [mk_some_name s] generates a fresh name derived from [s]. *)
+val mk_some_string : string -> t
 
 (** [make_from_identifier identifier] constructs a name from [identifier].
     This should be deprecated once the [Name] module is fully replaced with

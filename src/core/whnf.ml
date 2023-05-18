@@ -89,10 +89,10 @@ let etaContract =
 
 let newMTypName =
   function
-  | ClTyp (MTyp tA, _) -> Name.MVarName (Store.Cid.Typ.gen_mvar_name tA)
-  | ClTyp (PTyp tA, _) -> Name.PVarName (Store.Cid.Typ.gen_var_name tA)
-  | ClTyp (STyp _, _) -> Name.SVarName None
-  | CTyp _ -> Name.NoName
+  | ClTyp (MTyp tA, _) -> Name.mk_mvar_name (Store.Cid.Typ.gen_mvar_name tA)
+  | ClTyp (PTyp tA, _) -> Name.mk_pvar_name (Store.Cid.Typ.gen_var_name tA)
+  | ClTyp (STyp _, _) -> Name.mk_svar_name None
+  | CTyp _ -> Name.mk_no_name ()
 
 let next_mmvar_id =
   let c = ref 0 in
@@ -103,8 +103,7 @@ let next_mmvar_id =
 let newMMVar' n (cD, mtyp) plicity inductivity =
   let name =
     match n with
-    | None ->
-      Name.mk_name (newMTypName mtyp)
+    | None -> newMTypName mtyp
     | Some n -> n
   in
   { name
@@ -139,7 +138,7 @@ let rec lowerMVar' cPsi sA' plicity inductivity =
          (tA', LF.dot1 s')
          plicity inductivity
      in
-     (u', Lam (Location.ghost, Name.mk_name Name.NoName, tM))
+     (u', Lam (Location.ghost, Name.mk_no_name (), tM))
 
   | (TClo (tA, s), s') ->
      lowerMVar' cPsi (tA, LF.comp s s') plicity inductivity

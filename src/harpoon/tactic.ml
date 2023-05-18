@@ -91,7 +91,7 @@ let intros' : Theorem.t ->
               ( gen_var_for_typ active_names tau_1
               , Option.none)
          | Option.Some (name, user_names) ->
-              ( Name.(mk_name (SomeString name))
+              ( Name.mk_some_string name
               , Option.some user_names )
        in
        let d = Comp.CTypDecl (name, tau_1, false) in

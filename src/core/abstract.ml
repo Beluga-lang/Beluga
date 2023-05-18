@@ -320,7 +320,7 @@ let rec ctxToCtx =
   | I.Dec (cQ', FDecl (MMV _, Pure (MetaTyp (I.ClTyp (I.MTyp tA, cPsi), _, _)))) ->
      begin match raiseType cPsi tA with
      | (None, tA') ->
-        let x = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
+        let x = Name.mk_mvar_name (Store.Cid.Typ.gen_mvar_name tA') in
         I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
      | (Some _, _) -> Error.raise_violation "ctxToDctx generates LF-dctx with context variable."
      end

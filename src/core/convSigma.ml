@@ -178,7 +178,7 @@ let rec flattenSigmaTyp cD cPsi strec conv_list =
      (* bp: this could be replaced by generating a substitution s_tup / s_proj and then
         applying this substitution to tA – this would remove calls to strans entirely *)
      let tA' = strans_typ cD cPsi (tA, s) conv_list in
-     (LF.DDec (cPsi, LF.TypDecl (Name.mk_name Name.NoName, tA')), 1)
+     (LF.DDec (cPsi, LF.TypDecl (Name.mk_no_name (), tA')), 1)
 
   | (LF.SigmaElem (x, tA, trec), s) ->
      let tA' = strans_typ cD cPsi (tA, s) conv_list in

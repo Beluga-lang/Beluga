@@ -215,7 +215,7 @@ let extend_mctx cD (_, cdecl, t) =
 
 let mk_name_cdec =
   function
-  | Int.LF.Decl d -> Name.mk_name (Name.SomeName d.name)
+  | Int.LF.Decl d -> Name.mk_some_name d.name
 
 (* etaExpandMMV loc cD cPsi sA  = tN
  *

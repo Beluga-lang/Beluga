@@ -696,7 +696,7 @@ and checkTypRec cD cPsi (typRec, s) =
   | SigmaElem (_, tA, recA) ->
      checkTyp cD cPsi (tA, s);
      checkTypRec cD
-       (DDec (cPsi, S.LF.decSub (TypDecl (Name.mk_name Name.NoName, tA)) s))
+       (DDec (cPsi, S.LF.decSub (TypDecl (Name.mk_no_name (), tA)) s))
        (recA, S.LF.dot1 s)
 
 (* checkKind cD cPsi K

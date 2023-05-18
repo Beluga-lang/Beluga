@@ -2851,7 +2851,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
      dprint (fun () -> "elSpineSynth done \n");
      let tB' =
        Int.LF.PiTyp
-         ( ( Int.LF.TypDecl (Name.mk_name (Name.BVarName (Store.Cid.Typ.gen_var_name tA')), tA')
+         ( ( Int.LF.TypDecl (Name.mk_bvar_name (Store.Cid.Typ.gen_var_name tA'), tA')
            , Depend.maybe
            , Plicity.implicit
            )
@@ -2874,7 +2874,7 @@ let rec elDCtx recT cD =
   function
   | Apx.LF.CtxHole ->
      dprint (fun () -> "Encountered _ (underscore) for context...");
-     Int.LF.CtxVar (Whnf.newCVar (Some (Name.mk_name (Name.SomeString "j"))) cD None Plicity.implicit Inductivity.not_inductive)
+     Int.LF.CtxVar (Whnf.newCVar (Some (Name.mk_some_string "j")) cD None Plicity.implicit Inductivity.not_inductive)
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar c_var ->

@@ -1082,7 +1082,7 @@ let shiftMetaObj cD (cM, cU) (cPsi', s_proj, cPsi) =
 
   | (l, LF.ClObj (phat', LF.MObj tM)) , LF.ClTyp (tA , cPsi0) ->
      let rec padctx cPsi' k =  (* we actually know how to pad it... *)
-       if k = 0 then cPsi' else padctx (LF.DDec (cPsi',  LF.TypDeclOpt Name.(mk_name (SomeString ("bb" ^ string_of_int k))))) (k-1)
+       if k = 0 then cPsi' else padctx (LF.DDec (cPsi',  LF.TypDeclOpt (Name.mk_some_string ("bb" ^ string_of_int k)))) (k-1)
      in
      begin
        match prefixDCtx cD cPsi cPsi0 (* cPsi0 = cPsi, cPsi1 *) ,

@@ -13,7 +13,7 @@ type max_usage =
 
 val base_name : t -> string
 
-val get_module : t -> string list
+val get_modules : t -> string list
 
 (** Generate a blank name (underscore). *)
 val mk_blank : Location.t option -> t
@@ -45,7 +45,7 @@ type name_guide =
 (** Smart constructor for [t].
 
     [mk_name] generates a [t] with a guaranteed unique [string]. *)
-val mk_name : ?location:Location.t -> ?modules:string list -> name_guide -> t
+val mk_name : name_guide -> t
 
 (** [make_from_identifier identifier] constructs a name from [identifier].
     This should be deprecated once the [Name] module is fully replaced with

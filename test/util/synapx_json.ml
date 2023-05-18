@@ -25,7 +25,7 @@ let[@inline] json_of_depend = function
 
 let json_of_name name =
   json_of_association
-    [ ("modules", json_of_list json_of_string (Name.get_module name))
+    [ ("modules", json_of_list json_of_string (Name.get_modules name))
     ; ("name", json_of_string (Name.base_name name))
     ; ("location", json_of_location (Name.location name))
     ]

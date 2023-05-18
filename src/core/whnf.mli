@@ -72,7 +72,7 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Location.t
 
-val newMTypName : ctyp -> Name.name_guide
+val newMTypName : ctyp -> Name.t
 
 val m_id : msub
 (* val mshift: msub -> int -> msub

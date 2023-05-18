@@ -117,39 +117,51 @@ let max_usage ctx s =
             k pp_list ctx);
       `used k
 
-type name_guide =
-  | NoName
-  | MVarName of (unit -> string) option
-  | SVarName of (unit -> string) option
-  | PVarName of (unit -> string) option
-  | BVarName of (unit -> string) option
-  | SomeName of t
-  | SomeString of string
-
 let[@inline] mk_name_helper ?(location = Location.ghost) ?(modules = [])
     (nm : string) : t =
   let hint_name, hint_cnt = split_name nm in
   { modules; hint_name; hint_cnt; location }
 
-let mk_name : name_guide -> t = function
-  (* If no {!name} is given, create a new unique {!name}. This prevents the
-     problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is looked
-     up, we never have to compare a {!string option}. This prevents the case
-     where two entries appear to refer to the same name because [None =
-     None]. *)
-  | MVarName (Some vGen)
-  | BVarName (Some vGen) ->
-      mk_name_helper (vGen ())
-  | SVarName (Some vGen) -> mk_name_helper ("$" ^ vGen ())
-  | PVarName (Some vGen) -> mk_name_helper ("#" ^ vGen ())
-  | MVarName None -> mk_name_helper (Gensym.MVarData.gensym ())
-  | SVarName None -> mk_name_helper ("$" ^ Gensym.MVarData.gensym ())
-  | PVarName None -> mk_name_helper ("#" ^ Gensym.VarData.gensym ())
-  | BVarName None
-  | NoName ->
-      mk_name_helper (Gensym.VarData.gensym ())
-  | SomeName x -> sanitize_name x
-  | SomeString x -> mk_name_helper x
+(* In cases where no pre-defined name can be used for a declaration, the
+   following functions are helpers to create new unique names. This prevents
+   the problem that when an {!Store.Typ.entry} or {!Store.Term.entry} is
+   looked up, we never have to compare values of type {!string option}. This
+   prevents the case where two entries appear to refer to the same name
+   because [Option.none = Option.none]. For instance, when fresh
+   meta-variables are generated during abstraction, we could not use the name
+   [Option.none] for the meta-variable because it would be confused with
+   other fresh meta-variables given the name [Option.none]. *)
+
+(* FIXME: These generated variable names are not guaranteed to be fresh since
+   they are not generated with respect to the referencing environment (i.e.,
+   the constants and variables in scope, as well as the free variables
+   occurring in the same abstraction scope). *)
+
+let mk_bvar_name vGen_opt =
+  match vGen_opt with
+  | Option.None -> mk_name_helper (Gensym.VarData.gensym ())
+  | Option.Some vGen -> mk_name_helper (vGen ())
+
+let mk_mvar_name vGen_opt =
+  match vGen_opt with
+  | Option.None -> mk_name_helper (Gensym.MVarData.gensym ())
+  | Option.Some vGen -> mk_name_helper (vGen ())
+
+let mk_svar_name vGen_opt =
+  match vGen_opt with
+  | Option.None -> mk_name_helper ("$" ^ Gensym.MVarData.gensym ())
+  | Option.Some vGen -> mk_name_helper ("$" ^ vGen ())
+
+let mk_pvar_name vGen_opt =
+  match vGen_opt with
+  | Option.None -> mk_name_helper ("#" ^ Gensym.VarData.gensym ())
+  | Option.Some vGen -> mk_name_helper ("#" ^ vGen ())
+
+let mk_no_name () = mk_name_helper (Gensym.VarData.gensym ())
+
+let mk_some_name x = sanitize_name x
+
+let mk_some_string x = mk_name_helper x
 
 let make_from_identifier identifier =
   let identifier_as_string = Identifier.show identifier in

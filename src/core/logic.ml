@@ -341,7 +341,7 @@ module Convert = struct
     | Comp.TypArr (loc, tau1, tau2) ->
        let cr1 = comptypToCompRes tau1 in
        let cg2 = comptypToCompGoal tau2 in
-       let name = Name.mk_name Name.NoName in
+       let name = Name.mk_no_name () in
        let typ_dec = Comp.CTypDecl (name, tau1 , true) in
        Implies ((cr1, typ_dec), cg2)
     | Comp.TypBase (_, comp_cid, s) ->
@@ -4033,7 +4033,7 @@ module CSolver = struct
     let {cHead=hd; cMVars; cSubGoals=sg} = C.comptypToCClause tau in
     let fS = create_IH_args (thm, ih_args, tau) cD in
     let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
-    let name = Name.gen_fresh_name names (Name.mk_name Name.NoName) in
+    let name = Name.gen_fresh_name names (Name.mk_no_name ()) in
     let inst mobj k = match mobj with
         | LF.MObj (LF.Root (_, LF.MMVar ((mmvar, _), _), _, _))
           | LF.MObj (LF.Root (_, LF.MPVar ((mmvar, _), _), _, _)) ->
@@ -5211,7 +5211,7 @@ module CSolver = struct
        let {cHead=hd; cMVars; cSubGoals=sg} = C.comptypToCClause tau in
        let fS = create_IH_args (thm, ih_args, tau) cD in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
-       let name = Name.gen_fresh_name names (Name.mk_name Name.NoName) in
+       let name = Name.gen_fresh_name names (Name.mk_no_name ()) in
        let pattern = Comp.PatVar (noLoc, 1) in
        let cPool' = Full (shift_cPool cPool 1,
                           ({cHead=hd;
@@ -5251,7 +5251,7 @@ module CSolver = struct
        let {cHead=hd; cMVars; cSubGoals=sg} = C.comptypToCClause tau in
        let fS = create_IH_args (thm, ih_args, tau) cD in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
-       let name = Name.gen_fresh_name names (Name.mk_name Name.NoName) in
+       let name = Name.gen_fresh_name names (Name.mk_no_name ()) in
        let pattern = Comp.PatVar (noLoc, 1) in
        let cPool' = Full (shift_cPool cPool 1,
                           ({cHead=hd;
@@ -5315,7 +5315,7 @@ module CSolver = struct
                      cMVars = LF.Empty;
                      cSubGoals = (Solve (_,_)) as sg}, k', Boxed)) ->
        let fS = (fun s -> s) in
-       let n = Name.mk_name Name.NoName in
+       let n = Name.mk_no_name () in
        let name =
          let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
          Name.gen_fresh_name names n
@@ -5428,7 +5428,7 @@ module CSolver = struct
           the cD, and will no longer consider it to be in cG. *)
        let n = get_name k' cG in
        let (cD_a', cG_a') = update_annotations (cD_a, cG_a) n in
-       let name' = Name.mk_name (Whnf.newMTypName r) in
+       let name' = Whnf.newMTypName r in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
        let name = Name.gen_fresh_name names name' in
        let mctx_decl = LF.Decl { name; typ = r; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive } in

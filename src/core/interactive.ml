@@ -146,15 +146,15 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
        begin
          match t1 with
          | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, psi)) ->
-            let nam = Name.mk_name (Name.BVarName (genVarName tA)) in
+            let nam = Name.mk_mvar_name (genVarName tA) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
          | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA, psi)) ->
-            let nam = Name.mk_name (Name.PVarName (genVarName tA)) in
+            let nam = Name.mk_pvar_name (genVarName tA) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
          | _ ->
-            let nam = Name.mk_name (Name.NoName) in
+            let nam = Name.mk_no_name () in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(Location.ghost, nam, exp)
        end

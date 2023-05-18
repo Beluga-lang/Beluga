@@ -126,7 +126,7 @@ let get_session_kind c : [`introduced | `loaded] =
 
 let prepare_translated_proofs tes total_decs =
   let trans_name name =
-    Name.(mk_name (SomeString ("_" ^ show name ^ "_trans")))
+    Name.mk_some_string ("_" ^ Name.show name ^ "_trans")
   in
   (* create the totality declarations for the translated
          proofs, and allocate the mutual group with them. *)

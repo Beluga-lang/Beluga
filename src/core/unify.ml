@@ -1136,7 +1136,7 @@ let rec blockdeclInDctx =
        let tM' =
          prune
            cD0
-           (DDec (cPsi', TypDeclOpt (Name.mk_name Name.NoName)))
+           (DDec (cPsi', TypDeclOpt (Name.mk_no_name ())))
            (cvar, offset + 1)
            (tM, dot1 s)
            (ms, dot1 ssubst)

@@ -51,7 +51,7 @@ let rec hatToDCtx =
   | (ctx_v, k) ->
      LF.DDec
        ( hatToDCtx (ctx_v, k-1)
-       , LF.TypDeclOpt Name.(mk_name (SomeString ("x" ^ string_of_int k))))
+       , LF.TypDeclOpt (Name.mk_some_string ("x" ^ string_of_int k)))
 
 let extend_hatctx j  (ctx_v, k)  = (ctx_v, j+k)
 

@@ -50,7 +50,7 @@ let rec lowerMVar cPsi sA' =
          (DDec (cPsi, Substitution.LF.decSub decl s'))
          (tA', Substitution.LF.dot1 s')
      in
-       (Lam (Location.ghost, Name.mk_name Name.NoName, tM) , sAmv)
+       (Lam (Location.ghost, Name.mk_no_name (), tM) , sAmv)
 
   | (TClo (tA, s), s') ->
      lowerMVar cPsi (tA, Substitution.LF.comp s s')
@@ -111,7 +111,7 @@ let rec ctxToSub_mclosed cD psi =
      let s' = Whnf.cnormSub (s, MShift 1) in
      let result = Dot (Obj u, s') in
 
-     let u_name = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
+     let u_name = Name.mk_mvar_name (Store.Cid.Typ.gen_mvar_name tA') in
      (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
      ( Dec
          ( cD'
@@ -137,7 +137,7 @@ let rec ctxToSub_mclosed cD psi =
      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
      let s' = Whnf.cnormSub (s, MShift 1) in
      let tM , clT = lowerMVar (Whnf.cnormDCtx (CtxVar psi, MShift k)) (tA, s) in   (* where clT is the type of the mvar in M *)
-     let u_name = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
+     let u_name = Name.mk_mvar_name (Store.Cid.Typ.gen_mvar_name tA') in
      let result = Dot (Obj tM, s') in
      (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
      ( Dec

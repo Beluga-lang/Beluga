@@ -1544,12 +1544,12 @@ module Comp = struct
   let rec unroll' cD cG tau =
     match tau with
     | TypPiBox (_, c_decl, tau') ->
-       (* TODO ensure c_decl name is unique in context *)
+       (* TODO: ensure c_decl name is unique in context *)
        let cD' = I.Dec (cD, c_decl) in
        unroll' cD' cG tau' |> Pair.map_right ((+) 1)
     | TypArr (_, t1, t2) ->
-       (* TODO use contextual name generation *)
-       let name = Name.mk_name Name.NoName in
+       (* TODO: use contextual name generation *)
+       let name = Name.mk_no_name () in
        let cG' = I.(Dec (cG, CTypDecl (name, t1, false))) in
        unroll' cD cG' t2
     | _ -> (cD, cG, tau), 0

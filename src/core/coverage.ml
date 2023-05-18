@@ -2063,7 +2063,7 @@ let genNthSchemaElemGoal names cD n w =
   List.nth_opt elems (n - 1)
   $> begin fun e ->
      let x =
-       Name.(mk_name (SomeString "g"))
+       Name.(mk_some_string "g")
        |> NameGen.renumber names
      in
      let cD' =
@@ -2138,7 +2138,7 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let LF.TypDecl (x, tA) = decl in
      let s = LF.SVar (2, 0, S.LF.id) in
      let mT = LF.ClTyp (LF.STyp (r0, cPhi'), cPsi) in
-     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let name = Whnf.newMTypName mT in
      let cD' =
        LF.Dec
          (cD
@@ -2155,7 +2155,7 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let tA0 = Whnf.cnormTyp (tA, LF.MShift 1) in
      let cPhi0 = Whnf.cnormDCtx (cPhi', LF.MShift 1) in
      let mT' = LF.ClTyp (LF.MTyp tA0, cPhi0) in
-     let name' = Name.mk_name (Whnf.newMTypName mT') in
+     let name' = Whnf.newMTypName mT' in
      let cD'' =
        LF.Dec
          (cD'
@@ -2633,7 +2633,7 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
         let LF.Schema elems = Store.Cid.Schema.get_schema w in
         let cD' =
           let u =
-            Name.(mk_name (SomeString "g"))
+            Name.mk_some_string "g"
             |> NameGen.renumber names
           in
           LF.Dec
@@ -3230,7 +3230,7 @@ let gen_candidates loc cD covGoal pats =
 let initialize_coverage problem projOpt : cov_problems =
   match problem.ctype with
   | Comp.TypBox (loc, LF.CTyp w) ->
-     let name = Name.mk_name (Whnf.newMTypName (LF.CTyp w)) in
+     let name = Whnf.newMTypName (LF.CTyp w) in
      let cD' =
        LF.Dec
          (problem.cD
@@ -3269,7 +3269,7 @@ let initialize_coverage problem projOpt : cov_problems =
             P.fmt_ppr_lf_sub_typing (problem.cD, cPsi, s, cPsi')
           end;
         let mT = Whnf.cnormMTyp (LF.ClTyp (LF.MTyp tA', cPsi'), Whnf.m_id) in
-        let name = Name.mk_name (Whnf.newMTypName mT) in
+        let name = Whnf.newMTypName mT in
         let cD' =
           LF.Dec
             (problem.cD
@@ -3318,7 +3318,7 @@ let initialize_coverage problem projOpt : cov_problems =
   | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
      let mT = LF.ClTyp (LF.PTyp tA', cPsi') in
-     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let name = Whnf.newMTypName mT in
      let cD' =
        LF.Dec
          (problem.cD
@@ -3347,7 +3347,7 @@ let initialize_coverage problem projOpt : cov_problems =
      [(cD', cG', cand_list, mC)]
 
   | Comp.TypBox (loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)) as mT)) ->
-     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let name = Whnf.newMTypName mT in
      let cD' =
        LF.Dec
          (problem.cD

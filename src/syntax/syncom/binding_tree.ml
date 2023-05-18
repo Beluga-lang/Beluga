@@ -98,17 +98,6 @@ let rec lookup_nested namespaces identifier tree =
 let lookup qualified_identifier tree =
   with_namespaces_and_identifier qualified_identifier lookup_nested tree
 
-let lookup_toplevel_filter identifier p tree =
-  let value, subtree = lookup_toplevel identifier tree in
-  if p value then (value, subtree)
-  else Error.raise_notrace (Unbound_identifier identifier)
-
-let lookup_toplevel_filter_opt identifier p tree =
-  match lookup_toplevel_opt identifier tree with
-  | Option.None -> Option.none
-  | Option.Some (value, subtree) ->
-      if p value then Option.some (value, subtree) else Option.none
-
 let rec maximum_lookup identifiers tree =
   match identifiers with
   | List1.T (identifier, []) -> (
@@ -125,27 +114,6 @@ let rec maximum_lookup identifiers tree =
               `Partially_bound (x1 :: bound, result, unbound)
           | `Unbound unbound ->
               `Partially_bound ([], (x1, entry, subtree), unbound)))
-
-let rec maximum_lookup_filter identifiers p tree =
-  match identifiers with
-  | List1.T (identifier, []) -> (
-      match Identifier.Hashtbl.find_opt tree identifier with
-      | Option.None -> `Unbound (List1.singleton identifier)
-      | Option.Some { entry; subtree } ->
-          if p entry then `Bound (entry, subtree)
-          else `Unbound (List1.singleton identifier))
-  | List1.T (x1, x2 :: xs) -> (
-      match Identifier.Hashtbl.find_opt tree x1 with
-      | Option.None -> `Unbound identifiers
-      | Option.Some { entry; subtree } ->
-          if p entry then
-            match maximum_lookup_filter (List1.from x2 xs) p subtree with
-            | `Bound result -> `Bound result
-            | `Partially_bound (bound, result, unbound) ->
-                `Partially_bound (x1 :: bound, result, unbound)
-            | `Unbound unbound ->
-                `Partially_bound ([], (x1, entry, subtree), unbound)
-          else `Unbound identifiers)
 
 let open_namespace qualified_identifier tree =
   let _entry, subtree = lookup qualified_identifier tree in

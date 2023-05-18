@@ -1155,12 +1155,11 @@ module Disambiguation_state = struct
     | [] -> `Unbound identifiers
     | scope :: scopes -> (
         match
-          Binding_tree.maximum_lookup_filter identifiers
-            entry_is_not_variable
-            (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
         | `Bound (entry, _subtree) ->
-            `Bound (Qualified_identifier.from_list1 identifiers, entry)
+            if Entry.is_variable entry then `Unbound identifiers
+            else `Bound (Qualified_identifier.from_list1 identifiers, entry)
         | `Partially_bound
             (bound_segments, (identifier, entry, _subtree), unbound_segments)
           ->

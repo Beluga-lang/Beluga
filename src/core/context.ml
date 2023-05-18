@@ -365,8 +365,8 @@ let rec getNameDCtx cPsi k =
 
 let rec getNameMCtx cD k =
   match (cD, k) with
-  | (Dec (_, Decl (u, _, _, _)), 1) -> u
-  | (Dec (_, DeclOpt (u, _)), 1) -> u
+  | (Dec (_, Decl { name = u; _ }), 1) -> u
+  | (Dec (_, DeclOpt { name = u; _ }), 1) -> u
   | (Dec (cD, _), k) ->
      getNameMCtx cD (k - 1)
 
@@ -422,8 +422,8 @@ let lookup_inductivity (cD : LF.mctx) k =
   let open Option in
   lookup' cD k
   >>= function
-    | LF.Decl (_, tau, _, inductivity) -> Some (tau, inductivity)
-    | _ -> None
+    | LF.Decl d -> Option.some (d.typ, d.inductivity)
+    | _ -> Option.none
 
 let lookup cG k =
   let open Option in
@@ -434,7 +434,7 @@ let lookup cG k =
 
 let rec lookupSchema cD psi_offset =
   match (cD, psi_offset) with
-  | (Dec (_, Decl (_, CTyp (Some cid_schema), _, _)), 1) -> cid_schema
+  | (Dec (_, Decl { typ = CTyp (Some cid_schema); _ }), 1) -> cid_schema
   | (Dec (cD, _) , i) ->
      lookupSchema cD (i - 1)
 
@@ -442,7 +442,7 @@ and lookupCtxVar cD cvar =
   let rec lookup cD offset =
     match cD with
     | Empty -> Error.raise_violation "Context variable not found"
-    | Dec (cD, Decl (psi, CTyp (Some schemaName), _, _)) ->
+    | Dec (cD, Decl { name = psi; typ = CTyp (Option.Some schemaName); _ }) ->
        begin match cvar with
        | CtxName phi when Name.(psi = phi) -> (psi, schemaName)
        | CtxName _ -> lookup cD (offset + 1)
@@ -501,8 +501,8 @@ let names_of_proof_state g =
 
 let rec steal_mctx_names cD cD' =
   match (cD, cD') with
-  | (Dec (cD, Decl (_, cU, plicity, inductivity)), Dec (cD', Decl (u', _, _, _))) ->
-     Dec (steal_mctx_names cD cD', Decl (u', cU, plicity, inductivity))
+  | (Dec (cD, Decl d), Dec (cD', Decl d')) ->
+     Dec (steal_mctx_names cD cD', Decl { d with name = d'.name })
   | (Empty, Empty) -> Empty
   | _ -> Error.raise_violation "[steal_mctx_names] inputs weren't convertible"
 

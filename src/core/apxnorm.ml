@@ -295,7 +295,7 @@ let rec cnormApxExp cD delta e cDt =
      let (cD'', t) = cDt in
      let e' =
        cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.DeclOpt u)) e
-         (Int.LF.Dec (cD'', Int.LF.DeclOpt (u, Plicity.explicit)), Whnf.mvar_dot1 t)
+         (Int.LF.Dec (cD'', Int.LF.DeclOpt { name = u; plicity = Plicity.explicit }), Whnf.mvar_dot1 t)
      in
      Apx.Comp.MLam (loc, u, e')
 
@@ -389,7 +389,7 @@ and cnormApxBranch cD delta b (cD'', t) =
     | Apx.LF.Empty -> cD''
     | Apx.LF.Dec (delta2', Apx.LF.Decl (x, _, plicity)) ->
        let cD1'' = append_mctx cD'' delta2' in
-       Int.LF.Dec (cD1'', Int.LF.DeclOpt (x, plicity))
+       Int.LF.Dec (cD1'', Int.LF.DeclOpt { name = x; plicity })
   in
 
   match b with

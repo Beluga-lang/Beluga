@@ -23,19 +23,19 @@ let rec unroll cD cG = function
   | Comp.TypArr (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
      let LF.Dec (cG', Comp.CTypDecl (x, _, _)) = cG' in
-     (cD', cG', fun e -> Comp.Fn (Beluga_syntax.Location.ghost, x, f e))
+     (cD', cG', fun e -> Comp.Fn (Location.ghost, x, f e))
   | Comp.TypPiBox (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
-     let LF.Dec (cD', LF.Decl (x, _, plicity, _)) = cD' in
+     let LF.Dec (cD', LF.Decl { name = x; plicity; _ }) = cD' in
      ( cD'
      , cG'
-     , fun e -> Comp.MLam (Beluga_syntax.Location.ghost, x, f e, plicity)
+     , fun e -> Comp.MLam (Location.ghost, x, f e, plicity)
      )
   | _ -> (cD, cG, fun e -> e)
 
 let by cD cG i x tau =
   ( LF.Dec (cG, Comp.CTypDecl (x, tau, false))
-  , fun e -> Comp.Let (Beluga_syntax.Location.ghost, i, (x, e))
+  , fun e -> Comp.Let (Location.ghost, i, (x, e))
   )
 
 let unbox cD cG i x cU modifier =
@@ -46,21 +46,21 @@ let unbox cD cG i x cU modifier =
     p.fmt "[unbox] cU = @[%a@]"
       P.(fmt_ppr_cmp_meta_typ cD) cU
     end;
-  let cD' = LF.(Dec (cD, Decl (x, cU', Beluga_syntax.Plicity.explicit, Beluga_syntax.Inductivity.not_inductive))) in
+  let cD' = LF.(Dec (cD, Decl { name = x; typ = cU'; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive })) in
   let t = LF.MShift 1 in
   let pat =
     Comp.PatMetaObj
-      ( Beluga_syntax.Location.ghost
-      , ( Beluga_syntax.Location.ghost
+      ( Location.ghost
+      , ( Location.ghost
         , let open LF in
           match cU with
           | (ClTyp ( (MTyp _ | PTyp _), cPsi )) ->
              let tM =
                Root
-                 ( Beluga_syntax.Location.ghost
+                 ( Location.ghost
                  , MVar (Offset 1, s)
                  , Nil
-                 , Beluga_syntax.Plicity.explicit
+                 , Plicity.explicit
                  )
              in
              ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), MObj tM)
@@ -72,8 +72,8 @@ let unbox cD cG i x cU modifier =
   ( cD'
   , fun e ->
     let open Comp in
-    let b = Branch (Beluga_syntax.Location.ghost, LF.Empty, (cD', LF.Empty), pat, t, e) in
-    Case (Beluga_syntax.Location.ghost, PragmaCase, i, [b])
+    let b = Branch (Location.ghost, LF.Empty, (cD', LF.Empty), pat, t, e) in
+    Case (Location.ghost, PragmaCase, i, [b])
   )
 
 (* translate a Harpoon proof into Beluga internal syntax *)
@@ -106,7 +106,7 @@ and split_branch cD cG (cG_p, pat) t hyp tau =
   let cD_b, cG_b = Comp.(h.cD, h.cG) in
   let e = proof cD_b cG_b p tau_b in
   Comp.Branch
-    ( Beluga_syntax.Location.ghost
+    ( Location.ghost
     , LF.Empty
     , (cD_b, cG_p)
     , pat
@@ -150,17 +150,17 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp =
 
   | Comp.MetaSplit (i, _, sbs) ->
      let bs = List.map (fun b -> meta_split_branch cD cG b tau) sbs in
-     Comp.Case (Beluga_syntax.Location.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
   | Comp.CompSplit (i, _, sbs) ->
      let bs = List.map (fun b -> comp_split_branch cD cG b tau) sbs in
-     Comp.Case (Beluga_syntax.Location.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
   | Comp.ContextSplit (i, _, sbs) ->
      let bs = List.map (fun b -> context_split_branch cD cG b tau) sbs in
-     Comp.Case (Beluga_syntax.Location.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
-  | Comp.ImpossibleSplit i -> Comp.Impossible (Beluga_syntax.Location.ghost, i)
+  | Comp.ImpossibleSplit i -> Comp.Impossible (Location.ghost, i)
 
   | Comp.Suffices (i, args) ->
      (* FIXME: consider storing tau_i inside Suffices to avoid
@@ -169,7 +169,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp =
      let loc = Comp.loc_of_exp i in
      let _, (i', ttau_i') =
        Check.Comp.genMApp
-         Beluga_syntax.Location.ghost
+         Location.ghost
          (Fun.const true)
          cD
          (i, ttau_i)

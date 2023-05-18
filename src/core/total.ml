@@ -328,7 +328,7 @@ let gen_var' loc cD (x, cU) =
      , LF.CObj (cPsi)
      )
 
-let gen_var loc cD (LF.Decl (x, cU, _, _)) =
+let gen_var loc cD (LF.Decl { name = x; typ = cU; _ }) =
   (gen_var' loc cD (x, cU) , cU)
 
 (*
@@ -543,7 +543,7 @@ let gen_arg cD  (k, cU) cU0 =
 let rec rec_spine cD (k, cU) =
   function
   | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
-  | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
+  | (1, (Comp.TypPiBox (_, LF.Decl { typ = cU'; _ }, tau), theta)) ->
      let cU0 = Whnf.cnormMTyp (cU', theta) in
          begin
            try
@@ -622,7 +622,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
   match cD' with
   | LF.Empty -> cIH
 
-  | LF.Dec (cD', LF.Decl (u, cU, _, Inductivity.Not_inductive)) ->
+  | LF.Dec (cD', LF.Decl { name = u; typ = cU; inductivity = Inductivity.Not_inductive; _ }) ->
      dprintf
        begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>ignoring cD' entry %d, i.e.\
@@ -635,7 +635,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
        end;
      gen_rec_calls cD cIH (cD', j + 1) mfs
 
-  | LF.Dec (cD', LF.Decl (u, cU, plicity, inductivity)) ->
+  | LF.Dec (cD', (LF.Decl { name = u; typ = cU; plicity; inductivity } as d)) ->
      let k = j + 1 in
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j + 1)) in
      let mf_list = get_order mfs in
@@ -643,7 +643,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
        begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>Generate rec. calls given variable@,@[%a@]\
               @,considering a total of %d recursive functions@]"
-         (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, plicity, inductivity))
+         (P.fmt_ppr_lf_ctyp_decl cD') d
          (List.length mf_list)
        end;
 
@@ -652,7 +652,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
          begin fun p ->
          p.fmt "[mk_wf_rec] @[<v>for @[%a@] for position %d\
                 @,@[<hv 2>type of recursive call:@ @[%a@]@]@]"
-           (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, plicity, inductivity))
+           (P.fmt_ppr_lf_ctyp_decl cD') d
            x
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          end;
@@ -1269,7 +1269,7 @@ let filter cD cG cIH (loc, e) =
 
 (** Adjusts the given type signature with annotations for the
     induction arguments according to the given order.
-    Returns None if the order does not match the type, i.e. goes out
+    Returns [Option.None] if the order does not match the type, i.e. goes out
     of bounds.
  *)
 let annotate'
@@ -1278,8 +1278,8 @@ let annotate'
   let open Option in
   let rec ann tau pos =
     match (tau, pos) with
-    | (Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, _), tau), 1) ->
-      Option.some (Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.inductive), tau))
+    | (Comp.TypPiBox (loc, LF.Decl d, tau), 1) ->
+      Option.some (Comp.TypPiBox (loc, LF.Decl { d with inductivity = Inductivity.inductive }, tau))
     | (Comp.TypArr (loc, tau1, tau2), 1) ->
       Option.some (Comp.TypArr (loc, Comp.TypInd tau1, tau2))
     | (Comp.TypArr (loc, tau1, tau2), n) ->
@@ -1290,7 +1290,7 @@ let annotate'
        ann tau (n - 1)
        $> fun tau2' ->
           Comp.TypPiBox (loc, cd, tau2')
-    | _ -> None
+    | _ -> Option.none
   in
   List.fold_left_opt (fun tau' x -> ann tau' x) tau order
 
@@ -1298,8 +1298,8 @@ let annotate'
 let rec strip : Synint.Comp.typ -> Synint.Comp.typ =
   function
   | Comp.TypInd tau' -> strip tau'
-  | Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.Inductive), tau') ->
-    Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.not_inductive), strip tau')
+  | Comp.TypPiBox (loc, LF.Decl d, tau') ->
+    Comp.TypPiBox (loc, LF.Decl d, strip tau')
   | Comp.TypPiBox (loc, d, tau') -> Comp.TypPiBox (loc, d, strip tau')
   | Comp.TypArr (loc, tau1, tau2) -> Comp.TypArr (loc, strip tau1, strip tau2)
   | Comp.TypCross (loc, taus) -> Comp.TypCross (loc, List2.map strip taus)

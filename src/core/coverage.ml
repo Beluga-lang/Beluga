@@ -457,7 +457,7 @@ end = struct
          | (LF.MV _, LF.Dec (cD0, _))
            | (LF.CObj (LF.CtxVar _), LF.Dec (cD0, _)) ->
             id t cD0
-         | (LF.ClObj _, LF.Dec (cD0, LF.Decl (_, tU, _, _))) ->
+         | (LF.ClObj _, LF.Dec (cD0, LF.Decl { typ = tU; _ })) ->
             check_meta_obj
               cD
               (Location.ghost, m)
@@ -1079,8 +1079,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2, t)) (pS', (tau2', t')) mC1 sC1
 
-  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl (_, ClTyp (MTyp tA, cPsi), _, _)), tau2), t))
-         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl (_, ClTyp (MTyp tA', cPsi'), _, _)), tau2'), t'))
+  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl { typ = ClTyp (MTyp tA, cPsi); _ }), tau2), t))
+         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl { typ = ClTyp (MTyp tA', cPsi'); _ }), tau2'), t'))
     ) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
@@ -1097,8 +1097,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
        mC1
        sC1
 
-  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl (_, ClTyp (PTyp tA, cPsi), _, _)), tau2), t))
-         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl (_, ClTyp (PTyp tA', cPsi'), _, _)), tau2'), t'))
+  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl { typ = ClTyp (PTyp tA, cPsi); _ }), tau2), t))
+         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl { typ = ClTyp (PTyp tA', cPsi'); _ }), tau2'), t'))
     ) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
@@ -1115,8 +1115,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
        mC1
        sC1
 
-  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.Decl (_, LF.CTyp w, _, _), tau2), t))
-         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.Decl (_, LF.CTyp w', _, _), tau2'), t'))
+  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.Decl { typ = LF.CTyp w; _ }, tau2), t))
+         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.Decl { typ = LF.CTyp w'; _ }, tau2'), t'))
     ) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
@@ -1127,8 +1127,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      let (mC1, sC1) = match_metaobj cD cD_p ((loc, mO), tau1) ((loc', mO'), tau1') mC sC in
      match_spines (cD, cG) (cD_p, cG_p) (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
-  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl (_, ClTyp (STyp (cl, cPhi), cPsi), _, _)), tau2), t))
-         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl (_, ClTyp (STyp (cl', cPhi'), cPsi'), _, _)), tau2'), t'))) ->
+  | Comp.( (PatApp (_, pat, pS), (TypPiBox (_, LF.(Decl { typ = ClTyp (STyp (cl, cPhi), cPsi); _ }), tau2), t))
+         , (PatApp (_, pat', pS'), (TypPiBox (_, LF.(Decl { typ = ClTyp (STyp (cl', cPhi'), cPsi'); _ }), tau2'), t'))) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
      let mk_cltyp cl cPhi cPsi t = LF.(ClTyp (STyp (cl, Whnf.cnormDCtx (cPhi, t)), Whnf.cnormDCtx (cPsi, t))) in
@@ -1379,11 +1379,11 @@ let genPVarGoal (LF.SchElem (decls, trec)) (cD : LF.mctx) cPsi psi
   let pdecl =
     let open! LF in
     Decl
-      ( NameGen.(pvar tA |> renumber names)
-      , ClTyp (PTyp tA, Whnf.cnormDCtx (LF.CtxVar psi, MShift offset))
-      , Plicity.explicit
-      , Inductivity.not_inductive
-      )
+      { name = NameGen.(pvar tA |> renumber names)
+      ; typ = ClTyp (PTyp tA, Whnf.cnormDCtx (LF.CtxVar psi, MShift offset))
+      ; plicity = Plicity.explicit
+      ; inductivity = Inductivity.not_inductive
+      }
   in
 
   let cD'_pdecl = LF.Dec (cD', pdecl) in
@@ -1918,14 +1918,14 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
 let rec addToMCtx cD (cD_tail, ms) =
   match cD_tail with
   | [] -> (cD, ms)
-  | LF.Decl (u, LF.ClTyp (LF.MTyp tA, cPsi), plicity, inductivity) :: cD_tail ->
-     let mdec = LF.Decl (u, LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)), plicity, inductivity) in
+  | LF.Decl ({ typ = LF.ClTyp (LF.MTyp tA, cPsi); _ } as d) :: cD_tail ->
+     let mdec = LF.Decl { d with typ = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)) } in
      addToMCtx (LF.Dec (cD, mdec)) (cD_tail, Whnf.mvar_dot1 ms)
-  | LF.Decl (u, LF.ClTyp (LF.PTyp tA, cPsi), plicity, inductivity) :: cD_tail ->
-     let pdec = LF.Decl (u, LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)), plicity, inductivity) in
+  | LF.Decl ({ typ = LF.ClTyp (LF.PTyp tA, cPsi); _ } as d) :: cD_tail ->
+     let pdec = LF.Decl { d with typ = LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)) } in
      addToMCtx (LF.Dec (cD, pdec)) (cD_tail, Whnf.mvar_dot1 ms)
-  | LF.Decl (u, LF.ClTyp (LF.STyp (cl, cPhi), cPsi), plicity, inductivity) :: cD_tail ->
-     let sdec = LF.Decl (u, LF.ClTyp (LF.STyp (cl, Whnf.cnormDCtx (cPhi, ms)), Whnf.cnormDCtx (cPsi, ms)), plicity, inductivity) in
+  | LF.Decl ({ typ = LF.ClTyp (LF.STyp (cl, cPhi), cPsi); _ } as d) :: cD_tail ->
+     let sdec = LF.Decl { d with typ = LF.ClTyp (LF.STyp (cl, Whnf.cnormDCtx (cPhi, ms)), Whnf.cnormDCtx (cPsi, ms)) } in
      addToMCtx (LF.Dec (cD, sdec)) (cD_tail, Whnf.mvar_dot1 ms)
   | cdecl :: cD_tail ->
      addToMCtx (LF.Dec (cD, cdecl)) (cD_tail, Whnf.mvar_dot1 ms)
@@ -1975,11 +1975,11 @@ let rec decTomdec names cD' (LF.CtxOffset k as cpsi) (d, decls) =
      let ssi = S.LF.comp s ssi' in
      let mdec =
        LF.Decl
-         ( x
-         , LF.ClTyp (LF.MTyp (LF.TClo (tP, ssi)), cPsi')
-         , Plicity.implicit
-         , Inductivity.not_inductive
-         )
+         { name = x
+         ; typ = LF.ClTyp (LF.MTyp (LF.TClo (tP, ssi)), cPsi')
+         ; plicity = Plicity.implicit
+         ; inductivity = Inductivity.not_inductive
+         }
      in
      let mv =
        LF.Root
@@ -2066,7 +2066,16 @@ let genNthSchemaElemGoal names cD n w =
        Name.(mk_name (SomeString "g"))
        |> NameGen.renumber names
      in
-     let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive)) in
+     let cD' =
+       LF.Dec
+         (cD
+         , LF.Decl
+           { name = x
+           ; typ = LF.CTyp (Option.some w)
+           ; plicity = Plicity.implicit
+           ; inductivity = Inductivity.not_inductive
+           }
+         ) in
      let psi = LF.CtxOffset 1 in
      genSchemaElemGoal (x :: names) cD' psi e
      end
@@ -2105,9 +2114,19 @@ let genCtx names (LF.Dec (cD', LF.Decl _) as cD) cpsi =
     cD                  |- .
    ]
  *)
-let genContextGoals cD (x, LF.CTyp (Some schema_cid), plicity, inductivity) =
+let genContextGoals cD (x, LF.CTyp (Option.Some schema_cid), plicity, inductivity) =
   let LF.Schema elems = Store.Cid.Schema.get_schema schema_cid in
-  let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some schema_cid), plicity, inductivity)) in
+  let cD' =
+    LF.Dec
+      (cD
+      , LF.Decl
+          { name = x
+          ; typ = LF.CTyp (Option.some schema_cid)
+          ; plicity
+          ; inductivity
+          }
+      )
+  in
   genCtx [] cD' (LF.CtxOffset 1) elems
 
 (* Find mvar to split on *)
@@ -2119,13 +2138,35 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let LF.TypDecl (x, tA) = decl in
      let s = LF.SVar (2, 0, S.LF.id) in
      let mT = LF.ClTyp (LF.STyp (r0, cPhi'), cPsi) in
-     let cD' = LF.Dec (cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.explicit, Inductivity.not_inductive)) in
+     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let cD' =
+       LF.Dec
+         (cD
+         , LF.Decl
+             { name
+             ; typ = mT
+             ; plicity = Plicity.explicit
+             ; inductivity = Inductivity.not_inductive
+             }
+         )
+     in
      (* if ren = renaming, generate parameter variable *)
      let tM = LF.Root (Location.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil, Plicity.explicit) in
      let tA0 = Whnf.cnormTyp (tA, LF.MShift 1) in
      let cPhi0 = Whnf.cnormDCtx (cPhi', LF.MShift 1) in
      let mT' = LF.ClTyp (LF.MTyp tA0, cPhi0) in
-     let cD'' = LF.Dec (cD', LF.Decl (Name.mk_name (Whnf.newMTypName mT'), mT', Plicity.explicit, Inductivity.not_inductive)) in
+     let name' = Name.mk_name (Whnf.newMTypName mT') in
+     let cD'' =
+       LF.Dec
+         (cD'
+         , LF.Decl
+             { name = name'
+             ; typ = mT'
+             ; plicity = Plicity.explicit
+             ; inductivity = Inductivity.not_inductive
+             }
+         )
+     in
      let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift 2) in
      let cPhi'' = Whnf.cnormDCtx (cPhi, LF.MShift 2) in
      [(cD'', CovSub (cPsi', LF.Dot (LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
@@ -2199,7 +2240,7 @@ let rec best_ctx_cand (cD, cv_list) k cD_tail =
      then
        begin
          let ctx_goals =
-           let LF.Decl (x, cU, plicity, inductivity) = d in
+           let LF.Decl { name = x; typ = cU; plicity; inductivity } = d in
            genContextGoals cD' (x, cU, plicity, inductivity)
          in
          let f (cD', cPhi, ms) =
@@ -2234,7 +2275,7 @@ let rec best_ctx_cand (cD, cv_list) k cD_tail =
 let rec best_cand (cD, mv_list) k cD_tail =
   match (mv_list, cD) with
   | ([], _) -> NoCandidate
-  | (LF.Offset j :: mvlist', LF.(Dec (cD', (Decl (_, cT, _, _) as md)))) ->
+  | (LF.Offset j :: mvlist', LF.(Dec (cD', (Decl { typ = cT; _ } as md)))) ->
      if k = j
      then
        begin
@@ -2340,7 +2381,7 @@ let rec genPattSpine names mk_pat_var k =
      , Comp.PatApp (Location.ghost, pat1, pS)
      , ttau
      )
-  | Comp.TypPiBox (_, LF.Decl (u, LF.CTyp sW, plicity, inductivity), tau), t ->
+  | Comp.TypPiBox (_, LF.Decl { name = u; typ = LF.CTyp sW; plicity; inductivity }, tau), t ->
      let u = NameGen.renumber names u in
      let cPsi' =
        let open! LF in
@@ -2371,7 +2412,7 @@ let rec genPattSpine names mk_pat_var k =
    *)
   | ( Comp.TypPiBox
         ( _
-        , LF.(Decl (u, ClTyp ((PTyp tP | MTyp tP) as cl, cPsi), plicity, inductivity))
+        , LF.(Decl { name = u; typ = ClTyp ((PTyp tP | MTyp tP) as cl, cPsi); plicity; inductivity })
         , tau
         )
     , t
@@ -2405,7 +2446,7 @@ let rec genPattSpine names mk_pat_var k =
      in
      (cG, Comp.PatApp (Location.ghost, pat1, pS), ttau0)
 
-  | (Comp.TypPiBox (_, LF.(Decl (u, ClTyp (STyp (cl, cPhi), cPsi), _, _)), tau), t) ->
+  | (Comp.TypPiBox (_, LF.(Decl { name = u; typ = ClTyp (STyp (cl, cPhi), cPsi); _ }), tau), t) ->
      let cPhi' = Whnf.cnormDCtx (cPhi, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
 
@@ -2595,7 +2636,15 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
             Name.(mk_name (SomeString "g"))
             |> NameGen.renumber names
           in
-          LF.Dec (cD, LF.Decl (u, LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive))
+          LF.Dec
+            (cD
+            , LF.Decl
+                { name = u
+                ; typ = LF.CTyp (Option.some w)
+                ; plicity = Plicity.implicit
+                ; inductivity = Inductivity.not_inductive
+                }
+            )
         in
         genCtx names cD' (LF.CtxOffset 1) elems
         |> List.map
@@ -3181,7 +3230,17 @@ let gen_candidates loc cD covGoal pats =
 let initialize_coverage problem projOpt : cov_problems =
   match problem.ctype with
   | Comp.TypBox (loc, LF.CTyp w) ->
-     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, Plicity.implicit, Inductivity.not_inductive)) in
+     let name = Name.mk_name (Whnf.newMTypName (LF.CTyp w)) in
+     let cD' =
+       LF.Dec
+         (problem.cD
+         , LF.Decl
+             { name
+             ; typ = LF.CTyp w
+             ; plicity = Plicity.implicit
+             ; inductivity = Inductivity.not_inductive
+             }
+         ) in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let cPsi = LF.CtxVar (LF.CtxOffset 1) in
      (* let covGoal = CovPatt (LF.Empty, Comp.PatMetaObj (loc, LF.CObj cPsi)) in *)
@@ -3212,7 +3271,15 @@ let initialize_coverage problem projOpt : cov_problems =
         let mT = Whnf.cnormMTyp (LF.ClTyp (LF.MTyp tA', cPsi'), Whnf.m_id) in
         let name = Name.mk_name (Whnf.newMTypName mT) in
         let cD' =
-          LF.Dec (problem.cD, LF.Decl (name, mT, Plicity.implicit, Inductivity.not_inductive))
+          LF.Dec
+            (problem.cD
+            , LF.Decl
+                { name
+                ; typ = mT
+                ; plicity = Plicity.implicit
+                ; inductivity = Inductivity.not_inductive
+                }
+            )
         in
         let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
         let mv = LF.MVar (LF.Offset 1, s) in
@@ -3251,12 +3318,23 @@ let initialize_coverage problem projOpt : cov_problems =
   | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
      let mT = LF.ClTyp (LF.PTyp tA', cPsi') in
-     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
+     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let cD' =
+       LF.Dec
+         (problem.cD
+         , LF.Decl
+             { name
+             ; typ = mT
+             ; plicity = Plicity.implicit
+             ; inductivity = Inductivity.not_inductive
+             }
+         )
+     in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let mv =
        match projOpt with
-       | None -> LF.PVar (1, s)
-       | Some k -> LF.Proj (LF.PVar (1, s), k)
+       | Option.None -> LF.PVar (1, s)
+       | Option.Some k -> LF.Proj (LF.PVar (1, s), k)
      in
      let tM = LF.Root (Location.ghost, mv, LF.Nil, Plicity.explicit) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
@@ -3269,7 +3347,18 @@ let initialize_coverage problem projOpt : cov_problems =
      [(cD', cG', cand_list, mC)]
 
   | Comp.TypBox (loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)) as mT)) ->
-     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
+     let name = Name.mk_name (Whnf.newMTypName mT) in
+     let cD' =
+       LF.Dec
+         (problem.cD
+         , LF.Decl
+             { name
+             ; typ = mT
+             ; plicity = Plicity.implicit
+             ; inductivity = Inductivity.not_inductive
+             }
+         )
+     in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let s = LF.SVar (1, 0, S.LF.id) in
      let cPhi = Whnf.cnormDCtx (cPhi, LF.MShift 1) in
@@ -3303,7 +3392,7 @@ let initialize_coverage problem projOpt : cov_problems =
 let rec check_emptiness =
   function
   | LF.Empty -> false
-  | LF.Dec (cD', (LF.Decl (_, LF.ClTyp (LF.MTyp tA, cPsi), _, _) as cdecl)) ->
+  | LF.Dec (cD', (LF.Decl { typ = LF.ClTyp (LF.MTyp tA, cPsi); _} as cdecl)) ->
      begin
        try
          match genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) with
@@ -3323,9 +3412,9 @@ let rec check_emptiness =
             (P.fmt_ppr_lf_typ cD' cPsi P.l0) tA;
           check_emptiness cD'
      end
-  | LF.Dec (cD', LF.Decl (_, LF.ClTyp (LF.PTyp LF.Sigma _, _), _, _)) ->
+  | LF.Dec (cD', LF.Decl { typ = LF.ClTyp (LF.PTyp LF.Sigma _, _); _ }) ->
      check_emptiness cD'
-  | LF.Dec (cD', LF.Decl (_, LF.ClTyp (LF.PTyp tA, cPsi), _, _)) ->
+  | LF.Dec (cD', LF.Decl { typ = LF.ClTyp (LF.PTyp tA, cPsi); _ }) ->
      begin
        try
          match genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) with

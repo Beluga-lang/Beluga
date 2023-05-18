@@ -34,8 +34,16 @@ module LF = struct
     | CTyp of cid_schema option
 
   and ctyp_decl =                               (* Contextual Declarations        *)
-    | Decl of Name.t * ctyp * Plicity.t * Inductivity.t (* TODO: Annotate with [Depend.t]*)
-    | DeclOpt of Name.t * Plicity.t (* TODO: Annotate with [Depend.t]*)
+    | Decl of
+        { name : Name.t
+        ; typ : ctyp
+        ; plicity : Plicity.t
+        ; inductivity : Inductivity.t
+        } (* TODO: Annotate with [Depend.t]*)
+    | DeclOpt of
+        { name : Name.t
+        ; plicity : Plicity.t
+        } (* TODO: Annotate with [Depend.t]*)
 
   and typ =                                                (* LF level                       *)
     | Atom of Location.t * cid_typ * spine                 (* A ::= a M1 ... Mn              *)
@@ -216,8 +224,8 @@ module LF = struct
   let type_of_mmvar_instantiated mmvar =  (mmvar.typ)
   let rename_ctyp_decl f =
     function
-    | Decl (x, tA, plicity, inductivity) -> Decl (f x, tA, plicity, inductivity)
-    | DeclOpt (x, plicity) -> DeclOpt (f x, plicity)
+    | Decl d -> Decl { d with name = f d.name }
+    | DeclOpt d -> DeclOpt { d with name = f d.name }
 
   (** Embeds a head into a normal by using an empty spine.
       Very useful for constructing variables as normals.
@@ -240,7 +248,7 @@ module LF = struct
    *)
   let require_decl : ctyp_decl -> Name.t * ctyp * Plicity.t * Inductivity.t =
     function
-    | Decl (u, cU, plicity, inductivity) -> (u, cU, plicity, inductivity)
+    | Decl { name = u; typ = cU; plicity; inductivity } -> (u, cU, plicity, inductivity)
     | DeclOpt _ ->
        Error.raise_violation "[require_decl] DeclOpt is forbidden"
 
@@ -318,14 +326,14 @@ module LF = struct
 
   let is_explicit =
     function
-    | Decl (_, _, _, Inductivity.Inductive)
-    | Decl (_, _, Plicity.Explicit, _) -> true
+    | Decl { inductivity = Inductivity.Inductive; _ }
+    | Decl { plicity = Plicity.Explicit; _ } -> true
     | _ -> false
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with
-    | Decl (n, _, _, _) -> n
-    | DeclOpt (n, _) -> n
+    | Decl d -> d.name
+    | DeclOpt d -> d.name
 
   (** Decides whether the given mfront is a variable,
       viz. [projection of a] pattern variable, metavariable, or

@@ -106,7 +106,7 @@ let elaborate_mvar state cD loc name =
   let p (d, _) = Name.(LF.name_of_ctyp_decl d = name) in
   match Context.find_with_index_rev' cD p with
   | None -> Lfrecon.(throw loc (UnboundName name))
-  | Some LF.(Decl (_, cT, _, _), k) ->
+  | Some LF.(Decl { typ = cT; _ }, k) ->
       let cT = Whnf.cnormMTyp (cT, LF.MShift k) in
       dprintf
         begin fun p ->
@@ -245,19 +245,19 @@ let process_command
         let rec add_all_mctx state cD =
           (* [cD] is a stack, so traverse it from tail to head *)
           match cD with
-          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.CTyp _, _, _)) ->
+          | Synint.LF.Dec (cD', Synint.LF.Decl { name = u; typ = Synint.LF.CTyp _; _ }) ->
             add_all_mctx state cD';
             Disambiguation_state.add_context_variable state (Name.to_identifier u)
-          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.MTyp _, _), _, _)) ->
+          | Synint.LF.Dec (cD', Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.MTyp _, _); _ }) ->
             add_all_mctx state cD';
             Disambiguation_state.add_meta_variable state (Name.to_identifier u)
-          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.PTyp _, _), _, _)) ->
+          | Synint.LF.Dec (cD', Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.PTyp _, _); _ }) ->
             add_all_mctx state cD';
             Disambiguation_state.add_parameter_variable state (Name.to_identifier u)
-          | Synint.LF.Dec (cD', Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.STyp _, _), _, _)) ->
+          | Synint.LF.Dec (cD', Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.STyp _, _); _ }) ->
             add_all_mctx state cD';
             Disambiguation_state.add_substitution_variable state (Name.to_identifier u)
-          | Synint.LF.Dec (cD', Synint.LF.DeclOpt (u, _)) ->
+          | Synint.LF.Dec (cD', Synint.LF.DeclOpt { name = u; _ }) ->
               add_all_mctx state cD';
               Disambiguation_state.add_contextual_variable state (Name.to_identifier u)
           | Synint.LF.Empty -> () in

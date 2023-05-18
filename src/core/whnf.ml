@@ -1531,8 +1531,8 @@ let mctxLookupDep cD k =
            "Meta-variable out of bounds -- looking for %d in context of \
             length %d"
            k (Context.length cD))
-  | Option.Some (Decl (u, mtyp, plicity, inductivity)) ->
-      (u, cnormMTyp (mtyp, MShift k), plicity, inductivity)
+  | Option.Some (Decl d) ->
+      (d.name, cnormMTyp (d.typ, MShift k), d.plicity, d.inductivity)
   | Option.Some (DeclOpt _) ->
       Error.raise_violation "Expected declaration to have a type"
 
@@ -1569,7 +1569,7 @@ let mctxCDec cD k =
 let mctxMVarPos cD u =
   let rec lookup cD k =
     match cD with
-    | Dec (cD, Decl (v, mtyp, _, _)) ->
+    | Dec (cD, Decl { name = v; typ = mtyp; _ }) ->
        if Name.(v = u)
        then (k, cnormMTyp (mtyp, MShift k))
        else lookup cD (k + 1)
@@ -1616,9 +1616,11 @@ let rec normCTyp =
      let tTs' = List2.map (fun tT -> normCTyp tT) tTs in
      Comp.TypCross (loc, tTs')
 
-  | Comp.TypPiBox (loc, (Decl (u, mtyp, plicity, inductivity)), tau) ->
+  | Comp.TypPiBox (loc, (Decl d), tau) ->
+    let typ' = normMTyp d.typ in
+    let tau' = normCTyp tau in
     Comp.TypPiBox
-      (loc, (Decl (u, normMTyp mtyp, plicity, inductivity)), normCTyp tau)
+      (loc, (Decl { d with typ = typ' }), tau')
 
   | Comp.TypInd tau -> Comp.TypInd (normCTyp tau)
 
@@ -1637,8 +1639,9 @@ and cnormMetaSpine (mS, t) =
 
 let cnormCDecl (cdecl, t) =
   match cdecl with
-  | Decl (u, mtyp, plicity, inductivity) ->
-    Decl (u, cnormMTyp (mtyp, t), plicity, inductivity)
+  | Decl d ->
+    let typ' = cnormMTyp (d.typ, t) in
+    Decl { d with typ = typ' }
 
 let rec cnormCTyp =
   function
@@ -1954,8 +1957,10 @@ let normGCtx = Context.map normCTypDecl
 let rec normMCtx cD =
   match cD with
   | Empty -> Empty
-  | Dec (cD, Decl (u, mtyp, plicity, inductivity)) ->
-    Dec (normMCtx cD, Decl (u, normMTyp mtyp, plicity, inductivity))
+  | Dec (cD, Decl d) ->
+    let typ' = normMTyp d.typ in
+    let cD' = normMCtx cD in
+    Dec (cD', Decl { d with typ = typ' })
 
 
 (* ----------------------------------------------------------- *)
@@ -2026,8 +2031,8 @@ and convCTyp' thetaT1 thetaT2 =
   | ((Comp.TypCross (_, tTs), t), (Comp.TypCross (_, tTs'), t')) ->
      List2.for_all2 (fun tT tT' -> convCTyp (tT, t) (tT', t')) tTs tTs'
 
-  | ( (Comp.TypPiBox (_, Decl (_, mtyp1, _, _), tT), t)
-    , (Comp.TypPiBox (_, Decl (_, mtyp2, _, _), tT'), t')
+  | ( (Comp.TypPiBox (_, Decl { typ = mtyp1; _ }, tT), t)
+    , (Comp.TypPiBox (_, Decl { typ = mtyp2; _ }, tT'), t')
     ) ->
      convMTyp (cnormMTyp (mtyp1, t)) (cnormMTyp (mtyp2, t'))
      && convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
@@ -2048,13 +2053,14 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
 
 let convCTypDecl d1 d2 =
   match (d1, d2) with
-  | (Decl (x1, cT1, plicity1, inductivity1), Decl (x2, cT2, plicity2, inductivity2)) ->
-     Name.(x1 = x2)
-     && Plicity.(plicity1 = plicity2)
-     && Inductivity.(inductivity1 = inductivity2)
-     && convMTyp cT1 cT2
-  | (DeclOpt (x1, _), DeclOpt (x2, _)) ->
-     Name.(x1 = x2)
+  | (Decl d1, Decl d2) ->
+     Name.(d1.name = d2.name)
+     && Plicity.(d1.plicity = d2.plicity)
+     && Inductivity.(d1.inductivity = d2.inductivity)
+     && convMTyp d1.typ d2.typ
+  | (DeclOpt d1, DeclOpt d2) ->
+     Name.(d1.name = d2.name)
+     && Plicity.(d1.plicity = d2.plicity)
   | _ -> false
 
 (** Checks if two declarations are convertible.
@@ -2242,7 +2248,7 @@ and closedMetaObj (_, mF) = closedMFront mF
 
 let closedDecl =
   function
-  | Decl (_, cU, _, _) -> closedMetaTyp cU
+  | Decl { typ = cU; _ } -> closedMetaTyp cU
   | DeclOpt _ ->
      Error.raise_violation "[closedDecl] DeclOpt outside printing"
 
@@ -2404,7 +2410,7 @@ let convGCtx (cG1, t1) (cG2, t2) =
   conv_ctx f cG1 cG2
 
 let convMCtx cD1 cD2 =
-  let f (Decl (_, cU1, _, _)) (Decl (_, cU2, _, _)) =
+  let f (Decl { typ = cU1; _ }) (Decl { typ = cU2; _ }) =
     convMetaTyp cU1 cU2
   in
   conv_ctx f cD1 cD2

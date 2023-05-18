@@ -532,8 +532,8 @@ module Convert = struct
       match mV with
       | LF.Empty -> shift psiLst (-1)
       | LF.Dec (mV',
-                LF.Decl (name, LF.CTyp (Some cid), plic ,ind)) ->
-         let dctx = LF.CtxVar(Whnf.newCVar (Some name) cD (Some cid) plic ind) in
+                LF.Decl { name; typ = LF.CTyp (Option.Some cid); plicity; inductivity }) ->
+         let dctx = LF.CtxVar (Whnf.newCVar (Option.some name) cD (Option.some cid) plicity inductivity) in
          let psiLst' = (dctx, 1) :: (shift psiLst 1) in
          create_psiList mV' psiLst'
       | LF.Dec (mV', _) ->
@@ -543,36 +543,36 @@ module Convert = struct
       match mV with
       | LF.Empty -> ms
       | LF.Dec (mV',
-                LF.Decl (name, LF.CTyp (Some cid), plic, ind)) ->
+                LF.Decl { name; typ = LF.CTyp (Option.Some cid); _}) ->
          let (psiLst', dctx) = rmLst psiLst in
          let mfront = LF.CObj dctx in
          let ms' = mctxToMSub' cD (mV', ms) psiLst' in
          LF.MDot (mfront, ms')
       | LF.Dec (mV',
-                LF.Decl (name, LF.ClTyp (LF.MTyp tA,
-                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+                LF.Decl { name; typ = LF.ClTyp (LF.MTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)); plicity; inductivity }) ->
          let dctx = find_cPsi psiLst k in
          let dctx_hat = Context.dctxToHat dctx in
          let psiLst' = shift psiLst (-1) in
          let ms' = mctxToMSub' cD (mV', ms) psiLst' in
          let tA = Whnf.cnormTyp (tA, ms') in
-         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plicity inductivity in
          let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
          LF.MDot (mfront, ms')
       | LF.Dec (mV',
-                LF.Decl (name, LF.ClTyp (LF.PTyp tA,
-                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+                LF.Decl { name; typ = LF.ClTyp (LF.PTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)); plicity; inductivity }) ->
          let dctx = find_cPsi psiLst k in
          let dctx_hat = Context.dctxToHat dctx in
          let psiLst' = shift psiLst (-1) in
          let ms' = mctxToMSub' cD (mV', ms) psiLst' in
          let tA = Whnf.cnormTyp (tA, ms') in
-         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let cvar = Whnf.newMPVar (Option.some name) (cD, dctx, tA) plicity inductivity in
          let tM = LF.MPVar((cvar, ms), S.id) in
          let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
          LF.MDot (mfront, ms')
       | LF.Dec (mV',
-                LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), plic, ind)) ->
+                LF.Decl { name; typ = LF.ClTyp (LF.MTyp tA, cPsi); plicity; inductivity }) ->
          let k = find_ctxvar_offset cPsi in
          let dctx = match k with
            | 0 -> cPsi
@@ -582,11 +582,11 @@ module Convert = struct
          let psiLst' = shift psiLst (-1) in
          let ms' = mctxToMSub' cD (mV', ms) psiLst' in
          let tA = Whnf.cnormTyp (tA, ms') in
-         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plicity inductivity in
          let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
          LF.MDot (mfront, ms')
       | LF.Dec (mV',
-                LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi), plic, ind)) ->
+                LF.Decl { name; typ = LF.ClTyp (LF.PTyp tA, cPsi); plicity; inductivity }) ->
          let k = find_ctxvar_offset cPsi in
          let dctx = match k with
            | 0 -> cPsi
@@ -596,7 +596,7 @@ module Convert = struct
          let psiLst' = shift psiLst (-1) in
          let ms' = mctxToMSub' cD (mV', ms) psiLst' in
          let tA = Whnf.cnormTyp (tA, ms') in
-         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plicity inductivity in
          let tM = LF.MPVar((cvar, ms), S.id) in
          let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
          LF.MDot (mfront, ms')
@@ -693,7 +693,7 @@ let comptypToMQuery (tau, i) =
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
           raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau')  when i > 0 ->
-         let LF.Decl(x, mtyp, plicity, inductivity) = mdecl in
+         let LF.Decl { name = x; typ = mtyp; plicity; inductivity } = mdecl in
          (match mtyp with
          | LF.ClTyp (LF.MTyp _, _) ->
             let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) plicity inductivity in
@@ -1335,7 +1335,7 @@ module Solver = struct
   let rec fix_sub s cD =
     let rec get_plicity cD k =
       match cD with
-      | LF.Dec (_, LF.Decl (_, _, plic, _)) when k = 1 -> plic
+      | LF.Dec (_, LF.Decl d) when k = 1 -> d.plicity
       | LF.Dec (cD', _) -> get_plicity cD' (k-1)
     in
     match s with
@@ -1438,9 +1438,9 @@ module Solver = struct
     let cPhi' = strengthen (cPhi, curr_sub) in
     match cD with
     | LF.Empty -> raise NoSolution
-    | LF.Dec (cD', LF.Decl (_, LF.CTyp (_), _, _)) ->
+    | LF.Dec (cD', LF.Decl { typ = LF.CTyp _ ; _}) ->
        solve_sub_delta (cD_all, cD', k+1, cPhi, dPool) (tA, s, curr_sub) (u, s_all) (goal, s_goal)
-    | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, cPsi), plicity, _)) ->
+    | LF.Dec (cD', LF.Decl { typ = LF.ClTyp (cltyp, cPsi); plicity; _ }) ->
        let tA' = match cltyp with
          | LF.MTyp tau -> tau
          | LF.PTyp tau -> tau
@@ -1733,7 +1733,7 @@ dprintf begin fun p ->
       let rec loop cD' k =
         match cD' with
         | LF.Empty -> matchDProg dPool
-        | LF.Dec (cD'', LF.Decl (n, LF.ClTyp (cltyp, cPsi0), _, _)) ->
+        | LF.Dec (cD'', LF.Decl { name = n; typ = LF.ClTyp (cltyp, cPsi0); _ }) ->
            begin
              let cPsi' = Whnf.cnormDCtx (cPsi0, LF.MShift k) in
              let cltyp' = Whnf.cnormClTyp (cltyp, LF.MShift k) in
@@ -3076,23 +3076,22 @@ module CSolver = struct
     let rec is_in n l =
       match l with
       | [] -> false
-      | (LF.Decl (name, _, _, _), Some i, no, pos, thm_var, bool) :: cD_a'
-           when Name.equal name n -> true
+      | (LF.Decl d, Option.Some i, no, pos, thm_var, bool) :: cD_a'
+           when Name.equal d.name n -> true
       | _ :: cD_a' -> is_in n cD_a'
     in
     let rec retrieve n cD_a =
       match cD_a with
-      | (LF.Decl (name, ctyp, plic, ind), Some i, no, pos, thm_var, bool) :: cD_a'
-           when Name.equal name n ->
-         (LF.Decl (name, ctyp, plic, ind), Some i, no, pos, thm_var, bool)
+      | (LF.Decl d, Option.Some _, _, _, _, _) as x :: cD_a'
+           when Name.equal d.name n -> x
       | _ :: cD_a' -> retrieve n cD_a'
     in
     let rec update cD ret =
       match cD with
-      | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                Plicity.Explicit, ind)) as tdecl))
+      | LF.Dec (cD', ((LF.Decl { name; typ = ((LF.ClTyp (cltyp, cPsi)) as ctyp)
+                               ; plicity = Plicity.Explicit; _ }) as tdecl))
            when is_in name cD_a ->
-         let (LF.Decl (_, tau2, _, induc), _, con, pos, thm, bool) =
+         let (LF.Decl { typ = tau2; _ }, _, con, pos, thm, bool) =
            retrieve name cD_a in
          let (con', bool') =
            if bool then
@@ -3117,8 +3116,8 @@ module CSolver = struct
          let x = (tdecl', Some i, con', 1, thm, bool') in
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
-      | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                Plicity.Explicit, induc)) as tdecl)) ->
+      | LF.Dec (cD', ((LF.Decl { name; typ = ((LF.ClTyp (cltyp, cPsi)) as ctyp)
+                               ; plicity = Plicity.Explicit; _ }) as tdecl)) ->
          let (con', bool') =
             try
               (consOfLFTyp cltyp, true)
@@ -3140,15 +3139,15 @@ module CSolver = struct
          let x = (tdecl', Some i, con', 1, None, bool') in
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
-      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, cPsi),
-                                Plicity.Implicit, induc)) as tdecl)) ->
+      | LF.Dec (cD', ((LF.Decl { name; typ = LF.ClTyp (cltyp, cPsi)
+                               ; plicity = Plicity.Implicit; _ }) as tdecl)) ->
          (* Do not split on implict vars *)
          let (con, bool) = (0, false) in
          let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
          let x = (tdecl', None, con, 1, None, bool) in
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
-      | LF.Dec(cD', ((LF.Decl (name, (LF.CTyp cid_schema), _, _)) as tdecl)) ->
+      | LF.Dec(cD', ((LF.Decl { name; typ = (LF.CTyp cid_schema); _ }) as tdecl)) ->
          (* Do not currently split on context schemas *)
          let (con, bool) = (0, false) in
          let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
@@ -3188,7 +3187,7 @@ module CSolver = struct
     let rec cD_rating cD_a =
       match cD_a with
       | [] -> []
-      | (LF.Decl (name, mtyp, _, _), Some i, n, pos, _, true)
+      | (LF.Decl { name; _ }, Option.Some i, n, pos, _, true)
         :: cD_a' ->
          (match n with
             | 0 -> (cD_rating cD_a')
@@ -3255,10 +3254,10 @@ module CSolver = struct
     (* Remove mvar from the msplit list cD_a (i.e. set bool to false) *)
     let rec remove_mvar name cD_a =
       match cD_a with
-      | (LF.Decl (n, mtyp, pl, induc), Some i, no, k, thm_var, true)
-        :: cD_a' when Name.equal name n ->
-         let tau = Comp.TypBox(noLoc, mtyp) in
-         (tau, i, thm_var, (LF.Decl (n, mtyp, pl, induc), Some i, no, k, thm_var, false)
+      | (LF.Decl d, Option.Some i, no, k, thm_var, true)
+        :: cD_a' when Name.equal name d.name ->
+         let tau = Comp.TypBox(noLoc, d.typ) in
+         (tau, i, thm_var, (LF.Decl d, Option.some i, no, k, thm_var, false)
                      :: cD_a')
       | x :: cD_a' ->
          let (tau, i, thm_var, cD_a'') = remove_mvar name cD_a' in
@@ -3285,11 +3284,11 @@ module CSolver = struct
     (* If the split (m)var given is an mvar, returns the name of the mvar. *)
     let rec find_mvar k cD_a =
       match cD_a with
-      | (LF.Decl (name, _, _, _), _, _, _, Some k', true) :: cD_a'
+      | (LF.Decl { name; _}, _, _, _, Option.Some k', true) :: cD_a'
            when k = k' ->
-         Some name
+         Option.some name
       | c :: cD_a' -> find_mvar k cD_a'
-      | [] -> None
+      | [] -> Option.none
     in
     let (cD_tot, cG_tot) = (cD_rating cD_a, cG_rating cG_a) in
     match ind with
@@ -3374,7 +3373,7 @@ module CSolver = struct
       (name, Comp.TypBox (_, ((LF.ClTyp (cltyp, cPsi)) as ctyp)), wf) ->
        (match cltyp with
        | LF.MTyp tA ->
-          let tdecl' = LF.Decl (name, ctyp, Plicity.explicit, Inductivity.not_inductive) in
+          let tdecl' = LF.Decl { name; typ = ctyp; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive } in
           let norm =
             LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id), LF.Nil, Plicity.explicit) in
           let clobj = LF.MObj norm in
@@ -3387,7 +3386,7 @@ module CSolver = struct
                       :: (shift_cD_a cD_a) in
           (cD_a', cG_a')
        | LF.PTyp tA ->
-          let tdecl' = LF.Decl (name, ctyp, Plicity.explicit, Inductivity.not_inductive) in
+          let tdecl' = LF.Decl { name; typ = ctyp; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive } in
           let hd = LF.PVar (1, S.id) in
           let clobj = LF.PObj hd in
           let mf = LF.ClObj
@@ -3403,7 +3402,7 @@ module CSolver = struct
                                                    as ctyp))), wf) ->
        (match cltyp with
        | LF.MTyp _ ->
-          let tdecl' = LF.Decl (name, ctyp, Plicity.explicit, Inductivity.inductive) in
+          let tdecl' = LF.Decl { name; typ = ctyp; plicity = Plicity.explicit; inductivity = Inductivity.inductive } in
           let norm =
             LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id), LF.Nil, Plicity.explicit) in
           let clobj = LF.MObj norm in
@@ -3416,7 +3415,7 @@ module CSolver = struct
                       :: (shift_cD_a cD_a) in
           (cD_a', cG_a')
        | LF.PTyp _ ->
-          let tdecl' = LF.Decl (name, ctyp, Plicity.explicit, Inductivity.inductive) in
+          let tdecl' = LF.Decl { name; typ = ctyp; plicity = Plicity.explicit; inductivity = Inductivity.inductive } in
           let hd = LF.PVar (1, S.id) in
           let clobj = LF.PObj hd in
           let mf = LF.ClObj
@@ -3486,12 +3485,12 @@ module CSolver = struct
         "[add_msplit]"
       end;
     match tdecl with
-    | LF.Decl (_, ((LF.ClTyp (cltyp, cPsi)) as ctyp), plic, _) ->
+    | LF.Decl { typ = ((LF.ClTyp (cltyp, cPsi)) as ctyp); plicity; _ } ->
        (match cltyp with
         | LF.MTyp _ ->
           let norm =
             LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id),
-                     LF.Nil, plic) in
+                     LF.Nil, plicity) in
           let clobj = LF.MObj norm in
           let mf = LF.ClObj
                      (Whnf.cnorm_psihat (Context.dctxToHat cPsi) (LF.MShift 1)
@@ -3524,7 +3523,7 @@ module CSolver = struct
           in
           (tdecl', Some i, consOfLFTyp cltyp, 1, thm_var, true)
           :: (shift_cD_a cD_a))
-    | LF.Decl (_, LF.CTyp (Some cid), _, _) ->
+    | LF.Decl { typ = LF.CTyp (Option.Some cid); _ } ->
        (* For now we do not split on contexts *)
           let mf = LF.CObj (LF.CtxVar(LF.CtxName (Store.Cid.Schema.get_name cid))) in
           let mobj = (noLoc, mf) in
@@ -3539,7 +3538,7 @@ module CSolver = struct
           (* We hardcode the number of cases for a ctx schema to 2 *)
           (tdecl', Some i, 2, 1, thm_var, true)
           :: (shift_cD_a cD_a)
-    | LF.Decl (_, LF.CTyp None, _, _) ->
+    | LF.Decl { typ = LF.CTyp Option.None; _ } ->
        (* For now we do not split on contexts *)
           let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
           let thm_var =
@@ -3560,7 +3559,8 @@ module CSolver = struct
       end;
     let get_name tdecl =
       match tdecl with
-      | LF.Decl (name, _, _, _) | LF.DeclOpt (name, _) -> name
+      | LF.Decl { name; _ }
+      | LF.DeclOpt { name; _ } -> name
     in
     let check_in_thm name =
       let rec iter_thm k thm =
@@ -3695,13 +3695,13 @@ module CSolver = struct
              end;
       match (args, thm) with
       | (Comp.M ((loc, mf), _) :: xs,
-         Comp.TypPiBox (noLoc, LF.Decl (_, ctyp, plic, ind), tau)) ->
+         Comp.TypPiBox (noLoc, LF.Decl { typ = ctyp; plicity; _ }, tau)) ->
          let ctyp' = (* a bit sketchy... this is done bc during the check
                           the ctyp is only used for the dctx.             *)
-           fix_psi (cnormMTyp (ctyp,ms)) mf in
+           fix_psi (cnormMTyp (ctyp, ms)) mf in
          let ms' = LF.MDot (mf, ms) in
          create (tau, xs) (fun s ->
-             Comp.MApp (noLoc, f s, (noLoc, mf), ctyp', plic))
+             Comp.MApp (noLoc, f s, (noLoc, mf), ctyp', plicity))
            k (len-1) ms'
       | (Comp.M ((loc, mf), _) :: xs,
          Comp.TypArr(_, Comp.TypBox (l, mt), tau)) ->
@@ -3722,7 +3722,7 @@ module CSolver = struct
          create (tau, xs) (fun s ->
              Comp.Apply (noLoc, f s, Comp.Var (noLoc, k))) k (len-1) ms
       | (Comp.DC :: xs,
-         Comp.TypPiBox (noLoc, LF.Decl (_, ctyp, plic, ind), tau)) ->
+         Comp.TypPiBox (noLoc, LF.Decl _, tau)) ->
          (* If this case happens, it usually means there is a meta-variable
             not being used in the theorem. To make the prover more robust we
             can implement this case, it will just choose a random meta-var
@@ -3766,7 +3766,7 @@ module CSolver = struct
       let rec update_mvar_case_count cD_a =
         match cD_a with
         | [] -> []
-        | (((LF.Decl (_, mtyp, _, _)) as tdecl), i, _, pos, thm_var, true)::xs ->
+        | (((LF.Decl { typ = mtyp; _ }) as tdecl), i, _, pos, thm_var, true)::xs ->
            let tau = Comp.TypBox(noLoc, mtyp) in
            let cases =
              try
@@ -3802,8 +3802,8 @@ module CSolver = struct
   (* Returns the plicity of the mvar from the cD at position k *)
   let rec get_plicity cD k =
     match cD with
-    | LF.Dec (_, LF.Decl (_, _, plicity, _))
-      | LF.Dec (_, LF.DeclOpt (_, plicity))
+    | LF.Dec (_, LF.Decl { plicity; _ })
+      | LF.Dec (_, LF.DeclOpt { plicity; _ })
          when k = 1 -> plicity
     | LF.Dec (cD', _) -> get_plicity cD' (k-1)
     | _ ->
@@ -3818,7 +3818,7 @@ module CSolver = struct
        Comp.Fn (_1, _2, fix_plicities e' cD)
     | Comp.MLam (_1, name, e', _3) ->
        Comp.MLam (_1, name,
-                  fix_plicities e' (LF.Dec(cD, LF.DeclOpt (name, Plicity.explicit))),
+                  fix_plicities e' (LF.Dec(cD, LF.DeclOpt { name; plicity = Plicity.explicit })),
                   _3)
     | Comp.Box (_1, (_2, mft), _3) ->
        Comp.Box (_1, (_2, fix_plicities_mf mft cD), _3)
@@ -3896,15 +3896,15 @@ module CSolver = struct
       end;
     let rec find_name cD k =
       match cD with
-      | LF.Dec (_, LF.Decl (name, _, _, _)) when k = 1 -> name
+      | LF.Dec (_, LF.Decl { name; _ }) when k = 1 -> name
       | LF.Dec (cD', _) -> find_name cD' (k-1)
     in
     let collect_explicit_mvars =
       let rec collect_from_cD cD =
         match cD with
-        | LF.Dec (cD', LF.Decl (name, _, Plicity.Explicit, _)) ->
+        | LF.Dec (cD', LF.Decl { name; plicity = Plicity.Explicit; _ }) ->
            name :: (collect_from_cD cD')
-        | LF.Dec (cD', LF.DeclOpt (name, Plicity.Explicit)) ->
+        | LF.Dec (cD', LF.DeclOpt { name; plicity = Plicity.Explicit }) ->
            name :: (collect_from_cD cD')
         | LF.Dec (cD', _) ->
            collect_from_cD cD'
@@ -3984,16 +3984,16 @@ module CSolver = struct
     let rec fix cD =
       match cD with
       | LF.Empty -> cD
-      | LF.Dec (cD', LF.Decl (name, _1, _, _2))
-           when is_explicit name explicit_mvars ->
-         LF.Dec (fix cD', LF.Decl (name, _1, Plicity.explicit, _2))
-      | LF.Dec (cD', LF.Decl (_1, _2, _, _3)) ->
-         LF.Dec (fix cD', LF.Decl (_1, _2, Plicity.implicit, _3))
-      | LF.Dec (cD', LF.DeclOpt (name, _))
-           when is_explicit name explicit_mvars ->
-         LF.Dec (fix cD', LF.DeclOpt (name, Plicity.explicit))
-      | LF.Dec (cD', LF.DeclOpt (_1, _)) ->
-         LF.Dec (fix cD', LF.DeclOpt (_1, Plicity.implicit))
+      | LF.Dec (cD', LF.Decl d)
+           when is_explicit d.name explicit_mvars ->
+         LF.Dec (fix cD', LF.Decl { d with plicity = Plicity.explicit })
+      | LF.Dec (cD', LF.Decl d) ->
+         LF.Dec (fix cD', LF.Decl { d with plicity = Plicity.implicit })
+      | LF.Dec (cD', LF.DeclOpt d)
+           when is_explicit d.name explicit_mvars ->
+         LF.Dec (fix cD', LF.DeclOpt { d with plicity = Plicity.explicit })
+      | LF.Dec (cD', LF.DeclOpt d) ->
+         LF.Dec (fix cD', LF.DeclOpt { d with plicity = Plicity.implicit })
     in
     fix cD_fix
 
@@ -4006,8 +4006,7 @@ module CSolver = struct
       | [] -> false
     in
     match cD with
-    | LF.Dec (cD', LF.Decl (_, ctyp, plicity, _))
-         when Plicity.is_explicit plicity ->
+    | LF.Dec (cD', LF.Decl { typ = ctyp; plicity = Plicity.Explicit; _ }) ->
        (* We do not want to instantiate with implict mvars,
           this can cause issues when we reconstruct the type *)
        (
@@ -5432,7 +5431,7 @@ module CSolver = struct
        let name' = Name.mk_name (Whnf.newMTypName r) in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
        let name = Name.gen_fresh_name names name' in
-       let mctx_decl = LF.Decl (name, r, Plicity.explicit, Inductivity.not_inductive) in
+       let mctx_decl = LF.Decl { name; typ = r; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive } in
        let cD' = Whnf.extend_mctx cD (mctx_decl, LF.MShift 0) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        let cIH' = cnormIHCtx' (cIH, LF.MShift 1) in
@@ -6065,33 +6064,32 @@ module Frontend = struct
         (* Finds the index of the tagged inductive variable to split on, if any*)
       let rec ind_index tau n =
         match tau with
-        | Comp.TypPiBox(_, LF.Decl(_, _, _, inductive), _)
-             when Inductivity.is_inductive inductive -> Some n
-        | Comp.TypPiBox(_, _, tau') -> ind_index tau' (n + 1)
-        | Comp.TypInd(_) -> Some n
-        | Comp.TypBox(_, _) -> None
-        | Comp.TypBase(_, _, _) -> None
-        | Comp.TypArr(_, tau1, tau2) ->
+        | Comp.TypPiBox (_, LF.Decl { inductivity = Inductivity.Inductive; _ }, _) -> Option.some n
+        | Comp.TypPiBox (_, _, tau') -> ind_index tau' (n + 1)
+        | Comp.TypInd (_) -> Option.some n
+        | Comp.TypBox (_, _) -> Option.none
+        | Comp.TypBase (_, _, _) -> Option.none
+        | Comp.TypArr (_, tau1, tau2) ->
            let ind = ind_index tau1 n in
            match ind with
-           | None -> ind_index tau2 (n + 1)
-           | _ -> ind
+           | Option.None -> ind_index tau2 (n + 1)
+           | Option.Some _ -> ind
       in
       match invert with
       | 2 -> ind_index theorem 1
-      | _ -> None
+      | _ -> Option.none
     in
 
     (try
-       CSolver.cgSolve cD cG cIH' mquery scInit (depth, get_ind_index theorem invrt, invrt) (theorem, Some cid, mfs);
+       CSolver.cgSolve cD cG cIH' mquery scInit (depth, get_ind_index theorem invrt, invrt) (theorem, Option.some cid, mfs);
        raise NotImplementedYet
     with
     | Done ->
        Index.clearIndex ();
-       Some (!exp)
+       Option.some (!exp)
     | _ ->
        Index.clearIndex ();
-       None)
+       Option.none)
 
 
 end

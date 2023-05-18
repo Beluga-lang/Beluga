@@ -336,11 +336,16 @@ let rec ctxToMCtx f =
   function
   | I.Empty -> I.Empty
   | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, plicity, inductivity)))) ->
-     I.Dec (ctxToMCtx f cQ', I.Decl (n, ityp, f plicity, inductivity))
+     let plicity' = f plicity in
+     let cQ'' = ctxToMCtx f cQ' in
+     I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity = plicity'; inductivity })
   | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, plicity, inductivity)))) ->
-     I.Dec (ctxToMCtx f cQ', I.Decl (n, ityp, f plicity, inductivity))
+     let plicity' = f plicity in
+     let cQ'' = ctxToMCtx f cQ' in
+     I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity = plicity'; inductivity })
   | I.Dec (cQ', CtxV (x, w, plicity, inductivity)) ->
-     I.Dec (ctxToMCtx f cQ', I.Decl (x, I.CTyp (Some w), plicity, inductivity))
+     let cQ'' = ctxToMCtx f cQ' in
+     I.Dec (cQ'', I.Decl { name = x; typ = I.CTyp (Option.Some w); plicity; inductivity })
   (* f plicity here breaks things involving ctxvars... -je *)
 
   (* this case should not happen -bp *)
@@ -352,23 +357,28 @@ let rec ctxToMCtx f =
 let rec mctxToCtx =
   function
   | I.Empty -> I.Empty
-  | I.Dec (cQ', I.Decl (x, I.CTyp (Some w), plicity, inductivity)) ->
-     I.Dec (mctxToCtx cQ', CtxV (x, w, plicity, inductivity))
-  | I.Dec (cQ', I.Decl (n, ityp, plicity, inductivity)) ->
-     I.Dec (mctxToCtx cQ', FDecl (FV n, Pure (MetaTyp (ityp, plicity, inductivity))))
+  | I.Dec (cQ', I.Decl { name = x; typ = I.CTyp (Option.Some w); plicity; inductivity }) ->
+     let cQ'' = mctxToCtx cQ' in
+     I.Dec (cQ'', CtxV (x, w, plicity, inductivity))
+  | I.Dec (cQ', I.Decl { name = n; typ = ityp; plicity; inductivity }) ->
+     let cQ'' = mctxToCtx cQ' in
+     I.Dec (cQ'', FDecl (FV n, Pure (MetaTyp (ityp, plicity, inductivity))))
 
 let rec ctxToMCtx_pattern names =
   function
   | I.Empty -> I.Empty
   | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _, _)))) ->
-     I.Dec (ctxToMCtx_pattern (n :: names) cQ', I.Decl (n, ityp, Plicity.explicit, Inductivity.not_inductive))
+     let cQ'' = ctxToMCtx_pattern (n :: names) cQ' in
+     I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive })
 
   | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, plicity, inductivity)))) ->
      let n = NameGen.renumber names n in
-     I.Dec (ctxToMCtx_pattern (n :: names) cQ', I.Decl (n, ityp, plicity, inductivity))
+     let cQ'' = ctxToMCtx_pattern (n :: names) cQ' in
+     I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity; inductivity })
 
   | I.Dec (cQ', CtxV (x, w, plicity, inductivity)) ->
-     I.Dec (ctxToMCtx_pattern (x :: names) cQ', I.Decl (x, I.CTyp (Some w), plicity, inductivity))
+     let cQ'' = ctxToMCtx_pattern (x :: names) cQ' in
+     I.Dec (cQ'', I.Decl { name = x; typ =I.CTyp (Some w); plicity; inductivity })
 
   | I.Dec (cQ', FDecl (_, Impure)) ->
      ctxToMCtx_pattern names cQ'
@@ -468,7 +478,7 @@ and getType loc p name f =
     match f with
     | LF -> let tA = Store.FVar.get name in (LFTyp tA)
     | Comp ->
-       let (cD_d, I.Decl (_, mtyp, plicity, inductivity)) = Store.FCVar.get name in
+       let (cD_d, I.Decl { typ = mtyp; plicity; inductivity; _ }) = Store.FCVar.get name in
        let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
        if !pat_flag
        then MetaTyp (mtyp', Plicity.explicit, Inductivity.not_inductive)
@@ -746,9 +756,9 @@ and collectMetaTyp loc p cQ =
      (cQ'', I.ClTyp (tp', cPsi'))
 
 
-let collectCDecl p cQ (I.Decl (u, mtyp, plicity, inductivity)) =
-  let (cQ', mtyp') = collectMTyp p cQ mtyp in
-  (cQ', I.Decl (u, mtyp', plicity, inductivity))
+let collectCDecl p cQ (I.Decl d) =
+  let (cQ', mtyp') = collectMTyp p cQ d.typ in
+  (cQ', I.Decl { d with typ = mtyp' })
 
 let rec collectMctx cQ =
   function
@@ -1097,8 +1107,9 @@ and abstractMVarMTyp cQ mtyp loff =
   | I.ClTyp (tp, cPsi) -> I.ClTyp (abstractMVarClTyp cQ loff tp, abstractMVarDctx cQ loff cPsi)
   | I.CTyp sW -> I.CTyp sW
 
-and abstractMVarCdecl cQ loff (I.Decl (u, mtyp, plicity, inductivity)) =
-  I.Decl (u, abstractMVarMTyp cQ mtyp loff, plicity, inductivity)
+and abstractMVarCdecl cQ loff (I.Decl d) =
+  let mtyp' = abstractMVarMTyp cQ d.typ loff in
+  I.Decl { d with typ = mtyp' }
 
 and abstractMVarMctx cQ cD (l, offset) =
   match cD with
@@ -1156,11 +1167,14 @@ and abstractMSub t =
     function
     | I.Empty -> I.Empty
     | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, plicity, inductivity)))) ->
-       I.Dec (ctxToMCtx' cQ', I.Decl (n, ityp, plicity, inductivity))
+       let cQ'' = ctxToMCtx' cQ' in
+       I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity; inductivity })
     | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, plicity, inductivity)))) ->
-       I.Dec (ctxToMCtx' cQ', I.Decl (n, ityp, plicity, inductivity))
+       let cQ'' = ctxToMCtx' cQ' in
+       I.Dec (cQ'', I.Decl { name = n; typ = ityp; plicity; inductivity })
     | I.Dec (cQ', CtxV (x, w, plicity, inductivity)) ->
-       I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp (Some w), plicity, inductivity))
+       let cQ'' = ctxToMCtx' cQ' in
+       I.Dec (cQ'', I.Decl { name = x; typ = I.CTyp (Option.some w); plicity; inductivity })
     | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx' cQ'
   in
@@ -1544,7 +1558,7 @@ let raiseCompKind cD cK =
 let abstrCompKind cK =
   let rec roll cK cQ =
     match cK with
-    | Comp.PiKind (_, I.Decl (psi, I.CTyp (Some w), plicity, inductivity), cK) ->
+    | Comp.PiKind (_, I.Decl { name = psi; typ = I.CTyp (Option.Some w); plicity; inductivity }, cK) ->
        roll cK (I.Dec (cQ, CtxV (psi, w, plicity, inductivity)))
     | cK -> (cQ, cK)
   in
@@ -1563,13 +1577,13 @@ let abstrCompKind cK =
 let rec dropExplicitCTyp =
   function
   | I.Empty -> I.Empty
-  | I.Dec (cD', I.Decl (_, I.CTyp _, Plicity.Explicit, _)) -> dropExplicitCTyp cD'
+  | I.Dec (cD', I.Decl { typ = I.CTyp _; plicity = Plicity.Explicit; _ }) -> dropExplicitCTyp cD'
   | I.Dec (cD', d) -> I.Dec (dropExplicitCTyp cD', d)
 
 let abstrCompTyp tau =
   let rec roll tau cQ =
     match tau with
-    | Comp.TypPiBox (_, I.Decl (psi, I.CTyp (Some w), plicity, inductivity), tau) ->
+    | Comp.TypPiBox (_, I.Decl { name = psi; typ = I.CTyp (Option.Some w); plicity; inductivity }, tau) ->
        roll tau (I.Dec (cQ, CtxV (psi, w, plicity, inductivity)))
     | tau -> (cQ, tau)
   in
@@ -1598,7 +1612,7 @@ let abstrCompTyp tau =
 let abstrCompTypcD cD tau =
   let rec roll tau cQ =
     match tau with
-    | Comp.TypPiBox (_, I.Decl (psi, I.CTyp (Some w), plicity, inductivity), tau) ->
+    | Comp.TypPiBox (_, I.Decl { name = psi; typ = I.CTyp (Option.Some w); plicity; inductivity }, tau) ->
        roll tau (I.Dec (cQ, CtxV (psi, w, plicity, inductivity)))
     | tau -> (cQ, tau)
   in
@@ -1629,7 +1643,7 @@ let abstrCompTypcD cD tau =
 let abstrCodataTyp cD tau tau' =
   let rec split =
     function
-    | I.Dec (cD', (I.Decl (psi, I.CTyp (Some w), _, _) as decl)) ->
+    | I.Dec (cD', (I.Decl { name = psi; typ = I.CTyp (Option.Some w); _ } as decl)) ->
        let (cD_ctx, cD_rest) = split cD' in
        (I.Dec (cD_ctx, decl), cD_rest)
     | I.Dec (cD', decl) ->

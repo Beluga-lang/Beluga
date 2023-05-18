@@ -94,14 +94,14 @@ let auto_solve_trivial : t =
         (P.fmt_ppr_lf_ctyp_decl cD) m
       end;
     match m with
-    | LF.Decl (_, mtyp, _, _) ->
+    | LF.Decl { typ = mtyp; _ } ->
        Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
       Error.raise_violation (Format.asprintf "[%s] Unexpected DeclOpt" __FUNCTION__)
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
-    | (LF.Decl (_, (LF.ClTyp (_, _) as cU), _, _), idx) ->
+    | (LF.Decl { typ = LF.ClTyp (_, _) as cU; _ }, idx) ->
        let open LF in
        let t = LF.MShift idx in
        let LF.ClTyp (_, cPsi) as cU = Whnf.cnormMTyp (cU, t) in

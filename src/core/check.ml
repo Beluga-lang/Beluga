@@ -455,10 +455,10 @@ module Comp = struct
   let mark_ind cD k =
     let rec lookup cD k' =
       match (cD, k') with
-      | (I.Dec (cD, I.Decl (u, cdec, _, _)), 1) ->
-         I.Dec (cD, I.Decl (u, cdec, Plicity.explicit, Inductivity.inductive))
+      | (I.Dec (cD, I.Decl { name = u; typ = cdec; _ }), 1) ->
+         I.Dec (cD, I.Decl { name = u; typ = cdec; plicity = Plicity.explicit; inductivity =  Inductivity.inductive })
 
-      | (I.Dec (_, I.DeclOpt (u, _)), 1) ->
+      | (I.Dec (_, I.DeclOpt _), 1) ->
          Error.raise_violation "Expected declaration to have type"
 
       | (I.Dec (cD, dec), k') -> I.Dec (lookup cD (k' - 1), dec)
@@ -569,14 +569,14 @@ module Comp = struct
     | (I.MShift k, cD) -> (* k >= 0 *)
        id_map_ind cD1' (I.MDot (I.MV (k + 1), I.MShift (k + 1))) cD
 
-    | (I.MDot (I.MV u, ms), I.Dec (cD, I.Decl (_, mtyp1, _, Inductivity.Inductive))) ->
+    | (I.MDot (I.MV u, ms), I.Dec (cD, I.Decl { typ = mtyp1; inductivity = Inductivity.Inductive; _ })) ->
       let cD1' = mark_ind cD1' u in
       id_map_ind cD1' ms cD
 
-    | (I.MDot (I.MV u, ms), I.Dec (cD, I.Decl (_, mtyp1, _, Inductivity.Not_inductive))) ->
+    | (I.MDot (I.MV u, ms), I.Dec (cD, I.Decl { typ = mtyp1; inductivity = Inductivity.Not_inductive; _ })) ->
       id_map_ind cD1' ms cD
 
-    | (I.MDot (mf, ms), I.Dec (cD, I.Decl (_, mtyp1, _, inductivity))) ->
+    | (I.MDot (mf, ms), I.Dec (cD, I.Decl { typ = mtyp1; inductivity; _ })) ->
        begin match mf with
        | I.(ClObj (_, MObj (Root (_, MVar (Offset u, Shift 0), Nil, _))))
          | I.(ClObj (_, MObj (Root (_, PVar (u, Shift 0), Nil, _))))
@@ -716,7 +716,7 @@ module Comp = struct
 
   and genMAppW loc p cD (i, tau_t) =
     match tau_t with
-    | (Int.Comp.TypPiBox (_, (Int.LF.Decl (u, cU, plicity, inductivity) as d), tau), theta)
+    | (Int.Comp.TypPiBox (_, (Int.LF.Decl { name = u; typ = cU; plicity; inductivity } as d), tau), theta)
          when p d ->
        let (cM, t') = Whnf.dotMMVar loc cD theta (u, cU, plicity, inductivity) in
        let i =
@@ -775,7 +775,7 @@ module Comp = struct
   and checkMetaSpine loc cD mS cKt =
     match (mS, cKt) with
     | (MetaNil, (Ctype _, _)) -> ()
-    | (MetaApp (mO, mT, mS, plicity_app), (PiKind (_, I.Decl (_, ctyp, plicity_pi, inductivity), cK), t)) ->
+    | (MetaApp (mO, mT, mS, plicity_app), (PiKind (_, I.Decl { typ = ctyp; plicity = plicity_pi; inductivity; _ }, cK), t)) ->
        if Plicity.(plicity_app <> plicity_pi)
        then Error.raise_violation "[checkMetaSpine] plicity mismatch";
        let loc = getLoc mO in
@@ -819,8 +819,9 @@ module Comp = struct
        LF.checkDCtx cD cPsi;
        checkClTyp loc cD cPsi tp
 
-  let checkCDecl cD (I.Decl (x, ctyp, _, _)) =
-    checkCLFTyp (Name.location x) cD ctyp
+  let checkCDecl cD (I.Decl { name = x; typ = ctyp; _ }) =
+    let location = Name.location x in
+    checkCLFTyp location cD ctyp
 
   let rec checkKind cD =
     function
@@ -876,8 +877,9 @@ module Comp = struct
      cD, x:[t]U  mctx
 
    *)
-  let extend_mctx cD (x, (I.Decl (_, cU, plicity, inductivity)), t) =
-    I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t), plicity, inductivity))
+  let extend_mctx cD (x, (I.Decl d), t) =
+    let typ' = C.cnormMTyp (d.typ, t) in
+    I.Dec (cD, I.Decl { d with name = x; typ = typ' })
 
   let rec extract_var =
     function
@@ -1215,7 +1217,7 @@ module Comp = struct
            P.(fmt_ppr_cmp_meta_typ cD) cU
          end;
        begin match (C.cwhnfCTyp (tau1,t1)) with
-       | (TypPiBox (_, (I.Decl (_, ctyp, _, _)), tau), t) ->
+       | (TypPiBox (_, (I.Decl { typ = ctyp; _ }), tau), t) ->
           dprintf
             begin fun p ->
             p.fmt "[syn] @[<v>MApp\
@@ -1368,7 +1370,7 @@ module Comp = struct
        then synPatSpine cD cG pat_spine (tau1, t)
        else raise (Error (loc, TypMismatch (cD, (tau, theta), (tau0, t))))
 
-  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl (_, ctyp, _, _), theta) =
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl { typ = ctyp; _ }, theta) =
     LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot (metaObjToMFront mO, theta)
 
@@ -1652,7 +1654,7 @@ module Comp = struct
          p.fmt "[check] [command] [Unbox] result ctyp = @[%a@]"
            P.(fmt_ppr_cmp_meta_typ cD) cU
          end;
-       extend_meta I.(Decl (name, cU, Plicity.explicit, Inductivity.not_inductive))
+       extend_meta (I.Decl { name; typ = cU; plicity = Plicity.explicit; inductivity = Inductivity.not_inductive })
 
   (** Check a hypothetical derivation.
       Ensures that the contexts in the hypothetical are convertible

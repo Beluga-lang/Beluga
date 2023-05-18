@@ -2060,15 +2060,15 @@ module Indexing_state = struct
     | Synint.LF.Dec (cD', decl) -> (
         add_all_mctx state cD';
         match decl with
-        | Synint.LF.Decl (u, Synint.LF.CTyp _, _, _) ->
+        | Synint.LF.Decl { name = u; typ = Synint.LF.CTyp _; _ } ->
             add_context_variable state (Name.to_identifier u)
-        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.MTyp _, _), _, _) ->
+        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.MTyp _, _); _ } ->
             add_meta_variable state (Name.to_identifier u)
-        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.PTyp _, _), _, _) ->
+        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.PTyp _, _); _ } ->
             add_parameter_variable state (Name.to_identifier u)
-        | Synint.LF.Decl (u, Synint.LF.ClTyp (Synint.LF.STyp _, _), _, _) ->
+        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.STyp _, _); _ } ->
             add_substitution_variable state (Name.to_identifier u)
-        | Synint.LF.DeclOpt (u, _) ->
+        | Synint.LF.DeclOpt { name = u; _ } ->
             add_contextual_variable state (Name.to_identifier u))
     | Synint.LF.Empty -> ()
 

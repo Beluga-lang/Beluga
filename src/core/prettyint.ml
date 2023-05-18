@@ -212,13 +212,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     Name.gen_fresh_name (Context.names_of_gctx cG)
 
   let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl =
-    function
-    | LF.Decl (n, ct, plicity, inductivity) ->
-       let n' = fresh_name_mctx cD n in
-       LF.Decl (n', ct, plicity, inductivity)
-    | LF.DeclOpt (n, plicity) ->
-       let n' = fresh_name_mctx cD n in
-       LF.DeclOpt (n', plicity)
+    LF.rename_ctyp_decl (fun name -> fresh_name_mctx cD name)
 
   (** Prints a context.
       Prints each element of the context from left to right with the
@@ -801,11 +795,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.CtxOffset psi ->
        begin match Context.lookup' cD psi with
-       | Some LF.(Decl (u, _, Plicity.Implicit, _) | DeclOpt (u, Plicity.Implicit)) when !PC.printCtxUnderscore ->
+       | (Option.Some LF.Decl { name = u; plicity = Plicity.Implicit; _ }
+       | Option.Some LF.DeclOpt { name = u; plicity = Plicity.Implicit; _}) when !PC.printCtxUnderscore ->
           fprintf ppf "_"
-       | Some LF.(Decl (u, _, _, _) | DeclOpt (u, _)) ->
+       | Option.Some LF.Decl { name = u; _ }
+       | Option.Some LF.DeclOpt { name = u ; _} ->
           fprintf ppf "%a" Name.pp u
-       | None -> fprintf ppf "FREE CtxVar %d" psi
+       | Option.None -> fprintf ppf "FREE CtxVar %d" psi
        end
     | LF.CtxName psi ->
        fprintf ppf "%a"
@@ -960,9 +956,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       then fun _ -> true
       else
         function
-        | (_, LF.Decl (_, _, Plicity.Explicit, _)) ->
+        | (_, LF.Decl { plicity = Plicity.Explicit; _ }) ->
            Bool.not !Printer.Control.printNormal
-        | (_, LF.Decl (_, _, Plicity.Implicit, _)) ->
+        | (_, LF.Decl { plicity = Plicity.Implicit; _ }) ->
            Bool.not !Printer.Control.printNormal
            && !Printer.Control.printImplicit
         | _ -> true
@@ -1051,22 +1047,22 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      material. *)
   and fmt_ppr_lf_ctyp_decl ?(fmt_ppr_depend = fmt_ppr_lf_depend_clean) cD ppf =
     function
-    | LF.Decl (u, mtyp, plicity, inductivity) ->
+    | LF.Decl { name = u; typ = mtyp; plicity; inductivity } ->
        fprintf ppf "@[<2>%a%a :@ @[%a@]@]"
          Name.pp u
          fmt_ppr_depend (plicity, inductivity)
          (fmt_ppr_lf_mtyp' cD `parens) mtyp
 
-    | LF.DeclOpt (name, _) ->
+    | LF.DeclOpt { name; _ } ->
        fprintf ppf "%a : _"
          Name.pp name
 
   and fmt_ppr_lf_ctyp_decl_harpoon cD ppf =
     function
-    | LF.Decl (_, _, Plicity.Implicit, _) as d ->
+    | LF.Decl { plicity = Plicity.Implicit; _ } as d ->
        fprintf ppf "@[%a (not in scope)@]"
          (fmt_ppr_lf_ctyp_decl cD) d
-    | LF.Decl (_, _, _, _) as d ->
+    | LF.Decl _ as d ->
        fprintf ppf "@[%a@]"
          (fmt_ppr_lf_ctyp_decl cD) d
     | LF.DeclOpt _ ->
@@ -1074,8 +1070,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and isImplicitDecl =
     function
-    | LF.Decl (_, _, Plicity.Implicit, _) -> true
-    | _ -> false
+    | LF.Decl { plicity; _ }
+    | LF.DeclOpt { plicity; _ } -> Plicity.is_implicit plicity
 
   and fmt_ppr_lf_iterm cD cPsi lvl ppf =
     function
@@ -1187,15 +1183,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (* Special case for printing implicit context variable
        quantifiers; these can never be omitted, and are printed with
        parentheses instead of curly braces. *)
-    | Comp.TypPiBox (_, LF.(Decl (u, CTyp w, Plicity.Implicit, _) as d), tau) ->
+    | Comp.TypPiBox (_, LF.(Decl { name = u; typ = CTyp w; plicity = Plicity.Implicit; _ } as d), tau) ->
        let cond = lvl > 1 in
+       let d' =
+         LF.Decl
+           { name = u
+           ; typ = LF.CTyp w
+           ; plicity = Plicity.explicit
+           ; inductivity = Inductivity.not_inductive
+           }
+       in
+       let cD' = LF.Dec (cD, d') in
        fprintf ppf "%s@[<2>(@[<2>%a@])@ @[%a@]%s@]"
          (l_paren_if cond)
          (fmt_ppr_lf_ctyp_decl cD) d
          (* furthermore, they need to be considered *EXPLICIT* when
             printing the remaining type, so that they don't appear as
             _ *)
-         (fmt_ppr_cmp_typ (LF.(Dec(cD, Decl (u, CTyp w, Plicity.explicit, Inductivity.not_inductive)))) 1) tau
+         (fmt_ppr_cmp_typ cD' 1) tau
          (r_paren_if cond)
 
     | Comp.TypPiBox (_, ctyp_decl, tau) ->
@@ -1357,7 +1362,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.MLam (_, x, e, Plicity.Explicit) ->
        let x = fresh_name_mctx cD x in
        let cond = lvl > 0 in
-       let cD' = LF.Dec(cD, LF.DeclOpt (x, Plicity.explicit)) in
+       let cD' = LF.Dec(cD, LF.DeclOpt { name = x; plicity = Plicity.explicit }) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        fprintf ppf "%smlam %a =>@ %a%s"
          (l_paren_if cond)
@@ -1367,7 +1372,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.MLam (_, x, e, Plicity.Implicit) ->
        let x = fresh_name_mctx cD x in
-       let cD' = LF.(Dec(cD, DeclOpt (x, Plicity.implicit))) in
+       let cD' = LF.(Dec(cD, DeclOpt { name = x; plicity = Plicity.implicit })) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        fmt_ppr_cmp_exp cD' cG' 0 ppf e
 
@@ -1665,7 +1670,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       let open Comp in
       match c with
       | Unbox (_, u, _, _) ->
-         (LF.(Dec (cD, DeclOpt (u, Plicity.explicit))), Whnf.cnormGCtx (cG, LF.MShift 1))
+         (LF.Dec (cD, LF.DeclOpt { name = u; plicity = Plicity.explicit }), Whnf.cnormGCtx (cG, LF.MShift 1))
       | By (_, x, _) ->
          (cD, LF.Dec (cG, Comp.CTypDeclOpt x))
     in

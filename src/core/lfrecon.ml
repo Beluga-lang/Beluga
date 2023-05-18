@@ -314,7 +314,16 @@ let unify_phat cD psihat =
           begin
             begin match c_var with
             | CtxName psi ->
-               Store.FCVar.add psi (cD, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
+               Store.FCVar.add
+                 psi
+                 (cD
+                 , Decl
+                   { name = psi
+                   ; typ = CTyp s_cid
+                   ; plicity = Plicity.implicit
+                   ; inductivity = Inductivity.not_inductive
+                   }
+                 )
             | _ -> ()
             end;
             mmvar1.instantiation := Some (ICtx (CtxVar (c_var)));
@@ -346,7 +355,7 @@ let getSchema cD ctxvar loc =
   | Some (Int.LF.CtxName n) ->
      begin
        try
-         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _, _)) = Store.FCVar.get n in
+         let (_, Int.LF.Decl { typ = Int.LF.CTyp (Some s_cid); _ }) = Store.FCVar.get n in
          Store.Cid.Schema.get_schema s_cid
        with
        | _ -> throw loc (CtxVarSchema n)
@@ -1201,7 +1210,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _, _)) = Store.FCVar.get u in
+         let (cD_d, Int.LF.Decl { typ = Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi); _ }) = Store.FCVar.get u in
          dprintf
            begin fun p ->
            p.fmt "[elTerm'] @[<v>FMV %a of type %a[%a]@,in cD_d = %a@,and cD = %a@]"
@@ -1309,7 +1318,16 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                end;
 
-             Store.FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add
+               u
+               (cD
+               , Int.LF.Decl
+                  { name = u
+                  ; typ = Int.LF.ClTyp (Int.LF.MTyp tP, cPhi)
+                  ; plicity = Plicity.implicit
+                  ; inductivity = Inductivity.not_inductive
+                  }
+               );
              (*The depend paramater here affects both mlam vars and case vars*)
              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit)
           | _ when isProjPatSub s ->
@@ -1403,7 +1421,16 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
 
-             Store.FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add
+               u
+               (cD
+               , Int.LF.Decl
+                 { name = u
+                 ; typ = Int.LF.ClTyp (Int.LF.MTyp tP, cPhi)
+                 ; plicity = Plicity.implicit
+                 ; inductivity = Inductivity.not_inductive
+                 }
+               );
              Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil, Plicity.explicit)
 
           | _ ->
@@ -1446,7 +1473,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _, _)) = Store.FCVar.get p in
+         let (cD_d, Int.LF.Decl { typ = Int.LF.ClTyp (Int.LF.PTyp tA, cPhi); _ }) = Store.FCVar.get p in
          let d = Context.length cD - Context.length cD_d in
          let (tA, cPhi) =
            if d = 0
@@ -1507,7 +1534,16 @@ and elTerm' recT cD cPsi r sP =
                     end
                | _ -> ()
              end;
-             Store.FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add
+               p
+               (cD
+               , Int.LF.Decl
+                 { name = p
+                 ; typ = Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi)
+                 ; plicity = Plicity.implicit
+                 ; inductivity = Inductivity.not_inductive
+                 }
+               );
              Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil, Plicity.explicit)
 
           | (Apx.LF.Nil, false) ->
@@ -1532,7 +1568,7 @@ and elTerm' recT cD cPsi r sP =
            (Name.string_of_name p)
            (string_of_proj proj)
          );
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _, _)) =
+         let (cD_d, Int.LF.Decl { typ = Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi); _ }) =
            Store.FCVar.get p
          in
          let d = Context.length cD - Context.length cD_d in
@@ -1616,7 +1652,12 @@ and elTerm' recT cD cPsi r sP =
              let tB = Whnf.collapse_sigma typRec in
              Store.FCVar.add p
                ( cD
-               , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Plicity.implicit, Inductivity.not_inductive))
+               , Int.LF.Decl
+                 { name = p
+                 ; typ = Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tB, s_inst)), cPhi)
+                 ; plicity = Plicity.implicit
+                 ; inductivity = Inductivity.not_inductive
+                 }
                );
              Int.LF.Root (loc, Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex), Int.LF.Nil, Plicity.explicit)
 
@@ -1789,7 +1830,7 @@ and elTerm' recT cD cPsi r sP =
            let (u, tp, plicity, inductivity) = Whnf.mctxLookupDep cD k in
            p.fmt "[elTerm'] elaborating parameter variable at index %d -> %a"
              k
-             (P.fmt_ppr_lf_ctyp_decl cD) (Int.LF.Decl (u, tp, plicity, inductivity))
+             (P.fmt_ppr_lf_ctyp_decl cD) (Int.LF.Decl { name = u; typ = tp; plicity; inductivity })
          );
        let (_, tA, cPhi) = Whnf.mctxPDec cD k in
        let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
@@ -2232,7 +2273,7 @@ and elSub loc recT cD cPsi s cl cPhi =
         *)
        begin
          try
-           let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0), cPsi0), _, _)) =
+           let (cD_d, Int.LF.Decl { typ = Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0), cPsi0); _ }) =
              Store.FCVar.get s_name
            in
            svar_le (cl0, cl);
@@ -2276,11 +2317,11 @@ and elSub loc recT cD cPsi s cl cPhi =
                 Store.FCVar.add s_name
                   ( cD
                   , Int.LF.Decl
-                      ( s_name
-                      , Int.LF.ClTyp (Int.LF.STyp (cl, cPhi), cPsi')
-                      , Plicity.implicit
-                      , Inductivity.not_inductive
-                      )
+                      { name = s_name
+                      ; typ = Int.LF.ClTyp (Int.LF.STyp (cl, cPhi), cPsi')
+                      ; plicity = Plicity.implicit
+                      ; inductivity = Inductivity.not_inductive
+                      }
                   );
                 Int.LF.FSVar (0, (s_name, sigma'))
               end
@@ -2879,7 +2920,16 @@ let checkCtxVar loc cD c_var w =
             )
          )
   | Apx.LF.CtxName psi ->
-     Store.FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive));
+     Store.FCVar.add
+       psi
+       (cD
+       , Int.LF.Decl
+         { name = psi
+         ; typ = Int.LF.CTyp (Option.some w)
+         ; plicity = Plicity.implicit
+         ; inductivity = Inductivity.not_inductive
+         }
+       );
      Int.LF.CtxName psi
 
 (* ******************************************************************* *)
@@ -2967,14 +3017,14 @@ let solve_fcvarCnstr cnstrs =
     match tM, Int.LF.(v.typ) with
     | Apx.LF.(Root (loc, FMVar (u, s), _nil_spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
        assert (match _nil_spine with Apx.LF.Nil -> true | _ -> false);
-       let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _, _))) =
+       let (cD_d, Int.LF.(Decl { typ = ClTyp (MTyp _tP, cPhi); _ })) =
          lookup_fcvar loc u
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
        Int.LF.(v.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, Plicity.explicit))))
     | Apx.LF.(Root (loc, FPVar (x, s), spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
-       let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _, _))) =
+       let (cD_d, Int.LF.(Decl { typ = ClTyp (PTyp tA, cPhi); _ })) =
          lookup_fcvar loc x
        in
        let cPhi = weakenAppropriately cD_d cPhi in

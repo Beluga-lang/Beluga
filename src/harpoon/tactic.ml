@@ -101,10 +101,10 @@ let intros' : Theorem.t ->
             tau_2
        | `duplicate -> Either.left (DuplicateName (cD, cG, d))
        end
-    | Comp.TypPiBox (_, (LF.Decl (x, cU, plicity, inductivity)), tau_2) ->
-       let x = B.NameGen.renumber active_names x in
-       let d = LF.Decl (x, cU, plicity, inductivity) in
-       go true (x :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
+    | Comp.TypPiBox (_, (LF.Decl d), tau_2) ->
+       let name' = B.NameGen.renumber active_names d.name in
+       let d = LF.Decl { d with name = name' } in
+       go true (name' :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
     | _ when updated -> Either.right (cD, cG, tau)
     | _ -> Either.left NothingToIntro
   in
@@ -276,7 +276,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
             meta-context, accounting for dependent pattern matching on
             `m`. *)
          Reconstruct.synPatRefine
-           Beluga_syntax.Location.ghost
+           Location.ghost
            (Reconstruct.case_type (lazy pat) i)
            (s.context.cD, cD)
            t
@@ -432,15 +432,15 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
        | PatMetaObj (_, (_, LF.CObj cPsi)) ->
           let case_label =
             match cPsi with
-            | LF.Null -> EmptyContext Beluga_syntax.Location.ghost
-            | LF.(DDec _) -> ExtendedBy (Beluga_syntax.Location.ghost, k)
+            | LF.Null -> EmptyContext Location.ghost
+            | LF.(DDec _) -> ExtendedBy (Location.ghost, k)
             | _ -> Error.raise_violation "[get_context_branch] pattern not a context"
           in
           let label =
             Comp.SubgoalPath.build_context_split i case_label
           in
           let g' = new_state label in
-          let p = incomplete_proof Beluga_syntax.Location.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , context_branch case_label (cG_p, pat) theta context p
           )
@@ -469,7 +469,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
           in
           let label = Comp.SubgoalPath.build_meta_split i c in
           let g' = new_state label in
-          let p = incomplete_proof Beluga_syntax.Location.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , meta_branch c (cG_p, pat) theta context p
           )
@@ -483,7 +483,7 @@ let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.ty
             Comp.SubgoalPath.build_comp_split i cid
           in
           let g' = new_state label in
-          let p = incomplete_proof Beluga_syntax.Location.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , comp_branch cid (cG_p, pat) theta context p
           )
@@ -611,7 +611,15 @@ let solve_with_new_comp_decl action_name decl f t g =
        g
 
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : Name.t) : t =
-  solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, Beluga_syntax.Plicity.explicit, Beluga_syntax.Inductivity.not_inductive)) f
+  let decl =
+    LF.Decl
+      { name
+      ; typ = cT
+      ; plicity = Plicity.explicit
+      ; inductivity = Inductivity.not_inductive
+      }
+  in
+  solve_with_new_meta_decl "unbox" decl f
 
 let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : Name.t) modifier : t =
   let open Comp in
@@ -692,7 +700,7 @@ let suffices
             Comp.SubgoalPath.(append g.label (build_suffices i_head k))
         }
       in
-      (new_state, (Beluga_syntax.Location.ghost, tau, incomplete_proof Beluga_syntax.Location.ghost new_state))
+      (new_state, (Location.ghost, tau, incomplete_proof Location.ghost new_state))
       end
     |> List.split
   in

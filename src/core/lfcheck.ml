@@ -1116,7 +1116,7 @@ and checkMSub loc cD ms cD' =
      then checkMSub loc cD (MDot (MV (k + 1), MShift (k + 1))) cD'
      else Error.raise_violation ("Contextual substitution ill-formed")
 
-  | (MDot (mft, ms), Dec (cD1, Decl (_, mtyp, _, _))) ->
+  | (MDot (mft, ms), Dec (cD1, Decl { typ = mtyp; _ })) ->
      checkMetaObj cD (loc, mft) (mtyp, ms);
      checkMSub loc cD ms cD1
 

@@ -116,11 +116,11 @@ let rec ctxToSub_mclosed cD psi =
      ( Dec
          ( cD'
          , Decl
-             ( u_name
-             , ClTyp (MTyp tA', Whnf.cnormDCtx (CtxVar psi, MShift k))
-             , Plicity.implicit
-             , Inductivity.not_inductive
-             )
+             { name = u_name
+             ; typ = ClTyp (MTyp tA', Whnf.cnormDCtx (CtxVar psi, MShift k))
+             ; plicity = Plicity.implicit
+             ; inductivity = Inductivity.not_inductive
+             }
          )
      , result
      , k + 1
@@ -143,11 +143,11 @@ let rec ctxToSub_mclosed cD psi =
      ( Dec
          ( cD'
          , Decl
-             ( u_name
-             , clT
-             , Plicity.implicit
-             , Inductivity.not_inductive
-             )
+             { name = u_name
+             ; typ = clT
+             ; plicity = Plicity.implicit
+             ; inductivity = Inductivity.not_inductive
+             }
          )
      , result
      , k + 1
@@ -249,7 +249,7 @@ let mdeclToMMVar cD0 n mtyp plicity inductivity =
 let rec mctxToMMSub cD0 =
   function
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', Decl (n, mtyp, plicity, inductivity)) ->
+  | Dec (cD', Decl { name = n; typ = mtyp; plicity; inductivity }) ->
      let t = mctxToMMSub cD0 cD' in
      let mtyp' = Whnf.cnormMTyp (mtyp, t) in
      MDot (mdeclToMMVar cD0 n mtyp' plicity inductivity, t)

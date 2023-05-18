@@ -569,7 +569,7 @@ let rec blockdeclInDctx =
    | (MShift k, Dec _) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
-   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp, plicity, inductivity))) ->
+   | (MDot (MV k, mt), Dec (cD1, Decl { name = n; typ = ctyp; plicity; inductivity })) ->
       let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
       (* cD1 |- mt' <= cD2 *)
       begin match applyMSub k ms with
@@ -581,7 +581,7 @@ let rec blockdeclInDctx =
          (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
                   A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
          let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
-         (Whnf.mvar_dot1 mt', Dec (cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt'), plicity, inductivity))))
+         (Whnf.mvar_dot1 mt', Dec (cD2, Decl { name = n; typ = Whnf.cnormMTyp (ctyp, mtt'); plicity; inductivity }))
       end
 
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
@@ -687,7 +687,7 @@ let rec blockdeclInDctx =
   *)
   let rec m_intersection subst1 subst2 cD' =
     match (subst1, subst2, cD') with
-    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp, plicity, inductivity))) ->
+    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl { name = x; typ = ctyp; plicity; inductivity })) ->
        let (mt', cD'') = m_intersection mt1 mt2 cD' in
        (* cD' |- mt' : cD'' where cD'' =< cD' *)
        if k1 = k2
@@ -696,7 +696,7 @@ let rec blockdeclInDctx =
            let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
            (* cD'' |- mtt' <= cD' *)
            (* NOTE: Can't create m-closures CtxMClo (cPsi, mtt') and TMClo (tA'', mtt') *)
-           (Whnf.mvar_dot1 mt', Dec (cD'', Decl (x, Whnf.cnormMTyp (ctyp, mtt'), plicity, inductivity)))
+           (Whnf.mvar_dot1 mt', Dec (cD'', Decl { name = x; typ = Whnf.cnormMTyp (ctyp, mtt'); plicity; inductivity }))
          end
        else
          (Whnf.mcomp mt' (MShift 1), cD'')
@@ -819,7 +819,7 @@ let rec blockdeclInDctx =
        end
 
     | (Root (loc, FMVar (u, t), _ (* Nil *), plicity), s (* id *)) ->
-       let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get u in
+       let (cD_d, Decl { typ = ClTyp (_, cPsi1); _ }) = Store.FCVar.get u in
        let d = Context.length cD0 - Context.length cD_d in
        let cPsi1 =
          if d = 0
@@ -830,7 +830,7 @@ let rec blockdeclInDctx =
        Root (loc, FMVar (u, s'), Nil, plicity)
 
     | (Root (loc, FPVar (p, t), _ (* Nil *), plicity), s (* id *)) ->
-       let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get p in
+       let (cD_d, Decl { typ = ClTyp (_, cPsi1); _ }) = Store.FCVar.get p in
        let d = Context.length cD0 - Context.length cD_d in
        let cPsi1 =
          if d = 0
@@ -1030,7 +1030,7 @@ let rec blockdeclInDctx =
        end
     | (FSVar (n, (s_name, t)), cPsi1) ->
        dprint (fun () -> "invSub FSVar");
-       let (_, Decl (_, ClTyp (STyp (LF.Subst, _), cPsi'), _, _)) = Store.FCVar.get s_name in
+       let (_, Decl { typ = ClTyp (STyp (LF.Subst, _), cPsi'); _ }) = Store.FCVar.get s_name in
        FSVar (n, (s_name, invSub cD0 phat (t, cPsi') ss rOccur))
        (* if ssubst = id
         * then s
@@ -1062,7 +1062,7 @@ let rec blockdeclInDctx =
   and invMSub cD0 (mt, cD1) ms rOccur =
     match (mt, cD1) with
     | (MShift n, _) -> checkDefined (Whnf.mcomp (MShift n) ms)
-    | (MDot (ClObj (phat, SObj sigma), mt'), Dec (cD', Decl (_, ClTyp (STyp (_, cPhi), _), _, _))) ->
+    | (MDot (ClObj (phat, SObj sigma), mt'), Dec (cD', Decl { typ = ClTyp (STyp (_, cPhi), _); _ })) ->
        let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
        MDot (ClObj (phat, SObj sigma'), invMSub cD0 (mt', cD') ms rOccur)
     | (MDot (mobj, mt'), Dec (cD', _)) ->
@@ -1199,7 +1199,7 @@ let rec blockdeclInDctx =
       (v, comp (comp idsub t) ssubst)
 
   and pruneFVar cD0 cPsi (u, t) ss rOccur =
-   let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get u in
+   let (cD_d, Decl { typ = ClTyp (_, cPsi1); _ }) = Store.FCVar.get u in
    let d = Context.length cD0 - Context.length cD_d in
    let cPsi1 =
      if d = 0
@@ -1395,7 +1395,7 @@ let rec blockdeclInDctx =
               D ; Psi'' |- ss <= Psi
               [ss] ([s[sigma] ] id) exists
         *)
-       let (_, Decl (_, ClTyp (STyp _, cPsi'), _, _)) = Store.FCVar.get s in
+       let (_, Decl { typ = ClTyp (STyp _, cPsi'); _ }) = Store.FCVar.get s in
        ignore (invSub cD0 phat (sigma, cPsi') ss rOccur);
        (id, cPsi1)
 
@@ -2727,7 +2727,16 @@ let rec blockdeclInDctx =
                   ignore (Store.FCVar.get psi)
                 with
                 | Not_found ->
-                   Store.FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
+                   Store.FCVar.add
+                     psi
+                     (cD0
+                     , Decl
+                       { name = psi
+                       ; typ = CTyp s_cid
+                       ; plicity = Plicity.implicit
+                       ; inductivity = Inductivity.not_inductive
+                       }
+                     )
               end
            | _ -> ()
          end
@@ -2773,7 +2782,7 @@ let rec blockdeclInDctx =
 
   (* **************************************************************** *)
   let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) =
-    let Decl (_, cT, _, _) = cdecl in
+    let Decl { typ = cT; _ } = cdecl in
     unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
   and unifyClObj' cD mO mO' mT =
@@ -2910,14 +2919,14 @@ let rec blockdeclInDctx =
           else
             raise (Failure "CtxPi schema clash")
      *)
-    | ( (Comp.TypPiBox (_, (Decl (u, ctyp1, plicity, inductivity)), tau), t)
-      , (Comp.TypPiBox (_, (Decl (_, ctyp2, _, _)), tau'), t')
+    | ( (Comp.TypPiBox (_, (Decl { name = u; typ = ctyp1; plicity; inductivity }), tau), t)
+      , (Comp.TypPiBox (_, (Decl { typ = ctyp2; _ }), tau'), t')
       ) ->
        let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
        let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
        unifyCLFTyp Unification cD ctyp1n ctyp2n;
        unifyCompTyp
-         (Dec (cD, Decl (u, ctyp1n, plicity, inductivity)))
+         (Dec (cD, Decl { name = u; typ = ctyp1n; plicity; inductivity }))
          (tau, Whnf.mvar_dot1 t)
          (tau', Whnf.mvar_dot1 t')
 

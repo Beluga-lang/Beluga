@@ -440,16 +440,13 @@ module Html_printing_state = struct
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound result -> result
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             Error.raise
               (Qualified_identifier.Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
 
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in

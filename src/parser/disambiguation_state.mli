@@ -1,11 +1,24 @@
 (** Definition and implementation of the state required to disambiguate the
-    Beluga syntax from the parser AST to the external AST. *)
+    Beluga syntax from the parser AST to the external AST.
+
+    @author Marc-Antoine Ouimet *)
 
 open Support
 open Beluga_syntax.Syncom
 
-(** Abstract definition of entries bound to identifiers. *)
+(** Abstract definition of entries bound to identifiers.
+
+    Disambiguation performs a traversal of the parser syntax to convert it to
+    the external syntax. During this traversal, the disambiguation state is
+    updated to keep track of the referencing environment at each node.
+    Specifically, we add identifiers introduced by function abstractions,
+    patterns, lambdas a Pis.
+
+    A disambiguation state entry is the data associated with an identifier in
+    scope. Entries are constructed when a binding is added to the
+    disambiguation state. Notation pragmas edit entries as well. *)
 module type ENTRY = sig
+  (** The type of entry. *)
   type t
 
   (** [is_lf_variable entry] is [true] if and only if [entry] describes an LF
@@ -282,12 +295,21 @@ module type DISAMBIGUATION_STATE = sig
   val with_bound_pattern_meta_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_pattern_parameter_variable] is like
+      {!val:with_bound_pattern_meta_variable}, but for a parameter variable
+      introduced in the meta-context of a pattern. *)
   val with_bound_pattern_parameter_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_pattern_substitution_variable] is like
+      {!val:with_bound_pattern_meta_variable}, but for a substitution
+      variable introduced in the meta-context of a pattern. *)
   val with_bound_pattern_substitution_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
+  (** [with_bound_pattern_context_variable] is like
+      {!val:with_bound_pattern_meta_variable}, but for a context variable
+      introduced in the meta-context of a pattern. *)
   val with_bound_pattern_context_variable :
     state -> ?location:Location.t -> Identifier.t -> (state -> 'a) -> 'a
 
@@ -362,30 +384,52 @@ module type DISAMBIGUATION_STATE = sig
   val add_lf_type_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_lf_term_constant] is like {!val:add_lf_type_constant}, but for LF
+      term-level constants. *)
   val add_lf_term_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_schema_constant] is like {!val:add_lf_type_constant}, but for
+      schema constants. *)
   val add_schema_constant :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 
+  (** [add_inductive_computation_type_constant] is like
+      {!val:add_lf_type_constant}, but for inductive computation-level type
+      constants. *)
   val add_inductive_computation_type_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_stratified_computation_type_constant] is like
+      {!val:add_lf_type_constant}, but for stratified computation-level type
+      constants. *)
   val add_stratified_computation_type_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_coinductive_computation_type_constant] is like
+      {!val:add_lf_type_constant}, but for coinductive computation-level type
+      constants. *)
   val add_coinductive_computation_type_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_abbreviation_computation_type_constant] is like
+      {!val:add_lf_type_constant}, but for computation-level abbreviation
+      type constants. *)
   val add_abbreviation_computation_type_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_computation_term_constructor] is like {!val:add_lf_type_constant},
+      but for computation-level term constructors. *)
   val add_computation_term_constructor :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
+  (** [add_computation_term_destructor] is like {!val:add_lf_type_constant},
+      but for computation-level term destructors. *)
   val add_computation_term_destructor :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 
+  (** [add_program_constant] is like {!val:add_lf_type_constant}, but for
+      computation-level program constants. *)
   val add_program_constant :
     state -> ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t
 
@@ -397,10 +441,23 @@ module type DISAMBIGUATION_STATE = sig
 
   (** {1 Lookups} *)
 
+  (** [Unbound_identifier identifier] is raised if [identifier] cannot be
+      found in a disambiguation state when it is looked up.
+
+      This exception is caught whenever a variable lookup fails and
+      [identifier] can be disambiguated as a free variable. *)
   exception Unbound_identifier of Identifier.t
 
+  (** [Unbound_qualified_identifier identifier] is raised if [identifier]
+      cannot be found in a disambiguation state when it is looked up.
+
+      This exception is unrecoverable, but is caught during disambiguation to
+      provide better error messages. *)
   exception Unbound_qualified_identifier of Qualified_identifier.t
 
+  (** [Unbound_namespace namespace_identifier] is raised if a qualified
+      identifier could not be looked up in a disambiguation state because the
+      namespace with identifier [namespace_identifier] is unbound. *)
   exception Unbound_namespace of Qualified_identifier.t
 
   (** [lookup_toplevel state identifier] is [entry] if [identifier] resolves
@@ -419,25 +476,26 @@ module type DISAMBIGUATION_STATE = sig
         segment in [identifier] is unbound. *)
   val lookup : state -> Qualified_identifier.t -> Entry.t
 
+  type maximum_lookup_result =
+    | Unbound of { segments : Identifier.t List1.t }
+    | Partially_bound of
+        { leading_segments : Identifier.t List.t
+        ; segment : Identifier.t
+        ; entry : Entry.t
+        ; trailing_segments : Identifier.t List1.t
+        }
+    | Bound of { entry : Entry.t }
+
   (** [maximum_lookup state segments] is either:
 
-      - [`Unbound segments] if the first segment in [segments] is unbound in
-        [state].
-      - [`Partially_bound (leading_segments, (segment, entry), (trailing_segments))]
+      - [Unbound { segments }] if the first segment in [segments] is unbound
+        in [state].
+      - [Partially_bound { leading_segments; segment; entry; trailing_segments }]
         if the qualified identifier with namespaces [leading_segments] and
         name [segment] is bound to [entry] in [state].
-      - [`Bound (identifier, entry)] if [segments] form a qualified
+      - [Bound { identifier; entry }] if [segments] form a qualified
         identifier bound to [entry] in [state]. *)
-  val maximum_lookup :
-       state
-    -> Identifier.t List1.t
-    -> [ `Unbound of Identifier.t List1.t
-       | `Partially_bound of
-         Identifier.t List.t
-         * (Identifier.t * Entry.t)
-         * Identifier.t List1.t
-       | `Bound of Qualified_identifier.t * Entry.t
-       ]
+  val maximum_lookup : state -> Identifier.t List1.t -> maximum_lookup_result
 
   (** [actual_binding_exn identifier entry] is an exception reporting what
       sort of [entry] is bound at [identifier]. The exception is annotated

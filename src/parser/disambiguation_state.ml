@@ -692,16 +692,17 @@ module type DISAMBIGUATION_STATE = sig
 
   val lookup : state -> Qualified_identifier.t -> Entry.t
 
-  val maximum_lookup :
-       state
-    -> Identifier.t List1.t
-    -> [ `Unbound of Identifier.t List1.t
-       | `Partially_bound of
-         Identifier.t List.t
-         * (Identifier.t * Entry.t)
-         * Identifier.t List1.t
-       | `Bound of Qualified_identifier.t * Entry.t
-       ]
+  type maximum_lookup_result =
+    | Unbound of { segments : Identifier.t List1.t }
+    | Partially_bound of
+        { leading_segments : Identifier.t List.t
+        ; segment : Identifier.t
+        ; entry : Entry.t
+        ; trailing_segments : Identifier.t List1.t
+        }
+    | Bound of { entry : Entry.t }
+
+  val maximum_lookup : state -> Identifier.t List1.t -> maximum_lookup_result
 
   val actual_binding_exn : Qualified_identifier.t -> Entry.t -> exn
 
@@ -884,6 +885,10 @@ module Disambiguation_state = struct
     | Module_scope { bindings; _ } ->
         Binding_tree.remove identifier bindings
 
+  (** [add_declaration state identifier ?subtree entry] adds
+      [(entry, subtree)] as a declaration in the current module scope, bound
+      to [identifier] in [state]. It is assumed that the current scope in
+      [state] is indeed a module scope. *)
   let add_declaration state identifier ?subtree entry =
     match get_current_scope state with
     | Plain_scope _ ->
@@ -1053,15 +1058,24 @@ module Disambiguation_state = struct
                scopes. *)
             lookup_toplevel_declaration_in_scopes scopes query)
 
-  let lookup_toplevel_opt state query =
+  let internal_lookup_toplevel_opt state query =
     match state.scopes with
     | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        (* Overridden behaviour for pattern scopes. Variables can only be
+           looked up in that pattern scope, and declarations can only be
+           looked up in parent scopes. *)
         match lookup_toplevel_in_scope scope query with
         | Option.Some x -> Option.some x
         | Option.None -> lookup_toplevel_declaration_in_scopes scopes query)
     | List1.T (scope, scopes) ->
         lookup_toplevel_in_scopes (scope :: scopes) query
 
+  (** [lookup_in_scopes scopes identifiers] looks up for an entry bound to
+      the qualified identifier formed by [identifiers] successively in
+      [scopes]. The qualified identifier being represented as a list of
+      identifiers is an optimization. If an entry is fully bound or partially
+      bound in a scope, then the search ends. The [scopes] are arranged as a
+      stack. *)
   let rec lookup_in_scopes scopes identifiers =
     match scopes with
     | [] ->
@@ -1072,16 +1086,15 @@ module Disambiguation_state = struct
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound result -> result
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
+            (* The [leading_segments] are bound in [scope], so any binding
+               for [identifiers] in [scopes] is shadowed. *)
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
 
   let rec lookup_declaration_in_scopes scopes identifiers =
     match scopes with
@@ -1093,10 +1106,11 @@ module Disambiguation_state = struct
     | scope :: scopes -> (
         let scope_bindings = get_scope_bindings scope in
         match Binding_tree.maximum_lookup identifiers scope_bindings with
-        | `Bound (entry, subtree) when entry_is_not_variable entry ->
+        | Binding_tree.Bound { entry; subtree; _ }
+          when entry_is_not_variable entry ->
             (* [query] is bound to a declaration in [scope]. *)
             (entry, subtree)
-        | `Bound _result ->
+        | Binding_tree.Bound _result ->
             (* [query is bound to a variable in [scope], so any declaration
                in [scopes] bound to [query] is shadowed. *)
             assert (List1.length identifiers = 1)
@@ -1104,84 +1118,101 @@ module Disambiguation_state = struct
             Error.raise
               (Unbound_qualified_identifier
                  (Qualified_identifier.from_list1 identifiers))
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ ->
+            lookup_declaration_in_scopes scopes identifiers)
 
-  let lookup state query =
+  (** [internal_lookup state query] is [(entry, subtree)], where [entry] is
+      the entry bound to [query] in [state], and [subtree] is the tree of
+      bindings in the namespace declared by [entry]. In the case where
+      [entry] is a variable or non-namespace constant, then [subtree] is
+      empty. {!val:internal_lookup} differs from {!val:lookup} in that
+      [subtree] is returned. *)
+  let internal_lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
     match state.scopes with
     | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        (* Overridden behaviour for pattern scopes. Variables can only be
+           looked up in that pattern scope, and declarations can only be
+           looked up in parent scopes. *)
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound result -> result
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Bound { entry; subtree; _ } ->
+            (* An inner pattern variable is in scope *) (entry, subtree)
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
+            (* An inner pattern variable shadowed a namespace *)
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ ->
+            lookup_declaration_in_scopes scopes identifiers)
     | List1.T (scope, scopes) ->
         lookup_in_scopes (scope :: scopes) identifiers
 
+  type maximum_lookup_result =
+    | Unbound of { segments : Identifier.t List1.t }
+    | Partially_bound of
+        { leading_segments : Identifier.t List.t
+        ; segment : Identifier.t
+        ; entry : Entry.t
+        ; trailing_segments : Identifier.t List1.t
+        }
+    | Bound of { entry : Entry.t }
+
   let rec maximum_lookup_in_scopes scopes identifiers =
     match scopes with
-    | [] -> `Unbound identifiers
+    | [] -> Unbound { segments = identifiers }
     | scope :: scopes -> (
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound (entry, _subtree) ->
-            `Bound (Qualified_identifier.from_list1 identifiers, entry)
-        | `Partially_bound
-            (bound_segments, (identifier, entry, _subtree), unbound_segments)
-          ->
-            `Partially_bound
-              (bound_segments, (identifier, entry), unbound_segments)
-        | `Unbound _ -> maximum_lookup_in_scopes scopes identifiers)
+        | Binding_tree.Bound { entry; _ } -> Bound { entry }
+        | Binding_tree.Partially_bound
+            { leading_segments; segment; entry; trailing_segments; _ } ->
+            Partially_bound
+              { leading_segments; segment; entry; trailing_segments }
+        | Binding_tree.Unbound _ ->
+            maximum_lookup_in_scopes scopes identifiers)
 
   let rec maximum_lookup_declaration_in_scopes scopes identifiers =
     match scopes with
-    | [] -> `Unbound identifiers
+    | [] -> Unbound { segments = identifiers }
     | scope :: scopes -> (
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound (entry, _subtree) ->
-            if Entry.is_variable entry then `Unbound identifiers
-            else `Bound (Qualified_identifier.from_list1 identifiers, entry)
-        | `Partially_bound
-            (bound_segments, (identifier, entry, _subtree), unbound_segments)
-          ->
-            `Partially_bound
-              (bound_segments, (identifier, entry), unbound_segments)
-        | `Unbound _ ->
+        | Binding_tree.Bound { entry; _ } ->
+            if Entry.is_variable entry then
+              Unbound { segments = identifiers }
+            else Bound { entry }
+        | Binding_tree.Partially_bound
+            { leading_segments; segment; entry; trailing_segments; _ } ->
+            Partially_bound
+              { leading_segments; segment; entry; trailing_segments }
+        | Binding_tree.Unbound _ ->
             maximum_lookup_declaration_in_scopes scopes identifiers)
 
   let maximum_lookup state identifiers =
     match state.scopes with
     | List1.T ((Pattern_scope _ as scope), scopes) -> (
+        (* Overridden behaviour for pattern scopes. Variables can only be
+           looked up in that pattern scope, and declarations can only be
+           looked up in parent scopes. *)
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound (entry, _subtree) ->
-            `Bound (Qualified_identifier.from_list1 identifiers, entry)
-        | `Partially_bound
-            (bound_segments, (identifier, entry, _subtree), unbound_segments)
-          ->
-            `Partially_bound
-              (bound_segments, (identifier, entry), unbound_segments)
-        | `Unbound _ ->
+        | Binding_tree.Bound { entry; _ } -> Bound { entry }
+        | Binding_tree.Partially_bound
+            { leading_segments; segment; entry; trailing_segments; _ } ->
+            Partially_bound
+              { leading_segments; segment; entry; trailing_segments }
+        | Binding_tree.Unbound _ ->
             maximum_lookup_declaration_in_scopes scopes identifiers)
     | List1.T (scope, scopes) ->
         maximum_lookup_in_scopes (scope :: scopes) identifiers
@@ -1207,7 +1238,7 @@ module Disambiguation_state = struct
       (Entry.actual_binding_exn identifier entry)
 
   let modify_operator state identifier f =
-    let entry, subtree = lookup state identifier in
+    let entry, subtree = internal_lookup state identifier in
     let entry' =
       Entry.modify_operator
         ~operator:(fun operator arity ->
@@ -1220,12 +1251,15 @@ module Disambiguation_state = struct
                (actual_binding_exn identifier entry)))
         entry
     in
+    (* Update the entry in the current scope only *)
     let bindings = get_current_scope_bindings state in
     if Binding_tree.mem identifier bindings then
       Binding_tree.replace identifier
         (fun _entry _subtree -> (entry', subtree))
         bindings
     else Binding_tree.add identifier ~subtree entry' bindings;
+    (* If we're currently in a module scope, additionally update the exported
+       declaration *)
     match get_current_scope state with
     | Plain_scope _ -> ()
     | Pattern_scope _ -> ()
@@ -1272,12 +1306,12 @@ module Disambiguation_state = struct
               (Invalid_postfix_pragma { actual_arity = arity }))
 
   let open_namespace state identifier =
-    let _entry, subtree = lookup state identifier in
+    let _entry, subtree = internal_lookup state identifier in
     let bindings = get_current_scope_bindings state in
     Binding_tree.add_all bindings subtree
 
   let open_module state identifier =
-    match lookup state identifier with
+    match internal_lookup state identifier with
     | { Entry.desc = Entry.Module; _ }, _ -> (
         try open_namespace state identifier with
         | ( Unbound_identifier _ | Unbound_namespace _
@@ -1288,15 +1322,16 @@ module Disambiguation_state = struct
           (Qualified_identifier.location identifier)
           (Error.composite_exception2 (Expected_module identifier)
              (actual_binding_exn identifier entry))
-    | exception (Unbound_identifier _ as cause) ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-    | exception (Unbound_namespace _ as cause) ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-    | exception (Unbound_qualified_identifier _ as cause) ->
+    | (exception (Unbound_identifier _ as cause))
+    | (exception (Unbound_namespace _ as cause))
+    | (exception (Unbound_qualified_identifier _ as cause)) ->
         Error.raise_at1 (Qualified_identifier.location identifier) cause
 
+  (** [add_synonym state ?location qualified_identifier synonym] copies the
+      binding for [qualified_identifier] in [state] to a new binding with
+      identifier [synonym], and binding site [location] if specified. *)
   let add_synonym state ?location qualified_identifier synonym =
-    let entry, subtree = lookup state qualified_identifier in
+    let entry, subtree = internal_lookup state qualified_identifier in
     let binding_location' =
       match location with
       | Option.None -> Entry.binding_location entry
@@ -1307,7 +1342,7 @@ module Disambiguation_state = struct
 
   let add_module_abbreviation state ?location module_identifier abbreviation
       =
-    match lookup state module_identifier with
+    match internal_lookup state module_identifier with
     | { Entry.desc = Entry.Module; _ }, _ ->
         add_synonym state ?location module_identifier abbreviation
     | entry, _ ->
@@ -1315,15 +1350,9 @@ module Disambiguation_state = struct
           (Qualified_identifier.location module_identifier)
           (Error.composite_exception2 (Expected_module module_identifier)
              (actual_binding_exn module_identifier entry))
-    | exception (Unbound_identifier _ as cause) ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          cause
-    | exception (Unbound_namespace _ as cause) ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          cause
-    | exception (Unbound_qualified_identifier _ as cause) ->
+    | (exception (Unbound_identifier _ as cause))
+    | (exception (Unbound_namespace _ as cause))
+    | (exception (Unbound_qualified_identifier _ as cause)) ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)
           cause
@@ -1379,7 +1408,10 @@ module Disambiguation_state = struct
     let default_precedence = get_default_precedence state in
     push_new_module_scope state;
     let x = m state in
-    match pop_scope state with
+    match
+      pop_scope
+        state (* We expect the newly pushed module scope to be popped *)
+    with
     | Plain_scope _ ->
         Error.raise_violation
           (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
@@ -1413,15 +1445,17 @@ module Disambiguation_state = struct
     Fun.protect
       ~finally:(fun () ->
         let final_scopes_count = List1.length state.scopes in
-        if
+        let scopes_to_pop_count =
           final_scopes_count - original_scopes_count
+        in
+        if
+          scopes_to_pop_count
           >= 1 (* We expect there to at least be the new module scope *)
         then
           (* We have to count scopes because [m] may add new scopes. This is
              not foolproof because [m] could have discarded too many scopes
              and added some more. *)
-          Fun.repeat (final_scopes_count - original_scopes_count) (fun () ->
-              ignore (pop_scope state))
+          Fun.repeat scopes_to_pop_count (fun () -> ignore (pop_scope state))
         else
           Error.raise_violation
             (Format.asprintf
@@ -1451,11 +1485,12 @@ module Disambiguation_state = struct
     add_free_context_variable state ?location identifier;
     with_bound_context_variable state ?location identifier m
 
-  let with_free_variables_as_pattern_variables state ~pattern ~expression =
+  let with_free_variables_as_pattern_variables state
+      ~pattern:disambiguate_pattern ~expression:disambiguate_expression =
     let pattern_scope = create_pattern_scope () in
     push_scope state pattern_scope;
-    let pattern' = pattern state in
-    match pop_scope state with
+    let pattern' = disambiguate_pattern state in
+    match pop_scope state (* We expect [pattern_scope] to be popped *) with
     | Plain_scope _ ->
         Error.raise_violation
           (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
@@ -1475,17 +1510,18 @@ module Disambiguation_state = struct
         | Option.None ->
             let expression_scope = create_plain_scope expression_bindings in
             push_scope state expression_scope;
-            let expression' = expression state pattern' in
-            ignore (pop_scope state);
+            let expression' = disambiguate_expression state pattern' in
+            ignore (pop_scope state)
+            (* We expect [expression_scope] to be popped *);
             expression')
 
   let lookup_toplevel state identifier =
-    match lookup_toplevel_opt state identifier with
+    match internal_lookup_toplevel_opt state identifier with
     | Option.Some (entry, _subtree) -> entry
     | Option.None -> Error.raise_notrace (Unbound_identifier identifier)
 
   let lookup state qualified_identifier =
-    let entry, _subtree = lookup state qualified_identifier in
+    let entry, _subtree = internal_lookup state qualified_identifier in
     entry
 
   let lookup_operator state query =

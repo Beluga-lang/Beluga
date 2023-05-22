@@ -640,7 +640,7 @@ module Make
         match
           maximum_lookup state (Qualified_identifier.to_list1 identifier)
         with
-        | `Unbound (List1.T (free_variable, rest))
+        | Unbound { segments = List1.T (free_variable, rest) }
         (* A free computation-level variable with (possibly) trailing
            observations *) -> (
             let location = Identifier.location free_variable in
@@ -653,7 +653,13 @@ module Make
             | x :: xs ->
                 disambiguate_trailing_observations state scrutinee
                   (List1.from x xs))
-        | `Partially_bound ([], (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_computation_variable entry
                (* A bound computation-level variable with trailing
                   observations *) ->
@@ -663,8 +669,13 @@ module Make
             in
             disambiguate_trailing_observations state scrutinee
               unbound_segments
-        | `Partially_bound
-            (bound_segments, (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_computation_term_constructor entry
                (* [constant] forms a valid constructor constant *) ->
             let constant =
@@ -677,8 +688,13 @@ module Make
             in
             disambiguate_trailing_observations state scrutinee
               unbound_segments
-        | `Partially_bound
-            (bound_segments, (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_program_constant entry
                (* [constant] forms a valid program constant *) ->
             let constant =
@@ -691,8 +707,12 @@ module Make
             in
             disambiguate_trailing_observations state scrutinee
               unbound_segments
-        | `Partially_bound
-            (bound_segments, (identifier, entry), _unbound_segments)
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; entry
+            ; _
+            }
         (* [constant] forms an invalid constant *) ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
@@ -701,12 +721,11 @@ module Make
               (Error.composite_exception2
                  (Expected_program_or_constructor_constant constant)
                  (actual_binding_exn constant entry))
-        | `Bound (identifier, entry)
-          when Entry.is_computation_term_constructor entry ->
+        | Bound { entry } when Entry.is_computation_term_constructor entry ->
             Synext.Comp.Expression.Constructor { location; identifier }
-        | `Bound (identifier, entry) when Entry.is_program_constant entry ->
+        | Bound { entry } when Entry.is_program_constant entry ->
             Synext.Comp.Expression.Program { location; identifier }
-        | `Bound (identifier, entry) ->
+        | Bound { entry } ->
             Error.raise_at1 location
               (Error.composite_exception2
                  (Expected_program_or_constructor_constant identifier)
@@ -853,14 +872,20 @@ module Make
   and disambiguate_trailing_observations state scrutinee trailing_identifiers
       =
     match maximum_lookup state trailing_identifiers with
-    | `Unbound _ ->
+    | Unbound _ ->
         let qualified_identifier =
           Qualified_identifier.from_list1 trailing_identifiers
         in
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
           (Unbound_comp_term_destructor_constant qualified_identifier)
-    | `Partially_bound (bound_segments, (identifier, entry), unbound_segments)
+    | Partially_bound
+        { leading_segments = bound_segments
+        ; segment = identifier
+        ; trailing_segments = unbound_segments
+        ; entry
+        ; _
+        }
       when Entry.is_computation_term_destructor entry
            (* [constant] forms a destructor *) ->
         let constant =
@@ -877,8 +902,8 @@ module Make
             { scrutinee; destructor; location }
         in
         disambiguate_trailing_observations state scrutinee' unbound_segments
-    | `Partially_bound
-        (bound_segments, (identifier, entry), _unbound_segments)
+    | Partially_bound
+        { leading_segments = bound_segments; segment = identifier; entry; _ }
     (* [constant] forms an invalid constant *) ->
         let constant =
           Qualified_identifier.make ~namespaces:bound_segments identifier
@@ -887,10 +912,12 @@ module Make
           (Qualified_identifier.location constant)
           (Error.composite_exception2 Expected_comp_term_destructor_constant
              (actual_binding_exn constant entry))
-    | `Bound (identifier, entry)
+    | Bound { entry }
       when Entry.is_computation_term_destructor entry
-           (* [bound_segments] forms a destructor *) ->
-        let destructor = identifier in
+           (* [trailing_identifiers] forms a destructor *) ->
+        let destructor =
+          Qualified_identifier.from_list1 trailing_identifiers
+        in
         let location =
           Location.join
             (Synext.location_of_comp_expression scrutinee)
@@ -898,8 +925,11 @@ module Make
         in
         Synext.Comp.Expression.Observation
           { scrutinee; destructor; location }
-    | `Bound (identifier, entry)
-    (* [bound_segments] forms an invalid constant *) ->
+    | Bound { entry } (* [trailing_identifiers] forms an invalid constant *)
+      ->
+        let identifier =
+          Qualified_identifier.from_list1 trailing_identifiers
+        in
         Error.raise_at1
           (Qualified_identifier.location identifier)
           (Error.composite_exception2 Expected_comp_term_destructor_constant
@@ -1020,7 +1050,7 @@ module Make
            observations *)
         let identifiers = Qualified_identifier.to_list1 identifier in
         match maximum_lookup state identifiers with
-        | `Unbound _ ->
+        | Unbound _ ->
             (* This is a variable pattern followed by observations *)
             let[@warning "-8"] (List1.T (variable, d :: ds)) = identifiers in
             let destructors = List1.from d ds in
@@ -1053,7 +1083,13 @@ module Make
             ; patterns = pattern' :: patterns
             ; observations
             }
-        | `Partially_bound ([], (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_computation_term_constructor entry ->
             (* This is a constructor pattern followed by observations *)
             let constructor = Qualified_identifier.make_simple identifier in
@@ -1085,7 +1121,8 @@ module Make
             ; patterns = pattern' :: patterns
             ; observations
             }
-        | `Partially_bound ([], (identifier, entry), _unbound_segments)
+        | Partially_bound
+            { leading_segments = []; segment = identifier; entry; _ }
           when Entry.is_variable entry ->
             let qualified_identifier =
               Qualified_identifier.make_simple identifier
@@ -1094,7 +1131,12 @@ module Make
               (Error.composite_exception2
                  (Expected_constructor_constant qualified_identifier)
                  (actual_binding_exn qualified_identifier entry))
-        | `Partially_bound ([], (identifier, _entry), unbound_segments) ->
+        | Partially_bound
+            { leading_segments = []
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; _
+            } ->
             (* This is a variable pattern followed by observations *)
             let pattern' =
               Synext.Comp.Pattern.Variable
@@ -1123,8 +1165,13 @@ module Make
             ; patterns = pattern' :: patterns
             ; observations
             }
-        | `Partially_bound
-            (bound_segments, (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_computation_term_constructor entry ->
             (* This is a constructor pattern followed by observations *)
             let constructor =
@@ -1158,8 +1205,12 @@ module Make
             ; patterns = pattern' :: patterns
             ; observations
             }
-        | `Partially_bound
-            (bound_segments, (identifier, entry), _unbound_segments) ->
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; entry
+            ; _
+            } ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
             in
@@ -1168,9 +1219,10 @@ module Make
               (Error.composite_exception2
                  Expected_comp_term_destructor_constant
                  (actual_binding_exn constant entry))
-        | `Bound (constructor, entry)
-          when Entry.is_computation_term_constructor entry -> (
+        | Bound { entry } when Entry.is_computation_term_constructor entry
+          -> (
             (* This qualified identifier is a constructor pattern *)
+            let constructor = Qualified_identifier.from_list1 identifiers in
             let pattern' =
               Synext.Comp.Pattern.Constructor
                 { location = Qualified_identifier.location constructor
@@ -1197,7 +1249,8 @@ module Make
                 ; patterns = pattern' :: patterns
                 ; observations
                 })
-        | `Bound (constructor, entry) ->
+        | Bound { entry } ->
+            let constructor = Qualified_identifier.from_list1 identifiers in
             Error.raise_at1
               (Qualified_identifier.location constructor)
               (Error.composite_exception2
@@ -1260,14 +1313,20 @@ module Make
 
   and disambiguate_destructors state identifiers =
     match maximum_lookup state identifiers with
-    | `Unbound _ ->
+    | Unbound _ ->
         let qualified_identifier =
           Qualified_identifier.from_list1 identifiers
         in
         Error.raise_at1
           (Qualified_identifier.location qualified_identifier)
           (Unbound_comp_term_destructor_constant qualified_identifier)
-    | `Partially_bound (bound_segments, (identifier, entry), unbound_segments)
+    | Partially_bound
+        { leading_segments = bound_segments
+        ; segment = identifier
+        ; trailing_segments = unbound_segments
+        ; entry
+        ; _
+        }
       when Entry.is_computation_term_destructor entry
            (* [bound_segments] forms a destructor *) ->
         let destructor =
@@ -1275,8 +1334,8 @@ module Make
         in
         let destructors = disambiguate_destructors state unbound_segments in
         List1.cons destructor destructors
-    | `Partially_bound
-        (bound_segments, (identifier, entry), _unbound_segments)
+    | Partially_bound
+        { leading_segments = bound_segments; segment = identifier; entry; _ }
     (* [bound_segments] forms an invalid constant *) ->
         let constant =
           Qualified_identifier.make ~namespaces:bound_segments identifier
@@ -1285,12 +1344,12 @@ module Make
           (Qualified_identifier.location constant)
           (Error.composite_exception2 Expected_comp_term_destructor_constant
              (actual_binding_exn constant entry))
-    | `Bound (identifier, entry)
+    | Bound { entry }
       when Entry.is_computation_term_destructor entry
            (* [bound_segments] forms a destructor *) ->
-        List1.singleton identifier
-    | `Bound (identifier, entry)
-    (* [bound_segments] forms an invalid constant *) ->
+        List1.singleton (Qualified_identifier.from_list1 identifiers)
+    | Bound { entry } (* [bound_segments] forms an invalid constant *) ->
+        let identifier = Qualified_identifier.from_list1 identifiers in
         Error.raise_at1
           (Qualified_identifier.location identifier)
           (Error.composite_exception2 Expected_comp_term_destructor_constant

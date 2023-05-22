@@ -50,6 +50,9 @@ val remove : Identifier.t -> 'a t -> Unit.t
     @raise Unbound_identifier *)
 val lookup_toplevel : Identifier.t -> 'a t -> 'a * 'a t
 
+(** [lookup_toplevel_opt identifier tree] is [Option.Some (value, subtree)]
+    where [value] and [subtree] are as added with {!add}, and [Option.None]
+    if there is no binding in [tree] for [identifier]. *)
 val lookup_toplevel_opt : Identifier.t -> 'a t -> ('a * 'a t) Option.t
 
 (** [lookup qualified_identifier tree] is [(value, subtree)] where [value]
@@ -59,6 +62,20 @@ val lookup_toplevel_opt : Identifier.t -> 'a t -> ('a * 'a t) Option.t
     @raise Unbound_qualified_identifier
     @raise Unbound_namespace *)
 val lookup : Qualified_identifier.t -> 'a t -> 'a * 'a t
+
+type 'a maximum_lookup_result =
+  | Unbound of { segments : Identifier.t List1.t }
+  | Partially_bound of
+      { leading_segments : Identifier.t List.t
+      ; segment : Identifier.t
+      ; trailing_segments : Identifier.t List1.t
+      ; entry : 'a
+      ; subtree : 'a t
+      }
+  | Bound of
+      { entry : 'a
+      ; subtree : 'a t
+      }
 
 (** [maximum_lookup identifiers tree] looks up as many bound identifiers in
     [identifiers] as possible against [tree] in sequence. This effectively
@@ -74,16 +91,7 @@ val lookup : Qualified_identifier.t -> 'a t -> 'a * 'a t
       identifiers form a path in [tree].
     + [`Bound (entry, subtree)] if all identifiers in [identifiers] are
       bound, so they form a path in [tree]. *)
-val maximum_lookup :
-     Identifier.t List1.t
-  -> 'a t
-  -> [ `Unbound of Identifier.t List1.t
-     | `Partially_bound of
-       Identifier.t List.t
-       * (Identifier.t * 'a * 'a t)
-       * Identifier.t List1.t
-     | `Bound of 'a * 'a t
-     ]
+val maximum_lookup : Identifier.t List1.t -> 'a t -> 'a maximum_lookup_result
 
 (** [open_namespace qualified_identifier tree] adds all the bindings from
     [subtree] to [tree] if
@@ -108,6 +116,8 @@ val is_qualified_identifier_bound : Qualified_identifier.t -> 'a t -> Bool.t
 val replace :
   Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> Unit.t
 
+(** [mem identifier tree] is [true] if and only if there is a binding in
+    [tree] for [identifier]. *)
 val mem : Qualified_identifier.t -> 'a t -> Bool.t
 
 (** [snapshot tree] is a duplicate of [tree] that only retains the latest

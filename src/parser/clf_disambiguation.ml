@@ -528,8 +528,8 @@ module Make
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As an LF term, identifiers of the form [<identifier>
            <dot-identifier>+] are either term-level constants, or named
-           projections. *)
-        let reduce_projections base projections =
+           projections or a variable. *)
+        let (* helper function *) reduce_projections base projections =
           List.fold_left
             (fun term projection_identifier ->
               let location =
@@ -544,11 +544,14 @@ module Make
                 })
             base projections
         in
+        (* At this point, we need to figure out which segments of the
+           qualified identifier refer to a constant, an LF-bound variable, or
+           a meta-variable, and which segments are named projections. *)
         match
           maximum_lookup state (Qualified_identifier.to_list1 identifier)
         with
-        | `Unbound (List1.T (free_variable, projections)) ->
-            (* Projections of a free variable. *)
+        | Unbound { segments = List1.T (free_variable, projections) }
+        (* Projections of a free variable. *) ->
             add_free_meta_variable state free_variable;
             let location = Identifier.location free_variable in
             let term =
@@ -556,8 +559,13 @@ module Make
                 { location; identifier = free_variable }
             in
             reduce_projections term projections
-        | `Partially_bound
-            ([], (variable_identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = variable_identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_lf_variable entry
                (* Projections of an LF-bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -566,8 +574,13 @@ module Make
                 { location; identifier = variable_identifier }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound
-            ([], (variable_identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = variable_identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_meta_variable entry
                (* Projections of a bound meta-variable *) ->
             let location = Identifier.location variable_identifier in
@@ -576,9 +589,17 @@ module Make
                 { location; identifier = variable_identifier }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound
-            (bound_segments, (identifier, entry), unbound_segments)
-          when Entry.is_lf_term_constant entry ->
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
+          when Entry.is_lf_term_constant entry
+               (* Projections of a bound LF term constant. This is an error
+                  case, but type-checking will provide a better error
+                  message. *) ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
             in
@@ -587,17 +608,24 @@ module Make
               Synext.CLF.Term.Constant { location; identifier = constant }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound
-            (bound_segments, (identifier, entry), _unbound_segments) ->
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; entry
+            ; _
+            }
+        (* Invalid projection of some other bound constant *) ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
             in
             Error.raise_at1 location
               (Error.composite_exception2 Illegal_clf_term_projection
                  (actual_binding_exn constant entry))
-        | `Bound (identifier, entry) when Entry.is_lf_term_constant entry ->
+        | Bound { entry }
+          when Entry.is_lf_term_constant entry (* Bound LF term constant *)
+          ->
             Synext.CLF.Term.Constant { identifier; location }
-        | `Bound (identifier, entry) ->
+        | Bound { entry } (* Some other invalid bound constant *) ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn identifier entry)))
@@ -652,6 +680,11 @@ module Make
         let typ' = disambiguate_clf_typ state sort in
         Synext.CLF.Term.Type_annotated { location; term = term'; typ = typ' }
 
+  (** [disambiguate_clf_substitution state substitution] disambiguates
+      [substitution] as a contextual LF substitution. Substitutions were
+      parsed as a context object, so we have to ensure that every element in
+      [substitution] is untyped, and we must allow identifiers with the
+      dollar modifier (substitution variable) in head position. *)
   and disambiguate_clf_substitution state substitution =
     let { Synprs.CLF.Context_object.location; head; objects } =
       substitution
@@ -667,7 +700,8 @@ module Make
         objects
     in
     match head with
-    | Synprs.CLF.Context_object.Head.None { location = head_location } ->
+    | Synprs.CLF.Context_object.Head.None { location = head_location }
+    (* List of contextual LF objects *) ->
         let head', objects'' =
           match objects' with
           | Synprs.CLF.Object.Raw_substitution
@@ -726,7 +760,9 @@ module Make
         in
         let terms' = traverse_list state disambiguate_clf_term objects'' in
         { Synext.CLF.Substitution.location; head = head'; terms = terms' }
-    | Synprs.CLF.Context_object.Head.Identity { location = head_location } ->
+    | Synprs.CLF.Context_object.Head.Identity { location = head_location }
+    (* List of contextual LF objects, starting with the identity substitution
+       [..] *) ->
         let terms' = traverse_list state disambiguate_clf_term objects' in
         let head' =
           Synext.CLF.Substitution.Head.Identity { location = head_location }
@@ -786,6 +822,9 @@ module Make
           (Synprs.location_of_clf_object typ)
           Illegal_clf_context_missing_binding_identifier
 
+  (** [with_disambiguated_clf_context state context f] is [f state' context']
+      where [state'] is derived from [state] with the addition of variables
+      bound in [context]. After [f] is called, those bindings are removed. *)
   and with_disambiguated_clf_context state context f =
     let { Synprs.CLF.Context_object.location; head; objects } = context in
     match head with
@@ -962,7 +1001,7 @@ module Make
         match
           maximum_lookup state (Qualified_identifier.to_list1 identifier)
         with
-        | `Unbound (List1.T (free_variable, projections))
+        | Unbound { segments = List1.T (free_variable, projections) }
         (* Projections of a free variable *) ->
             let location = Identifier.location free_variable in
             let term =
@@ -971,8 +1010,12 @@ module Make
             in
             add_free_meta_variable state free_variable;
             reduce_projections term projections
-        | `Partially_bound
-            ([], (variable_identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = variable_identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            }
           when Entry.is_lf_variable entry
                (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -981,8 +1024,13 @@ module Make
                 { location; identifier = variable_identifier }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound
-            ([], (variable_identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = []
+            ; segment = variable_identifier
+            ; trailing_segments = unbound_segments
+            ; entry
+            ; _
+            }
           when Entry.is_meta_variable entry
                (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
@@ -991,7 +1039,8 @@ module Make
                 { location; identifier = variable_identifier }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound ([], (identifier, entry), _) ->
+        | Partially_bound
+            { leading_segments = []; segment = identifier; entry; _ } ->
             let identifier_location = Identifier.location identifier in
             let qualified_identifier =
               Qualified_identifier.make_simple identifier
@@ -999,8 +1048,12 @@ module Make
             Error.raise_at1 identifier_location
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
-        | `Partially_bound
-            (bound_segments, (identifier, entry), unbound_segments)
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; entry
+            ; trailing_segments = unbound_segments
+            }
           when Entry.is_lf_term_constant entry ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
@@ -1011,17 +1064,21 @@ module Make
                 { location; identifier = constant }
             in
             reduce_projections term (List1.to_list unbound_segments)
-        | `Partially_bound
-            (bound_segments, (identifier, entry), _unbound_segments) ->
+        | Partially_bound
+            { leading_segments = bound_segments
+            ; segment = identifier
+            ; entry
+            ; _
+            } ->
             let constant =
               Qualified_identifier.make ~namespaces:bound_segments identifier
             in
             Error.raise_at1 location
               (Error.composite_exception2 Illegal_clf_term_projection
                  (actual_binding_exn constant entry))
-        | `Bound (identifier, entry) when Entry.is_lf_term_constant entry ->
+        | Bound { entry } when Entry.is_lf_term_constant entry ->
             Synext.CLF.Term.Pattern.Constant { identifier; location }
-        | `Bound (identifier, entry) ->
+        | Bound { entry } ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
                  (Disambiguation_state.actual_binding_exn identifier entry)))

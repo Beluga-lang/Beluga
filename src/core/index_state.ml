@@ -918,16 +918,13 @@ module Indexing_state = struct
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound result -> result
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
 
   let rec lookup_declaration_in_scopes scopes identifiers =
     match scopes with
@@ -938,10 +935,11 @@ module Indexing_state = struct
     | scope :: scopes -> (
         let scope_bindings = get_scope_bindings scope in
         match Binding_tree.maximum_lookup identifiers scope_bindings with
-        | `Bound (entry, subtree) when entry_is_not_variable entry ->
+        | Binding_tree.Bound { entry; subtree; _ }
+          when entry_is_not_variable entry ->
             (* [query] is bound to a declaration in [scope]. *)
             (entry, subtree)
-        | `Bound _result ->
+        | Binding_tree.Bound _result ->
             (* [query is bound to a variable in [scope], so any declaration
                in [scopes] bound to [query] is shadowed. *)
             assert (List1.length identifiers = 1)
@@ -949,15 +947,13 @@ module Indexing_state = struct
             Error.raise
               (Unbound_qualified_identifier
                  (Qualified_identifier.from_list1 identifiers))
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ ->
+            lookup_declaration_in_scopes scopes identifiers)
 
   (** [lookup state query] is the entry and subtree bound to the qualified
       identifier [query] in [state]. To lookup simple identifiers, see
@@ -975,16 +971,14 @@ module Indexing_state = struct
         match
           Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
         with
-        | `Bound result -> result
-        | `Partially_bound
-            ( bound_segments
-            , (identifier, _entry, _subtree)
-            , _unbound_segments ) ->
+        | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
+        | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             Error.raise
               (Unbound_namespace
-                 (Qualified_identifier.make ~namespaces:bound_segments
-                    identifier))
-        | `Unbound _ -> lookup_declaration_in_scopes scopes identifiers)
+                 (Qualified_identifier.make ~namespaces:leading_segments
+                    segment))
+        | Binding_tree.Unbound _ ->
+            lookup_declaration_in_scopes scopes identifiers)
     | List1.T (scope, scopes) ->
         lookup_in_scopes (scope :: scopes) identifiers
 
@@ -2062,11 +2056,14 @@ module Indexing_state = struct
         match decl with
         | Synint.LF.Decl { name = u; typ = Synint.LF.CTyp _; _ } ->
             add_context_variable state (Name.to_identifier u)
-        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.MTyp _, _); _ } ->
+        | Synint.LF.Decl
+            { name = u; typ = Synint.LF.ClTyp (Synint.LF.MTyp _, _); _ } ->
             add_meta_variable state (Name.to_identifier u)
-        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.PTyp _, _); _ } ->
+        | Synint.LF.Decl
+            { name = u; typ = Synint.LF.ClTyp (Synint.LF.PTyp _, _); _ } ->
             add_parameter_variable state (Name.to_identifier u)
-        | Synint.LF.Decl { name = u; typ = Synint.LF.ClTyp (Synint.LF.STyp _, _); _ } ->
+        | Synint.LF.Decl
+            { name = u; typ = Synint.LF.ClTyp (Synint.LF.STyp _, _); _ } ->
             add_substitution_variable state (Name.to_identifier u)
         | Synint.LF.DeclOpt { name = u; _ } ->
             add_contextual_variable state (Name.to_identifier u))

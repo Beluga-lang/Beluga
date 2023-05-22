@@ -98,22 +98,45 @@ let rec lookup_nested namespaces identifier tree =
 let lookup qualified_identifier tree =
   with_namespaces_and_identifier qualified_identifier lookup_nested tree
 
+type 'a maximum_lookup_result =
+  | Unbound of { segments : Identifier.t List1.t }
+  | Partially_bound of
+      { leading_segments : Identifier.t List.t
+      ; segment : Identifier.t
+      ; trailing_segments : Identifier.t List1.t
+      ; entry : 'a
+      ; subtree : 'a t
+      }
+  | Bound of
+      { entry : 'a
+      ; subtree : 'a t
+      }
+
 let rec maximum_lookup identifiers tree =
   match identifiers with
   | List1.T (identifier, []) -> (
       match Identifier.Hashtbl.find_opt tree identifier with
-      | Option.None -> `Unbound (List1.singleton identifier)
-      | Option.Some { entry; subtree } -> `Bound (entry, subtree))
+      | Option.None -> Unbound { segments = List1.singleton identifier }
+      | Option.Some { entry; subtree } -> Bound { entry; subtree })
   | List1.T (x1, x2 :: xs) -> (
       match Identifier.Hashtbl.find_opt tree x1 with
-      | Option.None -> `Unbound identifiers
+      | Option.None -> Unbound { segments = identifiers }
       | Option.Some { entry; subtree } -> (
           match maximum_lookup (List1.from x2 xs) subtree with
-          | `Bound result -> `Bound result
-          | `Partially_bound (bound, result, unbound) ->
-              `Partially_bound (x1 :: bound, result, unbound)
-          | `Unbound unbound ->
-              `Partially_bound ([], (x1, entry, subtree), unbound)))
+          | Partially_bound result ->
+              Partially_bound
+                { result with
+                  leading_segments = x1 :: result.leading_segments
+                }
+          | Unbound { segments = trailing_segments } ->
+              Partially_bound
+                { leading_segments = []
+                ; segment = x1
+                ; entry
+                ; subtree
+                ; trailing_segments
+                }
+          | x -> x))
 
 let open_namespace qualified_identifier tree =
   let _entry, subtree = lookup qualified_identifier tree in

@@ -37,7 +37,10 @@
   sedlex
   omd
   uri
-  (ocamlformat :with-test)
+  (ocamlformat
+   (and
+    (= 0.25.1)
+    :with-test))
   (yojson :with-test)
   (ounit2 :with-test)
   (bisect_ppx :with-test)

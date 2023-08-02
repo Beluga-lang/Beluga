@@ -35,7 +35,7 @@ jobs:
           dune-cache: true
 
       - name: Install dependencies
-        run: opam install --locked --deps-only --with-test --with-doc .
+        run: opam install --locked --deps-only --with-test --with-doc beluga.opam
 
       - name: Check format
         run: opam exec -- dune fmt
@@ -73,7 +73,7 @@ jobs:
           dune-cache: true
 
       - name: Install dependencies
-        run: opam install --locked --deps-only --with-test --with-doc .
+        run: opam install --locked --deps-only --with-test --with-doc beluga.opam
 
       - name: Build
         run: opam exec -- make

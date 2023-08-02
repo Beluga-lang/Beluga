@@ -53,7 +53,8 @@ let process_option arg rest =
   | "+t" -> Monitor.on := true; rest
   | "+tfile" -> Monitor.onf := true; rest
   | "+printSubord" -> Subord.dump := true; rest
-  | "+test" | "-print" -> Chatter.level := 0; rest
+  | "+test" -> Chatter.level := 0; Syncom.Error.disable_colored_output (); rest
+  | "-print" -> Chatter.level := 0; rest
   | "+print" -> Chatter.level := 2; rest
   | "+html" -> Options.Html.enabled := true; rest
   | "-width" ->

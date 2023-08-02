@@ -133,17 +133,38 @@ let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
 (* See ANSI escape sequences:
    https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 *)
 
+let color_output : bool ref = ref true
+
+let enable_colored_output () = color_output := true
+
+let disable_colored_output () = color_output := false
+
+let if_color_output f ppv ppf x =
+  if !color_output then f ppv ppf x else ppv ppf x
+
 let bold ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1m" ppv x "\027[0m"
+  if_color_output
+    (fun ppv ppf x ->
+      Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1m" ppv x "\027[0m")
+    ppv ppf x
 
 let bold_red ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;31m" ppv x "\027[0m"
+  if_color_output
+    (fun ppv ppf x ->
+      Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;31m" ppv x "\027[0m")
+    ppv ppf x
 
 let bold_red_bg ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;41m" ppv x "\027[0m"
+  if_color_output
+    (fun ppv ppf x ->
+      Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;41m" ppv x "\027[0m")
+    ppv ppf x
 
 let red ppv ppf x =
-  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[31m" ppv x "\027[0m"
+  if_color_output
+    (fun ppv ppf x ->
+      Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[31m" ppv x "\027[0m")
+    ppv ppf x
 
 (** [replace_tabs_with_spaces line] is [line] where each tab character ['\t']
     is replaced with a single space [' '].

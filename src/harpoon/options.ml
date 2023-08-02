@@ -101,7 +101,9 @@ let options_spec : t Optparser.options_specification =
       | Option.Some _, `incomplete, `stop -> E.(throw InvalidStop)
       | _ ->
           Option.map
-            (fun test -> { filename = test; kind = test_kind })
+            (fun test ->
+              Syncom.Error.disable_colored_output ();
+              { filename = test; kind = test_kind })
             test_opt
     in
     { path

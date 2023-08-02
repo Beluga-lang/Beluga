@@ -2,6 +2,14 @@
 
 open Support
 
+(** [enable_colored_output ()] enables coloring functions in pretty-printing
+    of exceptions. *)
+val enable_colored_output : unit -> unit
+
+(** [disable_colored_output ()] disables coloring functions in
+    pretty-printing of exceptions. *)
+val disable_colored_output : unit -> unit
+
 (** [raise exn] raises [exn]. *)
 val raise : exn -> 'a
 

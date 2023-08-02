@@ -7,7 +7,7 @@ File "./t/code/error/coverage/match-param.bel", line 16, column 9:
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 19 || [g, y:term |- cons #p[..] L[.., y]] => remove [g, y:term |- L[.., y]]
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Error:
+Error: 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1)

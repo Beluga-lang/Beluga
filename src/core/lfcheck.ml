@@ -47,7 +47,8 @@ let error_printer = function
       "@[<v>Type\
       @,  @[%a@]\
       @,doesn't check against schema\
-      @,  @[<hv 2>%a =@ @[<hv>%a@]@]@]"
+      @,  @[<hv 2>%a =@ @[<hv>%a@]@]\
+      @]"
       (P.fmt_ppr_lf_typ c0 cPsi P.l0) (Whnf.normTyp sA)
       Name.pp name
       (P.fmt_ppr_lf_schema P.l0) sEl

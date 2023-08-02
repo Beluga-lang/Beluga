@@ -19,11 +19,12 @@ declare -a BELUGA_FLAGS=()
 
 declare -r ROOTDIR=${ROOTDIR:-$(pwd)}
 declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
+declare -r BUILDPATH=${BUILDPATH:-"${ROOTDIR}/_build/install/default/bin"}
 declare SKIP_RSYNC=0
 
-declare -r BELUGA=${BELUGA:-$(dune exec which beluga)}
-declare -r HARPOON=${HARPOON:-$(dune exec which harpoon)}
-declare -r REPLAY=${REPLAY:-$(dune exec which replay)}
+declare -r BELUGA=${BELUGA:-"${BUILDPATH}/beluga"}
+declare -r HARPOON=${HARPOON:-"${BUILDPATH}/harpoon"}
+declare -r REPLAY=${REPLAY:-"${BUILDPATH}/replay"}
 
 declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
 declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}

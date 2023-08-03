@@ -4348,7 +4348,7 @@ module CSolver = struct
         | _ -> true
       in
       if (* Check to see if the comp goal is the head of the assumption *)
-         check cid && matchHead sCCl.cHead cg;
+         check cid && matchHead sCCl.cHead cg
       then
         (let (ms', fS) =
            C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s)

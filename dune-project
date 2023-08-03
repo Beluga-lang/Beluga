@@ -1,4 +1,4 @@
-(lang dune 3.6)
+(lang dune 3.7)
 
 (name beluga)
 
@@ -28,20 +28,39 @@
  (synopsis
   "Implementation of contextual modal logic for reasoning with higher-order abstract syntax")
  (depends
-  dune-build-info
-  extlib
-  gen
-  linenoise
+  (dune-build-info
+   (>= 3.7.0))
+  (extlib
+   (>= 1.7.9))
+  (gen
+   (>= 1.0))
+  (linenoise
+   (>= 1.4.0))
   (ocaml
    (>= 4.14))
-  sedlex
-  omd
-  uri
+  (sedlex
+   (>= 2.5))
+  (omd
+   (>= 1.3.2))
+  (uri
+   (>= 4.2.0))
   (ocamlformat
    (and
     (= 0.25.1)
     :with-test))
-  (yojson :with-test)
-  (ounit2 :with-test)
-  (bisect_ppx :with-test)
-  (odoc :with-doc)))
+  (yojson
+   (and
+    (>= 2.0.2)
+    :with-test))
+  (ounit2
+   (and
+    (>= 2.2.6)
+    :with-test))
+  (bisect_ppx
+   (and
+    (>= 2.8.1)
+    :with-test))
+  (odoc
+   (and
+    (>= 2.2.0)
+    :with-doc))))

@@ -195,10 +195,15 @@ function check_compiler_test_case {
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.
     diff_code=$?
 
-    if [ "${exit_code}" -eq 152 ];then
-        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
-        (( TEST_RESULT_TIMEOUT+=1 ))
-        stop_on_failure
+    if [ "${exit_code}" -eq 152 ]; then
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+            (( TEST_RESULT_TIMEOUT+=1 ))
+            stop_on_failure
+        fi
     elif [[ "${diff_code}" -eq 0 || ("${exit_code}" -eq 0 && "${diff_code}" -eq 2) ]]; then
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
@@ -234,8 +239,14 @@ function check_interactive {
     exit_code=$?
 
     if [ "${exit_code}" -eq 152 ]; then
-        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
-        (( TEST_RESULT_TIMEOUT+=1 ))
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+            (( TEST_RESULT_TIMEOUT+=1 ))
+            stop_on_failure
+        fi
     elif [ "${exit_code}" -eq 0 ]; then
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
@@ -265,8 +276,14 @@ function check_harpoon {
     exit_code=$?
 
     if [ "${exit_code}" -eq 152 ]; then
-        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
-        (( TEST_RESULT_TIMEOUT+=1 ))
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+            (( TEST_RESULT_TIMEOUT+=1 ))
+            stop_on_failure
+        fi
     elif [ ${exit_code} -eq 0 ]; then
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))

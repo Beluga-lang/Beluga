@@ -93,3 +93,4 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"
+run-test: [make "test"]

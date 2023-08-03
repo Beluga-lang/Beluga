@@ -19,11 +19,11 @@ harpoon-test: # Run only the Harpoon intergration tests
 
 .PHONY: setup-development
 setup-development: # Setup a development environment
-	opam switch create --description="Beluga development switch" --locked --deps-only --with-test --with-doc --yes .
+	opam switch create --description="Beluga development switch" --locked --deps-only --with-test --with-doc --yes ./beluga.opam
 
 .PHONY: setup-install
 setup-install: # Setup a user environment for installation
-	opam switch create --description="Beluga installation switch" --locked --deps-only --yes .
+	opam switch create --description="Beluga installation switch" --locked --deps-only --yes ./beluga.opam
 
 .PHONY: install
 install: # Build and install the public executables
@@ -35,7 +35,7 @@ uninstall: # Remove the built public executables
 
 .PHONY: lock
 lock: # Generate a lockfile for the dependencies in the opam repository
-	opam lock --yes .
+	opam lock --yes ./beluga.opam
 
 .PHONY: watch
 watch: # Build default targets and trigger new builds on file system events

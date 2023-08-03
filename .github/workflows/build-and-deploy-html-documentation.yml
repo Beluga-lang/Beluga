@@ -33,7 +33,7 @@ jobs:
           dune-cache: true
 
       - name: Install dependencies
-        run: opam install --locked --deps-only --with-test --with-doc beluga.opam
+        run: opam install --locked --deps-only --with-test --with-doc ./beluga.opam
 
       - name: Build HTML documentation
         run: opam exec -- dune build @doc

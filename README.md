@@ -72,7 +72,7 @@ Use `make uninstall` to uninstall the executables.
 
 The latest version of Beluga may be built and installed as follows, with the test dependencies.
 With this configuration, the unit and integration tests can be run with `make test`.
-If you already have an opam switch for Beluga without the test dependencies installed as above, then you can install them with `opam install beluga.opam --locked --deps-only --with-test --with-doc`.
+If you already have an opam switch for Beluga without the test dependencies installed as above, then you can install them with `opam install ./beluga.opam --locked --deps-only --with-test --with-doc`.
 Alternatively, you can remove the existing opam switch with `opam switch remove .`.
 
 To start working on Beluga, clone the repository and run the `make setup-development` command to create an opam switch for Beluga with the necessary dependencies:

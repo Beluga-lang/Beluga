@@ -191,7 +191,7 @@ function check_compiler_test_case {
     # In bash < 4.4, array without an item is considered as an undefined variable.
     output=$("${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
     exit_code=$?
-    diff_output=$(echo "${output}" | diff -u "${file_path}.out" - 2>/dev/null)
+    diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.
     diff_code=$?
 

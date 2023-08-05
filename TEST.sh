@@ -129,7 +129,7 @@ function do_testing {
         for file_path in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
             start_test_case "${file_path}"
 
-            check_compiler_test_case "${file_path}"
+            check_example_test_case "${file_path}"
         done
     fi
 
@@ -182,18 +182,17 @@ function do_testing {
     exit $(( ! ! is_failed ))
 }
 
-function check_compiler_test_case {
+function check_example_test_case {
+    # Example test cases never have corresponding output files
     local -r file_path=$1
 
-    local output exit_code diff_output diff_code
+    local output output_file exit_code cmp_output diff_code
 
     # ${...[@]+${...[@]}} is a workaround for bash < 4.4
     # In bash < 4.4, array without an item is considered as an undefined variable.
-    output=$("${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
+    output_file="$(mktemp)"
+    "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
     exit_code=$?
-    diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
-    # diff responds 0 if same, 1 if different, 2 if couldn't compare.
-    diff_code=$?
 
     if [ "${exit_code}" -eq 152 ]; then
         if grep -q "${file_path}" .admissible-fail; then
@@ -204,7 +203,7 @@ function check_compiler_test_case {
             (( TEST_RESULT_TIMEOUT+=1 ))
             stop_on_failure
         fi
-    elif [[ "${diff_code}" -eq 0 || ("${exit_code}" -eq 0 && "${diff_code}" -eq 2) ]]; then
+    elif [ "${exit_code}" -eq 0 ]; then
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
     else
@@ -215,18 +214,89 @@ function check_compiler_test_case {
             echo -e "${C_FAIL}FAIL${C_END}"
             (( TEST_RESULT_FAIL+=1 ))
 
-            if [ -z "${diff_output}" ]; then
-                echo "${output}"
-            else
-                echo "${diff_output}" | colorize_diff
-            fi
+            echo "${output}"
 
             stop_on_failure
         fi
     fi
+}
+
+function check_compiler_test_case {
+    local -r file_path=$1
+
+    local output output_file exit_code cmp_output diff_code out_file_exists
+
+    # ${...[@]+${...[@]}} is a workaround for bash < 4.4
+    # In bash < 4.4, array without an item is considered as an undefined variable.
+    output_file="$(mktemp)"
+    "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
+    exit_code=$?
+
+    if [ "${exit_code}" -eq 152 ]; then
+        if grep -q "${file_path}" .admissible-fail; then
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
+        else
+            echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+            (( TEST_RESULT_TIMEOUT+=1 ))
+            stop_on_failure
+        fi
+    elif [[ ${exit_code} -eq 0 ]]; then
+        if [ ! -f "${file_path}.out" ]; then
+            echo -e "${C_OK}OK${C_END}"
+            (( TEST_RESULT_SUCCESS+=1 ))
+        else
+            if grep -q "${file_path}" .admissible-fail; then
+                echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+                (( TEST_RESULT_ADMISSIBLE+=1 ))
+            else
+                echo -e "${C_FAIL}FAIL${C_END}"
+                (( TEST_RESULT_FAIL+=1 ))
+
+                if [[ -f "${file_path}.out" ]]; then
+                    diff --color --unified=3 "${file_path}.out" "${output_file}"
+                else
+                    cat "${output_file}"
+                fi
+
+                stop_on_failure
+            fi
+        fi
+    else
+        if [ -f "${file_path}.out" ]; then
+            if cmp -s "${file_path}.out" "${output_file}"; then
+                echo -e "${C_OK}OK${C_END}"
+                (( TEST_RESULT_SUCCESS+=1 ))
+            else
+                if grep -q "${file_path}" .admissible-fail; then
+                    echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+                    (( TEST_RESULT_ADMISSIBLE+=1 ))
+                else
+                    echo -e "${C_FAIL}FAIL${C_END}"
+                    (( TEST_RESULT_FAIL+=1 ))
+
+                    diff --color --unified=3 "${file_path}.out" "${output_file}"
+
+                    stop_on_failure
+                fi
+            fi
+        else
+            if grep -q "${file_path}" .admissible-fail; then
+                echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+                (( TEST_RESULT_ADMISSIBLE+=1 ))
+            else
+                echo -e "${C_FAIL}FAIL${C_END}"
+                (( TEST_RESULT_FAIL+=1 ))
+
+                cat "${output_file}"
+
+                stop_on_failure
+            fi
+        fi
+    fi
 
     if [[ -n "${RESET_OUT_FILES}" && -f "${file_path}.out" ]]; then
-        echo "${output}" > "${file_path}.out"
+        cat "${output_file}" > "${file_path}.out"
     fi
 }
 
@@ -380,12 +450,6 @@ function set_colors {
     C_REMOVED="\x1b[31m"            # foreground red
 
     C_END="\x1b[00m"                # reset colors
-}
-
-function colorize_diff {
-    sed "s/^+/${C_ADDED}+/
-         s/^-/${C_REMOVED}-/
-         s/\$/${C_END}/"
 }
 
 main "$@"

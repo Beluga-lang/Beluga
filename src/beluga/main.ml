@@ -99,7 +99,7 @@ let main () =
   | [ file ] ->
       ignore (Load.load_fresh file)
   | _ -> bailout "Wrong number of command line arguments.");
-  printf "%s@." (Beluga.Coverage.get_information ())
+  Format.fprintf Format.std_formatter "%s@?" (Beluga.Coverage.get_information ())
 
 let () =
   Format.set_margin 80;

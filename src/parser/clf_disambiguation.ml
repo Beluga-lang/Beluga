@@ -144,7 +144,7 @@ let () =
         Format.dprintf "The LF type-level constant %a is unbound."
           Qualified_identifier.pp identifier
     | Expected_clf_type_constant ->
-        Format.dprintf "Expected a LF type-level constant."
+        Format.dprintf "Expected an LF type-level constant."
     | Unbound_type_constant_or_illegal_projection_clf_type identifier ->
         Format.dprintf
           "Either the LF type-level constant %a is unbound, or a projection \

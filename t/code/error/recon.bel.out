@@ -1,7 +1,7 @@
 File "./t/code/error/recon.bel", line 174, column 10:
 174 |   [g |- SN N] ->
               ^^      
-Error: Expected a LF type-level constant.
+Error: Expected an LF type-level constant.
        File "./t/code/error/recon.bel", line 94, column 11:
        94 |inductive SN : (g : cxt) {M : [g |- tm A[]]} ctype =
                      ^^                                        

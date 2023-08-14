@@ -31,7 +31,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(eval-when-compile (require 'cl-lib))
 (require 'smie)
 
 (provide 'beluga-unicode-input-method)

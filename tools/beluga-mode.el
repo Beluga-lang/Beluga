@@ -34,6 +34,9 @@
 (eval-when-compile (require 'cl-lib))
 (require 'smie)
 
+(require 'ansi-color)
+(add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+
 (provide 'beluga-unicode-input-method)
 (require 'quail)
 

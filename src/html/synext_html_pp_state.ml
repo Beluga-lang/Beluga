@@ -69,17 +69,17 @@ module type HTML_PRINTING_STATE = sig
     -> (state -> 'a)
     -> 'a
 
-  val make_prefix :
+  val add_prefix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  val make_infix :
+  val add_infix_notation :
        state
     -> ?precedence:Int.t
     -> ?associativity:Associativity.t
     -> Qualified_identifier.t
     -> Unit.t
 
-  val make_postfix :
+  val add_postfix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
   val lookup_operator :
@@ -188,9 +188,9 @@ module Entry = struct
   let make_module_entry ?location:_ ~page ~id _identifier =
     { reference = Html_reference.make ~page ~id; operator = Option.none }
 
-  let[@warning "-23"] modify_operator f entry =
+  let modify_operator f entry =
     let operator' = f entry.operator in
-    { entry with operator = operator' }
+    { entry with operator = operator' } [@warning "-23"]
 end
 
 module Html_printing_state = struct
@@ -484,18 +484,18 @@ module Html_printing_state = struct
             declarations
         else ()
 
-  let[@warning "-23"] make_prefix state ?precedence constant =
+  let add_prefix_notation state ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     modify_operator state constant (fun _operator ->
         Option.some (Operator.make_prefix ~precedence))
 
-  let[@warning "-23"] make_infix state ?precedence ?associativity constant =
+  let add_infix_notation state ?precedence ?associativity constant =
     let precedence = get_default_precedence_opt state precedence in
     let associativity = get_default_associativity_opt state associativity in
     modify_operator state constant (fun _operator ->
         Option.some (Operator.make_infix ~precedence ~associativity))
 
-  let[@warning "-23"] make_postfix state ?precedence constant =
+  let add_postfix_notation state ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     modify_operator state constant (fun _operator ->
         Option.some (Operator.make_postfix ~precedence))

@@ -2169,6 +2169,25 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     | Associativity.Right_associative -> pp_string state "right"
     | Associativity.Non_associative -> pp_string state "none"
 
+  let apply_signature_pragma state pragma =
+    match pragma with
+    | Signature.Pragma.Name _ -> ()
+    | Signature.Pragma.Default_associativity { associativity; _ } ->
+        set_default_associativity state associativity
+    | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
+        make_prefix state ?precedence constant
+    | Signature.Pragma.Infix_fixity
+        { constant; precedence; associativity; _ } ->
+        make_infix state ?precedence ?associativity constant
+    | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
+        make_postfix state ?precedence constant
+    | Signature.Pragma.Not _ -> ()
+    | Signature.Pragma.Open_module { module_identifier; _ } ->
+        open_module state module_identifier
+    | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
+        add_abbreviation state module_identifier abbreviation
+    | Signature.Pragma.Query _ -> ()
+
   let rec pp_signature_pragma state pragma =
     match pragma with
     | Signature.Pragma.Name
@@ -2196,8 +2215,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               pp_associativity state associativity;
               pp_dot state)
         in
-        pp_pragma state "assoc" pp_associativity_pragma;
-        set_default_associativity state associativity
+        pp_pragma state "assoc" pp_associativity_pragma
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         let pp_prefix_pragma state =
           pp_hovbox state ~indent (fun state ->
@@ -2211,8 +2229,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
                 precedence;
               pp_dot state)
         in
-        pp_pragma state "prefix" pp_prefix_pragma;
-        make_prefix state ?precedence constant
+        pp_pragma state "prefix" pp_prefix_pragma
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
         let pp_infix_pragma state =
@@ -2232,8 +2249,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
                 associativity;
               pp_dot state)
         in
-        pp_pragma state "infix" pp_infix_pragma;
-        make_infix state ?precedence ?associativity constant
+        pp_pragma state "infix" pp_infix_pragma
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         let pp_postfix_pragma state =
           pp_hovbox state ~indent (fun state ->
@@ -2247,8 +2263,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
                 precedence;
               pp_dot state)
         in
-        pp_pragma state "postfix" pp_postfix_pragma;
-        make_postfix state ?precedence constant
+        pp_pragma state "postfix" pp_postfix_pragma
     | Signature.Pragma.Not _ ->
         let pp_not_pragma state = pp_string state "--not" in
         pp_pragma state "not" pp_not_pragma
@@ -2260,8 +2275,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               pp_constant_invoke state module_identifier;
               pp_dot state)
         in
-        pp_pragma state "open" pp_open_pragma;
-        open_module state module_identifier
+        pp_pragma state "open" pp_open_pragma
     | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
         let pp_abbrev_pragma state =
           pp_hovbox state ~indent (fun state ->
@@ -2272,8 +2286,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               pp_identifier state abbreviation;
               pp_dot state)
         in
-        pp_pragma state "abbrev" pp_abbrev_pragma;
-        add_abbreviation state module_identifier abbreviation
+        pp_pragma state "abbrev" pp_abbrev_pragma
     | Signature.Pragma.Query
         { identifier; typ; expected_solutions; maximum_tries; _ } ->
         let pp_query_argument state argument_opt =
@@ -2898,7 +2911,8 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     | Signature.Entry.Declaration { declaration; _ } ->
         pp_signature_declaration state declaration
     | Signature.Entry.Pragma { pragma; _ } ->
-        pp_signature_pragma state pragma
+        pp_signature_pragma state pragma;
+        apply_signature_pragma state pragma
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
         pp_string state html

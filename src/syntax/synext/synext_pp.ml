@@ -2041,6 +2041,25 @@ struct
     | Associativity.Right_associative -> pp_string state "right"
     | Associativity.Non_associative -> pp_string state "none"
 
+  let apply_signature_pragma state pragma =
+    match pragma with
+    | Signature.Pragma.Name _ -> ()
+    | Signature.Pragma.Default_associativity { associativity; _ } ->
+        set_default_associativity state associativity
+    | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
+        make_prefix state ?precedence constant
+    | Signature.Pragma.Infix_fixity
+        { constant; precedence; associativity; _ } ->
+        make_infix state ?precedence ?associativity constant
+    | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
+        make_postfix state ?precedence constant
+    | Signature.Pragma.Not _ -> ()
+    | Signature.Pragma.Open_module { module_identifier; _ } ->
+        open_module state module_identifier
+    | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
+        add_abbreviation state module_identifier abbreviation
+    | Signature.Pragma.Query _ -> ()
+
   let rec pp_signature_pragma state pragma =
     match pragma with
     | Signature.Pragma.Name
@@ -2062,8 +2081,7 @@ struct
             pp_string state "--assoc";
             pp_space state;
             pp_associativity state associativity;
-            pp_dot state);
-        set_default_associativity state associativity
+            pp_dot state)
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         pp_hovbox state ~indent (fun state ->
             pp_string state "--prefix";
@@ -2074,8 +2092,7 @@ struct
                 pp_space state;
                 pp_int state precedence)
               precedence;
-            pp_dot state);
-        make_prefix state ?precedence constant
+            pp_dot state)
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
         pp_hovbox state ~indent (fun state ->
@@ -2092,8 +2109,7 @@ struct
                 pp_space state;
                 pp_associativity state associativity)
               associativity;
-            pp_dot state);
-        make_infix state ?precedence ?associativity constant
+            pp_dot state)
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         pp_hovbox state ~indent (fun state ->
             pp_string state "--postfix";
@@ -2104,16 +2120,14 @@ struct
                 pp_space state;
                 pp_int state precedence)
               precedence;
-            pp_dot state);
-        make_postfix state ?precedence constant
+            pp_dot state)
     | Signature.Pragma.Not _ -> pp_string state "--not"
     | Signature.Pragma.Open_module { module_identifier; _ } ->
         pp_hovbox state ~indent (fun state ->
             pp_string state "--open";
             pp_space state;
             pp_constant_invoke state module_identifier;
-            pp_dot state);
-        open_module state module_identifier
+            pp_dot state)
     | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
         pp_hovbox state ~indent (fun state ->
             pp_string state "--abbrev";
@@ -2121,8 +2135,7 @@ struct
             pp_constant_invoke state module_identifier;
             pp_space state;
             pp_identifier state abbreviation;
-            pp_dot state);
-        add_abbreviation state module_identifier abbreviation
+            pp_dot state)
     | Signature.Pragma.Query
         { identifier; typ; expected_solutions; maximum_tries; _ } ->
         let pp_query_argument state =
@@ -2687,7 +2700,8 @@ struct
     | Signature.Entry.Declaration { declaration; _ } ->
         pp_signature_declaration state declaration
     | Signature.Entry.Pragma { pragma; _ } ->
-        pp_signature_pragma state pragma
+        pp_signature_pragma state pragma;
+        apply_signature_pragma state pragma
     | Signature.Entry.Comment { content; _ } ->
         pp_vbox state (fun state ->
             pp_string state "%{{";

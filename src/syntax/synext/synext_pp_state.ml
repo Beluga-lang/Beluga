@@ -68,6 +68,21 @@ module type PRINTING_STATE = sig
   val add_postfix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
+  val add_postponed_prefix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  val add_postponed_infix_notation :
+       state
+    -> ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  val add_postponed_postfix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  val apply_postponed_fixity_pragmas : state -> unit
+
   val lookup_operator :
     state -> Qualified_identifier.t -> Operator.t Option.t
 
@@ -126,11 +141,33 @@ module Printing_state = struct
         ; declarations : Entry.t Binding_tree.t
         }
 
+  (** The type of fixity pragmas that are postponed to be applied at a later
+      point. The default precedence and associativity to be used are
+      determined where the pragma is declared, hence why those fields are not
+      optional like in the parser syntax. *)
+  type postponed_fixity_pragma =
+    | Prefix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+    | Infix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        ; associativity : Associativity.t
+        }
+    | Postfix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+
   type state =
     { mutable formatter : Format.formatter
     ; mutable scopes : scope List1.t
     ; mutable default_precedence : Int.t
     ; mutable default_associativity : Associativity.t
+    ; mutable postponed_fixity_pragmas : postponed_fixity_pragma List.t
+          (** The list of fixity pragmas that refer to constants declared
+              immediately after them instead of pragmas declared earlier. *)
     }
 
   include (
@@ -152,6 +189,7 @@ module Printing_state = struct
     ; scopes = List1.singleton (create_module_scope ())
     ; default_precedence
     ; default_associativity
+    ; postponed_fixity_pragmas = []
     }
 
   let set_formatter state formatter = state.formatter <- formatter
@@ -323,6 +361,40 @@ module Printing_state = struct
     let precedence = get_default_precedence_opt state precedence in
     modify_operator state constant (fun _operator ->
         Option.some (Operator.make_postfix ~precedence))
+
+  let add_postponed_notation state pragma =
+    state.postponed_fixity_pragmas <-
+      pragma :: state.postponed_fixity_pragmas
+
+  let add_postponed_prefix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state (Prefix_fixity { precedence; constant })
+
+  let add_postponed_infix_notation state ?precedence ?associativity constant
+      =
+    let precedence = get_default_precedence_opt state precedence in
+    let associativity = get_default_associativity_opt state associativity in
+    add_postponed_notation state
+      (Infix_fixity { precedence; associativity; constant })
+
+  let add_postponed_postfix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state (Postfix_fixity { precedence; constant })
+
+  let apply_postponed_fixity_pragmas =
+    let apply_postponed_fixity_pragma state = function
+      | Prefix_fixity { constant; precedence } ->
+          add_prefix_notation state ~precedence constant
+      | Infix_fixity { constant; precedence; associativity } ->
+          add_infix_notation state ~precedence ~associativity constant
+      | Postfix_fixity { constant; precedence } ->
+          add_postfix_notation state ~precedence constant
+    in
+    fun state ->
+      List.iter
+        (apply_postponed_fixity_pragma state)
+        state.postponed_fixity_pragmas;
+      state.postponed_fixity_pragmas <- []
 
   let open_namespace state identifier =
     let _entry, subtree = lookup state identifier in

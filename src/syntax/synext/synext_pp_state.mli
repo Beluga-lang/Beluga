@@ -87,16 +87,16 @@ module type PRINTING_STATE = sig
   val add_program_constant :
     state -> ?location:Location.t -> Identifier.t -> Unit.t
 
-  (** [make_prefix state ?precedence constant] sets [constant] as a prefix
-      operator with precedence [p] if [precedence = Option.Some p], or
+  (** [add_prefix_notation state ?precedence constant] sets [constant] as a
+      prefix operator with precedence [p] if [precedence = Option.Some p], or
       [state]'s default precedence if [precedence = Option.None].
 
       If [constant] is unbound in [state], then an exception is raised. *)
-  val make_prefix :
+  val add_prefix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
-  (** [make_infix state ?precedence ?associativity constant] sets [constant]
-      as an infix operator with:
+  (** [add_infix_notation state ?precedence ?associativity constant] sets
+      [constant] as an infix operator with:
 
       - precedence [p] if [precedence = Option.Some p], or [state]'s default
         precedence if [precedence = Option.None].
@@ -104,19 +104,19 @@ module type PRINTING_STATE = sig
         default associativity if [associativity = Option.None].
 
       If [constant] is unbound in [state], then an exception is raised. *)
-  val make_infix :
+  val add_infix_notation :
        state
     -> ?precedence:Int.t
     -> ?associativity:Associativity.t
     -> Qualified_identifier.t
     -> Unit.t
 
-  (** [make_postfix state ?precedence constant] sets [constant] as a postfix
-      operator with precedence [p] if [precedence = Option.Some p], or
-      [state]'s default precedence if [precedence = Option.None].
+  (** [add_postfix_notation state ?precedence constant] sets [constant] as a
+      postfix operator with precedence [p] if [precedence = Option.Some p],
+      or [state]'s default precedence if [precedence = Option.None].
 
       If [constant] is unbound, then an exception is raised. *)
-  val make_postfix :
+  val add_postfix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
 
   (** [lookup_operator state constant] is the operator description

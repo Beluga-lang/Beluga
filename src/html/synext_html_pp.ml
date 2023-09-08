@@ -2175,12 +2175,12 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     | Signature.Pragma.Default_associativity { associativity; _ } ->
         set_default_associativity state associativity
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
-        make_prefix state ?precedence constant
+        add_prefix_notation state ?precedence constant
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
-        make_infix state ?precedence ?associativity constant
+        add_infix_notation state ?precedence ?associativity constant
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
-        make_postfix state ?precedence constant
+        add_postfix_notation state ?precedence constant
     | Signature.Pragma.Not _ -> ()
     | Signature.Pragma.Open_module { module_identifier; _ } ->
         open_module state module_identifier

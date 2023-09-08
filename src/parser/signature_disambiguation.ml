@@ -441,14 +441,6 @@ struct
         Synext.Signature.Totality.Order.Simultaneous_ordering
           { location; arguments = arguments' }
 
-  and disambiguate_mutually_recursive_declarations state declarations =
-    iter_list1 state add_declaration declarations;
-    apply_postponed_fixity_pragmas state;
-    let declarations =
-      traverse_list1 state disambiguate_declaration declarations
-    in
-    declarations
-
   and disambiguate_declaration state = function
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
         { location; identifier; typ_or_const }
@@ -631,8 +623,10 @@ struct
               (Duplicate_identifiers_recursive_declaration
                  (List1.map Pair.fst duplicates))
         | Option.None ->
+            iter_list1 state add_declaration declarations;
+            apply_postponed_fixity_pragmas state;
             let declarations' =
-              disambiguate_mutually_recursive_declarations state declarations
+              traverse_list1 state disambiguate_declaration declarations
             in
             Synext.Signature.Declaration.Recursive_declarations
               { location; declarations = declarations' })
@@ -829,12 +823,12 @@ struct
               fixity pragma nor a documentation comment"
              __FUNCTION__)
 
-  (** [disambiguate_entries state entries] is disambiguated list of entries
-      derived from [entries]. This function handles entry disambiguation for
-      entries that interact in special cases with other declarations.
-      Particularly, this determines whether a fixity pragma should apply to
-      an already declared constant, or if it should be postponed to be
-      applied to a constant declared later. *)
+  (** [disambiguate_entries state entries] is the disambiguated list of
+      entries derived from [entries]. This function handles entry
+      disambiguation for entries that interact in special cases with other
+      declarations. Particularly, this determines whether a fixity pragma
+      should apply to an already declared constant, or if it should be
+      postponed to be applied to a constant declared later. *)
   and disambiguate_entries state = function
     | Synprs.Signature.Entry.Raw_pragma
         { pragma =

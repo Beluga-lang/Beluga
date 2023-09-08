@@ -443,6 +443,7 @@ struct
 
   and disambiguate_mutually_recursive_declarations state declarations =
     iter_list1 state add_declaration declarations;
+    apply_postponed_fixity_pragmas state;
     let declarations =
       traverse_list1 state disambiguate_declaration declarations
     in
@@ -613,6 +614,7 @@ struct
       | Synprs.Signature.Declaration.Raw_val _ ) as declaration ->
         let declaration' = disambiguate_declaration state declaration in
         add_declaration' state declaration';
+        apply_postponed_fixity_pragmas state;
         declaration'
     | Synprs.Signature.Declaration.Raw_recursive_declarations
         { location; declarations } -> (
@@ -654,12 +656,226 @@ struct
     | Synprs.Signature.Entry.Raw_comment { location; content } ->
         Synext.Signature.Entry.Comment { location; content }
 
+  (** [get_constant_declaration_identifier_if_can_have_fixity_pragma declaration]
+      is [Option.Some identifier] if [declaration] can have a fixity pragma
+      attached to it. In that case, a fixity pragma could be declared before
+      it, and it would apply to [declaration]. Such a pragma is called a
+      postponed fixity pragma. *)
+  and get_constant_declaration_identifier_if_can_have_fixity_pragma =
+    function
+    | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
+        { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_lf_typ_constant { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_lf_term_constant { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant
+        { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant
+        { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_comp_cotyp_constant { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_comp_expression_constructor
+        { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
+        { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_theorem { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_proof { identifier; _ }
+    | Synprs.Signature.Declaration.Raw_val { identifier; _ } ->
+        Option.some identifier
+    | Synprs.Signature.Declaration.Raw_comp_expression_destructor _
+    | Synprs.Signature.Declaration.Raw_schema _
+    | Synprs.Signature.Declaration.Raw_recursive_declarations _
+    | Synprs.Signature.Declaration.Raw_module _ ->
+        Option.none
+
+  (** [fixable_constant_declaration_identifiers entry] is the set of
+      identifiers in [entry] to which a postponed fixity pragma can be
+      attached. [entry] is assumed to be the signature-level entry that
+      immediately follows a set of fixity pragmas. *)
+  and fixable_constant_declaration_identifiers = function
+    | Synprs.Signature.Entry.Raw_declaration
+        { declaration =
+            Synprs.Signature.Declaration.Raw_recursive_declarations
+              { declarations; _ }
+        ; _
+        } ->
+        (* Collect all the declaration identifiers in the group of mutually
+           recursive declarations that can have fixity pragmas attached to
+           them *)
+        List.fold_left
+          (fun identifier_set declaration ->
+            match
+              get_constant_declaration_identifier_if_can_have_fixity_pragma
+                declaration
+            with
+            | Option.None -> identifier_set
+            | Option.Some identifier ->
+                Identifier.Set.add identifier identifier_set)
+          Identifier.Set.empty
+          (List1.to_list declarations)
+    | Synprs.Signature.Entry.Raw_declaration { declaration; _ } -> (
+        (* Return the declaration identifier if it can have a fixity pragma
+           attached to it *)
+        match
+          get_constant_declaration_identifier_if_can_have_fixity_pragma
+            declaration
+        with
+        | Option.None -> Identifier.Set.empty
+        | Option.Some identifier -> Identifier.Set.singleton identifier)
+    | _ -> Identifier.Set.empty
+
+  (** [is_entry_fixity_pragma_or_comment entry] is [true] if and only if
+      [entry] is a fixity pragma or a documentation comment.
+
+      This predicate is used to determine which signature entries can be
+      skipped over when looking ahead to find which signature-level
+      declaration can a postponed fixity pragma be applied to. *)
+  and is_entry_fixity_pragma_or_comment = function
+    | Synprs.Signature.Entry.Raw_pragma
+        { pragma =
+            ( Synprs.Signature.Pragma.Prefix_fixity _
+            | Synprs.Signature.Pragma.Infix_fixity _
+            | Synprs.Signature.Pragma.Postfix_fixity _ )
+        ; _
+        }
+    | Synprs.Signature.Entry.Raw_comment _ ->
+        true
+    | _ -> false
+
+  (** [disambiguate_postponable_fixity_pragma state applicable_constant_identifiers entry]
+      disambiguates the fixity pragma or documentation comment [entry] with
+      respect to the disambiguation state [state] and the set
+      [applicable_constant_identifiers] of identifiers in the signature-level
+      declaration that follows the pragma/comment.
+
+      If [entry] is a pragma whose constant is in
+      [applicable_constant_identifiers], then [entry] is a postponed fixity
+      pragma, and its application should wait until the later declaration is
+      in scope.
+
+      It is assumed that [entry] does not affect the lookahead for the target
+      declaration for a postponed fixity pragma. That is, [entry] must be a
+      prefix, infix or postfix fixity pragma, or a documentation comment. *)
+  and disambiguate_postponable_fixity_pragma state
+      applicable_constant_identifiers =
+    let is_constant_a_plain_identifier constant =
+      List.null (Qualified_identifier.namespaces constant)
+    in
+    let is_fixity_constant_postponed constant =
+      is_constant_a_plain_identifier constant
+      && Identifier.Set.mem
+           (Qualified_identifier.name constant)
+           applicable_constant_identifiers
+    in
+    function
+    | Synprs.Signature.Entry.Raw_comment { location; content } ->
+        Synext.Signature.Entry.Comment { location; content }
+    | Synprs.Signature.Entry.Raw_pragma
+        { pragma =
+            Synprs.Signature.Pragma.Prefix_fixity
+              { location; constant; precedence }
+        ; location = entry_location
+        } ->
+        let add_notation =
+          if is_fixity_constant_postponed constant then
+            add_postponed_prefix_notation
+          else add_prefix_notation
+        in
+        add_notation state ?precedence constant;
+        Synext.Signature.Entry.Pragma
+          { pragma =
+              Synext.Signature.Pragma.Prefix_fixity
+                { location; constant; precedence }
+          ; location = entry_location
+          }
+    | Synprs.Signature.Entry.Raw_pragma
+        { pragma =
+            Synprs.Signature.Pragma.Infix_fixity
+              { location; constant; precedence; associativity }
+        ; location = entry_location
+        } ->
+        let add_notation =
+          if is_fixity_constant_postponed constant then
+            add_postponed_infix_notation
+          else add_infix_notation
+        in
+        add_notation state ?precedence ?associativity constant;
+        Synext.Signature.Entry.Pragma
+          { pragma =
+              Synext.Signature.Pragma.Infix_fixity
+                { location; constant; precedence; associativity }
+          ; location = entry_location
+          }
+    | Synprs.Signature.Entry.Raw_pragma
+        { pragma =
+            Synprs.Signature.Pragma.Postfix_fixity
+              { location; constant; precedence }
+        ; location = entry_location
+        } ->
+        let add_notation =
+          if is_fixity_constant_postponed constant then
+            add_postponed_postfix_notation
+          else add_postfix_notation
+        in
+        add_notation state ?precedence constant;
+        Synext.Signature.Entry.Pragma
+          { pragma =
+              Synext.Signature.Pragma.Postfix_fixity
+                { location; constant; precedence }
+          ; location = entry_location
+          }
+    | _ ->
+        Error.raise_violation
+          (Format.asprintf
+             "[%s] unexpectedly encountered an entry that is neither a \
+              fixity pragma nor a documentation comment"
+             __FUNCTION__)
+
+  (** [disambiguate_entries state entries] is disambiguated list of entries
+      derived from [entries]. This function handles entry disambiguation for
+      entries that interact in special cases with other declarations.
+      Particularly, this determines whether a fixity pragma should apply to
+      an already declared constant, or if it should be postponed to be
+      applied to a constant declared later. *)
+  and disambiguate_entries state = function
+    | Synprs.Signature.Entry.Raw_pragma
+        { pragma =
+            ( Synprs.Signature.Pragma.Prefix_fixity _
+            | Synprs.Signature.Pragma.Infix_fixity _
+            | Synprs.Signature.Pragma.Postfix_fixity _ )
+        ; _
+        }
+      :: _ as entries -> (
+        (* Special case of disambiguation where the fixity pragma may apply
+           to a constant declared subsequently after the pragma *)
+        match List.take_while is_entry_fixity_pragma_or_comment entries with
+        | _, [] -> traverse_list state disambiguate_entry entries
+        | pragmas_and_comments, entry :: entries ->
+            let applicable_constant_identifiers =
+              fixable_constant_declaration_identifiers entry
+            in
+            (* The fixity pragmas in [pragmas_and_comments] whose identifiers
+               are in [applicable_constant_identifiers] are postponed fixity
+               pragmas *)
+            let pragmas_and_comments' =
+              traverse_list state
+                (fun state ->
+                  disambiguate_postponable_fixity_pragma state
+                    applicable_constant_identifiers)
+                pragmas_and_comments
+            in
+            let entries' = disambiguate_entries state (entry :: entries) in
+            pragmas_and_comments' @ entries')
+    | [] -> []
+    | x :: xs ->
+        let y = disambiguate_entry state x in
+        let ys = disambiguate_entries state xs in
+        y :: ys
+
   and disambiguate_signature_file state
       { Synprs.Signature.location; global_pragmas; entries } =
     let global_pragmas' =
       traverse_list state disambiguate_global_pragma global_pragmas
     in
-    let entries' = traverse_list state disambiguate_entry entries in
+    let entries' = disambiguate_entries state entries in
     { Synext.Signature.location
     ; global_pragmas = global_pragmas'
     ; entries = entries'

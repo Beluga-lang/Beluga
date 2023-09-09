@@ -61,14 +61,14 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val get_default_precedence : state -> Int.t
 
-  val set_operator_prefix :
+  val add_prefix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
     -> Qualified_identifier.t
     -> Unit.t
 
-  val set_operator_infix :
+  val add_infix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
@@ -76,12 +76,64 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     -> Qualified_identifier.t
     -> Unit.t
 
-  val set_operator_postfix :
+  val add_postfix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
     -> Qualified_identifier.t
     -> Unit.t
+
+  (** [add_postponed_prefix_notation state ?location ?precedence identifier]
+      adds a postponed prefix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_prefix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  (** [add_postponed_infix_notation state ?location ?precedence ?associativity identifier]
+      adds a postponed infix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead. Likewise, if [associativity = Option.None], then
+      {!get_default_associativity} is used instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_infix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  (** [add_postponed_postfix_notation state ?location ?precedence identifier]
+      adds a postponed postfix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_postfix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  (** [apply_postponed_fixity_pragmas state] adds in scope the postponed
+      prefix, infix and postfix fixity pragmas. This function should be
+      called only when the targets of those postponed pragmas are in scope.
+      That is, postponed fixity pragmas are applied after the subsequent
+      declaration is added, or after a group of mutually recursive
+      declarations are added. *)
+  val apply_postponed_fixity_pragmas : state -> unit
 
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t

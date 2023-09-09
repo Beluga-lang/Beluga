@@ -85,14 +85,14 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val get_default_precedence : state -> Int.t
 
-  val set_operator_prefix :
+  val add_prefix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
     -> Qualified_identifier.t
     -> Unit.t
 
-  val set_operator_infix :
+  val add_infix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
@@ -100,12 +100,36 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     -> Qualified_identifier.t
     -> Unit.t
 
-  val set_operator_postfix :
+  val add_postfix_notation :
        state
     -> ?location:Location.t
     -> ?precedence:Int.t
     -> Qualified_identifier.t
     -> Unit.t
+
+  val add_postponed_prefix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  val add_postponed_infix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  val add_postponed_postfix_notation :
+       state
+    -> ?location:Location.t
+    -> ?precedence:Int.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  val apply_postponed_fixity_pragmas : state -> unit
 
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t
@@ -216,6 +240,33 @@ module Make_signature_reconstruction_state
     (Index_state : Index_state.INDEXING_STATE)
     (Index : Index.INDEXER with type state = Index_state.state) =
 struct
+  type type_family =
+    | Typ of Id.cid_typ
+    | Comp_typ of Id.cid_comp_typ
+    | Comp_cotyp of Id.cid_comp_cotyp
+
+  (** The type of fixity pragmas that are postponed to be applied at a later
+      point. The default precedence and associativity to be used are
+      determined where the pragma is declared, hence why those fields are not
+      optional like in the parser syntax. *)
+  type postponed_fixity_pragma =
+    | Prefix_fixity of
+        { location : Location.t Option.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+    | Infix_fixity of
+        { location : Location.t Option.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t
+        ; associativity : Associativity.t
+        }
+    | Postfix_fixity of
+        { location : Location.t Option.t
+        ; constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+
   type state =
     { mutable leftover_vars :
         (Abstract.free_var Synint.LF.ctx * Location.t) List.t
@@ -230,16 +281,15 @@ struct
     ; mutable modules : Int.t
           (** The number of reconstructed modules. Used for generating module
               IDs. *)
-    ; mutable unfrozen_declarations :
-        [ `Typ of Id.cid_typ
-        | `Comp_typ of Id.cid_comp_typ
-        | `Comp_cotyp of Id.cid_comp_cotyp
-        ]
-        List.t
-          (** The list of declarations that are not frozen, by ID.
+    ; mutable unfrozen_declarations : type_family List.t
+          (** The list of type family declarations that are not frozen, by
+              ID.
 
               For instance, unfrozen LF type declarations can have
               constructors added to them. *)
+    ; mutable postponed_fixity_pragmas : postponed_fixity_pragma List.t
+          (** The list of fixity pragmas that refer to constants declared
+              immediately after them instead of pragmas declared earlier. *)
     }
 
   include (
@@ -255,6 +305,7 @@ struct
     ; default_precedence = Synext.default_precedence
     ; modules = 0
     ; unfrozen_declarations = []
+    ; postponed_fixity_pragmas = []
     }
 
   let clear_state ~clear_index_state state =
@@ -314,7 +365,7 @@ struct
     state.unfrozen_declarations <- entry :: state.unfrozen_declarations
 
   let add_lf_type_constant state ?location identifier cid =
-    add_unfrozen_declaration state (`Typ cid);
+    add_unfrozen_declaration state (Typ cid);
     Index_state.add_lf_type_constant state.index_state ?location identifier
       cid
 
@@ -339,17 +390,17 @@ struct
       ?location identifier cid
 
   let add_comp_inductive_type_constant state ?location identifier cid =
-    add_unfrozen_declaration state (`Comp_typ cid);
+    add_unfrozen_declaration state (Comp_typ cid);
     Index_state.add_inductive_computation_type_constant state.index_state
       ?location identifier cid
 
   let add_comp_stratified_type_constant state ?location identifier cid =
-    add_unfrozen_declaration state (`Comp_typ cid);
+    add_unfrozen_declaration state (Comp_typ cid);
     Index_state.add_stratified_computation_type_constant state.index_state
       ?location identifier cid
 
   let add_comp_cotype_constant state ?location identifier cid =
-    add_unfrozen_declaration state (`Comp_cotyp cid);
+    add_unfrozen_declaration state (Comp_cotyp cid);
     Index_state.add_coinductive_computation_type_constant state.index_state
       ?location identifier cid
 
@@ -417,7 +468,7 @@ struct
         Option.some Store.Cid.Comp.(explicit_arguments (get cid))
     | _ -> Option.none
 
-  let set_operator_prefix state ?location ?precedence constant =
+  let add_prefix_notation state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     match lookup_operator_arity state ?location constant with
     | Option.None ->
@@ -431,7 +482,7 @@ struct
           Store.OpPragmas.addPragma name Fixity.prefix precedence
             Associativity.right_associative
 
-  let set_operator_infix state ?location ?precedence ?associativity constant
+  let add_infix_notation state ?location ?precedence ?associativity constant
       =
     let precedence = get_default_precedence_opt state precedence in
     let associativity = get_default_associativity_opt state associativity in
@@ -447,7 +498,7 @@ struct
           Store.OpPragmas.addPragma name Fixity.infix precedence
             associativity
 
-  let set_operator_postfix state ?location ?precedence constant =
+  let add_postfix_notation state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     match lookup_operator_arity state ?location constant with
     | Option.None ->
@@ -460,6 +511,43 @@ struct
           let name = Name.make_from_qualified_identifier constant in
           Store.OpPragmas.addPragma name Fixity.postfix precedence
             Associativity.left_associative
+
+  let add_postponed_notation state pragma =
+    state.postponed_fixity_pragmas <-
+      pragma :: state.postponed_fixity_pragmas
+
+  let add_postponed_prefix_notation state ?location ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state
+      (Prefix_fixity { location; precedence; constant })
+
+  let add_postponed_infix_notation state ?location ?precedence ?associativity
+      constant =
+    let precedence = get_default_precedence_opt state precedence in
+    let associativity = get_default_associativity_opt state associativity in
+    add_postponed_notation state
+      (Infix_fixity { location; precedence; associativity; constant })
+
+  let add_postponed_postfix_notation state ?location ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state
+      (Postfix_fixity { location; precedence; constant })
+
+  let apply_postponed_fixity_pragmas =
+    let apply_postponed_fixity_pragma state = function
+      | Prefix_fixity { location; constant; precedence } ->
+          add_prefix_notation state ?location ~precedence constant
+      | Infix_fixity { location; constant; precedence; associativity } ->
+          add_infix_notation state ?location ~precedence ~associativity
+            constant
+      | Postfix_fixity { location; constant; precedence } ->
+          add_postfix_notation state ?location ~precedence constant
+    in
+    fun state ->
+      List.iter
+        (apply_postponed_fixity_pragma state)
+        state.postponed_fixity_pragmas;
+      state.postponed_fixity_pragmas <- []
 
   let add_module_abbreviation state ?location module_identifier ~abbreviation
       =
@@ -508,9 +596,9 @@ struct
   let freeze_all_unfrozen_declarations state =
     iter_list state
       (fun _state -> function
-        | `Typ id -> Store.Cid.Typ.freeze id
-        | `Comp_typ id -> Store.Cid.CompTyp.freeze id
-        | `Comp_cotyp id -> Store.Cid.CompCotyp.freeze id)
+        | Typ id -> Store.Cid.Typ.freeze id
+        | Comp_typ id -> Store.Cid.CompTyp.freeze id
+        | Comp_cotyp id -> Store.Cid.CompCotyp.freeze id)
       state.unfrozen_declarations;
     state.unfrozen_declarations <- []
 end

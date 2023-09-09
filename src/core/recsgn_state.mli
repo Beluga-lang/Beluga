@@ -135,6 +135,12 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
       declarations are added. *)
   val apply_postponed_fixity_pragmas : state -> unit
 
+  (** [apply_postponed_fixity_pragmas_for_constant state identifier] adds in
+      scope the postponed fixity pragmas for the constant having identifier
+      [identifier]. *)
+  val apply_postponed_fixity_pragmas_for_constant :
+    state -> Identifier.t -> unit
+
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t
 

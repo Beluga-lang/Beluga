@@ -1372,7 +1372,7 @@ module Disambiguation_state = struct
           add_postfix_notation state ~precedence constant
     in
     fun state ->
-      List.iter
+      List.iter_rev
         (apply_postponed_fixity_pragma state)
         state.postponed_fixity_pragmas;
       state.postponed_fixity_pragmas <- []

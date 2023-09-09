@@ -131,6 +131,9 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val apply_postponed_fixity_pragmas : state -> unit
 
+  val apply_postponed_fixity_pragmas_for_constant :
+    state -> Identifier.t -> unit
+
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t
 
@@ -533,21 +536,39 @@ struct
     add_postponed_notation state
       (Postfix_fixity { location; precedence; constant })
 
-  let apply_postponed_fixity_pragmas =
-    let apply_postponed_fixity_pragma state = function
-      | Prefix_fixity { location; constant; precedence } ->
-          add_prefix_notation state ?location ~precedence constant
-      | Infix_fixity { location; constant; precedence; associativity } ->
-          add_infix_notation state ?location ~precedence ~associativity
-            constant
-      | Postfix_fixity { location; constant; precedence } ->
-          add_postfix_notation state ?location ~precedence constant
-    in
-    fun state ->
-      List.iter
-        (apply_postponed_fixity_pragma state)
-        state.postponed_fixity_pragmas;
-      state.postponed_fixity_pragmas <- []
+  let postponed_fixity_pragma_identifier = function
+    | Prefix_fixity { constant; _ }
+    | Infix_fixity { constant; _ }
+    | Postfix_fixity { constant; _ } ->
+        Qualified_identifier.name constant
+
+  let apply_postponed_fixity_pragma state = function
+    | Prefix_fixity { location; constant; precedence } ->
+        add_prefix_notation state ?location ~precedence constant
+    | Infix_fixity { location; constant; precedence; associativity } ->
+        add_infix_notation state ?location ~precedence ~associativity
+          constant
+    | Postfix_fixity { location; constant; precedence } ->
+        add_postfix_notation state ?location ~precedence constant
+
+  let apply_postponed_fixity_pragmas state =
+    List.iter_rev
+      (apply_postponed_fixity_pragma state)
+      state.postponed_fixity_pragmas;
+    state.postponed_fixity_pragmas <- []
+
+  let apply_postponed_fixity_pragmas_for_constant state identifier =
+    state.postponed_fixity_pragmas <-
+      List.filter
+        (fun pragma ->
+          if
+            Identifier.equal identifier
+              (postponed_fixity_pragma_identifier pragma)
+          then (
+            apply_postponed_fixity_pragma state pragma;
+            false)
+          else true)
+        state.postponed_fixity_pragmas
 
   let add_module_abbreviation state ?location module_identifier ~abbreviation
       =

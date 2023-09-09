@@ -1147,6 +1147,10 @@ module Indexing_state = struct
           (Qualified_identifier.location qualified_identifier)
           (Error.composite_exception2 Expected_constant
              (actual_binding_exn qualified_identifier entry))
+    | exception exn ->
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          exn
 
   let index_of_lf_type_constant state qualified_identifier =
     match lookup state qualified_identifier with

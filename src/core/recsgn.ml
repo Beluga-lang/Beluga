@@ -722,6 +722,7 @@ module Make
       Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
     in
     add_lf_type_constant state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.Typ { location; identifier; cid; kind = tK' }
 
   and reconstruct_lf_const_declaration state location identifier extT =
@@ -781,6 +782,7 @@ module Make
           Store.Cid.Term.mk_entry name tA' i)
     in
     add_lf_term_constant state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.Const { location; identifier; cid; typ = tA' }
 
   and reconstruct_comp_typ_constant state location identifier kind
@@ -835,6 +837,7 @@ module Make
         add_comp_stratified_type_constant state ~location identifier cid
     | `Inductive ->
         add_comp_inductive_type_constant state ~location identifier cid);
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.CompTyp
       { location; identifier; cid; kind = cK'; positivity_flag = p }
 
@@ -885,6 +888,7 @@ module Make
           Store.Cid.CompCotyp.mk_entry name cK' i)
     in
     add_comp_cotype_constant state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.CompCotyp { location; identifier; cid; kind = cK' }
 
   and reconstruct_comp_constructor state location ~stratNum identifier typ =
@@ -952,6 +956,7 @@ module Make
           Store.Cid.CompConst.mk_entry name tau' i)
     in
     add_comp_constructor state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.CompConst { location; identifier; cid; typ = tau' }
 
   and reconstruct_comp_destructor state location identifier observation_type
@@ -1083,6 +1088,7 @@ module Make
           Store.Cid.CompTypDef.mk_entry name i (cD, cT) cK)
     in
     add_comp_typedef state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.CompTypAbbrev
       { location; identifier; cid; kind = cK; typ = cT }
 
@@ -1145,6 +1151,7 @@ module Make
           Store.Cid.Comp.mk_entry name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.Val
       { location
       ; identifier
@@ -1216,6 +1223,7 @@ module Make
           Store.Cid.Comp.mk_entry name tau' 0 mgid value_opt)
     in
     add_comp_val state ~location identifier cid;
+    apply_postponed_fixity_pragmas_for_constant state identifier;
     Synint.Sgn.Val
       { location
       ; identifier
@@ -1653,6 +1661,7 @@ module Make
             Store.Cid.Comp.mk_entry name tau' 0 total_decs Option.none)
       in
       add_prog state identifier cid;
+      apply_postponed_fixity_pragmas_for_constant state identifier;
       cid
     in
 

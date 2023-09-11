@@ -1285,28 +1285,33 @@ let rec json_of_signature_pragma pragma =
           [ ("associativity", json_of_associativity associativity)
           ; ("location", json_of_location location)
           ]
-  | Signature.Pragma.Prefix_fixity { constant; precedence; location } ->
+  | Signature.Pragma.Prefix_fixity
+      { constant; precedence; postponed; location } ->
       json_of_variant ~name:"Signature.Pragma.Prefix_fixity"
         ~data:
           [ ("constant", json_of_qualified_identifier constant)
           ; ("precedence", json_of_option json_of_int precedence)
+          ; ("postponed", json_of_bool postponed)
           ; ("location", json_of_location location)
           ]
   | Signature.Pragma.Infix_fixity
-      { constant; precedence; associativity; location } ->
+      { constant; precedence; associativity; postponed; location } ->
       json_of_variant ~name:"Signature.Pragma.Infix_fixity"
         ~data:
           [ ("constant", json_of_qualified_identifier constant)
           ; ( "associativity"
             , json_of_option json_of_associativity associativity )
           ; ("precedence", json_of_option json_of_int precedence)
+          ; ("postponed", json_of_bool postponed)
           ; ("location", json_of_location location)
           ]
-  | Signature.Pragma.Postfix_fixity { constant; precedence; location } ->
+  | Signature.Pragma.Postfix_fixity
+      { constant; precedence; postponed; location } ->
       json_of_variant ~name:"Signature.Pragma.Postfix_fixity"
         ~data:
           [ ("constant", json_of_qualified_identifier constant)
           ; ("precedence", json_of_option json_of_int precedence)
+          ; ("postponed", json_of_bool postponed)
           ; ("location", json_of_location location)
           ]
   | Signature.Pragma.Not { location } ->

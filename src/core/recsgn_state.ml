@@ -253,18 +253,18 @@ struct
       determined where the pragma is declared, hence why those fields are not
       optional like in the external syntax. *)
   type postponed_fixity_pragma =
-    | Prefix_fixity of
+    | Postponed_prefix_fixity of
         { location : Location.t Option.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t
         }
-    | Infix_fixity of
+    | Postponed_infix_fixity of
         { location : Location.t Option.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t
         ; associativity : Associativity.t
         }
-    | Postfix_fixity of
+    | Postponed_postfix_fixity of
         { location : Location.t Option.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t
@@ -522,33 +522,33 @@ struct
   let add_postponed_prefix_notation state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     add_postponed_notation state
-      (Prefix_fixity { location; precedence; constant })
+      (Postponed_prefix_fixity { location; precedence; constant })
 
   let add_postponed_infix_notation state ?location ?precedence ?associativity
       constant =
     let precedence = get_default_precedence_opt state precedence in
     let associativity = get_default_associativity_opt state associativity in
     add_postponed_notation state
-      (Infix_fixity { location; precedence; associativity; constant })
+      (Postponed_infix_fixity { location; precedence; associativity; constant })
 
   let add_postponed_postfix_notation state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
     add_postponed_notation state
-      (Postfix_fixity { location; precedence; constant })
+      (Postponed_postfix_fixity { location; precedence; constant })
 
   let postponed_fixity_pragma_identifier = function
-    | Prefix_fixity { constant; _ }
-    | Infix_fixity { constant; _ }
-    | Postfix_fixity { constant; _ } ->
+    | Postponed_prefix_fixity { constant; _ }
+    | Postponed_infix_fixity { constant; _ }
+    | Postponed_postfix_fixity { constant; _ } ->
         Qualified_identifier.name constant
 
   let apply_postponed_fixity_pragma state = function
-    | Prefix_fixity { location; constant; precedence } ->
+    | Postponed_prefix_fixity { location; constant; precedence } ->
         add_prefix_notation state ?location ~precedence constant
-    | Infix_fixity { location; constant; precedence; associativity } ->
+    | Postponed_infix_fixity { location; constant; precedence; associativity } ->
         add_infix_notation state ?location ~precedence ~associativity
           constant
-    | Postfix_fixity { location; constant; precedence } ->
+    | Postponed_postfix_fixity { location; constant; precedence } ->
         add_postfix_notation state ?location ~precedence constant
 
   let apply_postponed_fixity_pragmas state =

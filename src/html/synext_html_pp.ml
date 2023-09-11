@@ -2177,13 +2177,22 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     | Signature.Pragma.Name _ -> ()
     | Signature.Pragma.Default_associativity { associativity; _ } ->
         set_default_associativity state associativity
-    | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
-        add_prefix_notation state ?precedence constant
+    | Signature.Pragma.Prefix_fixity { constant; precedence; postponed; _ }
+      ->
+        if postponed then
+          add_postponed_prefix_notation state ?precedence constant
+        else add_prefix_notation state ?precedence constant
     | Signature.Pragma.Infix_fixity
-        { constant; precedence; associativity; _ } ->
-        add_infix_notation state ?precedence ?associativity constant
-    | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
-        add_postfix_notation state ?precedence constant
+        { constant; precedence; associativity; postponed; _ } ->
+        if postponed then
+          add_postponed_infix_notation state ?precedence ?associativity
+            constant
+        else add_infix_notation state ?precedence ?associativity constant
+    | Signature.Pragma.Postfix_fixity { constant; precedence; postponed; _ }
+      ->
+        if postponed then
+          add_postponed_postfix_notation state ?precedence constant
+        else add_postfix_notation state ?precedence constant
     | Signature.Pragma.Not _ -> ()
     | Signature.Pragma.Open_module { module_identifier; _ } ->
         open_module state module_identifier
@@ -2219,12 +2228,25 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               pp_dot state)
         in
         pp_pragma state "assoc" pp_associativity_pragma
-    | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
+    | Signature.Pragma.Prefix_fixity { constant; precedence; postponed; _ }
+      ->
         let pp_prefix_pragma state =
           pp_hovbox state ~indent (fun state ->
               pp_string state "--prefix";
               pp_space state;
-              pp_constant_invoke state constant;
+              if postponed then
+                let id =
+                  preallocate_id state (Qualified_identifier.name constant)
+                  (* [constant] is a plain identifier by
+                     [is_fixity_constant_postponed constant] *)
+                in
+                let reference =
+                  "#" ^ id
+                  (* Postponed fixity pragmas are necessarily in the same
+                     file *)
+                in
+                pp_constant_invoke_resolved state constant reference
+              else pp_constant_invoke state constant;
               pp_option state
                 (fun state precedence ->
                   pp_space state;
@@ -2234,12 +2256,24 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
         in
         pp_pragma state "prefix" pp_prefix_pragma
     | Signature.Pragma.Infix_fixity
-        { constant; precedence; associativity; _ } ->
+        { constant; precedence; associativity; postponed; _ } ->
         let pp_infix_pragma state =
           pp_hovbox state ~indent (fun state ->
               pp_string state "--infix";
               pp_space state;
-              pp_constant_invoke state constant;
+              if postponed then
+                let id =
+                  preallocate_id state (Qualified_identifier.name constant)
+                  (* [constant] is a plain identifier by
+                     [is_fixity_constant_postponed constant] *)
+                in
+                let reference =
+                  "#" ^ id
+                  (* Postponed fixity pragmas are necessarily in the same
+                     file *)
+                in
+                pp_constant_invoke_resolved state constant reference
+              else pp_constant_invoke state constant;
               pp_option state
                 (fun state precedence ->
                   pp_space state;
@@ -2253,12 +2287,25 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               pp_dot state)
         in
         pp_pragma state "infix" pp_infix_pragma
-    | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
+    | Signature.Pragma.Postfix_fixity { constant; precedence; postponed; _ }
+      ->
         let pp_postfix_pragma state =
           pp_hovbox state ~indent (fun state ->
               pp_string state "--postfix";
               pp_space state;
-              pp_constant_invoke state constant;
+              if postponed then
+                let id =
+                  preallocate_id state (Qualified_identifier.name constant)
+                  (* [constant] is a plain identifier by
+                     [is_fixity_constant_postponed constant] *)
+                in
+                let reference =
+                  "#" ^ id
+                  (* Postponed fixity pragmas are necessarily in the same
+                     file *)
+                in
+                pp_constant_invoke_resolved state constant reference
+              else pp_constant_invoke state constant;
               pp_option state
                 (fun state precedence ->
                   pp_space state;
@@ -2981,271 +3028,6 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
         let html = render_markdown location content in
         pp_string state html
 
-  (** [get_constant_declaration_identifier_if_can_have_fixity_pragma declaration]
-      is [Option.Some identifier] if [declaration] can have a fixity pragma
-      attached to it. In that case, a fixity pragma could be declared before
-      it, and it would apply to [declaration]. Such a pragma is called a
-      postponed fixity pragma. *)
-  and get_constant_declaration_identifier_if_can_have_fixity_pragma =
-    function
-    | Signature.Declaration.Typ { identifier; _ }
-    | Signature.Declaration.Const { identifier; _ }
-    | Signature.Declaration.CompTyp { identifier; _ }
-    | Signature.Declaration.CompCotyp { identifier; _ }
-    | Signature.Declaration.CompConst { identifier; _ }
-    | Signature.Declaration.CompTypAbbrev { identifier; _ }
-    | Signature.Declaration.Theorem { identifier; _ }
-    | Signature.Declaration.Proof { identifier; _ }
-    | Signature.Declaration.Val { identifier; _ } ->
-        Option.some identifier
-    | Signature.Declaration.CompDest _
-    | Signature.Declaration.Schema _
-    | Signature.Declaration.Recursive_declarations _
-    | Signature.Declaration.Module _ ->
-        Option.none
-
-  (** [fixable_constant_declaration_identifiers entry] is the set of
-      identifiers in [entry] to which a postponed fixity pragma can be
-      attached. [entry] is assumed to be the signature-level entry that
-      immediately follows a set of fixity pragmas. *)
-  and fixable_constant_declaration_identifiers = function
-    | Signature.Entry.Declaration
-        { declaration =
-            Signature.Declaration.Recursive_declarations { declarations; _ }
-        ; _
-        } ->
-        (* Collect all the declaration identifiers in the group of mutually
-           recursive declarations that can have fixity pragmas attached to
-           them *)
-        List.fold_left
-          (fun identifier_set declaration ->
-            match
-              get_constant_declaration_identifier_if_can_have_fixity_pragma
-                declaration
-            with
-            | Option.None -> identifier_set
-            | Option.Some identifier ->
-                Identifier.Set.add identifier identifier_set)
-          Identifier.Set.empty
-          (List1.to_list declarations)
-    | Signature.Entry.Declaration { declaration; _ } -> (
-        (* Return the declaration identifier if it can have a fixity pragma
-           attached to it *)
-        match
-          get_constant_declaration_identifier_if_can_have_fixity_pragma
-            declaration
-        with
-        | Option.None -> Identifier.Set.empty
-        | Option.Some identifier -> Identifier.Set.singleton identifier)
-    | _ -> Identifier.Set.empty
-
-  (** [is_entry_fixity_pragma_or_comment entry] is [true] if and only if
-      [entry] is a fixity pragma or a documentation comment.
-
-      This predicate is used to determine which signature entries can be
-      skipped over when looking ahead to find which signature-level
-      declaration can a postponed fixity pragma be applied to. *)
-  and is_entry_fixity_pragma_or_comment = function
-    | Signature.Entry.Pragma
-        { pragma =
-            ( Signature.Pragma.Prefix_fixity _
-            | Signature.Pragma.Infix_fixity _
-            | Signature.Pragma.Postfix_fixity _ )
-        ; _
-        }
-    | Signature.Entry.Comment _ ->
-        true
-    | _ -> false
-
-  (** [pp_postponable_fixity_pragma state applicable_constant_identifiers entry]
-      pretty-prints the fixity pragma or documentation comment [entry] with
-      respect to the pretty-printing state [state] and the set
-      [applicable_constant_identifiers] of identifiers in the signature-level
-      declaration that follows the pragma/comment.
-
-      If [entry] is a pragma whose constant is in
-      [applicable_constant_identifiers], then [entry] is a postponed fixity
-      pragma, and its application should wait until the later declaration is
-      in scope.
-
-      It is assumed that [entry] does not affect the lookahead for the target
-      declaration for a postponed fixity pragma. That is, [entry] must be a
-      prefix, infix or postfix fixity pragma, or a documentation comment. *)
-  and pp_postponable_fixity_pragma state applicable_constant_identifiers =
-    let is_constant_a_plain_identifier constant =
-      List.null (Qualified_identifier.namespaces constant)
-    in
-    let is_fixity_constant_postponed constant =
-      is_constant_a_plain_identifier constant
-      && Identifier.Set.mem
-           (Qualified_identifier.name constant)
-           applicable_constant_identifiers
-    in
-    let preallocate_id state constant =
-      preallocate_id state (Qualified_identifier.name constant)
-    in
-    function
-    | Signature.Entry.Pragma
-        { pragma =
-            Signature.Pragma.Prefix_fixity { constant; precedence; _ } as
-            pragma
-        ; _
-        } ->
-        if is_fixity_constant_postponed constant then
-          let pp_prefix_pragma state =
-            add_postponed_prefix_notation state ?precedence constant;
-            let id =
-              preallocate_id state constant
-              (* Plain identifier by [is_fixity_constant_postponed] *)
-            in
-            let reference =
-              "#" ^ id
-              (* Postponed fixity pragmas are necessarily in the same file *)
-            in
-            pp_hovbox state ~indent (fun state ->
-                pp_string state "--prefix";
-                pp_space state;
-                pp_constant_invoke_resolved state constant reference;
-                pp_option state
-                  (fun state precedence ->
-                    pp_space state;
-                    pp_int state precedence)
-                  precedence;
-                pp_dot state)
-          in
-          pp_pragma state "prefix" pp_prefix_pragma
-        else (
-          add_prefix_notation state ?precedence constant;
-          pp_signature_pragma state pragma)
-    | Signature.Entry.Pragma
-        { pragma =
-            Signature.Pragma.Infix_fixity
-              { constant; precedence; associativity; _ } as pragma
-        ; _
-        } ->
-        if is_fixity_constant_postponed constant then (
-          add_postponed_infix_notation state ?precedence ?associativity
-            constant;
-          let id =
-            preallocate_id state constant
-            (* Plain identifier by [is_fixity_constant_postponed] *)
-          in
-          let reference =
-            "#" ^ id
-            (* Postponed fixity pragmas are necessarily in the same file *)
-          in
-          let pp_infix_pragma state =
-            pp_hovbox state ~indent (fun state ->
-                pp_string state "--infix";
-                pp_space state;
-                pp_constant_invoke_resolved state constant reference;
-                pp_option state
-                  (fun state precedence ->
-                    pp_space state;
-                    pp_int state precedence)
-                  precedence;
-                pp_option state
-                  (fun state associativity ->
-                    pp_space state;
-                    pp_associativity state associativity)
-                  associativity;
-                pp_dot state)
-          in
-          pp_pragma state "infix" pp_infix_pragma)
-        else (
-          add_infix_notation state ?precedence ?associativity constant;
-          pp_signature_pragma state pragma)
-    | Signature.Entry.Pragma
-        { pragma =
-            Signature.Pragma.Postfix_fixity { constant; precedence; _ } as
-            pragma
-        ; _
-        } ->
-        if is_fixity_constant_postponed constant then (
-          add_postponed_postfix_notation state ?precedence constant;
-          let id =
-            preallocate_id state constant
-            (* Plain identifier by [is_fixity_constant_postponed] *)
-          in
-          let reference =
-            "#" ^ id
-            (* Postponed fixity pragmas are necessarily in the same file *)
-          in
-          let pp_postfix_pragma state =
-            pp_hovbox state ~indent (fun state ->
-                pp_string state "--postfix";
-                pp_space state;
-                pp_constant_invoke_resolved state constant reference;
-                pp_option state
-                  (fun state precedence ->
-                    pp_space state;
-                    pp_int state precedence)
-                  precedence;
-                pp_dot state)
-          in
-          pp_pragma state "postfix" pp_postfix_pragma)
-        else (
-          add_postfix_notation state ?precedence constant;
-          pp_signature_pragma state pragma)
-    | Signature.Entry.Comment { location; _ }
-    | Signature.Entry.Pragma { location; _ }
-    | Signature.Entry.Declaration { location; _ } ->
-        Error.raise_violation ~location
-          (Format.asprintf
-             "[%s] unexpectedly encountered an entry that is not a fixity \
-              pragma"
-             __FUNCTION__)
-
-  (** [pp_signature_code_entries state ?sep code_entries rest] pretty-prints
-      [code_entries]. This function handles pretty-printing for entries that
-      interact in special cases with other declarations. Particularly, this
-      determines whether a fixity pragma should apply to an already declared
-      constant, or if it should be postponed to be applied to a constant
-      declared later. *)
-  and pp_signature_code_entries state ?(sep = pp_double_cut) code_entries
-      rest =
-    match code_entries with
-    | (Signature.Entry.Pragma
-         { pragma =
-             ( Signature.Pragma.Prefix_fixity _
-             | Signature.Pragma.Infix_fixity _
-             | Signature.Pragma.Postfix_fixity _ )
-         ; _
-         } as entry)
-      :: entries -> (
-        (* Special case of pretty-printing where the fixity pragma may apply
-           to a constant declared subsequently after the pragma *)
-        match
-          List.find_opt
-            (Fun.negate is_entry_fixity_pragma_or_comment)
-            (entries @ rest)
-        with
-        | Option.Some lookahead_entry -> (
-            let applicable_constant_identifiers =
-              fixable_constant_declaration_identifiers lookahead_entry
-            in
-            pp_postponable_fixity_pragma state
-              applicable_constant_identifiers entry;
-            match entries with
-            | [] -> pp_nop state
-            | _ ->
-                sep state;
-                pp_signature_code_entries state ~sep entries rest)
-        | Option.None -> (
-            (* The fixity pragma is not postponed *)
-            pp_signature_entry state entry;
-            match entries with
-            | [] -> pp_nop state
-            | _ ->
-                sep state;
-                pp_signature_code_entries state ~sep entries rest))
-    | [] -> pp_nop state
-    | [ x ] -> pp_signature_entry state x
-    | x :: xs ->
-        pp_signature_entry state x;
-        sep state;
-        pp_signature_code_entries state ~sep xs rest
-
   and pp_signature_entries state ?(sep = pp_double_cut) ?(in_module = false)
       entries =
     match entries with
@@ -3258,9 +3040,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               else pp_preformatted_code_html
             in
             pp_code_html state (fun state ->
-                pp_signature_code_entries state ~sep
-                  (List1.to_list code_entries)
-                  rest);
+                pp_list1 state ~sep pp_signature_entry code_entries);
             match rest with
             | [] -> pp_nop state
             | _ :: _ ->

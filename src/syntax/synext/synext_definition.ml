@@ -1487,21 +1487,29 @@ module Signature = struct
           { location : Location.t
           ; constant : Qualified_identifier.t
           ; precedence : Int.t Option.t
+          ; postponed : Bool.t
           }
-          (** [Prefix_fixity { constant = c; precedence; _ }] is the pragma
-              [--prefix c precedence.] for configuring the constant [c] to be
-              parsed as a prefix operator with [precedence].
+          (** [Prefix_fixity { constant = c; precedence; postponed; _ }] is
+              the pragma [--prefix c precedence.] for configuring the
+              constant [c] to be parsed as a prefix operator with
+              [precedence].
 
               If a precedence is already assigned to [c], and
               [precedence = Option.None], then the pre-existing precedence is
-              used. *)
+              used.
+
+              If [postponed = false], then the pragma is attached to a
+              constant declared earlier than the pragma. Otherwise, when
+              [postponed = true], then the pragma is attached to a constant
+              declared immediately after the pragma. *)
       | Infix_fixity of
           { location : Location.t
           ; constant : Qualified_identifier.t
           ; precedence : Int.t Option.t
           ; associativity : Associativity.t Option.t
+          ; postponed : Bool.t
           }
-          (** [Infix_fixity { constant = c; precedence; associativity; _ }]
+          (** [Infix_fixity { constant = c; precedence; associativity; postponed; _ }]
               is the pragma [--infix c precedence associativity.] for
               configuring the constant [c] to be parsed as an infix operator
               with [precedence] and [associativity].
@@ -1513,19 +1521,31 @@ module Signature = struct
                 defaults to the associativity configured by the
                 [--default_associativity assoc.] pragma, or
                 [Associativity.Non_associative] if that pragma was never
-                used. *)
+                used.
+
+              If [postponed = false], then the pragma is attached to a
+              constant declared earlier than the pragma. Otherwise, when
+              [postponed = true], then the pragma is attached to a constant
+              declared immediately after the pragma. *)
       | Postfix_fixity of
           { location : Location.t
           ; constant : Qualified_identifier.t
           ; precedence : Int.t Option.t
+          ; postponed : Bool.t
           }
-          (** [Postfix_fixity { constant = c; precedence; _ }] is the pragma
-              [--postfix c precedence.] for configuring the constant [c] to
-              be parsed as a postfix operator with [precedence].
+          (** [Postfix_fixity { constant = c; precedence; postponed; _ }] is
+              the pragma [--postfix c precedence.] for configuring the
+              constant [c] to be parsed as a postfix operator with
+              [precedence].
 
               If a precedence is already assigned to [c], and
               [precedence = Option.None], then the pre-existing precedence is
-              used. *)
+              used.
+
+              If [postponed = false], then the pragma is attached to a
+              constant declared earlier than the pragma. Otherwise, when
+              [postponed = true], then the pragma is attached to a constant
+              declared immediately after the pragma. *)
       | Not of { location : Location.t }
           (** [Not _] is the pragma [--not] which asserts that the
               declaration that follows it fails reconstruction. *)

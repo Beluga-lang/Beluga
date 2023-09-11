@@ -346,17 +346,22 @@ struct
         { location; constant; precedence } ->
         add_prefix_notation state ?precedence constant;
         Synext.Signature.Pragma.Prefix_fixity
-          { location; constant; precedence }
+          { location; constant; precedence; postponed = false }
     | Synprs.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
         add_infix_notation state ?precedence ?associativity constant;
         Synext.Signature.Pragma.Infix_fixity
-          { location; constant; precedence; associativity }
+          { location
+          ; constant
+          ; precedence
+          ; associativity
+          ; postponed = false
+          }
     | Synprs.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
         add_postfix_notation state ?precedence constant;
         Synext.Signature.Pragma.Postfix_fixity
-          { location; constant; precedence }
+          { location; constant; precedence; postponed = false }
     | Synprs.Signature.Pragma.Not { location } ->
         Synext.Signature.Pragma.Not { location }
     | Synprs.Signature.Pragma.Open_module { location; module_identifier } ->
@@ -768,16 +773,16 @@ struct
               { location; constant; precedence }
         ; location = entry_location
         } ->
+        let is_postponed = is_fixity_constant_postponed constant in
         let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_prefix_notation
+          if is_postponed then add_postponed_prefix_notation
           else add_prefix_notation
         in
         add_notation state ?precedence constant;
         Synext.Signature.Entry.Pragma
           { pragma =
               Synext.Signature.Pragma.Prefix_fixity
-                { location; constant; precedence }
+                { location; constant; precedence; postponed = is_postponed }
           ; location = entry_location
           }
     | Synprs.Signature.Entry.Raw_pragma
@@ -786,16 +791,21 @@ struct
               { location; constant; precedence; associativity }
         ; location = entry_location
         } ->
+        let is_postponed = is_fixity_constant_postponed constant in
         let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_infix_notation
+          if is_postponed then add_postponed_infix_notation
           else add_infix_notation
         in
         add_notation state ?precedence ?associativity constant;
         Synext.Signature.Entry.Pragma
           { pragma =
               Synext.Signature.Pragma.Infix_fixity
-                { location; constant; precedence; associativity }
+                { location
+                ; constant
+                ; precedence
+                ; associativity
+                ; postponed = is_postponed
+                }
           ; location = entry_location
           }
     | Synprs.Signature.Entry.Raw_pragma
@@ -804,16 +814,16 @@ struct
               { location; constant; precedence }
         ; location = entry_location
         } ->
+        let is_postponed = is_fixity_constant_postponed constant in
         let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_postfix_notation
+          if is_postponed then add_postponed_postfix_notation
           else add_postfix_notation
         in
         add_notation state ?precedence constant;
         Synext.Signature.Entry.Pragma
           { pragma =
               Synext.Signature.Pragma.Postfix_fixity
-                { location; constant; precedence }
+                { location; constant; precedence; postponed = is_postponed }
           ; location = entry_location
           }
     | Synprs.Signature.Entry.Raw_declaration { location; _ }

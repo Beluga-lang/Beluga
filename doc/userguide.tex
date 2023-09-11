@@ -2,6 +2,7 @@
 
 \usepackage[utf8x]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{hyperref}
 
 \newcommand{\shellcmd}[1]{\\\indent\texttt{\# #1}\\}
 
@@ -410,13 +411,13 @@ LF term : type =
 \end{verbatim}
 
 \subsection{Operators}
-A type constructor which takes two arguments can be declared an infix operator using the \verb+--infix+ pragma.
-The \verb+--infix+ pragma is proceeded by the identifier of the operator which must match the identifier of the LF declaration to which it is applied.
-The association is specified next to be left, right, or non-associative.
+A term or type constructor which takes two arguments can be declared an infix operator using the \verb+--infix+ pragma.
+The \verb+--infix+ pragma is proceeded by the identifier of the operator which must match the identifier of the declaration to which it is applied.
+The association is specified next to be left-associative (\verb+left+), right-associative (\verb+right+), or non-associative (\verb+none+).
 Operator precedence is specified last as a natural number, delineated from largest to smallest such that the largest number takes the highest precedence.
 
 The precedence of ordinary prefix operators can be adjusted using the \verb+--prefix+ pragma which takes all the same arguments as \verb+--infix+ except associativity.
-Prefix operators default to the low precedence of -1 if none is specified.
+Prefix operators default to the low precedence of 0 if none is specified.
 
 The operator is treated as non-associative by default if no associativity is stated explicitly.
 The default associativity can be altered with the \verb+--assoc+ pragma.
@@ -424,11 +425,27 @@ The default associativity can be altered with the \verb+--assoc+ pragma.
 \textbf{Example:} A user may wish to declare \verb+app+ and \verb+lam+ as infix operators while ensuring that \verb+red+ has higher precedence.
 Seeing as no associativity was listed, \verb+lam+ takes the default associativity, here defined as \verb+right+.
 \begin{verbatim}
---assoc right
+--assoc right.
 
-app: term -> term -> term. --infix app none 1.
-lam: (term -> term) -> term. --infix lam 1.
+app: term -> term -> term. --infix app 1 none.
+lam: (term -> term) -> term. --prefix lam 1.
 red: term -> term --prefix red 2.
+\end{verbatim}
+
+Fixity pragmas for defining operators can be used immediately before a declaration, or after the declaration.
+The notation specified by a fixity pragma takes effect after the pragma.
+As such, the previous snippet could be declared equivalently as follows:
+\begin{verbatim}
+--assoc right.
+
+--infix app 1 none.
+--prefix lam 1.
+--prefix red 2.
+
+LF term : type =
+| app: term -> term -> term =
+| lam: (term -> term) -> term
+| red: term -> term;
 \end{verbatim}
 
 \subsection{Schemas and Context Variables}

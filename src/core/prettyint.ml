@@ -1977,7 +1977,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
           module_identifier
     | Sgn.DefaultAssocPrag { associativity; location = _ } ->
         fprintf ppf "@\n--assoc %a.@\n" fmt_ppr_associativity associativity
-    | Sgn.PrefixFixityPrag { constant; precedence; location = _ } -> (
+    | Sgn.PrefixFixityPrag { constant; precedence; postponed = _; location = _ } -> (
         match precedence with
         | Option.Some precedence ->
             fprintf ppf "@\n--prefix %a %d.@\n" Qualified_identifier.pp
@@ -1986,7 +1986,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             fprintf ppf "@\n--prefix %a.@\n" Qualified_identifier.pp constant
         )
     | Sgn.InfixFixityPrag
-        { constant; precedence; associativity; location = _ } -> (
+        { constant; precedence; associativity; postponed = _; location = _ } -> (
         match (precedence, associativity) with
         | Option.Some precedence, Option.Some associativity ->
             fprintf ppf "@\n--infix %a %d %a.@\n" Qualified_identifier.pp
@@ -1999,7 +1999,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
               constant precedence
         | Option.None, Option.None ->
             fprintf ppf "@\n--infix %a.@\n" Qualified_identifier.pp constant)
-    | Sgn.PostfixFixityPrag { constant; precedence; location = _ } -> (
+    | Sgn.PostfixFixityPrag { constant; precedence; postponed = _; location = _ } -> (
         match precedence with
         | Option.Some precedence ->
             fprintf ppf "@\n--postfix %a %d.@\n" Qualified_identifier.pp

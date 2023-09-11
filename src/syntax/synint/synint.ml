@@ -941,17 +941,20 @@ module Sgn = struct
         { location : Location.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t Option.t
+        ; postponed : Bool.t
         }
     | InfixFixityPrag of
         { location : Location.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t Option.t
         ; associativity : Associativity.t Option.t
+        ; postponed : Bool.t
         }
     | PostfixFixityPrag of
         { location : Location.t
         ; constant : Qualified_identifier.t
         ; precedence : Int.t Option.t
+        ; postponed : Bool.t
         }
     | AbbrevPrag of
         { location : Location.t

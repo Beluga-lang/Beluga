@@ -325,171 +325,6 @@ module Make
         with_coverage_checking state ~location (fun state ->
             f state global_pragma')
 
-  (** [get_constant_declaration_identifier_if_can_have_fixity_pragma declaration]
-      is [Option.Some identifier] if [declaration] can have a fixity pragma
-      attached to it. In that case, a fixity pragma could be declared before
-      it, and it would apply to [declaration]. Such a pragma is called a
-      postponed fixity pragma. *)
-  and get_constant_declaration_identifier_if_can_have_fixity_pragma =
-    function
-    | Synext.Signature.Declaration.Typ { identifier; _ }
-    | Synext.Signature.Declaration.Const { identifier; _ }
-    | Synext.Signature.Declaration.CompTyp { identifier; _ }
-    | Synext.Signature.Declaration.CompCotyp { identifier; _ }
-    | Synext.Signature.Declaration.CompConst { identifier; _ }
-    | Synext.Signature.Declaration.CompTypAbbrev { identifier; _ }
-    | Synext.Signature.Declaration.Theorem { identifier; _ }
-    | Synext.Signature.Declaration.Proof { identifier; _ }
-    | Synext.Signature.Declaration.Val { identifier; _ } ->
-        Option.some identifier
-    | Synext.Signature.Declaration.CompDest _
-    | Synext.Signature.Declaration.Schema _
-    | Synext.Signature.Declaration.Recursive_declarations _
-    | Synext.Signature.Declaration.Module _ ->
-        Option.none
-
-  (** [fixable_constant_declaration_identifiers entry] is the set of
-      identifiers in [entry] to which a postponed fixity pragma can be
-      attached. [entry] is assumed to be the signature-level entry that
-      immediately follows a set of fixity pragmas. *)
-  and fixable_constant_declaration_identifiers = function
-    | Synext.Signature.Entry.Declaration
-        { declaration =
-            Synext.Signature.Declaration.Recursive_declarations
-              { declarations; _ }
-        ; _
-        } ->
-        (* Collect all the declaration identifiers in the group of mutually
-           recursive declarations that can have fixity pragmas attached to
-           them *)
-        List.fold_left
-          (fun identifier_set declaration ->
-            match
-              get_constant_declaration_identifier_if_can_have_fixity_pragma
-                declaration
-            with
-            | Option.None -> identifier_set
-            | Option.Some identifier ->
-                Identifier.Set.add identifier identifier_set)
-          Identifier.Set.empty
-          (List1.to_list declarations)
-    | Synext.Signature.Entry.Declaration { declaration; _ } -> (
-        (* Return the declaration identifier if it can have a fixity pragma
-           attached to it *)
-        match
-          get_constant_declaration_identifier_if_can_have_fixity_pragma
-            declaration
-        with
-        | Option.None -> Identifier.Set.empty
-        | Option.Some identifier -> Identifier.Set.singleton identifier)
-    | _ -> Identifier.Set.empty
-
-  (** [is_entry_fixity_pragma_or_comment entry] is [true] if and only if
-      [entry] is a fixity pragma or a documentation comment.
-
-      This predicate is used to determine which signature entries can be
-      skipped over when looking ahead to find which signature-level
-      declaration can a postponed fixity pragma be applied to. *)
-  and is_entry_fixity_pragma_or_comment = function
-    | Synext.Signature.Entry.Pragma
-        { pragma =
-            ( Synext.Signature.Pragma.Prefix_fixity _
-            | Synext.Signature.Pragma.Infix_fixity _
-            | Synext.Signature.Pragma.Postfix_fixity _ )
-        ; _
-        }
-    | Synext.Signature.Entry.Comment _ ->
-        true
-    | _ -> false
-
-  (** [reconstruct_postponable_fixity_pragma state applicable_constant_identifiers entry]
-      pretty-prints the fixity pragma or documentation comment [entry] with
-      respect to the pretty-printing state [state] and the set
-      [applicable_constant_identifiers] of identifiers in the signature-level
-      declaration that follows the pragma/comment.
-
-      If [entry] is a pragma whose constant is in
-      [applicable_constant_identifiers], then [entry] is a postponed fixity
-      pragma, and its application should wait until the later declaration is
-      in scope.
-
-      It is assumed that [entry] does not affect the lookahead for the target
-      declaration for a postponed fixity pragma. That is, [entry] must be a
-      prefix, infix or postfix fixity pragma, or a documentation comment. *)
-  and reconstruct_postponable_fixity_pragma state
-      applicable_constant_identifiers =
-    let is_constant_a_plain_identifier constant =
-      List.null (Qualified_identifier.namespaces constant)
-    in
-    let is_fixity_constant_postponed constant =
-      is_constant_a_plain_identifier constant
-      && Identifier.Set.mem
-           (Qualified_identifier.name constant)
-           applicable_constant_identifiers
-    in
-    function
-    | Synext.Signature.Entry.Comment _ as entry ->
-        reconstruct_signature_entry state entry
-    | Synext.Signature.Entry.Pragma
-        { pragma =
-            Synext.Signature.Pragma.Prefix_fixity
-              { constant; precedence; location }
-        ; location = entry_location
-        } ->
-        let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_prefix_notation
-          else add_prefix_notation
-        in
-        add_notation state ?precedence constant;
-        Synint.Sgn.Pragma
-          { pragma =
-              Synint.Sgn.PrefixFixityPrag { location; constant; precedence }
-          ; location = entry_location
-          }
-    | Synext.Signature.Entry.Pragma
-        { pragma =
-            Synext.Signature.Pragma.Infix_fixity
-              { constant; precedence; associativity; location }
-        ; location = entry_location
-        } ->
-        let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_infix_notation
-          else add_infix_notation
-        in
-        add_notation state ?precedence ?associativity constant;
-        Synint.Sgn.Pragma
-          { pragma =
-              Synint.Sgn.InfixFixityPrag
-                { location; constant; precedence; associativity }
-          ; location = entry_location
-          }
-    | Synext.Signature.Entry.Pragma
-        { pragma =
-            Synext.Signature.Pragma.Postfix_fixity
-              { constant; precedence; location }
-        ; location = entry_location
-        } ->
-        let add_notation =
-          if is_fixity_constant_postponed constant then
-            add_postponed_postfix_notation
-          else add_postfix_notation
-        in
-        add_notation state ?precedence constant;
-        Synint.Sgn.Pragma
-          { pragma =
-              Synint.Sgn.PostfixFixityPrag { location; constant; precedence }
-          ; location = entry_location
-          }
-    | Ext.Signature.Entry.Pragma { location; _ }
-    | Ext.Signature.Entry.Declaration { location; _ } ->
-        Error.raise_violation ~location
-          (Format.asprintf
-             "[%s] unexpectedly encountered an entry that is neither a \
-              fixity pragma nor a documentation comment"
-             __FUNCTION__)
-
   (** [reconstruct_signature_entries entries] reconstructs a list of
       signature entries. This in particular handles the reconstruction of
       entries that are not handled independently from one another, such as
@@ -526,36 +361,6 @@ module Make
                     Format.fprintf ppf
                       "Reconstruction fails for --not'd declaration@\n");
                 reconstruct_signature_entries state entries))
-    | Synext.Signature.Entry.Pragma
-        { pragma =
-            ( Synext.Signature.Pragma.Prefix_fixity _
-            | Synext.Signature.Pragma.Infix_fixity _
-            | Synext.Signature.Pragma.Postfix_fixity _ )
-        ; _
-        }
-      :: _ as entries -> (
-        (* Special case of pretty-printing where the fixity pragma may apply
-           to a constant declared subsequently after the pragma *)
-        match List.take_while is_entry_fixity_pragma_or_comment entries with
-        | _, [] -> reconstruct_signature_entries state entries
-        | pragmas_and_comments, entry :: entries ->
-            let applicable_constant_identifiers =
-              fixable_constant_declaration_identifiers entry
-            in
-            (* The fixity pragmas in [pragmas_and_comments] whose identifiers
-               are in [applicable_constant_identifiers] are postponed fixity
-               pragmas *)
-            let pragmas_and_comments' =
-              traverse_list state
-                (fun state ->
-                  reconstruct_postponable_fixity_pragma state
-                    applicable_constant_identifiers)
-                pragmas_and_comments
-            in
-            let entries' =
-              reconstruct_signature_entries state (entry :: entries)
-            in
-            pragmas_and_comments' @ entries')
     | entry :: entries ->
         let entry' = reconstruct_signature_entry state entry in
         let entries' = reconstruct_signature_entries state entries in
@@ -604,19 +409,24 @@ module Make
         set_default_associativity state ~location associativity;
         Synint.Sgn.DefaultAssocPrag { associativity; location }
     | Synext.Signature.Pragma.Prefix_fixity
-        { location; constant; precedence } ->
-        add_prefix_notation state ~location ?precedence constant;
-        Synint.Sgn.PrefixFixityPrag { location; constant; precedence }
+        { constant; precedence; postponed; location } ->
+          (if postponed then
+            add_postponed_prefix_notation state ?precedence constant
+          else add_prefix_notation state ?precedence constant);
+        Synint.Sgn.PrefixFixityPrag { constant; precedence; postponed; location }
     | Synext.Signature.Pragma.Infix_fixity
-        { location; constant; precedence; associativity } ->
-        add_infix_notation state ~location ?precedence ?associativity
-          constant;
+        { constant; precedence; associativity; postponed; location } ->
+          (if postponed then
+            add_postponed_infix_notation state ?precedence ?associativity constant
+          else add_infix_notation state ?precedence ?associativity constant);
         Synint.Sgn.InfixFixityPrag
-          { location; constant; precedence; associativity }
+          { constant; precedence; associativity; postponed; location }
     | Synext.Signature.Pragma.Postfix_fixity
-        { location; constant; precedence } ->
-        add_postfix_notation state ~location ?precedence constant;
-        Synint.Sgn.PostfixFixityPrag { location; constant; precedence }
+        { constant; precedence; postponed; location } ->
+          (if postponed then
+            add_postponed_postfix_notation state ?precedence constant
+          else add_postfix_notation state ?precedence constant);
+        Synint.Sgn.PostfixFixityPrag { constant; precedence; postponed; location }
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
         freeze_all_unfrozen_declarations state;
         open_module state ~location module_identifier;

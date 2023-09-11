@@ -2299,14 +2299,14 @@ struct
             pp_space state;
             pp_comp_expression state expression;
             pp_semicolon state)
-    | Signature.Declaration.Recursive_declarations _ ->
-        Error.raise_violation
+    | Signature.Declaration.Recursive_declarations { location; _ } ->
+        Error.raise_violation ~location
           (Format.asprintf
              "[%s] can't pretty-print mutually recursive declarations \
               without adding its entries to the state"
              __FUNCTION__)
-    | Signature.Declaration.Module _ ->
-        Error.raise_violation
+    | Signature.Declaration.Module { location; _ } ->
+        Error.raise_violation ~location
           (Format.asprintf
              "[%s] can't pretty-print a module without adding its entries \
               to the state"
@@ -2340,21 +2340,40 @@ struct
         add_abbreviation_computation_type_constant state identifier
     | Signature.Declaration.Val { identifier; _ } ->
         add_program_constant state identifier
-    | Signature.Declaration.Module { location; _ }
+    | Signature.Declaration.Module { location; _ } ->
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't add module declaration to the pretty-printing \
+              state without pretty-printing it as well."
+             __FUNCTION__)
     | Signature.Declaration.Recursive_declarations { location; _ } ->
-        Error.raise_at1 location Unsupported_recursive_declaration
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't add mutually recursive declarations to the \
+              pretty-printing state without pretty-printing them as well."
+             __FUNCTION__)
 
   and pp_and_add_signature_declaration state = function
+    | (Signature.Declaration.CompDest _ | Signature.Declaration.Schema _) as
+      declaration ->
+        (* Single declaration that cannot have a postponed fixity *)
+        pp_signature_declaration state declaration;
+        add_declaration state declaration
     | ( Signature.Declaration.Typ _ | Signature.Declaration.Const _
       | Signature.Declaration.CompTyp _ | Signature.Declaration.CompCotyp _
-      | Signature.Declaration.CompConst _ | Signature.Declaration.CompDest _
-      | Signature.Declaration.CompTypAbbrev _
-      | Signature.Declaration.Schema _ | Signature.Declaration.Theorem _
-      | Signature.Declaration.Proof _ | Signature.Declaration.Val _ ) as
-      declaration ->
+      | Signature.Declaration.CompConst _
+      | Signature.Declaration.CompTypAbbrev _ | Signature.Declaration.Val _
+        ) as declaration ->
+        (* Single declaration that cannot recursively refer to itself *)
         pp_signature_declaration state declaration;
         add_declaration state declaration;
         apply_postponed_fixity_pragmas state
+    | (Signature.Declaration.Theorem _ | Signature.Declaration.Proof _) as
+      declaration ->
+        (* Single declaration that can recursively refer to itself *)
+        add_declaration state declaration;
+        apply_postponed_fixity_pragmas state;
+        pp_signature_declaration state declaration
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
         iter_list1 state add_declaration declarations;
         apply_postponed_fixity_pragmas state;
@@ -2843,8 +2862,9 @@ struct
         in
         add_notation state ?precedence constant;
         pp_signature_pragma state pragma
-    | _ ->
-        Error.raise_violation
+    | Signature.Entry.Pragma { location; _ }
+    | Signature.Entry.Declaration { location; _ } ->
+        Error.raise_violation ~location
           (Format.asprintf
              "[%s] unexpectedly encountered an entry that is neither a \
               fixity pragma nor a documentation comment"
@@ -2882,12 +2902,12 @@ struct
               pragmas_and_comments;
             sep state;
             pp_signature_entries state ~sep (entry :: entries))
-    | [] -> ()
+    | [] -> pp_nop state
     | [ x ] -> pp_signature_entry state x
-    | x1 :: x2 :: xs ->
-        pp_signature_entry state x1;
+    | x :: xs ->
+        pp_signature_entry state x;
         sep state;
-        pp_signature_entries state (x2 :: xs)
+        pp_signature_entries state xs
 
   and pp_module_entries state entries =
     pp_vbox state ~indent:0 (fun state -> pp_signature_entries state entries)
@@ -2912,9 +2932,9 @@ struct
     let pp_global_pragmas_opt state =
       match global_pragmas with
       | [] -> pp_nop state
-      | _ ->
+      | _ :: _ ->
           pp_list state ~sep:pp_cut pp_signature_global_pragma global_pragmas;
-          pp_cut state
+          pp_double_cut state
     in
     pp_vbox state ~indent:0 (fun state ->
         pp_global_pragmas_opt state;

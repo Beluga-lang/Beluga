@@ -223,8 +223,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     pp_in_html state ~start ~stop:{|</span>|} (fun state ->
         pp_identifier state identifier)
 
-  let pp_constant_invoke state ?css_class identifier =
-    let reference = lookup_reference state identifier in
+  let pp_constant_invoke_resolved state ?css_class identifier reference =
     let start =
       match css_class with
       | Option.Some css_class ->
@@ -235,6 +234,10 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     in
     pp_in_html state ~start ~stop:{|</a></span>|} (fun state ->
         pp_qualified_identifier state identifier)
+
+  let pp_constant_invoke state ?css_class identifier =
+    let reference = lookup_reference state identifier in
+    pp_constant_invoke_resolved state ?css_class identifier reference
 
   let lf_type_constant_css_class = "lf-type-constant"
 
@@ -2386,7 +2389,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
                   (fun state -> pp_signature_totality_order state ppv)
                   arguments))
 
-  and pp_signature_declaration state declaration =
+  and pp_signature_declaration state declaration ~id =
     match declaration with
     | Signature.Declaration.CompTyp _
     | Signature.Declaration.CompCotyp _
@@ -2398,27 +2401,22 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
           (Synext.location_of_signature_declaration declaration)
           Unsupported_non_recursive_declaration
     | Signature.Declaration.Typ { identifier; kind; _ } ->
-        let id = fresh_lf_type_id state identifier in
         pp_hovbox state ~indent (fun state ->
             pp_lf_type_constant state ~id identifier;
             pp_non_breaking_space state;
             pp_colon state;
             pp_space state;
             pp_lf_kind state kind;
-            pp_dot state);
-        add_lf_type_constant state identifier ~id
+            pp_dot state)
     | Signature.Declaration.Const { identifier; typ; _ } ->
-        let id = fresh_lf_term_id state identifier in
         pp_hovbox state ~indent (fun state ->
             pp_lf_term_constant state ~id identifier;
             pp_non_breaking_space state;
             pp_colon state;
             pp_space state;
             pp_lf_typ state typ;
-            pp_dot state);
-        add_lf_term_constant state identifier ~id
+            pp_dot state)
     | Signature.Declaration.Schema { identifier; schema; _ } ->
-        let id = fresh_schema_id state identifier in
         pp_hovbox state ~indent (fun state ->
             pp_schema_keyword state;
             pp_non_breaking_space state;
@@ -2427,10 +2425,121 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
             pp_equal state;
             pp_space state;
             pp_schema state schema;
-            pp_semicolon state);
+            pp_semicolon state)
+    | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
+        pp_hovbox state ~indent (fun state ->
+            pp_typedef_keyword state;
+            pp_non_breaking_space state;
+            pp_computation_abbreviation_constant state ~id identifier;
+            pp_non_breaking_space state;
+            pp_colon state;
+            pp_space state;
+            pp_comp_kind state kind;
+            pp_non_breaking_space state;
+            pp_equal state;
+            pp_space state;
+            pp_comp_typ state typ;
+            pp_semicolon state)
+    | Signature.Declaration.Val { identifier; typ; expression; _ } ->
+        let pp_typ_annotation state =
+          pp_option state
+            (fun state typ ->
+              pp_colon state;
+              pp_space state;
+              pp_comp_typ state typ)
+            typ
+        in
+        let pp_declaration state =
+          pp_computation_program state ~id identifier;
+          pp_typ_annotation state
+        in
+        pp_hovbox state ~indent (fun state ->
+            pp_let_keyword state;
+            pp_space state;
+            pp_declaration state;
+            pp_space state;
+            pp_equal state;
+            pp_space state;
+            pp_comp_expression state expression;
+            pp_semicolon state)
+    | Signature.Declaration.Recursive_declarations { location; _ } ->
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't pretty-print mutually recursive declarations \
+              without adding its entries to the state"
+             __FUNCTION__)
+    | Signature.Declaration.Module { location; _ } ->
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't pretty-print a module without adding its entries \
+              to the state"
+             __FUNCTION__)
+
+  and pp_and_add_signature_declaration state declaration =
+    match declaration with
+    | Signature.Declaration.Typ { identifier; _ } as declaration ->
+        let id = fresh_lf_type_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_lf_type_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.Const { identifier; _ } as declaration ->
+        let id = fresh_lf_term_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_lf_term_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.CompTyp
+        { identifier; datatype_flavour = `Inductive; _ } as declaration ->
+        let id = fresh_computation_inductive_type_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_inductive_computation_type_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.CompTyp
+        { identifier; datatype_flavour = `Stratified; _ } as declaration ->
+        let id = fresh_computation_stratified_type_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_stratified_computation_type_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.CompCotyp { identifier; _ } as declaration ->
+        let id = fresh_computation_coinductive_type_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_coinductive_computation_type_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.CompConst { identifier; _ } as declaration ->
+        let id = fresh_computation_constructor_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_computation_term_constructor state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.CompDest { identifier; _ } as declaration ->
+        let id = fresh_computation_destructor_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_computation_term_destructor state identifier ~id
+    | Signature.Declaration.CompTypAbbrev { identifier; _ } as declaration ->
+        let id = fresh_computation_abbreviation_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_abbreviation_computation_type_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
+    | Signature.Declaration.Schema { identifier; _ } as declaration ->
+        let id = fresh_schema_id state identifier in
+        pp_signature_declaration state declaration ~id;
         add_schema_constant state identifier ~id
+    | Signature.Declaration.Theorem { identifier; _ } as declaration ->
+        let id = fresh_theorem_id state identifier in
+        add_program_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state;
+        pp_signature_declaration state declaration ~id
+    | Signature.Declaration.Proof { identifier; _ } as declaration ->
+        let id = fresh_proof_id state identifier in
+        add_program_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state;
+        pp_signature_declaration state declaration ~id
+    | Signature.Declaration.Val { identifier; _ } as declaration ->
+        let id = fresh_computation_value_id state identifier in
+        pp_signature_declaration state declaration ~id;
+        add_program_constant state identifier ~id;
+        apply_postponed_fixity_pragmas state
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
-        iter_list1 state pre_add_declaration declarations;
+        iter_list1 state add_declaration declarations;
+        apply_postponed_fixity_pragmas state;
         match group_recursive_declarations declarations with
         | List1.T (first, []) ->
             pp_vbox state ~indent:0 (fun state ->
@@ -2445,46 +2554,6 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
                     pp_grouped_declaration state ~prepend_and:true)
                   rest);
             pp_semicolon state)
-    | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
-        let id = fresh_computation_abbreviation_id state identifier in
-        pp_hovbox state ~indent (fun state ->
-            pp_typedef_keyword state;
-            pp_non_breaking_space state;
-            pp_computation_abbreviation_constant state ~id identifier;
-            pp_non_breaking_space state;
-            pp_colon state;
-            pp_space state;
-            pp_comp_kind state kind;
-            pp_non_breaking_space state;
-            pp_equal state;
-            pp_space state;
-            pp_comp_typ state typ;
-            pp_semicolon state);
-        add_abbreviation_computation_type_constant state identifier ~id
-    | Signature.Declaration.Val { identifier; typ; expression; _ } ->
-        let pp_typ_annotation state =
-          pp_option state
-            (fun state typ ->
-              pp_colon state;
-              pp_space state;
-              pp_comp_typ state typ)
-            typ
-        in
-        let id = fresh_computation_value_id state identifier in
-        let pp_declaration state =
-          pp_computation_program state ~id identifier;
-          pp_typ_annotation state
-        in
-        pp_hovbox state ~indent (fun state ->
-            pp_let_keyword state;
-            pp_space state;
-            pp_declaration state;
-            pp_space state;
-            pp_equal state;
-            pp_space state;
-            pp_comp_expression state expression;
-            pp_semicolon state);
-        add_program_constant state identifier ~id
     | Signature.Declaration.Module { identifier; entries; _ } ->
         let id = fresh_module_id state identifier in
         add_module state identifier ~id (fun state ->
@@ -2497,11 +2566,11 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
             pp_struct_keyword state;
             pp_break state 1 2;
             pp_vbox state ~indent:0 (fun state ->
-                pp_module_entries state entries);
+                pp_signature_entries state ~in_module:true entries);
             pp_cut state;
             pp_end_keyword state)
 
-  and pre_add_declaration state declaration =
+  and add_declaration state declaration =
     match declaration with
     | Signature.Declaration.Typ { identifier; _ } ->
         let id = fresh_lf_type_id state identifier in
@@ -2541,9 +2610,18 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
     | Signature.Declaration.Val { identifier; _ } ->
         let id = fresh_computation_value_id state identifier in
         add_program_constant state identifier ~id
-    | Signature.Declaration.Module { location; _ }
+    | Signature.Declaration.Module { location; _ } ->
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't add module declaration to the pretty-printing \
+              state without pretty-printing it as well."
+             __FUNCTION__)
     | Signature.Declaration.Recursive_declarations { location; _ } ->
-        Error.raise_at1 location Unsupported_recursive_declaration
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] can't add mutually recursive declarations to the \
+              pretty-printing state without pretty-printing them as well."
+             __FUNCTION__)
 
   and pp_grouped_declaration state ~prepend_and declaration =
     let pp_and_opt state =
@@ -2892,24 +2970,10 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
         Error.raise_at1 location
           (Error.composite_exception2 Markdown_rendering_error cause)
 
-  and pp_module_entries state entries =
-    let groups = group_signature_entries entries in
-    let pp_group state = function
-      | `Code group ->
-          pp_list1 state ~sep:pp_double_cut pp_signature_entry group
-      | `Comment group ->
-          pp_inner_documentation_html state (fun state ->
-              pp_list1 state ~sep:pp_double_cut pp_signature_entry group)
-    in
-    let pp_groups state groups =
-      pp_list state ~sep:pp_double_cut pp_group groups
-    in
-    pp_vbox state ~indent:0 (fun state -> pp_groups state groups)
-
   and pp_signature_entry state entry =
     match entry with
     | Signature.Entry.Declaration { declaration; _ } ->
-        pp_signature_declaration state declaration
+        pp_and_add_signature_declaration state declaration
     | Signature.Entry.Pragma { pragma; _ } ->
         pp_signature_pragma state pragma;
         apply_signature_pragma state pragma
@@ -2917,37 +2981,324 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
         let html = render_markdown location content in
         pp_string state html
 
+  (** [get_constant_declaration_identifier_if_can_have_fixity_pragma declaration]
+      is [Option.Some identifier] if [declaration] can have a fixity pragma
+      attached to it. In that case, a fixity pragma could be declared before
+      it, and it would apply to [declaration]. Such a pragma is called a
+      postponed fixity pragma. *)
+  and get_constant_declaration_identifier_if_can_have_fixity_pragma =
+    function
+    | Signature.Declaration.Typ { identifier; _ }
+    | Signature.Declaration.Const { identifier; _ }
+    | Signature.Declaration.CompTyp { identifier; _ }
+    | Signature.Declaration.CompCotyp { identifier; _ }
+    | Signature.Declaration.CompConst { identifier; _ }
+    | Signature.Declaration.CompTypAbbrev { identifier; _ }
+    | Signature.Declaration.Theorem { identifier; _ }
+    | Signature.Declaration.Proof { identifier; _ }
+    | Signature.Declaration.Val { identifier; _ } ->
+        Option.some identifier
+    | Signature.Declaration.CompDest _
+    | Signature.Declaration.Schema _
+    | Signature.Declaration.Recursive_declarations _
+    | Signature.Declaration.Module _ ->
+        Option.none
+
+  (** [fixable_constant_declaration_identifiers entry] is the set of
+      identifiers in [entry] to which a postponed fixity pragma can be
+      attached. [entry] is assumed to be the signature-level entry that
+      immediately follows a set of fixity pragmas. *)
+  and fixable_constant_declaration_identifiers = function
+    | Signature.Entry.Declaration
+        { declaration =
+            Signature.Declaration.Recursive_declarations { declarations; _ }
+        ; _
+        } ->
+        (* Collect all the declaration identifiers in the group of mutually
+           recursive declarations that can have fixity pragmas attached to
+           them *)
+        List.fold_left
+          (fun identifier_set declaration ->
+            match
+              get_constant_declaration_identifier_if_can_have_fixity_pragma
+                declaration
+            with
+            | Option.None -> identifier_set
+            | Option.Some identifier ->
+                Identifier.Set.add identifier identifier_set)
+          Identifier.Set.empty
+          (List1.to_list declarations)
+    | Signature.Entry.Declaration { declaration; _ } -> (
+        (* Return the declaration identifier if it can have a fixity pragma
+           attached to it *)
+        match
+          get_constant_declaration_identifier_if_can_have_fixity_pragma
+            declaration
+        with
+        | Option.None -> Identifier.Set.empty
+        | Option.Some identifier -> Identifier.Set.singleton identifier)
+    | _ -> Identifier.Set.empty
+
+  (** [is_entry_fixity_pragma_or_comment entry] is [true] if and only if
+      [entry] is a fixity pragma or a documentation comment.
+
+      This predicate is used to determine which signature entries can be
+      skipped over when looking ahead to find which signature-level
+      declaration can a postponed fixity pragma be applied to. *)
+  and is_entry_fixity_pragma_or_comment = function
+    | Signature.Entry.Pragma
+        { pragma =
+            ( Signature.Pragma.Prefix_fixity _
+            | Signature.Pragma.Infix_fixity _
+            | Signature.Pragma.Postfix_fixity _ )
+        ; _
+        }
+    | Signature.Entry.Comment _ ->
+        true
+    | _ -> false
+
+  (** [pp_postponable_fixity_pragma state applicable_constant_identifiers entry]
+      pretty-prints the fixity pragma or documentation comment [entry] with
+      respect to the pretty-printing state [state] and the set
+      [applicable_constant_identifiers] of identifiers in the signature-level
+      declaration that follows the pragma/comment.
+
+      If [entry] is a pragma whose constant is in
+      [applicable_constant_identifiers], then [entry] is a postponed fixity
+      pragma, and its application should wait until the later declaration is
+      in scope.
+
+      It is assumed that [entry] does not affect the lookahead for the target
+      declaration for a postponed fixity pragma. That is, [entry] must be a
+      prefix, infix or postfix fixity pragma, or a documentation comment. *)
+  and pp_postponable_fixity_pragma state applicable_constant_identifiers =
+    let is_constant_a_plain_identifier constant =
+      List.null (Qualified_identifier.namespaces constant)
+    in
+    let is_fixity_constant_postponed constant =
+      is_constant_a_plain_identifier constant
+      && Identifier.Set.mem
+           (Qualified_identifier.name constant)
+           applicable_constant_identifiers
+    in
+    let preallocate_id state constant =
+      preallocate_id state (Qualified_identifier.name constant)
+    in
+    function
+    | Signature.Entry.Pragma
+        { pragma =
+            Signature.Pragma.Prefix_fixity { constant; precedence; _ } as
+            pragma
+        ; _
+        } ->
+        if is_fixity_constant_postponed constant then
+          let pp_prefix_pragma state =
+            add_postponed_prefix_notation state ?precedence constant;
+            let id =
+              preallocate_id state constant
+              (* Plain identifier by [is_fixity_constant_postponed] *)
+            in
+            let reference =
+              "#" ^ id
+              (* Postponed fixity pragmas are necessarily in the same file *)
+            in
+            pp_hovbox state ~indent (fun state ->
+                pp_string state "--prefix";
+                pp_space state;
+                pp_constant_invoke_resolved state constant reference;
+                pp_option state
+                  (fun state precedence ->
+                    pp_space state;
+                    pp_int state precedence)
+                  precedence;
+                pp_dot state)
+          in
+          pp_pragma state "prefix" pp_prefix_pragma
+        else (
+          add_prefix_notation state ?precedence constant;
+          pp_signature_pragma state pragma)
+    | Signature.Entry.Pragma
+        { pragma =
+            Signature.Pragma.Infix_fixity
+              { constant; precedence; associativity; _ } as pragma
+        ; _
+        } ->
+        if is_fixity_constant_postponed constant then (
+          add_postponed_infix_notation state ?precedence ?associativity
+            constant;
+          let id =
+            preallocate_id state constant
+            (* Plain identifier by [is_fixity_constant_postponed] *)
+          in
+          let reference =
+            "#" ^ id
+            (* Postponed fixity pragmas are necessarily in the same file *)
+          in
+          let pp_infix_pragma state =
+            pp_hovbox state ~indent (fun state ->
+                pp_string state "--infix";
+                pp_space state;
+                pp_constant_invoke_resolved state constant reference;
+                pp_option state
+                  (fun state precedence ->
+                    pp_space state;
+                    pp_int state precedence)
+                  precedence;
+                pp_option state
+                  (fun state associativity ->
+                    pp_space state;
+                    pp_associativity state associativity)
+                  associativity;
+                pp_dot state)
+          in
+          pp_pragma state "infix" pp_infix_pragma)
+        else (
+          add_infix_notation state ?precedence ?associativity constant;
+          pp_signature_pragma state pragma)
+    | Signature.Entry.Pragma
+        { pragma =
+            Signature.Pragma.Postfix_fixity { constant; precedence; _ } as
+            pragma
+        ; _
+        } ->
+        if is_fixity_constant_postponed constant then (
+          add_postponed_postfix_notation state ?precedence constant;
+          let id =
+            preallocate_id state constant
+            (* Plain identifier by [is_fixity_constant_postponed] *)
+          in
+          let reference =
+            "#" ^ id
+            (* Postponed fixity pragmas are necessarily in the same file *)
+          in
+          let pp_postfix_pragma state =
+            pp_hovbox state ~indent (fun state ->
+                pp_string state "--postfix";
+                pp_space state;
+                pp_constant_invoke_resolved state constant reference;
+                pp_option state
+                  (fun state precedence ->
+                    pp_space state;
+                    pp_int state precedence)
+                  precedence;
+                pp_dot state)
+          in
+          pp_pragma state "postfix" pp_postfix_pragma)
+        else (
+          add_postfix_notation state ?precedence constant;
+          pp_signature_pragma state pragma)
+    | Signature.Entry.Comment { location; _ }
+    | Signature.Entry.Pragma { location; _ }
+    | Signature.Entry.Declaration { location; _ } ->
+        Error.raise_violation ~location
+          (Format.asprintf
+             "[%s] unexpectedly encountered an entry that is not a fixity \
+              pragma"
+             __FUNCTION__)
+
+  (** [pp_signature_code_entries state ?sep code_entries rest] pretty-prints
+      [code_entries]. This function handles pretty-printing for entries that
+      interact in special cases with other declarations. Particularly, this
+      determines whether a fixity pragma should apply to an already declared
+      constant, or if it should be postponed to be applied to a constant
+      declared later. *)
+  and pp_signature_code_entries state ?(sep = pp_double_cut) code_entries
+      rest =
+    match code_entries with
+    | (Signature.Entry.Pragma
+         { pragma =
+             ( Signature.Pragma.Prefix_fixity _
+             | Signature.Pragma.Infix_fixity _
+             | Signature.Pragma.Postfix_fixity _ )
+         ; _
+         } as entry)
+      :: entries -> (
+        (* Special case of pretty-printing where the fixity pragma may apply
+           to a constant declared subsequently after the pragma *)
+        match
+          List.find_opt
+            (Fun.negate is_entry_fixity_pragma_or_comment)
+            (entries @ rest)
+        with
+        | Option.Some lookahead_entry -> (
+            let applicable_constant_identifiers =
+              fixable_constant_declaration_identifiers lookahead_entry
+            in
+            pp_postponable_fixity_pragma state
+              applicable_constant_identifiers entry;
+            match entries with
+            | [] -> pp_nop state
+            | _ ->
+                sep state;
+                pp_signature_code_entries state ~sep entries rest)
+        | Option.None -> (
+            (* The fixity pragma is not postponed *)
+            pp_signature_entry state entry;
+            match entries with
+            | [] -> pp_nop state
+            | _ ->
+                sep state;
+                pp_signature_code_entries state ~sep entries rest))
+    | [] -> pp_nop state
+    | [ x ] -> pp_signature_entry state x
+    | x :: xs ->
+        pp_signature_entry state x;
+        sep state;
+        pp_signature_code_entries state ~sep xs rest
+
+  and pp_signature_entries state ?(sep = pp_double_cut) ?(in_module = false)
+      entries =
+    match entries with
+    | [] -> pp_nop state
+    | e :: es -> (
+        match group_signature_entries (List1.from e es) with
+        | `Code code_entries, rest -> (
+            let pp_code_html =
+              if in_module then fun state f -> f state
+              else pp_preformatted_code_html
+            in
+            pp_code_html state (fun state ->
+                pp_signature_code_entries state ~sep
+                  (List1.to_list code_entries)
+                  rest);
+            match rest with
+            | [] -> pp_nop state
+            | _ :: _ ->
+                sep state;
+                pp_signature_entries state ~sep ~in_module rest)
+        | `Comment comment_entries, rest -> (
+            (let pp_documentation_html =
+               if in_module then pp_inner_documentation_html
+               else pp_toplevel_documentation_html
+             in
+             pp_documentation_html state (fun state ->
+                 pp_list1 state ~sep pp_signature_entry comment_entries));
+            match rest with
+            | [] -> pp_nop state
+            | _ :: _ ->
+                sep state;
+                pp_signature_entries state ~sep ~in_module rest))
+
   and pp_signature_file state signature_file =
     let { Signature.global_pragmas; entries; _ } = signature_file in
     let pp_global_pragmas_opt state =
       match global_pragmas with
       | [] -> pp_nop state
-      | _ ->
+      | _ :: _ ->
           pp_preformatted_code_html state (fun state ->
               pp_list state ~sep:pp_cut pp_signature_global_pragma
                 global_pragmas);
-          pp_cut state
-    in
-    let groups = group_signature_entries entries in
-    let pp_group state = function
-      | `Code group ->
-          pp_preformatted_code_html state (fun state ->
-              pp_list1 state ~sep:pp_double_cut pp_signature_entry group)
-      | `Comment group ->
-          pp_toplevel_documentation_html state (fun state ->
-              pp_list1 state ~sep:pp_double_cut pp_signature_entry group)
-    in
-    let pp_groups state groups =
-      pp_list state ~sep:pp_double_cut pp_group groups
+          pp_double_cut state
     in
     pp_vbox state ~indent:0 (fun state ->
         pp_global_pragmas_opt state;
-        pp_groups state groups)
+        pp_signature_entries state entries)
 
   and group_signature_entries entries =
-    match entries with
-    | (Signature.Entry.Declaration _ as x) :: xs
-    | (Signature.Entry.Pragma _ as x) :: xs ->
+    let (List1.T (x, xs)) = entries in
+    match x with
+    | Signature.Entry.Declaration _
+    | Signature.Entry.Pragma _ ->
         let code_entries, rest =
           List.take_while
             (function
@@ -2957,8 +3308,8 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               | Signature.Entry.Comment _ -> false)
             xs
         in
-        `Code (List1.from x code_entries) :: group_signature_entries rest
-    | (Signature.Entry.Comment _ as x) :: xs ->
+        (`Code (List1.from x code_entries), rest)
+    | Signature.Entry.Comment _ ->
         let comment_entries, rest =
           List.take_while
             (function
@@ -2968,9 +3319,7 @@ module Make_html_printer (Html_printing_state : HTML_PRINTING_STATE) = struct
               | Signature.Entry.Comment _ -> true)
             xs
         in
-        `Comment (List1.from x comment_entries)
-        :: group_signature_entries rest
-    | [] -> []
+        (`Comment (List1.from x comment_entries), rest)
 
   and pp_signature state signature =
     pp_list1 state ~sep:pp_double_cut pp_signature_file signature

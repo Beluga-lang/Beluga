@@ -144,7 +144,7 @@ module Printing_state = struct
   (** The type of fixity pragmas that are postponed to be applied at a later
       point. The default precedence and associativity to be used are
       determined where the pragma is declared, hence why those fields are not
-      optional like in the parser syntax. *)
+      optional like in the external syntax. *)
   type postponed_fixity_pragma =
     | Prefix_fixity of
         { constant : Qualified_identifier.t
@@ -320,7 +320,12 @@ module Printing_state = struct
 
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
-    lookup_in_scopes (List1.to_list state.scopes) identifiers
+    try lookup_in_scopes (List1.to_list state.scopes) identifiers with
+    | exn ->
+        Error.re_raise
+          (Error.located_exception1
+             (Qualified_identifier.location query)
+             exn)
 
   let lookup_operator state constant =
     let entry, _subtree = lookup state constant in

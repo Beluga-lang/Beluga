@@ -482,8 +482,9 @@ module Make
               Synint.Sgn.PostfixFixityPrag { location; constant; precedence }
           ; location = entry_location
           }
-    | _ ->
-        Error.raise_violation
+    | Ext.Signature.Entry.Pragma { location; _ }
+    | Ext.Signature.Entry.Declaration { location; _ } ->
+        Error.raise_violation ~location
           (Format.asprintf
              "[%s] unexpectedly encountered an entry that is neither a \
               fixity pragma nor a documentation comment"

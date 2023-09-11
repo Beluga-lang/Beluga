@@ -816,8 +816,9 @@ struct
                 { location; constant; precedence }
           ; location = entry_location
           }
-    | _ ->
-        Error.raise_violation
+    | Synprs.Signature.Entry.Raw_declaration { location; _ }
+    | Synprs.Signature.Entry.Raw_pragma { location; _ } ->
+        Error.raise_violation ~location
           (Format.asprintf
              "[%s] unexpectedly encountered an entry that is neither a \
               fixity pragma nor a documentation comment"

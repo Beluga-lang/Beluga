@@ -23,13 +23,15 @@ val re_raise : exn -> 'a
 val raise_notrace : exn -> 'a
 
 (** [Violation message] is the exception signalling a programmer error, like
-    an unmet pre-condition. This exception variant should not be exported,
-    but it is incorrectly being used for backtracking with exceptions in the
-    core library. *)
+    an unmet pre-condition. FIXME: This exception variant should not be
+    exported, but it is incorrectly being used for backtracking with
+    exceptions in the core library. *)
 exception Violation of string
 
 (** [raise_violation ?location message] raises a violation exception with the
-    given [message] and [location]. *)
+    given [message] and [location]. A violation encountered at runtime
+    indicates that there is a bug in the implementation, such as a
+    pre-condition, post-condition or invariant not being upheld. *)
 val raise_violation : ?location:Location.t -> string -> 'a
 
 (** [located_exception locations cause] is a decorated exception having

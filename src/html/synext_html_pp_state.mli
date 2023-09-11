@@ -31,6 +31,19 @@ module type HTML_PRINTING_STATE = sig
       generated IDs are unique. *)
   val fresh_id : state -> ?prefix:String.t -> Identifier.t -> String.t
 
+  (** [preallocate_id state ?prefix identifier] is the unique ID generated
+      from [identifier] and [state], and optionally using [prefix] that will
+      be bound to the next declaration added to [state] with identifier
+      [identifier]. That is, the preallocated ID is reserved for the next
+      time we want to generate a fresh ID for [identifier].
+
+      This is used specifically for postponed fixity pragmas. A postponed
+      fixity pragma needs an ID reference to the declaration it is attached
+      to, but this declaration appears later in the signature file. Hence we
+      preallocate an ID for that subsequent declaration, and use it as
+      reference for the postponed pragma. *)
+  val preallocate_id : state -> ?prefix:String.t -> Identifier.t -> String.t
+
   val set_current_page : state -> String.t -> Unit.t
 
   val lookup_reference : state -> Qualified_identifier.t -> String.t
@@ -146,6 +159,49 @@ module type HTML_PRINTING_STATE = sig
       If [constant] is unbound, then an exception is raised. *)
   val add_postfix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  (** [add_postponed_prefix_notation state ?precedence identifier] adds a
+      postponed prefix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_prefix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  (** [add_postponed_infix_notation state ?precedence ?associativity identifier]
+      adds a postponed infix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead. Likewise, if [associativity = Option.None], then
+      {!get_default_associativity} is used instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_infix_notation :
+       state
+    -> ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  (** [add_postponed_postfix_notation state ?precedence identifier] adds a
+      postponed postfix notation for [identifier]. If
+      [precedence = Option.None], then {!get_default_precedence} is used
+      instead.
+
+      This notation is postponed, meaning that it only applies once
+      {!val:apply_postponed_fixity_pragmas} is called. *)
+  val add_postponed_postfix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  (** [apply_postponed_fixity_pragmas state] adds in scope the postponed
+      prefix, infix and postfix fixity pragmas. This function should be
+      called only when the targets of those postponed pragmas are in scope.
+      That is, postponed fixity pragmas are applied after the subsequent
+      declaration is added, or after a group of mutually recursive
+      declarations are added. *)
+  val apply_postponed_fixity_pragmas : state -> unit
 
   (** [lookup_operator state constant] is the operator description
       corresponding to [constant] bound in [state].

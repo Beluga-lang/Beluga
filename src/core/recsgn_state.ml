@@ -251,7 +251,7 @@ struct
   (** The type of fixity pragmas that are postponed to be applied at a later
       point. The default precedence and associativity to be used are
       determined where the pragma is declared, hence why those fields are not
-      optional like in the parser syntax. *)
+      optional like in the external syntax. *)
   type postponed_fixity_pragma =
     | Prefix_fixity of
         { location : Location.t Option.t

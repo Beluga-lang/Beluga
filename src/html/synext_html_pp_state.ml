@@ -12,6 +12,8 @@ module type HTML_PRINTING_STATE = sig
 
   val fresh_id : state -> ?prefix:String.t -> Identifier.t -> String.t
 
+  val preallocate_id : state -> ?prefix:String.t -> Identifier.t -> String.t
+
   val set_current_page : state -> String.t -> Unit.t
 
   val lookup_reference : state -> Qualified_identifier.t -> String.t
@@ -81,6 +83,21 @@ module type HTML_PRINTING_STATE = sig
 
   val add_postfix_notation :
     state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  val add_postponed_prefix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  val add_postponed_infix_notation :
+       state
+    -> ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t
+
+  val add_postponed_postfix_notation :
+    state -> ?precedence:Int.t -> Qualified_identifier.t -> Unit.t
+
+  val apply_postponed_fixity_pragmas : state -> unit
 
   val lookup_operator :
     state -> Qualified_identifier.t -> Operator.t Option.t
@@ -202,6 +219,25 @@ module Html_printing_state = struct
         ; default_precedence : Int.t
         }
 
+  (** The type of fixity pragmas that are postponed to be applied at a later
+      point. The default precedence and associativity to be used are
+      determined where the pragma is declared, hence why those fields are not
+      optional like in the external syntax. *)
+  type postponed_fixity_pragma =
+    | Prefix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+    | Infix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        ; associativity : Associativity.t
+        }
+    | Postfix_fixity of
+        { constant : Qualified_identifier.t
+        ; precedence : Int.t
+        }
+
   type state =
     { mutable ids : String.Set.t
           (** The set of HTML IDs generated so far. *)
@@ -217,6 +253,16 @@ module Html_printing_state = struct
           (** The default precedence of user-defined operators. *)
     ; mutable default_associativity : Associativity.t
           (** The default associativity of user-defined operators. *)
+    ; mutable postponed_fixity_pragmas : postponed_fixity_pragma List.t
+          (** The list of fixity pragmas that refer to constants declared
+              immediately after them instead of pragmas declared earlier. *)
+    ; preallocated_ids : String.t Identifier.Hashtbl.t
+          (** An association from constant identifiers to fresh IDs generated
+              before the constant is declared. If an ID is preallocated for a
+              given identifier, then generating a fresh ID for that
+              identifier instead uses the preallocated ID. This allows for
+              postponed fixity pragmas to create the ID for the constant
+              declared later in the signature. *)
     }
 
   include (
@@ -244,6 +290,8 @@ module Html_printing_state = struct
     ; scopes = List1.singleton (create_module_scope ())
     ; default_precedence
     ; default_associativity
+    ; postponed_fixity_pragmas = []
+    ; preallocated_ids = Identifier.Hashtbl.create 16
     }
 
   let set_current_page state current_page =
@@ -263,22 +311,28 @@ module Html_printing_state = struct
       integer suffix does not fit in an {!type:int}. *)
   let split_id s =
     match search_backward_opt non_digit_regexp s (String.length s) with
-    | Option.Some pos ->
-        let pos = pos + 1 in
-        let s' = Str.string_before s pos in
-        let n = Int.of_string_opt (Str.string_after s pos) in
-        (s', n)
+    | Option.Some first_non_digit_index -> (
+        let number_suffix_start_index = first_non_digit_index + 1 in
+        match
+          Int.of_string_opt (Str.string_after s number_suffix_start_index)
+        with
+        | Option.None ->
+            (* The number suffix is too large to be represented as an
+               [int] *)
+            (s, Option.none)
+        | Option.Some n ->
+            let s' = Str.string_before s number_suffix_start_index in
+            (s', Option.some n))
     | Option.None -> (s, Option.none)
 
-  (** [fresh_id ?prefix identifier state] is [(state', id)] where [id] is a
-      percent-encoded unique ID with respect to [state] starting with
-      [prefix] and [identifier]. The ID needs to be percent-encoded because
-      [identifier] may contain UTF-8 characters which may not be used in HTML
-      anchors.
+  (** [generate_id ?prefix identifier state] is a percent-encoded unique ID
+      with respect to [state] starting with [prefix] and [identifier]. The ID
+      needs to be percent-encoded because [identifier] may contain UTF-8
+      characters which cannot be used in HTML anchors and URLs.
 
       [id] is guaranteed to be unique by optionally appending a numeric
       suffix. *)
-  let fresh_id state ?(prefix = "") identifier =
+  let generate_id state ?(prefix = "") identifier =
     let initial_id = Uri.pct_encode (prefix ^ Identifier.name identifier) in
     let base, suffix_opt = split_id initial_id in
     let id' =
@@ -301,6 +355,24 @@ module Html_printing_state = struct
     in
     state.ids <- String.Set.add id' state.ids;
     id'
+
+  let fresh_id state ?prefix identifier =
+    match Identifier.Hashtbl.find_opt state.preallocated_ids identifier with
+    | Option.Some id ->
+        (* Claim the preallocated ID *)
+        Identifier.Hashtbl.remove state.preallocated_ids identifier;
+        id
+    | Option.None ->
+        (* Generate a new ID *)
+        generate_id state ?prefix identifier
+
+  let preallocate_id state ?prefix identifier =
+    match Identifier.Hashtbl.find_opt state.preallocated_ids identifier with
+    | Option.Some id -> (* Reuse already preallocated ID *) id
+    | Option.None ->
+        let id = generate_id state ?prefix identifier in
+        Identifier.Hashtbl.add state.preallocated_ids identifier id;
+        id
 
   let set_formatter state formatter = state.formatter <- formatter
 
@@ -450,7 +522,12 @@ module Html_printing_state = struct
 
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
-    lookup_in_scopes (List1.to_list state.scopes) identifiers
+    try lookup_in_scopes (List1.to_list state.scopes) identifiers with
+    | exn ->
+        Error.re_raise
+          (Error.located_exception1
+             (Qualified_identifier.location query)
+             exn)
 
   let lookup_id state query =
     let entry, _subtree = lookup state query in
@@ -499,6 +576,40 @@ module Html_printing_state = struct
     let precedence = get_default_precedence_opt state precedence in
     modify_operator state constant (fun _operator ->
         Option.some (Operator.make_postfix ~precedence))
+
+  let add_postponed_notation state pragma =
+    state.postponed_fixity_pragmas <-
+      pragma :: state.postponed_fixity_pragmas
+
+  let add_postponed_prefix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state (Prefix_fixity { precedence; constant })
+
+  let add_postponed_infix_notation state ?precedence ?associativity constant
+      =
+    let precedence = get_default_precedence_opt state precedence in
+    let associativity = get_default_associativity_opt state associativity in
+    add_postponed_notation state
+      (Infix_fixity { precedence; associativity; constant })
+
+  let add_postponed_postfix_notation state ?precedence constant =
+    let precedence = get_default_precedence_opt state precedence in
+    add_postponed_notation state (Postfix_fixity { precedence; constant })
+
+  let apply_postponed_fixity_pragmas =
+    let apply_postponed_fixity_pragma state = function
+      | Prefix_fixity { constant; precedence } ->
+          add_prefix_notation state ~precedence constant
+      | Infix_fixity { constant; precedence; associativity } ->
+          add_infix_notation state ~precedence ~associativity constant
+      | Postfix_fixity { constant; precedence } ->
+          add_postfix_notation state ~precedence constant
+    in
+    fun state ->
+      List.iter_rev
+        (apply_postponed_fixity_pragma state)
+        state.postponed_fixity_pragmas;
+      state.postponed_fixity_pragmas <- []
 
   let open_namespace state identifier =
     let _entry, subtree = lookup state identifier in

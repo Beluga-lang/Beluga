@@ -1,3 +1,17 @@
+## v1.1.1
+
+### Added
+
+- Added support for fixity pragmas before declarations (#270).
+
+### Changed
+
+- Updated the Beluga mode for Emacs to use the `'cl-lib` library instead of `'cl`.
+
+### Fixed
+
+- Colouring of error messages is fixed for the Beluga mode for Emacs using the `'ansi-color` library (requires Emacs >= v28.1).
+
 ## v1.1
 
 ### Added

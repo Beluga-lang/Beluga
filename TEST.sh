@@ -214,7 +214,7 @@ function check_example_test_case {
             echo -e "${C_FAIL}FAIL${C_END}"
             (( TEST_RESULT_FAIL+=1 ))
 
-            echo "${output}"
+            cat "${output_file}"
 
             stop_on_failure
         fi

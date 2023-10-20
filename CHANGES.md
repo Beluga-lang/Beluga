@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Underscores (`_`) in LF term and type constant declarations are treated as wildcards. This means that a constant `a : oft M A -> equiv M N _ -> oft N _` stands for `a : oft M A -> equiv M N B -> oft N C` as opposed to `a : oft M A -> equiv M N A -> oft N A`.
 - Substitution meta-objects need to be prefixed by `$`. That is, the plain substitution `[g |- $S]` must be written as `$[g |- $S]`, and the renaming substitution `[g |-# $S]` must be written as `$[g |-# $S]`.
 - Substitution meta-types need to be prefixed by `$`. That is, the plain substitution meta-type `[g |- h]` must be written as `$[g |- h]`, and the renaming substitution meta-type `[g |-# h]` must be written as `$[g |-# h]`.
 - Parameter types need to be prefixed by `#`. That is, `{#p : [g |- nat]}` must be written as `{#p : #[g |- nat]}`.

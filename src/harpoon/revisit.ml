@@ -41,13 +41,20 @@ struct
         open_module state module_identifier
     | Synint.Sgn.DefaultAssocPrag { associativity; _ } ->
         set_default_associativity state associativity
-    | Synint.Sgn.PrefixFixityPrag { constant; precedence; _ } ->
-        add_prefix_notation state ?precedence constant
-    | Synint.Sgn.InfixFixityPrag { constant; precedence; associativity; _ }
-      ->
-        add_infix_notation state ?precedence ?associativity constant
-    | Synint.Sgn.PostfixFixityPrag { constant; precedence; _ } ->
-        add_postfix_notation state ?precedence constant
+    | Synint.Sgn.PrefixFixityPrag { constant; precedence; postponed; _ } ->
+        if postponed then
+          add_postponed_prefix_notation state ?precedence constant
+        else add_prefix_notation state ?precedence constant
+    | Synint.Sgn.InfixFixityPrag
+        { constant; precedence; associativity; postponed; _ } ->
+        if postponed then
+          add_postponed_infix_notation state ?precedence ?associativity
+            constant
+        else add_infix_notation state ?precedence ?associativity constant
+    | Synint.Sgn.PostfixFixityPrag { constant; precedence; postponed; _ } ->
+        if postponed then
+          add_postponed_postfix_notation state ?precedence constant
+        else add_postfix_notation state ?precedence constant
     | Synint.Sgn.AbbrevPrag { module_identifier; abbreviation; location } ->
         add_module_abbreviation state ~location module_identifier
           abbreviation

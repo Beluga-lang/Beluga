@@ -1,0 +1,61 @@
+% This test case checks that postponed fixity pragmas can be used in interactive Harpoon sessions.
+
+% Completeness of algorithmic equality for declarative equality for simply typed lambda calculus
+% Accompanies Mechanizing Logical Relations using Contextual Type Theory
+% by Andrew Cave and Brigitte Pientka
+
+LF tp : type =
+  | i :  tp
+  | arr: tp -> tp -> tp
+;
+--name tp T.
+
+LF tm : type =
+  | app : tm -> tm -> tm
+  | lam : (tm -> tm) -> tm
+;
+--name tm E.
+
+LF step : tm -> tm -> type =
+  | beta : step (app (lam M) N) (M N)
+  | stepapp : step M M' -> step (app M N) (app M' N)
+;
+--name step S.
+
+LF mstep : tm -> tm -> type =
+  | refl : mstep M M
+  | trans1 : step M M' -> mstep M' M'' -> mstep M M''
+;
+--name mstep S.
+
+LF algeq : tm -> tm -> tp -> type =
+  | alg_base : mstep M P -> mstep N Q -> algeqNeu P Q i -> algeq M N i
+  | alg_arr : ({x : tm} {p : algeqNeu x x T} algeq (app M x) (app N x) S) -> algeq M N (arr T S)
+
+and LF algeqNeu : tm -> tm -> tp -> type =
+  | alg_app : algeqNeu M1 M2 (arr T S) -> algeq N1 N2 T -> algeqNeu (app M1 N1) (app M2 N2) S
+;
+
+schema tctx = some [t : tp] block (x : tm, y : algeqNeu x x t);
+
+% Logical equivalence. _|-_~~_:_ in the paper
+
+--infix sim 5 right.
+LF tmpair : type =
+  | sim : tm -> tm -> tmpair
+;
+
+stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
+| LogBase : [g |- algeq M N i] -> Log [g |- M sim N] [|- i]
+| LogArr :
+    {M1 : [g |- tm]}
+    {M2 : [g |- tm]}
+    ({h : tctx}
+      {$R : $[h |- g]}
+      {N1 : [h |- tm]}
+      {N2 : [h |- tm]}
+      Log [h |- N1 sim N2] [ |- T] ->
+      Log [h |- (app M1[$R] N1) sim (app M2[$R] N2)] [|- S]
+    ) ->
+    Log [g |- M1 sim M2] [ |- arr T S]
+;

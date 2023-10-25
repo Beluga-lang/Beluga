@@ -1,0 +1,11 @@
+t/harpoon/algeq-simplified.bel
+logEq_Monotone
+{h : tctx} {$W : $[h |- g]} Log [g |- M1 sim M2] [ |- A] -> Log [h |- M1[$W] sim M2[$W]] [ |- A]
+
+
+split x
+solve LogArr [h |- M[$W[..]]] [h |- M1[$W[..]]] (mlam h0 => mlam $W2 => mlam N1 => mlam N2 => fn rn => x1 [h0] $[h0 |- $W[$W2[..]]] [h0 |- N1] [h0 |- N2] rn)
+
+by x1 as P unboxed
+solve LogBase [h |- P[$W[..]]]
+:quit

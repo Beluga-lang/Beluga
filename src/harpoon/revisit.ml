@@ -30,7 +30,8 @@ struct
     | Synint.Sgn.Pragma { pragma; _ } ->
         revisit_sgn_pragma state snapshots pragma
     | Synint.Sgn.Declaration { declaration; _ } ->
-        revisit_sgn_declaration state snapshots declaration
+        revisit_sgn_declaration state snapshots declaration;
+        apply_postponed_fixity_pragmas state
     | Synint.Sgn.Comment _ -> ()
 
   and revisit_sgn_pragma state _snapshots pragma =
@@ -151,6 +152,7 @@ struct
           Store.Cid.Comp.explicit_arguments (Store.Cid.Comp.get cid)
         in
         add_program_constant state ~location ~arity identifier;
+        apply_postponed_fixity_pragmas state;
         Id.Prog.Hashtbl.add snapshots cid (snapshot_state state)
 
   and revisit_recursive_sgn_declarations state snapshots declarations =
@@ -172,6 +174,7 @@ struct
             proof_cids := Id.Prog.Set.add cid !proof_cids
         | _ -> revisit_sgn_declaration state snapshots declaration)
       declarations;
+    apply_postponed_fixity_pragmas state;
     let snapshot = snapshot_state state in
     Id.Prog.Set.iter
       (fun cid -> Id.Prog.Hashtbl.add snapshots cid snapshot)

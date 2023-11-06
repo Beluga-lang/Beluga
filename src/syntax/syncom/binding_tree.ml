@@ -49,9 +49,20 @@ let add qualified_identifier entry ?(subtree = create ()) tree =
       add_nested namespaces identifier { entry; subtree } tree)
 
 let add_all t1 t2 =
-  Identifier.Hashtbl.iter
-    (fun identifier entry -> Identifier.Hashtbl.add t1 identifier entry)
-    t2
+  (* Keep track of the identifiers from [t2] added to [t1] to only keep the
+     latest binding from [t2]. *)
+  ignore
+    (Identifier.Hashtbl.fold
+       (fun identifier entry added_identifiers ->
+         if Identifier.Set.mem identifier added_identifiers then
+           (* A binding from [t2] with [identifier] was already added to
+              [t1] *)
+           added_identifiers
+         else (
+           Identifier.Hashtbl.add t1 identifier entry;
+           Identifier.Set.add identifier added_identifiers))
+       t2 Identifier.Set.empty
+      : Identifier.Set.t)
 
 let remove identifier tree =
   match Identifier.Hashtbl.find_opt tree identifier with

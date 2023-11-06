@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>T (beluga.Beluga.Printer.Int.T)</title><link rel="stylesheet" href="../../../../../odoc.support/odoc.css"/><meta charset="utf-8"/><meta name="generator" content="odoc 2.3.1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../../../index.html">beluga</a> &#x00BB; <a href="../../../index.html">Beluga</a> &#x00BB; <a href="../../index.html">Printer</a> &#x00BB; <a href="../index.html">Int</a> &#x00BB; T</nav><header class="odoc-preamble"><h1>Module type <code><span>Int.T</span></code></h1></header><div class="odoc-content"><div class="odoc-spec"><div class="spec type anchored" id="type-lvl"><a href="#type-lvl" class="anchor"></a><code><span><span class="keyword">type</span> lvl</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-l0"><a href="#val-l0" class="anchor"></a><code><span><span class="keyword">val</span> l0 : <a href="#type-lvl">lvl</a></span></code></div></div><div class="odoc-spec"><div class="spec type anchored" id="type-depend_print_style"><a href="#type-depend_print_style" class="anchor"></a><code><span><span class="keyword">type</span> depend_print_style</span><span> = </span><span>[ </span></code><ol><li id="type-depend_print_style.depend" class="def constructor anchored"><a href="#type-depend_print_style.depend" class="anchor"></a><code><span>| </span></code><code><span>`depend</span></code></li><li id="type-depend_print_style.inductive" class="def constructor anchored"><a href="#type-depend_print_style.inductive" class="anchor"></a><code><span>| </span></code><code><span>`inductive</span></code></li><li id="type-depend_print_style.clean" class="def constructor anchored"><a href="#type-depend_print_style.clean" class="anchor"></a><code><span>| </span></code><code><span>`clean</span></code></li></ol><code><span> ]</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_plicity"><a href="#val-fmt_ppr_plicity" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_plicity : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Syncom/Plicity/index.html#type-t">Beluga_syntax.Plicity.t</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_depend"><a href="#val-fmt_ppr_lf_depend" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_depend : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Syncom/Plicity/index.html#type-t">Beluga_syntax.Plicity.t</a> * <a href="../../../../Syncom/Inductivity/index.html#type-t">Beluga_syntax.Inductivity.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_depend_clean"><a href="#val-fmt_ppr_lf_depend_clean" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_depend_clean : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Syncom/Inductivity/index.html#type-t">Beluga_syntax.Inductivity.t</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_depend_inductive"><a href="#val-fmt_ppr_lf_depend_inductive" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_depend_inductive : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Syncom/Inductivity/index.html#type-t">Beluga_syntax.Inductivity.t</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_split_kind"><a href="#val-fmt_ppr_cmp_split_kind" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_split_kind : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>[ `split <span>| `invert</span> <span>| `impossible</span> ]</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_context_case"><a href="#val-fmt_ppr_cmp_context_case" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_context_case : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-context_case">Beluga_syntax.Synint.Comp.context_case</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_sgn"><a href="#val-fmt_ppr_sgn" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_sgn : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Sgn/index.html#type-sgn">Beluga_syntax.Synint.Sgn.sgn</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_sgn_decl"><a href="#val-fmt_ppr_sgn_decl" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_sgn_decl : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Sgn/index.html#type-decl">Beluga_syntax.Synint.Sgn.decl</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_svar_class"><a href="#val-fmt_ppr_lf_svar_class" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_svar_class : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-svar_class">Beluga_syntax.Synint.LF.svar_class</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_kind"><a href="#val-fmt_ppr_lf_kind" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_kind : 
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-kind">Beluga_syntax.Synint.LF.kind</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_ctyp_decl"><a href="#val-fmt_ppr_lf_ctyp_decl" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_ctyp_decl : 
+  <span><span class="optlabel">?fmt_ppr_depend</span>:
+    <span>(<span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+      <span><span>(<a href="../../../../Syncom/Plicity/index.html#type-t">Beluga_syntax.Plicity.t</a> * <a href="../../../../Syncom/Inductivity/index.html#type-t">Beluga_syntax.Inductivity.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+      unit)</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-ctyp_decl">Beluga_syntax.Synint.LF.ctyp_decl</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_typ_rec"><a href="#val-fmt_ppr_lf_typ_rec" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_typ_rec : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-typ_rec">Beluga_syntax.Synint.LF.typ_rec</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_typ"><a href="#val-fmt_ppr_lf_typ" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_typ : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-typ">Beluga_syntax.Synint.LF.typ</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_mtyp"><a href="#val-fmt_ppr_lf_mtyp" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_mtyp : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-ctyp">Beluga_syntax.Synint.LF.ctyp</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_tuple"><a href="#val-fmt_ppr_lf_tuple" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_tuple : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-tuple">Beluga_syntax.Synint.LF.tuple</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_normal"><a href="#val-fmt_ppr_lf_normal" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_normal : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-normal">Beluga_syntax.Synint.LF.normal</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_head"><a href="#val-fmt_ppr_lf_head" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_head : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-head">Beluga_syntax.Synint.LF.head</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_spine"><a href="#val-fmt_ppr_lf_spine" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_spine : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-spine">Beluga_syntax.Synint.LF.spine</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_sub"><a href="#val-fmt_ppr_lf_sub" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_sub : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-sub">Beluga_syntax.Synint.LF.sub</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_schema"><a href="#val-fmt_ppr_lf_schema" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_schema : 
+  <span><span class="optlabel">?useName</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-schema">Beluga_syntax.Synint.LF.schema</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_sch_elem"><a href="#val-fmt_ppr_lf_sch_elem" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_sch_elem : 
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-sch_elem">Beluga_syntax.Synint.LF.sch_elem</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_dctx_hat"><a href="#val-fmt_ppr_lf_dctx_hat" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_dctx_hat : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_dctx"><a href="#val-fmt_ppr_lf_dctx" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_dctx : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_mctx"><a href="#val-fmt_ppr_lf_mctx" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_mctx : 
+  <span><span class="optlabel">?all</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?sep</span>:<span>(<span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span> <span>unit <span class="arrow">&#45;&gt;</span></span> unit)</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_ctx_var"><a href="#val-fmt_ppr_lf_ctx_var" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_ctx_var : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-ctx_var">Beluga_syntax.Synint.LF.ctx_var</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_mfront"><a href="#val-fmt_ppr_lf_mfront" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_mfront : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-mfront">Beluga_syntax.Synint.LF.mfront</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_iterm"><a href="#val-fmt_ppr_lf_iterm" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_iterm : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-iterm">Beluga_syntax.Synint.LF.iterm</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_constraint"><a href="#val-fmt_ppr_lf_constraint" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_constraint : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-constrnt">Beluga_syntax.Synint.LF.constrnt</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_constraints"><a href="#val-fmt_ppr_lf_constraints" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_constraints : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../../../Synint/LF/index.html#type-cnstr">Beluga_syntax.Synint.LF.cnstr</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_msub"><a href="#val-fmt_ppr_lf_msub" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_msub : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-msub">Beluga_syntax.Synint.LF.msub</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_msub_typing"><a href="#val-fmt_ppr_lf_msub_typing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_msub_typing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a>
+   * <a href="../../../../Synint/LF/index.html#type-msub">Beluga_syntax.Synint.LF.msub</a>
+   * <a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div><div class="spec-doc"><p>Prints a typing judgment for an msub: cD' |- theta : cD</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_typ_typing"><a href="#val-fmt_ppr_lf_typ_typing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_typ_typing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a>
+   * <a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a>
+   * <a href="../../../../Synint/LF/index.html#type-typ">Beluga_syntax.Synint.LF.typ</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div><div class="spec-doc"><p>Prints a typing judgment for an LF type: cD ; cPsi |- tA : type</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_lf_sub_typing"><a href="#val-fmt_ppr_lf_sub_typing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_lf_sub_typing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a>
+   * <a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a>
+   * <a href="../../../../Synint/LF/index.html#type-sub">Beluga_syntax.Synint.LF.sub</a>
+   * <a href="../../../../Synint/LF/index.html#type-dctx">Beluga_syntax.Synint.LF.dctx</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div><div class="spec-doc"><p>Prints a typing judgment for an LF substitution: cD ; cPsi |- s : cPsi'</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_kind"><a href="#val-fmt_ppr_cmp_kind" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_kind : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-kind">Beluga_syntax.Synint.Comp.kind</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_typ"><a href="#val-fmt_ppr_cmp_typ" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_typ : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-typ">Beluga_syntax.Synint.Comp.typ</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_suffices_typ"><a href="#val-fmt_ppr_cmp_suffices_typ" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_suffices_typ : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-suffices_typ">Beluga_syntax.Synint.Comp.suffices_typ</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_ctyp_decl"><a href="#val-fmt_ppr_cmp_ctyp_decl" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_ctyp_decl : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-ctyp_decl">Beluga_syntax.Synint.Comp.ctyp_decl</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_gctx"><a href="#val-fmt_ppr_cmp_gctx" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_gctx : 
+  <span><span class="optlabel">?sep</span>:<span>(<span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span> <span>unit <span class="arrow">&#45;&gt;</span></span> unit)</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_exp"><a href="#val-fmt_ppr_cmp_exp" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_exp : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-exp">Beluga_syntax.Synint.Comp.exp</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_value"><a href="#val-fmt_ppr_cmp_value" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_value : 
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-value">Beluga_syntax.Synint.Comp.value</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_branches"><a href="#val-fmt_ppr_cmp_branches" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_branches : 
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../../../Synint/Comp/index.html#type-branch">Beluga_syntax.Synint.Comp.branch</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_branch"><a href="#val-fmt_ppr_cmp_branch" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_branch : 
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-branch">Beluga_syntax.Synint.Comp.branch</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_ih_args"><a href="#val-fmt_ppr_cmp_ih_args" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_ih_args : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../../../Synint/Comp/index.html#type-ih_arg">Beluga_syntax.Synint.Comp.ih_arg</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_ih"><a href="#val-fmt_ppr_cmp_ih" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_ih : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-ih_decl">Beluga_syntax.Synint.Comp.ih_decl</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_ihctx"><a href="#val-fmt_ppr_cmp_ihctx" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_ihctx : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-ihctx">Beluga_syntax.Synint.Comp.ihctx</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_total_dec_kind"><a href="#val-fmt_ppr_cmp_total_dec_kind" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_total_dec_kind : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../../../Synint/Comp/index.html#type-order">Beluga_syntax.Synint.Comp.order</a> <a href="../../../../Synint/Comp/index.html#type-total_dec_kind">Beluga_syntax.Synint.Comp.total_dec_kind</a></span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_total_dec"><a href="#val-fmt_ppr_cmp_total_dec" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_total_dec : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-total_dec">Beluga_syntax.Synint.Comp.total_dec</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_gctx_typing"><a href="#val-fmt_ppr_cmp_gctx_typing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_gctx_typing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> * <a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_typ_typing"><a href="#val-fmt_ppr_cmp_typ_typing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_typ_typing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> * <a href="../../../../Synint/Comp/index.html#type-typ">Beluga_syntax.Synint.Comp.typ</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_numeric_order"><a href="#val-fmt_ppr_cmp_numeric_order" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_numeric_order : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-order">Beluga_syntax.Synint.Comp.order</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_hypotheses_listing"><a href="#val-fmt_ppr_cmp_hypotheses_listing" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_hypotheses_listing : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-hypotheses">Beluga_syntax.Synint.Comp.hypotheses</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_subgoal_path"><a href="#val-fmt_ppr_cmp_subgoal_path" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_subgoal_path : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/SubgoalPath/index.html#type-t">Beluga_syntax.Synint.Comp.SubgoalPath.t</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_proof_state"><a href="#val-fmt_ppr_cmp_proof_state" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_proof_state : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-proof_state">Beluga_syntax.Synint.Comp.proof_state</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_proof"><a href="#val-fmt_ppr_cmp_proof" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_proof : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-proof">Beluga_syntax.Synint.Comp.proof</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_command"><a href="#val-fmt_ppr_cmp_command" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_command : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-command">Beluga_syntax.Synint.Comp.command</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_directive"><a href="#val-fmt_ppr_cmp_directive" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_directive : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-directive">Beluga_syntax.Synint.Comp.directive</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_hypothetical"><a href="#val-fmt_ppr_cmp_hypothetical" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_hypothetical : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-hypothetical">Beluga_syntax.Synint.Comp.hypothetical</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_pattern"><a href="#val-fmt_ppr_cmp_pattern" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_pattern : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-gctx">Beluga_syntax.Synint.Comp.gctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-pattern">Beluga_syntax.Synint.Comp.pattern</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_meta_typ"><a href="#val-fmt_ppr_cmp_meta_typ" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_meta_typ : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-meta_typ">Beluga_syntax.Synint.Comp.meta_typ</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_meta_obj"><a href="#val-fmt_ppr_cmp_meta_obj" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_meta_obj : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-meta_obj">Beluga_syntax.Synint.Comp.meta_obj</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_meta_spine"><a href="#val-fmt_ppr_cmp_meta_spine" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_meta_spine : 
+  <span><a href="../../../../Synint/LF/index.html#type-mctx">Beluga_syntax.Synint.LF.mctx</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="#type-lvl">lvl</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-meta_spine">Beluga_syntax.Synint.Comp.meta_spine</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_comp_prog_info"><a href="#val-fmt_ppr_cmp_comp_prog_info" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_comp_prog_info : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../Store/Cid/Comp/index.html#type-entry">Store.Cid.Comp.entry</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_cmp_thm"><a href="#val-fmt_ppr_cmp_thm" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_cmp_thm : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Comp/index.html#type-thm">Beluga_syntax.Synint.Comp.thm</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_sgn_file"><a href="#val-fmt_ppr_sgn_file" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_sgn_file : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../../../Synint/Sgn/index.html#type-sgn_file">Beluga_syntax.Synint.Sgn.sgn_file</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-fmt_ppr_theorem"><a href="#val-fmt_ppr_theorem" class="anchor"></a><code><span><span class="keyword">val</span> fmt_ppr_theorem : 
+  <span><span class="xref-unresolved">Stdlib</span>.Format.formatter <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../../../Syncom/Identifier/index.html#type-t">Beluga_syntax.Identifier.t</a>
+   * <a href="../../../../Synint/Comp/index.html#type-thm">Beluga_syntax.Synint.Comp.thm</a>
+   * <a href="../../../../Synint/Comp/index.html#type-typ">Beluga_syntax.Synint.Comp.typ</a>)</span> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div></div></body></html>

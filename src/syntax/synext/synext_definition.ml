@@ -41,8 +41,8 @@ open Syncom
     data-dependent disambiguation.
 
     These types are only intended to be used in the definition of LF
-    type-level or term-level constants. Thi The modules are used s is a weak,
-    representational function space without case analysis or recursion.
+    type-level or term-level constants. This is a weak, representational
+    function space without case analysis or recursion.
 
     LF terms as defined below may contain free variables. During the
     abstraction phase of term reconstruction, implicit binders are introduced

@@ -989,13 +989,31 @@ module Indexing_state = struct
     | Module_scope { bindings; _ } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings.bindings
 
+  let[@inline] increment_lf_context_size bindings =
+    bindings.lf_context_size <- bindings.lf_context_size + 1
+
+  let[@inline] decrement_lf_context_size bindings =
+    bindings.lf_context_size <- bindings.lf_context_size - 1
+
+  let[@inline] increment_meta_context_size bindings =
+    bindings.meta_context_size <- bindings.meta_context_size + 1
+
+  let[@inline] decrement_meta_context_size bindings =
+    bindings.meta_context_size <- bindings.meta_context_size - 1
+
+  let[@inline] increment_comp_context_size bindings =
+    bindings.comp_context_size <- bindings.comp_context_size + 1
+
+  let[@inline] decrement_comp_context_size bindings =
+    bindings.comp_context_size <- bindings.comp_context_size - 1
+
   let remove_lf_binding state identifier =
     match get_current_scope state with
     | Plain_scope { bindings }
     | Pattern_scope { pattern_bindings = bindings; _ }
     | Module_scope { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
-        bindings.lf_context_size <- bindings.lf_context_size - 1
+        decrement_lf_context_size bindings
 
   let remove_meta_binding state identifier =
     match get_current_scope state with
@@ -1003,7 +1021,7 @@ module Indexing_state = struct
     | Pattern_scope { pattern_bindings = bindings; _ }
     | Module_scope { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
-        bindings.meta_context_size <- bindings.meta_context_size - 1
+        decrement_meta_context_size bindings
 
   let remove_comp_binding state identifier =
     match get_current_scope state with
@@ -1011,7 +1029,7 @@ module Indexing_state = struct
     | Pattern_scope { pattern_bindings = bindings; _ }
     | Module_scope { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
-        bindings.comp_context_size <- bindings.comp_context_size - 1
+        decrement_comp_context_size bindings
 
   let add_declaration state identifier ?subtree entry =
     match get_current_scope state with
@@ -1034,7 +1052,7 @@ module Indexing_state = struct
       make_entry
         ~lf_level:(Option.some (Lf_level.of_int bindings.lf_context_size))
     in
-    bindings.lf_context_size <- bindings.lf_context_size + 1;
+    increment_lf_context_size bindings;
     Binding_tree.add_toplevel identifier entry bindings.bindings
 
   let add_meta_level_variable state identifier make_entry =
@@ -1044,7 +1062,7 @@ module Indexing_state = struct
         ~meta_level:
           (Option.some (Meta_level.of_int bindings.meta_context_size))
     in
-    bindings.meta_context_size <- bindings.meta_context_size + 1;
+    increment_meta_context_size bindings;
     Binding_tree.add_toplevel identifier entry bindings.bindings
 
   let add_comp_level_variable state identifier make_entry =
@@ -1054,7 +1072,7 @@ module Indexing_state = struct
         ~comp_level:
           (Option.some (Comp_level.of_int bindings.comp_context_size))
     in
-    bindings.comp_context_size <- bindings.comp_context_size + 1;
+    increment_comp_context_size bindings;
     Binding_tree.add_toplevel identifier entry bindings.bindings
 
   let add_lf_variable state ?location identifier =
@@ -1087,27 +1105,27 @@ module Indexing_state = struct
 
   let shift_lf_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.lf_context_size <- bindings_state.lf_context_size + 1
+    increment_lf_context_size bindings_state
 
   let unshift_lf_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.lf_context_size <- bindings_state.lf_context_size - 1
+    decrement_lf_context_size bindings_state
 
   let shift_meta_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.meta_context_size <- bindings_state.meta_context_size + 1
+    increment_meta_context_size bindings_state
 
   let unshift_meta_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.meta_context_size <- bindings_state.meta_context_size - 1
+    decrement_meta_context_size bindings_state
 
   let shift_comp_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.comp_context_size <- bindings_state.comp_context_size + 1
+    increment_comp_context_size bindings_state
 
   let unshift_comp_context state =
     let bindings_state = get_current_scope_bindings_state state in
-    bindings_state.comp_context_size <- bindings_state.comp_context_size - 1
+    decrement_comp_context_size bindings_state
 
   let actual_binding_exn = Entry.actual_binding_exn
 
@@ -1617,8 +1635,7 @@ module Indexing_state = struct
           identifier :: scope.pattern_variables_rev;
         Binding_tree.add_toplevel identifier entry
           scope.expression_bindings.bindings;
-        scope.expression_bindings.comp_context_size <-
-          scope.expression_bindings.comp_context_size + 1
+        increment_comp_context_size scope.expression_bindings
     | Plain_scope _
     | Module_scope _ ->
         ()
@@ -1760,14 +1777,12 @@ module Indexing_state = struct
         in
         Binding_tree.add_toplevel identifier pattern_entry
           scope.pattern_bindings.bindings;
-        scope.pattern_bindings.meta_context_size <-
-          scope.pattern_bindings.meta_context_size + 1;
+        increment_meta_context_size scope.pattern_bindings;
         scope.pattern_variables_rev <-
           identifier :: scope.pattern_variables_rev;
         Binding_tree.add_toplevel identifier expression_entry
           scope.expression_bindings.bindings;
-        scope.expression_bindings.meta_context_size <-
-          scope.expression_bindings.meta_context_size + 1
+        increment_meta_context_size scope.expression_bindings
     | Plain_scope _ ->
         Error.raise_violation
           (Format.asprintf

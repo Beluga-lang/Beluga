@@ -529,7 +529,8 @@ struct
     let precedence = get_default_precedence_opt state precedence in
     let associativity = get_default_associativity_opt state associativity in
     add_postponed_notation state
-      (Postponed_infix_fixity { location; precedence; associativity; constant })
+      (Postponed_infix_fixity
+         { location; precedence; associativity; constant })
 
   let add_postponed_postfix_notation state ?location ?precedence constant =
     let precedence = get_default_precedence_opt state precedence in
@@ -545,7 +546,8 @@ struct
   let apply_postponed_fixity_pragma state = function
     | Postponed_prefix_fixity { location; constant; precedence } ->
         add_prefix_notation state ?location ~precedence constant
-    | Postponed_infix_fixity { location; constant; precedence; associativity } ->
+    | Postponed_infix_fixity
+        { location; constant; precedence; associativity } ->
         add_infix_notation state ?location ~precedence ~associativity
           constant
     | Postponed_postfix_fixity { location; constant; precedence } ->

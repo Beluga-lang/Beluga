@@ -571,7 +571,7 @@ struct
           traverse_option state disambiguate_totality_declaration order
         in
         let body' =
-          with_scope state (fun state ->
+          with_frame state (fun state ->
               disambiguate_harpoon_proof state body)
         in
         Synext.Signature.Declaration.Proof

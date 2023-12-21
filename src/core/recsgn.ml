@@ -410,23 +410,26 @@ module Make
         Synint.Sgn.DefaultAssocPrag { associativity; location }
     | Synext.Signature.Pragma.Prefix_fixity
         { constant; precedence; postponed; location } ->
-          (if postponed then
-            add_postponed_prefix_notation state ?precedence constant
-          else add_prefix_notation state ?precedence constant);
-        Synint.Sgn.PrefixFixityPrag { constant; precedence; postponed; location }
+        if postponed then
+          add_postponed_prefix_notation state ?precedence constant
+        else add_prefix_notation state ?precedence constant;
+        Synint.Sgn.PrefixFixityPrag
+          { constant; precedence; postponed; location }
     | Synext.Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; postponed; location } ->
-          (if postponed then
-            add_postponed_infix_notation state ?precedence ?associativity constant
-          else add_infix_notation state ?precedence ?associativity constant);
+        if postponed then
+          add_postponed_infix_notation state ?precedence ?associativity
+            constant
+        else add_infix_notation state ?precedence ?associativity constant;
         Synint.Sgn.InfixFixityPrag
           { constant; precedence; associativity; postponed; location }
     | Synext.Signature.Pragma.Postfix_fixity
         { constant; precedence; postponed; location } ->
-          (if postponed then
-            add_postponed_postfix_notation state ?precedence constant
-          else add_postfix_notation state ?precedence constant);
-        Synint.Sgn.PostfixFixityPrag { constant; precedence; postponed; location }
+        if postponed then
+          add_postponed_postfix_notation state ?precedence constant
+        else add_postfix_notation state ?precedence constant;
+        Synint.Sgn.PostfixFixityPrag
+          { constant; precedence; postponed; location }
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
         freeze_all_unfrozen_declarations state;
         open_module state ~location module_identifier;

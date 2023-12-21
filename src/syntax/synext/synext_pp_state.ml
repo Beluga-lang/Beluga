@@ -135,8 +135,8 @@ module Entry = struct
 end
 
 module Printing_state = struct
-  type scope =
-    | Module_scope of
+  type frame =
+    | Module_frame of
         { bindings : Entry.t Binding_tree.t
         ; declarations : Entry.t Binding_tree.t
         }
@@ -162,7 +162,7 @@ module Printing_state = struct
 
   type state =
     { mutable formatter : Format.formatter
-    ; mutable scopes : scope List1.t
+    ; mutable frames : frame List1.t
     ; mutable default_precedence : Int.t
     ; mutable default_associativity : Associativity.t
     ; mutable postponed_fixity_pragmas : postponed_fixity_pragma List.t
@@ -178,15 +178,15 @@ module Printing_state = struct
     end) :
       Format_state.S with type state := state)
 
-  let create_module_scope () =
-    Module_scope
+  let create_module_frame () =
+    Module_frame
       { bindings = Binding_tree.create ()
       ; declarations = Binding_tree.create ()
       }
 
   let create_initial_state formatter =
     { formatter
-    ; scopes = List1.singleton (create_module_scope ())
+    ; frames = List1.singleton (create_module_frame ())
     ; default_precedence
     ; default_associativity
     ; postponed_fixity_pragmas = []
@@ -194,24 +194,24 @@ module Printing_state = struct
 
   let set_formatter state formatter = state.formatter <- formatter
 
-  let get_scope_bindings = function
-    | Module_scope { bindings; _ } -> bindings
+  let get_frame_bindings = function
+    | Module_frame { bindings; _ } -> bindings
 
-  let get_current_scope state = List1.head state.scopes
+  let get_current_frame state = List1.head state.frames
 
-  let get_current_scope_bindings state =
-    get_scope_bindings (get_current_scope state)
+  let get_current_frame_bindings state =
+    get_frame_bindings (get_current_frame state)
 
-  let push_scope state scope = state.scopes <- List1.cons scope state.scopes
+  let push_frame state frame = state.frames <- List1.cons frame state.frames
 
-  let pop_scope state =
-    match state.scopes with
+  let pop_frame state =
+    match state.frames with
     | List1.T (x1, x2 :: xs) ->
-        state.scopes <- List1.from x2 xs;
+        state.frames <- List1.from x2 xs;
         x1
     | List1.T (_x, []) ->
         Error.raise_violation
-          (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
+          (Format.asprintf "[%s] cannot pop the last frame" __FUNCTION__)
 
   let set_default_associativity state default_associativity =
     state.default_associativity <- default_associativity
@@ -232,13 +232,13 @@ module Printing_state = struct
     | Option.Some precedence -> precedence
 
   let add_binding state identifier ?subtree entry =
-    match get_current_scope state with
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Module_frame { bindings; _ } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings
 
   let add_declaration state identifier ?subtree entry =
-    match get_current_scope state with
-    | Module_scope { bindings; declarations } ->
+    match get_current_frame state with
+    | Module_frame { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings;
         Binding_tree.add_toplevel identifier entry ?subtree declarations
 
@@ -289,26 +289,26 @@ module Printing_state = struct
   let add_module state ?location identifier f =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
-    let module_scope = create_module_scope () in
-    push_scope state module_scope;
+    let module_frame = create_module_frame () in
+    push_frame state module_frame;
     let x = f state in
-    match pop_scope state with
-    | Module_scope { declarations; _ } ->
+    match pop_frame state with
+    | Module_frame { declarations; _ } ->
         add_declaration state identifier ~subtree:declarations
           (Entry.make_module_entry ?location identifier);
         set_default_associativity state default_associativity;
         set_default_precedence state default_precedence;
         x
 
-  let rec lookup_in_scopes scopes identifiers =
-    match scopes with
+  let rec lookup_in_frames frames identifiers =
+    match frames with
     | [] ->
         Error.raise
           (Qualified_identifier.Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
-    | scope :: scopes -> (
+    | frame :: frames -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
         | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
@@ -316,11 +316,11 @@ module Printing_state = struct
               (Qualified_identifier.Unbound_namespace
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
-        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
+        | Binding_tree.Unbound _ -> lookup_in_frames frames identifiers)
 
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
-    try lookup_in_scopes (List1.to_list state.scopes) identifiers with
+    try lookup_in_frames (List1.to_list state.frames) identifiers with
     | exn ->
         Error.re_raise
           (Error.located_exception1
@@ -337,14 +337,14 @@ module Printing_state = struct
   let modify_operator state identifier f =
     let entry, subtree = lookup state identifier in
     let entry' = Entry.modify_operator f entry in
-    let bindings = get_current_scope_bindings state in
+    let bindings = get_current_frame_bindings state in
     if Binding_tree.mem identifier bindings then
       Binding_tree.replace identifier
         (fun _entry _subtree -> (entry', subtree))
         bindings
     else Binding_tree.add identifier ~subtree entry' bindings;
-    match get_current_scope state with
-    | Module_scope { declarations; _ } ->
+    match get_current_frame state with
+    | Module_frame { declarations; _ } ->
         if Binding_tree.mem identifier declarations then
           Binding_tree.replace identifier
             (fun _entry subtree -> (entry', subtree))
@@ -405,7 +405,7 @@ module Printing_state = struct
 
   let open_namespace state identifier =
     let _entry, subtree = lookup state identifier in
-    let bindings = get_current_scope_bindings state in
+    let bindings = get_current_frame_bindings state in
     Binding_tree.add_all bindings subtree
 
   let open_module state identifier = open_namespace state identifier

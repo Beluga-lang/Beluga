@@ -678,9 +678,9 @@ module type INDEXING_STATE = sig
     -> Identifier.t
     -> Unit.t
 
-  val with_scope : state -> (state -> 'a) -> 'a
+  val with_frame : state -> (state -> 'a) -> 'a
 
-  val with_parent_scope : state -> (state -> 'a) -> 'a
+  val with_parent_frame : state -> (state -> 'a) -> 'a
 
   val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
@@ -739,20 +739,20 @@ module Indexing_state = struct
           (** The length of [cG], the context of computation-level variables. *)
     }
 
-  type scope =
-    | Plain_scope of { bindings : bindings }
-    | Pattern_scope of
+  type frame =
+    | Plain_frame of { bindings : bindings }
+    | Pattern_frame of
         { pattern_bindings : bindings
         ; mutable pattern_variables_rev : Identifier.t List.t
         ; expression_bindings : bindings
         }
-    | Module_scope of
+    | Module_frame of
         { bindings : bindings
         ; declarations : entry_binding_tree
         }
 
   type state =
-    { mutable scopes : scope List1.t
+    { mutable frames : frame List1.t
     ; mutable free_variables_allowed : Bool.t
     ; mutable generated_fresh_variables_count : Int.t
     }
@@ -770,20 +770,20 @@ module Indexing_state = struct
     ; comp_context_size = 0
     }
 
-  let[@inline] create_empty_module_scope () =
-    Module_scope
+  let[@inline] create_empty_module_frame () =
+    Module_frame
       { bindings = create_empty_bindings ()
       ; declarations = Binding_tree.create ()
       }
 
   let[@inline] create_initial_state () =
-    { scopes = List1.singleton (create_empty_module_scope ())
+    { frames = List1.singleton (create_empty_module_frame ())
     ; free_variables_allowed = false
     ; generated_fresh_variables_count = 0
     }
 
   let clear_state state =
-    state.scopes <- List1.singleton (create_empty_module_scope ());
+    state.frames <- List1.singleton (create_empty_module_frame ());
     state.free_variables_allowed <- false;
     state.generated_fresh_variables_count <- 0
 
@@ -812,79 +812,81 @@ module Indexing_state = struct
     | Option.Some identifier -> identifier
     | Option.None -> fresh_identifier state
 
-  let[@inline] get_scope_bindings_state = function
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ }
-    | Plain_scope { bindings } ->
+  let[@inline] get_frame_bindings_state = function
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ }
+    | Plain_frame { bindings } ->
         bindings
 
-  let[@inline] get_scope_bindings state =
-    (get_scope_bindings_state state).bindings
+  let[@inline] get_frame_bindings state =
+    (get_frame_bindings_state state).bindings
 
-  let[@inline] push_scope state scope =
-    state.scopes <- List1.cons scope state.scopes
+  let[@inline] push_frame state frame =
+    state.frames <- List1.cons frame state.frames
 
-  let pop_scope state =
-    match state.scopes with
+  let pop_frame state =
+    match state.frames with
     | List1.T (x1, x2 :: xs) ->
-        state.scopes <- List1.from x2 xs;
+        state.frames <- List1.from x2 xs;
         x1
     | List1.T (_x, []) ->
-        (* This suggests a mismanaged scopes state, where there are more
-           [pop_scope] operations than there are [push_scope] operations. *)
+        (* This suggests a mismanaged frames state, where there are more
+           [pop_frame] operations than there are [push_frame] operations. *)
         Error.raise_violation
-          (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
+          (Format.asprintf "[%s] cannot pop the last frame" __FUNCTION__)
 
-  let[@inline] get_current_scope state = List1.head state.scopes
+  let[@inline] get_current_frame state = List1.head state.frames
 
-  let[@inline] get_current_scope_bindings_state state =
-    get_scope_bindings_state (get_current_scope state)
+  let[@inline] get_current_frame_bindings_state state =
+    get_frame_bindings_state (get_current_frame state)
 
-  let[@inline] get_current_scope_bindings state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+  let[@inline] get_current_frame_bindings state =
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    current_scope_bindings_state.bindings
+    current_frame_bindings_state.bindings
 
-  (** [push_new_plain_scope state] pushes a new empty plain scope to [state].
+  (** [push_new_plain_frame state] pushes a new empty plain frame to [state].
       The LF, meta and computation context sizes are carried over. *)
-  let push_new_plain_scope state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+  let push_new_plain_frame state =
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
     let bindings =
-      { current_scope_bindings_state (* Copy context sizes *) with
-        bindings = Binding_tree.create ()
+      { bindings = Binding_tree.create ()
+      ; lf_context_size = current_frame_bindings_state.lf_context_size
+      ; meta_context_size = current_frame_bindings_state.meta_context_size
+      ; comp_context_size = current_frame_bindings_state.comp_context_size
       }
     in
-    let scope = Plain_scope { bindings } in
-    push_scope state scope
+    let frame = Plain_frame { bindings } in
+    push_frame state frame
 
   let entry_is_not_variable entry = Bool.not (Entry.is_variable entry)
 
-  let lookup_toplevel_in_scope scope query =
-    Binding_tree.lookup_toplevel_opt query (get_scope_bindings scope)
+  let lookup_toplevel_in_frame frame query =
+    Binding_tree.lookup_toplevel_opt query (get_frame_bindings frame)
 
-  let lookup_toplevel_in_scopes scopes query =
-    List.find_map (fun scope -> lookup_toplevel_in_scope scope query) scopes
+  let lookup_toplevel_in_frames frames query =
+    List.find_map (fun frame -> lookup_toplevel_in_frame frame query) frames
 
-  let rec lookup_toplevel_declaration_in_scopes scopes query =
-    match scopes with
-    | [] -> (* Exhausted the list of scopes to check. *) Option.none
-    | scope :: scopes -> (
-        let scope_bindings = get_scope_bindings scope in
-        match Binding_tree.lookup_toplevel_opt query scope_bindings with
+  let rec lookup_toplevel_declaration_in_frames frames query =
+    match frames with
+    | [] -> (* Exhausted the list of frames to check. *) Option.none
+    | frame :: frames -> (
+        let frame_bindings = get_frame_bindings frame in
+        match Binding_tree.lookup_toplevel_opt query frame_bindings with
         | Option.Some (entry, subtree) when entry_is_not_variable entry ->
-            (* [query] is bound to a declaration in [scope]. *)
+            (* [query] is bound to a declaration in [frame]. *)
             Option.some (entry, subtree)
         | Option.Some _ ->
-            (* [query] is bound to a variable in [scope], so any declaration
-               in [scopes] bound to [query] is shadowed. *)
+            (* [query] is bound to a variable in [frame], so any declaration
+               in [frames] bound to [query] is shadowed. *)
             Option.none
         | Option.None ->
-            (* [query] is unbound in [scope], so check in the parent
-               scopes. *)
-            lookup_toplevel_declaration_in_scopes scopes query)
+            (* [query] is unbound in [frame], so check in the parent
+               frames. *)
+            lookup_toplevel_declaration_in_frames frames query)
 
   (** [lookup_toplevel_opt state query] is the entry and subtree bound to the
       identifier [query] in [state]. The "toplevel" here refers to [query]
@@ -893,30 +895,30 @@ module Indexing_state = struct
       {!val:lookup}.
 
       The entry bound to [query] in [state] is the first entry found in a
-      scope in the stack of scopes in [state].
+      frame in the stack of frames in [state].
 
-      Exceptionally for pattern scopes, we ignore bound variables in outer
-      scopes. This means that in the computation-level Beluga expression
+      Exceptionally for pattern frames, we ignore bound variables in outer
+      frames. This means that in the computation-level Beluga expression
       [let x = ? in case ? of p => ?], the pattern [p] may not refer to [x].
       The name [x] can be used in [p], but it is considered a free variable. *)
   let lookup_toplevel_opt state query =
-    match state.scopes with
-    | List1.T ((Pattern_scope _ as scope), scopes) -> (
-        match lookup_toplevel_in_scope scope query with
+    match state.frames with
+    | List1.T ((Pattern_frame _ as frame), frames) -> (
+        match lookup_toplevel_in_frame frame query with
         | Option.Some x -> Option.some x
-        | Option.None -> lookup_toplevel_declaration_in_scopes scopes query)
-    | List1.T (scope, scopes) ->
-        lookup_toplevel_in_scopes (scope :: scopes) query
+        | Option.None -> lookup_toplevel_declaration_in_frames frames query)
+    | List1.T (frame, frames) ->
+        lookup_toplevel_in_frames (frame :: frames) query
 
-  let rec lookup_in_scopes scopes identifiers =
-    match scopes with
+  let rec lookup_in_frames frames identifiers =
+    match frames with
     | [] ->
         Error.raise
           (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
-    | scope :: scopes -> (
+    | frame :: frames -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
         | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
@@ -924,24 +926,24 @@ module Indexing_state = struct
               (Unbound_namespace
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
-        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
+        | Binding_tree.Unbound _ -> lookup_in_frames frames identifiers)
 
-  let rec lookup_declaration_in_scopes scopes identifiers =
-    match scopes with
+  let rec lookup_declaration_in_frames frames identifiers =
+    match frames with
     | [] ->
         Error.raise
           (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
-    | scope :: scopes -> (
-        let scope_bindings = get_scope_bindings scope in
-        match Binding_tree.maximum_lookup identifiers scope_bindings with
+    | frame :: frames -> (
+        let frame_bindings = get_frame_bindings frame in
+        match Binding_tree.maximum_lookup identifiers frame_bindings with
         | Binding_tree.Bound { entry; subtree; _ }
           when entry_is_not_variable entry ->
-            (* [query] is bound to a declaration in [scope]. *)
+            (* [query] is bound to a declaration in [frame]. *)
             (entry, subtree)
         | Binding_tree.Bound _result ->
-            (* [query is bound to a variable in [scope], so any declaration
-               in [scopes] bound to [query] is shadowed. *)
+            (* [query is bound to a variable in [frame], so any declaration
+               in [frames] bound to [query] is shadowed. *)
             assert (List1.length identifiers = 1)
             (* Variables can't be in namespaces *);
             Error.raise
@@ -953,23 +955,23 @@ module Indexing_state = struct
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
         | Binding_tree.Unbound _ ->
-            lookup_declaration_in_scopes scopes identifiers)
+            lookup_declaration_in_frames frames identifiers)
 
   (** [lookup state query] is the entry and subtree bound to the qualified
       identifier [query] in [state]. To lookup simple identifiers, see
       {!val:lookup_toplevel}.
 
       The entry bound to [query] in [state] is the first entry found in a
-      scope in the stack of scopes in [state]. If a scope has [entry] as
+      frame in the stack of frames in [state]. If a frame has [entry] as
       partially bound (meaning that only the first few namespaces of [query]
-      are bound in that scope), then [query] is considered to be unbound
+      are bound in that frame), then [query] is considered to be unbound
       because one of its namespaces is unbound. *)
   let lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
-    match state.scopes with
-    | List1.T ((Pattern_scope _ as scope), scopes) -> (
+    match state.frames with
+    | List1.T ((Pattern_frame _ as frame), frames) -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
         | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
@@ -978,15 +980,15 @@ module Indexing_state = struct
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
         | Binding_tree.Unbound _ ->
-            lookup_declaration_in_scopes scopes identifiers)
-    | List1.T (scope, scopes) ->
-        lookup_in_scopes (scope :: scopes) identifiers
+            lookup_declaration_in_frames frames identifiers)
+    | List1.T (frame, frames) ->
+        lookup_in_frames (frame :: frames) identifiers
 
   let add_binding state identifier ?subtree entry =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings.bindings
 
   let[@inline] increment_lf_context_size bindings =
@@ -1007,47 +1009,57 @@ module Indexing_state = struct
   let[@inline] decrement_comp_context_size bindings =
     bindings.comp_context_size <- bindings.comp_context_size - 1
 
+  (** [remove_lf_binding state identifier] removes the latest binding of
+      [identifier] from [state]. It is assumed that this binding is that of
+      an LF variable, and that it was introduced in the current frame. *)
   let remove_lf_binding state identifier =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
         decrement_lf_context_size bindings
 
+  (** [remove_meta_binding state identifier] removes the latest binding of
+      [identifier] from [state]. It is assumed that this binding is that of a
+      meta-level variable, and that it was introduced in the current frame. *)
   let remove_meta_binding state identifier =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
         decrement_meta_context_size bindings
 
+  (** [remove_comp_binding state identifier] removes the latest binding of
+      [identifier] from [state]. It is assumed that this binding is that of a
+      computation-level variable, and that it was introduced in the current
+      frame. *)
   let remove_comp_binding state identifier =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.remove identifier bindings.bindings;
         decrement_comp_context_size bindings
 
   let add_declaration state identifier ?subtree entry =
-    match get_current_scope state with
-    | Plain_scope _ ->
+    match get_current_frame state with
+    | Plain_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid plain scope, expected a module scope" __FUNCTION__)
-    | Pattern_scope _ ->
+             "[%s] invalid plain frame, expected a module frame" __FUNCTION__)
+    | Pattern_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid pattern scope, expected a module scope"
+             "[%s] invalid pattern frame, expected a module frame"
              __FUNCTION__)
-    | Module_scope { bindings; declarations } ->
+    | Module_frame { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings.bindings;
         Binding_tree.add_toplevel identifier entry ?subtree declarations
 
   let add_lf_level_variable state identifier make_entry =
-    let bindings = get_current_scope_bindings_state state in
+    let bindings = get_current_frame_bindings_state state in
     let entry =
       make_entry
         ~lf_level:(Option.some (Lf_level.of_int bindings.lf_context_size))
@@ -1056,7 +1068,7 @@ module Indexing_state = struct
     Binding_tree.add_toplevel identifier entry bindings.bindings
 
   let add_meta_level_variable state identifier make_entry =
-    let bindings = get_current_scope_bindings_state state in
+    let bindings = get_current_frame_bindings_state state in
     let entry =
       make_entry
         ~meta_level:
@@ -1066,7 +1078,7 @@ module Indexing_state = struct
     Binding_tree.add_toplevel identifier entry bindings.bindings
 
   let add_comp_level_variable state identifier make_entry =
-    let bindings = get_current_scope_bindings_state state in
+    let bindings = get_current_frame_bindings_state state in
     let entry =
       make_entry
         ~comp_level:
@@ -1104,27 +1116,27 @@ module Indexing_state = struct
       (Entry.make_computation_variable_entry ?location identifier)
 
   let shift_lf_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     increment_lf_context_size bindings_state
 
   let unshift_lf_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     decrement_lf_context_size bindings_state
 
   let shift_meta_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     increment_meta_context_size bindings_state
 
   let unshift_meta_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     decrement_meta_context_size bindings_state
 
   let shift_comp_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     increment_comp_context_size bindings_state
 
   let unshift_comp_context state =
-    let bindings_state = get_current_scope_bindings_state state in
+    let bindings_state = get_current_frame_bindings_state state in
     decrement_comp_context_size bindings_state
 
   let actual_binding_exn = Entry.actual_binding_exn
@@ -1293,22 +1305,22 @@ module Indexing_state = struct
              (actual_binding_exn qualified_identifier entry))
 
   let[@inline] get_lf_context_size state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    current_scope_bindings_state.lf_context_size
+    current_frame_bindings_state.lf_context_size
 
   let[@inline] get_meta_context_size state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    current_scope_bindings_state.meta_context_size
+    current_frame_bindings_state.meta_context_size
 
   let[@inline] get_comp_context_size state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    current_scope_bindings_state.comp_context_size
+    current_frame_bindings_state.comp_context_size
 
   let[@inline] index_of_lf_level state lf_level =
     let lf_context_size = get_lf_context_size state in
@@ -1557,7 +1569,7 @@ module Indexing_state = struct
 
   let open_namespace state identifier =
     let _entry, subtree = lookup state identifier in
-    let bindings = get_current_scope_bindings state in
+    let bindings = get_current_frame_bindings state in
     Binding_tree.add_all bindings subtree
 
   let open_module state ?location identifier =
@@ -1608,36 +1620,36 @@ module Indexing_state = struct
   let add_free_lf_level_variable _state _identifier _make_entry = ()
 
   let add_free_meta_level_variable state identifier make_entry =
-    match get_current_scope state with
-    | Pattern_scope scope ->
+    match get_current_frame state with
+    | Pattern_frame frame ->
         let entry = make_entry ~meta_level:Option.none in
-        scope.pattern_variables_rev <-
-          identifier :: scope.pattern_variables_rev;
+        frame.pattern_variables_rev <-
+          identifier :: frame.pattern_variables_rev;
         Binding_tree.add_toplevel identifier entry
-          scope.pattern_bindings.bindings;
+          frame.pattern_bindings.bindings;
         Binding_tree.add_toplevel identifier entry
-          scope.expression_bindings.bindings
-    | Plain_scope _
-    | Module_scope _ ->
+          frame.expression_bindings.bindings
+    | Plain_frame _
+    | Module_frame _ ->
         ()
 
   let add_free_comp_level_variable state identifier make_entry =
-    match get_current_scope state with
-    | Pattern_scope scope ->
+    match get_current_frame state with
+    | Pattern_frame frame ->
         let entry =
           make_entry
             ~comp_level:
               (Option.some
                  (Comp_level.of_int
-                    scope.expression_bindings.comp_context_size))
+                    frame.expression_bindings.comp_context_size))
         in
-        scope.pattern_variables_rev <-
-          identifier :: scope.pattern_variables_rev;
+        frame.pattern_variables_rev <-
+          identifier :: frame.pattern_variables_rev;
         Binding_tree.add_toplevel identifier entry
-          scope.expression_bindings.bindings;
-        increment_comp_context_size scope.expression_bindings
-    | Plain_scope _
-    | Module_scope _ ->
+          frame.expression_bindings.bindings;
+        increment_comp_context_size frame.expression_bindings
+    | Plain_frame _
+    | Module_frame _ ->
         ()
 
   let add_free_lf_variable state ?location identifier =
@@ -1760,38 +1772,38 @@ module Indexing_state = struct
 
   let add_bound_pattern_meta_level_variable state ?location identifier
       make_entry =
-    match get_current_scope state with
-    | Pattern_scope scope ->
+    match get_current_frame state with
+    | Pattern_frame frame ->
         let pattern_entry =
           make_entry ?location identifier
             ~meta_level:
               (Option.some
-                 (Meta_level.of_int scope.pattern_bindings.meta_context_size))
+                 (Meta_level.of_int frame.pattern_bindings.meta_context_size))
         in
         let expression_entry =
           make_entry ?location identifier
             ~meta_level:
               (Option.some
                  (Meta_level.of_int
-                    scope.expression_bindings.meta_context_size))
+                    frame.expression_bindings.meta_context_size))
         in
         Binding_tree.add_toplevel identifier pattern_entry
-          scope.pattern_bindings.bindings;
-        increment_meta_context_size scope.pattern_bindings;
-        scope.pattern_variables_rev <-
-          identifier :: scope.pattern_variables_rev;
+          frame.pattern_bindings.bindings;
+        increment_meta_context_size frame.pattern_bindings;
+        frame.pattern_variables_rev <-
+          identifier :: frame.pattern_variables_rev;
         Binding_tree.add_toplevel identifier expression_entry
-          scope.expression_bindings.bindings;
-        increment_meta_context_size scope.expression_bindings
-    | Plain_scope _ ->
+          frame.expression_bindings.bindings;
+        increment_meta_context_size frame.expression_bindings
+    | Plain_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid plain scope, expected a pattern scope"
+             "[%s] invalid plain frame, expected a pattern frame"
              __FUNCTION__)
-    | Module_scope _ ->
+    | Module_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid module scope, expected a pattern scope"
+             "[%s] invalid module frame, expected a pattern frame"
              __FUNCTION__)
 
   let add_bound_pattern_meta_variable state ?location identifier =
@@ -1942,72 +1954,72 @@ module Indexing_state = struct
     add_declaration state identifier
       (Entry.make_program_constant_entry ?location identifier cid)
 
-  let push_new_module_scope state =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+  let push_new_module_frame state =
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    let module_scope =
-      Module_scope
+    let module_frame =
+      Module_frame
         { bindings =
-            { current_scope_bindings_state with
+            { current_frame_bindings_state with
               bindings = Binding_tree.create ()
             }
         ; declarations = Binding_tree.create ()
         }
     in
-    push_scope state module_scope
+    push_frame state module_frame
 
   let add_module state ?location identifier cid m =
-    push_new_module_scope state;
+    push_new_module_frame state;
     let x = m state in
-    (match get_current_scope state with
-    | Plain_scope _ ->
+    (match get_current_frame state with
+    | Plain_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid plain scope, expected a module scope" __FUNCTION__)
-    | Pattern_scope _ ->
+             "[%s] invalid plain frame, expected a module frame" __FUNCTION__)
+    | Pattern_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid pattern scope, expected a module scope"
+             "[%s] invalid pattern frame, expected a module frame"
              __FUNCTION__)
-    | Module_scope { declarations; _ } ->
-        ignore (pop_scope state);
+    | Module_frame { declarations; _ } ->
+        ignore (pop_frame state);
         add_declaration state ~subtree:declarations identifier
           (Entry.make_module_entry ?location identifier cid));
     x
 
-  let with_scope state m =
-    push_new_plain_scope state;
+  let with_frame state m =
+    push_new_plain_frame state;
     let x = m state in
-    ignore (pop_scope state);
+    ignore (pop_frame state);
     x
 
-  let with_parent_scope state m =
-    let scope = pop_scope state in
-    let x = with_scope state m in
-    push_scope state scope;
+  let with_parent_frame state m =
+    let frame = pop_frame state in
+    let x = with_frame state m in
+    push_frame state frame;
     x
 
   let with_bindings_checkpoint state m =
-    let original_scopes_count = List1.length state.scopes in
-    (* Push a fresh module scope so that [m] may add declarations *)
-    push_new_module_scope state;
+    let original_frames_count = List1.length state.frames in
+    (* Push a fresh module frame so that [m] may add declarations *)
+    push_new_module_frame state;
     Fun.protect
       ~finally:(fun () ->
-        let final_scopes_count = List1.length state.scopes in
+        let final_frames_count = List1.length state.frames in
         if
-          final_scopes_count - original_scopes_count
-          >= 1 (* We expect there to at least be the new module scope *)
+          final_frames_count - original_frames_count
+          >= 1 (* We expect there to at least be the new module frame *)
         then
-          (* We have to count scopes because [m] may add new scopes. This is
-             not foolproof because [m] could have discarded too many scopes
+          (* We have to count frames because [m] may add new frames. This is
+             not foolproof because [m] could have discarded too many frames
              and added some more. *)
-          Fun.repeat (final_scopes_count - original_scopes_count) (fun () ->
-              ignore (pop_scope state))
+          Fun.repeat (final_frames_count - original_frames_count) (fun () ->
+              ignore (pop_frame state))
         else
           Error.raise_violation
             (Format.asprintf
-               "[%s] invalid states, there are fewer scopes than there \
+               "[%s] invalid states, there are fewer frames than there \
                 originally were"
                __FUNCTION__))
       (fun () -> m state)
@@ -2027,33 +2039,37 @@ module Indexing_state = struct
     x
 
   let with_free_variables_as_pattern_variables state ~pattern ~expression =
-    let current_scope_bindings_state =
-      get_current_scope_bindings_state state
+    let current_frame_bindings_state =
+      get_current_frame_bindings_state state
     in
-    let pattern_scope =
-      Pattern_scope
+    let pattern_frame =
+      Pattern_frame
         { pattern_bindings = create_empty_bindings ()
         ; pattern_variables_rev = []
         ; expression_bindings =
-            { current_scope_bindings_state (* Copy context sizes *) with
-              bindings = Binding_tree.create ()
+            { bindings = Binding_tree.create ()
+            ; lf_context_size = current_frame_bindings_state.lf_context_size
+            ; meta_context_size =
+                current_frame_bindings_state.meta_context_size
+            ; comp_context_size =
+                current_frame_bindings_state.comp_context_size
             }
         }
     in
-    push_scope state pattern_scope;
+    push_frame state pattern_frame;
     let pattern' = allow_free_variables state (fun state -> pattern state) in
-    match pop_scope state with
-    | Module_scope _ ->
+    match pop_frame state with
+    | Module_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid module scope, expected a pattern scope"
+             "[%s] invalid module frame, expected a pattern frame"
              __FUNCTION__)
-    | Plain_scope _ ->
+    | Plain_frame _ ->
         Error.raise_violation
           (Format.asprintf
-             "[%s] invalid plain scope, expected a pattern scope"
+             "[%s] invalid plain frame, expected a pattern frame"
              __FUNCTION__)
-    | Pattern_scope { pattern_variables_rev; expression_bindings; _ } -> (
+    | Pattern_frame { pattern_variables_rev; expression_bindings; _ } -> (
         match
           Identifier.find_duplicates (List.rev pattern_variables_rev)
         with
@@ -2062,9 +2078,9 @@ module Indexing_state = struct
               (fun identifiers -> Duplicate_pattern_variables identifiers)
               duplicates
         | Option.None ->
-            push_scope state (Plain_scope { bindings = expression_bindings });
+            push_frame state (Plain_frame { bindings = expression_bindings });
             let expression' = expression state pattern' in
-            ignore (pop_scope state);
+            ignore (pop_frame state);
             expression')
 
   let rec add_all_mctx state cD =
@@ -2106,30 +2122,30 @@ module Indexing_state = struct
     ; comp_context_size (* Immutable *)
     }
 
-  let snapshot_scope = function
-    | Plain_scope { bindings } ->
+  let snapshot_frame = function
+    | Plain_frame { bindings } ->
         let bindings' = snapshot_bindings bindings in
-        Plain_scope { bindings = bindings' }
-    | Pattern_scope
+        Plain_frame { bindings = bindings' }
+    | Pattern_frame
         { pattern_bindings; pattern_variables_rev; expression_bindings } ->
         let pattern_bindings' = snapshot_bindings pattern_bindings in
         let expression_bindings' = snapshot_bindings expression_bindings in
-        Pattern_scope
+        Pattern_frame
           { pattern_bindings = pattern_bindings'
           ; pattern_variables_rev (* Immutable *)
           ; expression_bindings = expression_bindings'
           }
-    | Module_scope { bindings; declarations } ->
+    | Module_frame { bindings; declarations } ->
         let bindings' = snapshot_bindings bindings in
         let declarations' = Binding_tree.snapshot declarations in
-        Module_scope { bindings = bindings'; declarations = declarations' }
+        Module_frame { bindings = bindings'; declarations = declarations' }
 
-  let snapshot_scopes scopes = List1.map snapshot_scope scopes
+  let snapshot_frames frames = List1.map snapshot_frame frames
 
   let snapshot_state
-      { scopes; free_variables_allowed; generated_fresh_variables_count } =
-    let scopes' = snapshot_scopes scopes in
-    { scopes = scopes'
+      { frames; free_variables_allowed; generated_fresh_variables_count } =
+    let frames' = snapshot_frames frames in
+    { frames = frames'
     ; free_variables_allowed (* Immutable *)
     ; generated_fresh_variables_count (* Immutable *)
     }

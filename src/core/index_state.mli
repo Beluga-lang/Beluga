@@ -287,7 +287,7 @@ module type INDEXING_STATE = sig
 
   (** [open_module state ?location module_identifier] opens the module
       [module_identifier] it is a bound module. This effectively adds all the
-      declarations in that module to the current scope, but not as
+      declarations in that module to the current frame, but not as
       declarations (i.e., this opens the module like in OCaml). *)
   val open_module :
     state -> ?location:Location.t -> Qualified_identifier.t -> Unit.t
@@ -299,9 +299,16 @@ module type INDEXING_STATE = sig
     -> Identifier.t
     -> Unit.t
 
-  val with_scope : state -> (state -> 'a) -> 'a
+  (** [with_frame state m] runs [m] in a nested bindings frame that is
+      discarded afterwards. *)
+  val with_frame : state -> (state -> 'a) -> 'a
 
-  val with_parent_scope : state -> (state -> 'a) -> 'a
+  (** [with_parent_frame state m] runs [m] while ignoring the topmost frame.
+
+      This is used for indexing Harpoon proof scripts because Harpoon
+      hypotheticals are already serialized with all the identifiers in the
+      meta-level and computation-level contexts of the proof. *)
+  val with_parent_frame : state -> (state -> 'a) -> 'a
 
   (** [with_bindings_checkpoint state m] runs [m] with a checkpoint on the
       bindings' state to backtrack to in case [m] raises an exception.

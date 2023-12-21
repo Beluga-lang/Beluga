@@ -348,16 +348,16 @@ module type DISAMBIGUATION_STATE = sig
   val with_free_variables_as_pattern_variables :
     state -> pattern:(state -> 'a) -> expression:(state -> 'a -> 'b) -> 'b
 
-  (** [with_scope state m] runs [m] in a nested bindings scope that is
+  (** [with_frame state m] runs [m] in a nested bindings frame that is
       discarded afterwards. *)
-  val with_scope : state -> (state -> 'a) -> 'a
+  val with_frame : state -> (state -> 'a) -> 'a
 
-  (** [with_parent_scope state m] runs [m] while ignoring the topmost scope.
+  (** [with_parent_frame state m] runs [m] while ignoring the topmost frame.
 
       This is used for the disambiguation of Harpoon proof scripts because
       Harpoon hypotheticals are already serialized with all the identifiers
       in the meta-level and computation-level contexts of the proof. *)
-  val with_parent_scope : state -> (state -> 'a) -> 'a
+  val with_parent_frame : state -> (state -> 'a) -> 'a
 
   (** [with_bindings_checkpoint state m] runs [m] with a checkpoint on the
       bindings' state to backtrack to in case [m] raises an exception.
@@ -371,7 +371,7 @@ module type DISAMBIGUATION_STATE = sig
 
       This checkpoint mechanism does not perform a copy or snapshot of the
       referencing environment. You need to make sure that [m] does not pop
-      too many scopes. *)
+      too many frames. *)
   val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
   (** {1 Constants} *)

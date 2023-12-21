@@ -1913,7 +1913,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
       ; comp_context
       ; proof
       } =
-    with_parent_scope state (fun state ->
+    with_parent_frame state (fun state ->
         with_indexed_meta_context state meta_context
           (fun state meta_context' ->
             with_indexed_comp_context state comp_context
@@ -1964,7 +1964,7 @@ module Make_indexer (Indexing_state : Index_state.INDEXING_STATE) = struct
   let index_harpoon_proof state proof =
     disallow_free_variables state (fun state ->
         let proof' =
-          with_scope state (fun state -> index_harpoon_proof state proof)
+          with_frame state (fun state -> index_harpoon_proof state proof)
         in
         Synapx.Comp.Proof proof')
 

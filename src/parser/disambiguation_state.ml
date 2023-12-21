@@ -639,9 +639,9 @@ module type DISAMBIGUATION_STATE = sig
   val with_free_variables_as_pattern_variables :
     state -> pattern:(state -> 'a) -> expression:(state -> 'a -> 'b) -> 'b
 
-  val with_scope : state -> (state -> 'a) -> 'a
+  val with_frame : state -> (state -> 'a) -> 'a
 
-  val with_parent_scope : state -> (state -> 'a) -> 'a
+  val with_parent_frame : state -> (state -> 'a) -> 'a
 
   val with_bindings_checkpoint : state -> (state -> 'a) -> 'a
 
@@ -771,17 +771,17 @@ module Disambiguation_state = struct
   (** A bindings environment is a binding tree of entries. *)
   type bindings = Entry.t Binding_tree.t
 
-  (** A referencing environment is a stack of scopes (LIFO data structure).
+  (** A referencing environment is a stack of frames (LIFO data structure).
       An identifier is unbound in a referencing environment if it is unbound
-      in each of its scopes. An identifier is bound to an entry if it is
-      bound in one of the scopes. In lookups, the returned entry is the one
-      in the first scope that has the identifier bound. *)
-  type referencing_environment = scope List1.t
+      in each of its frames. An identifier is bound to an entry if it is
+      bound in one of the frames. In lookups, the returned entry is the one
+      in the first frame that has the identifier bound. *)
+  type referencing_environment = frame List1.t
 
-  and scope =
-    | Plain_scope of { bindings : bindings }
-        (** Plain scopes are scopes without special operations. *)
-    | Pattern_scope of
+  and frame =
+    | Plain_frame of { bindings : bindings }
+        (** Plain frames are frames without special operations. *)
+    | Pattern_frame of
         { pattern_bindings : bindings
               (** The bindings to use to disambiguate nodes in the pattern
                   AST. *)
@@ -792,14 +792,14 @@ module Disambiguation_state = struct
               (** The bindings to use for disambiguating the expression using
                   the accumulated free variables as bound variables. *)
         }
-        (** Pattern scopes are scopes that keep track of added free variables
+        (** Pattern frames are frames that keep track of added free variables
             in patterns in order to add them to the expression bindings as
             bound variables. *)
-    | Module_scope of
+    | Module_frame of
         { bindings : bindings
         ; declarations : bindings
         }
-        (** Module scopes are scopes that keep track of added declarations in
+        (** Module frames are frames that keep track of added declarations in
             order to add them as declarations in the module being
             disambiguated. *)
 
@@ -823,7 +823,7 @@ module Disambiguation_state = struct
         }
 
   type state =
-    { mutable scopes : referencing_environment
+    { mutable frames : referencing_environment
     ; mutable default_associativity : Associativity.t
           (** The default associativity to use for user-defined operators. *)
     ; mutable default_precedence : Int.t
@@ -839,40 +839,40 @@ module Disambiguation_state = struct
     end) :
       Imperative_state.IMPERATIVE_STATE with type state := state)
 
-  let create_empty_plain_scope () =
-    Plain_scope { bindings = Binding_tree.create () }
+  let create_empty_plain_frame () =
+    Plain_frame { bindings = Binding_tree.create () }
 
-  let create_plain_scope bindings = Plain_scope { bindings }
+  let create_plain_frame bindings = Plain_frame { bindings }
 
-  let create_pattern_scope () =
-    Pattern_scope
+  let create_pattern_frame () =
+    Pattern_frame
       { pattern_bindings = Binding_tree.create ()
       ; pattern_variables_rev = []
       ; expression_bindings = Binding_tree.create ()
       }
 
-  let create_module_scope () =
-    Module_scope
+  let create_module_frame () =
+    Module_frame
       { bindings = Binding_tree.create ()
       ; declarations = Binding_tree.create ()
       }
 
   let create_initial_state () =
-    { scopes = List1.singleton (create_module_scope ())
+    { frames = List1.singleton (create_module_frame ())
     ; default_precedence = Synext.default_precedence
     ; default_associativity = Synext.default_associativity
     ; postponed_fixity_pragmas = []
     }
 
   let clear_state state =
-    state.scopes <- List1.singleton (create_module_scope ());
+    state.frames <- List1.singleton (create_module_frame ());
     state.default_precedence <- Synext.default_precedence;
     state.default_associativity <- Synext.default_associativity
 
-  let get_scope_bindings = function
-    | Plain_scope { bindings } -> bindings
-    | Module_scope { bindings; _ } -> bindings
-    | Pattern_scope { pattern_bindings; _ } -> pattern_bindings
+  let get_frame_bindings = function
+    | Plain_frame { bindings } -> bindings
+    | Module_frame { bindings; _ } -> bindings
+    | Pattern_frame { pattern_bindings; _ } -> pattern_bindings
 
   let set_default_associativity state default_associativity =
     state.default_associativity <- default_associativity
@@ -892,52 +892,55 @@ module Disambiguation_state = struct
     | Option.None -> get_default_precedence state
     | Option.Some precedence -> precedence
 
-  let[@inline] push_scope state scope =
-    state.scopes <- List1.cons scope state.scopes
+  let[@inline] push_frame state frame =
+    state.frames <- List1.cons frame state.frames
 
-  let pop_scope state =
-    match state.scopes with
+  let pop_frame state =
+    match state.frames with
     | List1.T (x1, x2 :: xs) ->
-        state.scopes <- List1.from x2 xs;
+        state.frames <- List1.from x2 xs;
         x1
     | List1.T (_x, []) ->
         Error.raise_violation
-          (Format.asprintf "[%s] cannot pop the last scope" __FUNCTION__)
+          (Format.asprintf "[%s] cannot pop the last frame" __FUNCTION__)
 
-  let[@inline] get_current_scope state = List1.head state.scopes
+  let[@inline] get_current_frame state = List1.head state.frames
 
-  let[@inline] get_current_scope_bindings state =
-    get_scope_bindings (get_current_scope state)
+  let[@inline] get_current_frame_bindings state =
+    get_frame_bindings (get_current_frame state)
 
   let add_binding state identifier ?subtree entry =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings
 
+  (** [remove_binding state identifier] removes the latest binding of
+      [identifier] from [state]. It is assumed that this binding was
+      introduced in the current frame. *)
   let remove_binding state identifier =
-    match get_current_scope state with
-    | Plain_scope { bindings }
-    | Pattern_scope { pattern_bindings = bindings; _ }
-    | Module_scope { bindings; _ } ->
+    match get_current_frame state with
+    | Plain_frame { bindings }
+    | Pattern_frame { pattern_bindings = bindings; _ }
+    | Module_frame { bindings; _ } ->
         Binding_tree.remove identifier bindings
 
   (** [add_declaration state identifier ?subtree entry] adds
-      [(entry, subtree)] as a declaration in the current module scope, bound
-      to [identifier] in [state]. It is assumed that the current scope in
-      [state] is indeed a module scope. *)
+      [(entry, subtree)] as a declaration in the current module frame, bound
+      to [identifier] in [state]. It is assumed that the current frame in
+      [state] is indeed a module frame. *)
   let add_declaration state identifier ?subtree entry =
-    match get_current_scope state with
-    | Plain_scope _ ->
+    match get_current_frame state with
+    | Plain_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope disambiguation state"
+          (Format.asprintf "[%s] invalid plain frame disambiguation state"
              __FUNCTION__)
-    | Pattern_scope _ ->
+    | Pattern_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope disambiguation state"
+          (Format.asprintf "[%s] invalid pattern frame disambiguation state"
              __FUNCTION__)
-    | Module_scope { bindings; declarations } ->
+    | Module_frame { bindings; declarations } ->
         Binding_tree.add_toplevel identifier entry ?subtree bindings;
         Binding_tree.add_toplevel identifier entry ?subtree declarations
 
@@ -1023,27 +1026,27 @@ module Disambiguation_state = struct
      nothing. *)
 
   let add_free_meta_level_variable state identifier entry =
-    match get_current_scope state with
-    | Pattern_scope scope ->
+    match get_current_frame state with
+    | Pattern_frame frame ->
         (* Free meta-level variables will have reconstructed binders in the
            pattern meta-context, so they are hereafter considered as bound in
            the pattern. *)
-        Binding_tree.add_toplevel identifier entry scope.pattern_bindings;
-        Binding_tree.add_toplevel identifier entry scope.expression_bindings;
-        scope.pattern_variables_rev <-
-          identifier :: scope.pattern_variables_rev
-    | Module_scope _
-    | Plain_scope _ ->
+        Binding_tree.add_toplevel identifier entry frame.pattern_bindings;
+        Binding_tree.add_toplevel identifier entry frame.expression_bindings;
+        frame.pattern_variables_rev <-
+          identifier :: frame.pattern_variables_rev
+    | Module_frame _
+    | Plain_frame _ ->
         () (* Currently not keeping track of free variables. *)
 
   let add_free_comp_level_variable state identifier entry =
-    match get_current_scope state with
-    | Pattern_scope scope ->
-        Binding_tree.add_toplevel identifier entry scope.expression_bindings;
-        scope.pattern_variables_rev <-
-          identifier :: scope.pattern_variables_rev
-    | Module_scope _
-    | Plain_scope _ ->
+    match get_current_frame state with
+    | Pattern_frame frame ->
+        Binding_tree.add_toplevel identifier entry frame.expression_bindings;
+        frame.pattern_variables_rev <-
+          identifier :: frame.pattern_variables_rev
+    | Module_frame _
+    | Plain_frame _ ->
         () (* Currently not keeping track of free variables. *)
 
   let add_free_lf_variable state ?location identifier =
@@ -1072,85 +1075,85 @@ module Disambiguation_state = struct
 
   let entry_is_not_variable entry = Bool.not (Entry.is_variable entry)
 
-  let lookup_toplevel_in_scope scope query =
-    Binding_tree.lookup_toplevel_opt query (get_scope_bindings scope)
+  let lookup_toplevel_in_frame frame query =
+    Binding_tree.lookup_toplevel_opt query (get_frame_bindings frame)
 
-  let lookup_toplevel_in_scopes scopes query =
-    List.find_map (fun scope -> lookup_toplevel_in_scope scope query) scopes
+  let lookup_toplevel_in_frames frames query =
+    List.find_map (fun frame -> lookup_toplevel_in_frame frame query) frames
 
-  let rec lookup_toplevel_declaration_in_scopes scopes query =
-    match scopes with
-    | [] -> (* Exhausted the list of scopes to check. *) Option.none
-    | scope :: scopes -> (
-        let scope_bindings = get_scope_bindings scope in
-        match Binding_tree.lookup_toplevel_opt query scope_bindings with
+  let rec lookup_toplevel_declaration_in_frames frames query =
+    match frames with
+    | [] -> (* Exhausted the list of frames to check. *) Option.none
+    | frame :: frames -> (
+        let frame_bindings = get_frame_bindings frame in
+        match Binding_tree.lookup_toplevel_opt query frame_bindings with
         | Option.Some (entry, subtree) when entry_is_not_variable entry ->
-            (* [query] is bound to a declaration in [scope]. *)
+            (* [query] is bound to a declaration in [frame]. *)
             Option.some (entry, subtree)
         | Option.Some _ ->
-            (* [query] is bound to a variable in [scope], so any declaration
-               in [scopes] bound to [query] is shadowed. *)
+            (* [query] is bound to a variable in [frame], so any declaration
+               in [frames] bound to [query] is shadowed. *)
             Option.none
         | Option.None ->
-            (* [query] is unbound in [scope], so check in the parent
-               scopes. *)
-            lookup_toplevel_declaration_in_scopes scopes query)
+            (* [query] is unbound in [frame], so check in the parent
+               frames. *)
+            lookup_toplevel_declaration_in_frames frames query)
 
   let internal_lookup_toplevel_opt state query =
-    match state.scopes with
-    | List1.T ((Pattern_scope _ as scope), scopes) -> (
-        (* Overridden behaviour for pattern scopes. Variables can only be
-           looked up in that pattern scope, and declarations can only be
-           looked up in parent scopes. *)
-        match lookup_toplevel_in_scope scope query with
+    match state.frames with
+    | List1.T ((Pattern_frame _ as frame), frames) -> (
+        (* Overridden behaviour for pattern frames. Variables can only be
+           looked up in that pattern frame, and declarations can only be
+           looked up in parent frames. *)
+        match lookup_toplevel_in_frame frame query with
         | Option.Some x -> Option.some x
-        | Option.None -> lookup_toplevel_declaration_in_scopes scopes query)
-    | List1.T (scope, scopes) ->
-        lookup_toplevel_in_scopes (scope :: scopes) query
+        | Option.None -> lookup_toplevel_declaration_in_frames frames query)
+    | List1.T (frame, frames) ->
+        lookup_toplevel_in_frames (frame :: frames) query
 
-  (** [lookup_in_scopes scopes identifiers] looks up for an entry bound to
+  (** [lookup_in_frames frames identifiers] looks up for an entry bound to
       the qualified identifier formed by [identifiers] successively in
-      [scopes]. The qualified identifier being represented as a list of
+      [frames]. The qualified identifier being represented as a list of
       identifiers is an optimization. If an entry is fully bound or partially
-      bound in a scope, then the search ends. The [scopes] are arranged as a
+      bound in a frame, then the search ends. The [frames] are arranged as a
       stack. *)
-  let rec lookup_in_scopes scopes identifiers =
-    match scopes with
+  let rec lookup_in_frames frames identifiers =
+    match frames with
     | [] ->
         Error.raise
           (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
-    | scope :: scopes -> (
+    | frame :: frames -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; subtree; _ } -> (entry, subtree)
         | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
-            (* The [leading_segments] are bound in [scope], so any binding
-               for [identifiers] in [scopes] is shadowed. *)
+            (* The [leading_segments] are bound in [frame], so any binding
+               for [identifiers] in [frames] is shadowed. *)
             Error.raise
               (Unbound_namespace
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
-        | Binding_tree.Unbound _ -> lookup_in_scopes scopes identifiers)
+        | Binding_tree.Unbound _ -> lookup_in_frames frames identifiers)
 
-  let rec lookup_declaration_in_scopes scopes identifiers =
-    match scopes with
+  let rec lookup_declaration_in_frames frames identifiers =
+    match frames with
     | [] ->
-        (* Exhausted the list of scopes to check. *)
+        (* Exhausted the list of frames to check. *)
         Error.raise
           (Unbound_qualified_identifier
              (Qualified_identifier.from_list1 identifiers))
-    | scope :: scopes -> (
-        let scope_bindings = get_scope_bindings scope in
-        match Binding_tree.maximum_lookup identifiers scope_bindings with
+    | frame :: frames -> (
+        let frame_bindings = get_frame_bindings frame in
+        match Binding_tree.maximum_lookup identifiers frame_bindings with
         | Binding_tree.Bound { entry; subtree; _ }
           when entry_is_not_variable entry ->
-            (* [query] is bound to a declaration in [scope]. *)
+            (* [query] is bound to a declaration in [frame]. *)
             (entry, subtree)
         | Binding_tree.Bound _result ->
-            (* [query is bound to a variable in [scope], so any declaration
-               in [scopes] bound to [query] is shadowed. *)
+            (* [query is bound to a variable in [frame], so any declaration
+               in [frames] bound to [query] is shadowed. *)
             assert (List1.length identifiers = 1)
             (* Variables can't be in namespaces *);
             Error.raise
@@ -1162,7 +1165,7 @@ module Disambiguation_state = struct
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
         | Binding_tree.Unbound _ ->
-            lookup_declaration_in_scopes scopes identifiers)
+            lookup_declaration_in_frames frames identifiers)
 
   (** [internal_lookup state query] is [(entry, subtree)], where [entry] is
       the entry bound to [query] in [state], and [subtree] is the tree of
@@ -1172,16 +1175,16 @@ module Disambiguation_state = struct
       [subtree] is returned. *)
   let internal_lookup state query =
     let identifiers = Qualified_identifier.to_list1 query in
-    match state.scopes with
-    | List1.T ((Pattern_scope _ as scope), scopes) -> (
-        (* Overridden behaviour for pattern scopes. Variables can only be
-           looked up in that pattern scope, and declarations can only be
-           looked up in parent scopes. *)
+    match state.frames with
+    | List1.T ((Pattern_frame _ as frame), frames) -> (
+        (* Overridden behaviour for pattern frames. Variables can only be
+           looked up in that pattern frame, and declarations can only be
+           looked up in parent frames. *)
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; subtree; _ } ->
-            (* An inner pattern variable is in scope *) (entry, subtree)
+            (* An inner pattern variable is in frame *) (entry, subtree)
         | Binding_tree.Partially_bound { leading_segments; segment; _ } ->
             (* An inner pattern variable shadowed a namespace *)
             Error.raise
@@ -1189,9 +1192,9 @@ module Disambiguation_state = struct
                  (Qualified_identifier.make ~namespaces:leading_segments
                     segment))
         | Binding_tree.Unbound _ ->
-            lookup_declaration_in_scopes scopes identifiers)
-    | List1.T (scope, scopes) ->
-        lookup_in_scopes (scope :: scopes) identifiers
+            lookup_declaration_in_frames frames identifiers)
+    | List1.T (frame, frames) ->
+        lookup_in_frames (frame :: frames) identifiers
 
   type maximum_lookup_result =
     | Unbound of { segments : Identifier.t List1.t }
@@ -1203,12 +1206,12 @@ module Disambiguation_state = struct
         }
     | Bound of { entry : Entry.t }
 
-  let rec maximum_lookup_in_scopes scopes identifiers =
-    match scopes with
+  let rec maximum_lookup_in_frames frames identifiers =
+    match frames with
     | [] -> Unbound { segments = identifiers }
-    | scope :: scopes -> (
+    | frame :: frames -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; _ } -> Bound { entry }
         | Binding_tree.Partially_bound
@@ -1216,14 +1219,14 @@ module Disambiguation_state = struct
             Partially_bound
               { leading_segments; segment; entry; trailing_segments }
         | Binding_tree.Unbound _ ->
-            maximum_lookup_in_scopes scopes identifiers)
+            maximum_lookup_in_frames frames identifiers)
 
-  let rec maximum_lookup_declaration_in_scopes scopes identifiers =
-    match scopes with
+  let rec maximum_lookup_declaration_in_frames frames identifiers =
+    match frames with
     | [] -> Unbound { segments = identifiers }
-    | scope :: scopes -> (
+    | frame :: frames -> (
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; _ } ->
             if Entry.is_variable entry then
@@ -1234,16 +1237,16 @@ module Disambiguation_state = struct
             Partially_bound
               { leading_segments; segment; entry; trailing_segments }
         | Binding_tree.Unbound _ ->
-            maximum_lookup_declaration_in_scopes scopes identifiers)
+            maximum_lookup_declaration_in_frames frames identifiers)
 
   let maximum_lookup state identifiers =
-    match state.scopes with
-    | List1.T ((Pattern_scope _ as scope), scopes) -> (
-        (* Overridden behaviour for pattern scopes. Variables can only be
-           looked up in that pattern scope, and declarations can only be
-           looked up in parent scopes. *)
+    match state.frames with
+    | List1.T ((Pattern_frame _ as frame), frames) -> (
+        (* Overridden behaviour for pattern frames. Variables can only be
+           looked up in that pattern frame, and declarations can only be
+           looked up in parent frames. *)
         match
-          Binding_tree.maximum_lookup identifiers (get_scope_bindings scope)
+          Binding_tree.maximum_lookup identifiers (get_frame_bindings frame)
         with
         | Binding_tree.Bound { entry; _ } -> Bound { entry }
         | Binding_tree.Partially_bound
@@ -1251,9 +1254,9 @@ module Disambiguation_state = struct
             Partially_bound
               { leading_segments; segment; entry; trailing_segments }
         | Binding_tree.Unbound _ ->
-            maximum_lookup_declaration_in_scopes scopes identifiers)
-    | List1.T (scope, scopes) ->
-        maximum_lookup_in_scopes (scope :: scopes) identifiers
+            maximum_lookup_declaration_in_frames frames identifiers)
+    | List1.T (frame, frames) ->
+        maximum_lookup_in_frames (frame :: frames) identifiers
 
   let raise_duplicate_identifiers_exception f duplicates =
     match duplicates with
@@ -1289,19 +1292,19 @@ module Disambiguation_state = struct
                (actual_binding_exn identifier entry)))
         entry
     in
-    (* Update the entry in the current scope only *)
-    let bindings = get_current_scope_bindings state in
+    (* Update the entry in the current frame only *)
+    let bindings = get_current_frame_bindings state in
     if Binding_tree.mem identifier bindings then
       Binding_tree.replace identifier
         (fun _entry _subtree -> (entry', subtree))
         bindings
     else Binding_tree.add identifier ~subtree entry' bindings;
-    (* If we're currently in a module scope, additionally update the exported
+    (* If we're currently in a module frame, additionally update the exported
        declaration *)
-    match get_current_scope state with
-    | Plain_scope _ -> ()
-    | Pattern_scope _ -> ()
-    | Module_scope { declarations; _ } ->
+    match get_current_frame state with
+    | Plain_frame _ -> ()
+    | Pattern_frame _ -> ()
+    | Module_frame { declarations; _ } ->
         if Binding_tree.mem identifier declarations then
           Binding_tree.replace identifier
             (fun _entry subtree -> (entry', subtree))
@@ -1381,7 +1384,7 @@ module Disambiguation_state = struct
 
   let open_namespace state identifier =
     let _entry, subtree = internal_lookup state identifier in
-    let bindings = get_current_scope_bindings state in
+    let bindings = get_current_frame_bindings state in
     Binding_tree.add_all bindings subtree
 
   let open_module state identifier =
@@ -1473,67 +1476,67 @@ module Disambiguation_state = struct
     remove_binding state identifier;
     x
 
-  let push_new_module_scope state =
-    let module_scope = create_module_scope () in
-    push_scope state module_scope
+  let push_new_module_frame state =
+    let module_frame = create_module_frame () in
+    push_frame state module_frame
 
   let add_module state ?location identifier m =
     let default_associativity = get_default_associativity state in
     let default_precedence = get_default_precedence state in
-    push_new_module_scope state;
+    push_new_module_frame state;
     let x = m state in
     match
-      pop_scope
-        state (* We expect the newly pushed module scope to be popped *)
+      pop_frame
+        state (* We expect the newly pushed module frame to be popped *)
     with
-    | Plain_scope _ ->
+    | Plain_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
-    | Pattern_scope _ ->
+          (Format.asprintf "[%s] invalid plain frame state" __FUNCTION__)
+    | Pattern_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid pattern scope state" __FUNCTION__)
-    | Module_scope { declarations; _ } ->
+          (Format.asprintf "[%s] invalid pattern frame state" __FUNCTION__)
+    | Module_frame { declarations; _ } ->
         add_declaration state identifier ~subtree:declarations
           (Entry.make_module_entry ?location identifier);
         set_default_associativity state default_associativity;
         set_default_precedence state default_precedence;
         x
 
-  let with_scope state m =
-    let scope = create_empty_plain_scope () in
-    push_scope state scope;
+  let with_frame state m =
+    let frame = create_empty_plain_frame () in
+    push_frame state frame;
     let x = m state in
-    ignore (pop_scope state);
+    ignore (pop_frame state);
     x
 
-  let with_parent_scope state m =
-    let scope = pop_scope state in
-    let x = with_scope state m in
-    push_scope state scope;
+  let with_parent_frame state m =
+    let frame = pop_frame state in
+    let x = with_frame state m in
+    push_frame state frame;
     x
 
   let with_bindings_checkpoint state m =
-    let original_scopes_count = List1.length state.scopes in
-    (* Push a fresh module scope so that [m] may add declarations *)
-    push_new_module_scope state;
+    let original_frames_count = List1.length state.frames in
+    (* Push a fresh module frame so that [m] may add declarations *)
+    push_new_module_frame state;
     Fun.protect
       ~finally:(fun () ->
-        let final_scopes_count = List1.length state.scopes in
-        let scopes_to_pop_count =
-          final_scopes_count - original_scopes_count
+        let final_frames_count = List1.length state.frames in
+        let frames_to_pop_count =
+          final_frames_count - original_frames_count
         in
         if
-          scopes_to_pop_count
-          >= 1 (* We expect there to at least be the new module scope *)
+          frames_to_pop_count
+          >= 1 (* We expect there to at least be the new module frame *)
         then
-          (* We have to count scopes because [m] may add new scopes. This is
-             not foolproof because [m] could have discarded too many scopes
+          (* We have to count frames because [m] may add new frames. This is
+             not foolproof because [m] could have discarded too many frames
              and added some more. *)
-          Fun.repeat scopes_to_pop_count (fun () -> ignore (pop_scope state))
+          Fun.repeat frames_to_pop_count (fun () -> ignore (pop_frame state))
         else
           Error.raise_violation
             (Format.asprintf
-               "[%s] invalid states, there are fewer scopes than there \
+               "[%s] invalid states, there are fewer frames than there \
                 originally were"
                __FUNCTION__))
       (fun () -> m state)
@@ -1561,17 +1564,17 @@ module Disambiguation_state = struct
 
   let with_free_variables_as_pattern_variables state
       ~pattern:disambiguate_pattern ~expression:disambiguate_expression =
-    let pattern_scope = create_pattern_scope () in
-    push_scope state pattern_scope;
+    let pattern_frame = create_pattern_frame () in
+    push_frame state pattern_frame;
     let pattern' = disambiguate_pattern state in
-    match pop_scope state (* We expect [pattern_scope] to be popped *) with
-    | Plain_scope _ ->
+    match pop_frame state (* We expect [pattern_frame] to be popped *) with
+    | Plain_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid plain scope state" __FUNCTION__)
-    | Module_scope _ ->
+          (Format.asprintf "[%s] invalid plain frame state" __FUNCTION__)
+    | Module_frame _ ->
         Error.raise_violation
-          (Format.asprintf "[%s] invalid module scope state" __FUNCTION__)
-    | Pattern_scope
+          (Format.asprintf "[%s] invalid module frame state" __FUNCTION__)
+    | Pattern_frame
         { pattern_bindings = _; pattern_variables_rev; expression_bindings }
       -> (
         match
@@ -1582,11 +1585,11 @@ module Disambiguation_state = struct
               (fun identifiers -> Duplicate_pattern_variables identifiers)
               duplicates
         | Option.None ->
-            let expression_scope = create_plain_scope expression_bindings in
-            push_scope state expression_scope;
+            let expression_frame = create_plain_frame expression_bindings in
+            push_frame state expression_frame;
             let expression' = disambiguate_expression state pattern' in
-            ignore (pop_scope state)
-            (* We expect [expression_scope] to be popped *);
+            ignore (pop_frame state)
+            (* We expect [expression_frame] to be popped *);
             expression')
 
   let lookup_toplevel state identifier =
@@ -1606,36 +1609,36 @@ module Disambiguation_state = struct
     | (exception Unbound_qualified_identifier _) ->
         Option.none
 
-  let snapshot_scope = function
-    | Plain_scope { bindings } ->
+  let snapshot_frame = function
+    | Plain_frame { bindings } ->
         let bindings' = Binding_tree.snapshot bindings in
-        Plain_scope { bindings = bindings' }
-    | Pattern_scope
+        Plain_frame { bindings = bindings' }
+    | Pattern_frame
         { pattern_bindings; pattern_variables_rev; expression_bindings } ->
         let pattern_bindings' = Binding_tree.snapshot pattern_bindings in
         let expression_bindings' =
           Binding_tree.snapshot expression_bindings
         in
-        Pattern_scope
+        Pattern_frame
           { pattern_bindings = pattern_bindings'
           ; pattern_variables_rev (* Immutable *)
           ; expression_bindings = expression_bindings'
           }
-    | Module_scope { bindings; declarations } ->
+    | Module_frame { bindings; declarations } ->
         let bindings' = Binding_tree.snapshot bindings in
         let declarations' = Binding_tree.snapshot declarations in
-        Module_scope { bindings = bindings'; declarations = declarations' }
+        Module_frame { bindings = bindings'; declarations = declarations' }
 
-  let snapshot_scopes scopes = List1.map snapshot_scope scopes
+  let snapshot_frames frames = List1.map snapshot_frame frames
 
   let snapshot_state
-      { scopes
+      { frames
       ; default_associativity
       ; default_precedence
       ; postponed_fixity_pragmas
       } =
-    let scopes' = snapshot_scopes scopes in
-    { scopes = scopes'
+    let frames' = snapshot_frames frames in
+    { frames = frames'
     ; default_associativity (* Immutable *)
     ; default_precedence (* Immutable *)
     ; postponed_fixity_pragmas (* Immutable *)

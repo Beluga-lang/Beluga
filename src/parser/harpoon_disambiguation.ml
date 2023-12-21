@@ -176,7 +176,7 @@ struct
       ; comp_context
       ; proof
       } ->
-        with_parent_scope state (fun state ->
+        with_parent_frame state (fun state ->
             with_disambiguated_meta_context state meta_context
               (fun state meta_context' ->
                 with_disambiguated_comp_context state comp_context

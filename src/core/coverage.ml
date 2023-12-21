@@ -162,6 +162,12 @@ let open_cov_problems = ref ([] : open_cov_problems)
 let reset_open_cov_problems () =
   open_cov_problems := []
 
+let add_open_cov_problem problem =
+  open_cov_problems := problem :: !open_cov_problems
+
+let append_open_cov_problems problems =
+  open_cov_problems := problems @ !open_cov_problems
+
 type solved =
   | Solved
   | NotSolvable
@@ -1839,7 +1845,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
           p.fmt "[OPEN COVERAGE GOAL] %a"
             Prettycov.fmt_ppr_cov_goals [cg]
           end;
-        open_cov_problems := (cD_cg, cG', pat') :: !open_cov_problems;
+        add_open_cov_problem (cD_cg, cG', pat');
         refine_pattern cgs cov_problem
      | _ ->
         dprintf
@@ -1890,7 +1896,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
             P.(fmt_ppr_cmp_pattern cD_cg cG' l0)
             pat'
           end;
-        open_cov_problems := (cD_cg, cG', pat') :: !open_cov_problems;
+        add_open_cov_problem (cD_cg, cG', pat');
         refine_pattern cgs cov_problem
      | _ ->
         dprintf
@@ -2821,7 +2827,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
        begin fun _ ->
        "[refine_mv] NOTHING TO REFINE"
        end;
-     open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
+     add_open_cov_problem (cD, cG, patt);
      raise (Error (Location.ghost, NothingToRefine))
   (* [] *)
   (* raise (Error "Nothing to refine") *)
@@ -2850,7 +2856,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
 
      | (SomeTermCands (_, []), []) -> []
      | (SomeTermCands (_, []), _) ->
-        open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
+        add_open_cov_problem (cD, cG, patt);
         raise (Error (Location.ghost, NothingToRefine))
      | (SomeTermCands (_, cgoals), _) ->
         dprintf
@@ -2872,7 +2878,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
                       refine_lf_cov_problem cgoals lf_cov_problem      *)
      | (NoCandidate, []) -> []
      | (NoCandidate, _) ->
-        open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
+        add_open_cov_problem (cD, cG, patt);
         []
      end
 
@@ -3050,7 +3056,7 @@ let rec refine_patt_cands names ((cD, cG, candidates, patt) as cov_problem) (pvs
      let r_cands = refine_patt_cands names cov_problem (pvsplits, pv) in
      begin match candidates'' with
      | [] ->
-        open_cov_problems := (cD', cG', patt') :: !open_cov_problems;
+        add_open_cov_problem (cD', cG', patt');
         r_cands
      | _ ->
         (cD', cG', candidates'', patt') :: r_cands
@@ -3127,7 +3133,7 @@ let rec check_cov_problem (cD, cG, candidates, cg) =
     match candidates with
     | [] ->
        let cov_prob' = (cD, cG, nCands, cg) in
-       open_cov_problems := open_cg @ !open_cov_problems;
+       append_open_cov_problems open_cg;
        dprint
          begin fun _ ->
          "[existsCandidate] refining variables since candidates have been processed"
@@ -3190,7 +3196,7 @@ let rec check_cov_problem (cD, cG, candidates, cg) =
                  (Prettycov.fmt_ppr_candidate (cD, cG)) c
                end;
              let open_goal = (cD, cG, cg) in
-             (* open_cov_problems := ((cO, cD), cPhi, tM)::!open_cov_problems; *)
+             (* add_open_cov_problem ((cO, cD), cPhi, tM); *)
              existsCandidate cands nCands (open_goal :: open_cg)
           end
        | _ -> existsCandidate cands (c :: nCands) open_cg

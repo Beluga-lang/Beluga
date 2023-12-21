@@ -3154,7 +3154,8 @@ let rec blockdeclInDctx =
               in
               (* why do we drop the constraints here ? -je *)
               let i = CInst (mmvar2', Whnf.mcomp theta2 mtt1) in
-              mmvar1.instantiation := Some (ICtx (CtxVar i))
+              let cPsi = CtxVar i in
+              instantiateCtxVar (mmvar1.instantiation, cPsi)
             end
           else
             Error.raise_violation
@@ -3164,18 +3165,22 @@ let rec blockdeclInDctx =
 
        | (Some c_var, d') ->
           if d = d'
-          then mmvar1.instantiation := Some (ICtx (CtxVar (c_var)))
+          then
+            let cPsi = CtxVar c_var in
+            instantiateCtxVar (mmvar1.instantiation, cPsi)
           else if d' < d
           then fail "Hat Context's do not unify"
           else
             begin
               let cPsi = Context.hatToDCtx (Some c_var, d' - d) in
-              mmvar1.instantiation := Some (ICtx cPsi)
+              instantiateCtxVar (mmvar1.instantiation, cPsi)
             end
 
        | (None, d') ->
           if d = d'
-          then mmvar1.instantiation := Some (ICtx Null)
+          then
+            let cPsi = Null in
+            instantiateCtxVar (mmvar1.instantiation, cPsi)
           else if d' < d
           then
             (* (Some (cref), d) == (None, d') d' = d0 + d *)
@@ -3183,7 +3188,7 @@ let rec blockdeclInDctx =
           else
             begin
               let cPsi = Context.hatToDCtx (None, d' - d) in
-              mmvar1.instantiation := Some (ICtx cPsi)
+              instantiateCtxVar (mmvar1.instantiation, cPsi)
             end
        end
 

@@ -28,10 +28,13 @@ let make_html_test ?(save_html_to_file = false) compiler_test_file =
       ignore
         (Format.asprintf "%a@." Beluga_html.pp_signature signature : string)
 
+let case_studies_directory = "../case-studies"
+
 let examples_directory = "../examples"
 
 let tests () =
   let compiler_tests =
-    Files.find_compiler_tests ~directory:examples_directory
+    Files.find_compiler_tests ~directory:case_studies_directory
+    @ Files.find_compiler_tests ~directory:examples_directory
   in
   List.map make_html_test compiler_tests

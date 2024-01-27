@@ -7,6 +7,7 @@ shopt -s nullglob
 
 # Option flags.
 declare FORCE_COLOR_OUTPUT=""
+declare RUN_CASE_STUDIES="true"
 declare RUN_EXAMPLES_TESTS="true"
 declare RUN_COMPILER_TESTS="true"
 declare RUN_INTERACTIVE_MODE_TESTS="true"
@@ -28,6 +29,7 @@ declare -r REPLAY=${REPLAY:-"${BUILDPATH}/replay"}
 
 declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
 declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}
+declare -r STUDYDIR=${STUDYDIR:-"./case-studies"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
 declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${TESTROOTDIR}/interactive"}
 declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${TESTROOTDIR}/harpoon"}
@@ -37,6 +39,7 @@ declare -i TIMEOUT=${TIMEOUT:-10}
 function rsync_test_artifacts {
     rsync -ak "${ROOTDIR}/.admissible-fail" "${TEMPDIR}/.admissible-fail"
     rsync -ak --chmod=Fa+w "${ROOTDIR}/${TESTROOTDIR}/" "${TEMPDIR}/${TESTROOTDIR}"
+    rsync -ak "${ROOTDIR}/${STUDYDIR}/" "${TEMPDIR}/${STUDYDIR}"
     rsync -ak "${ROOTDIR}/${EXAMPLEDIR}/" "${TEMPDIR}/${EXAMPLEDIR}"
 }
 
@@ -123,44 +126,54 @@ function do_testing {
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
-    if [[ -n "${RUN_EXAMPLES_TESTS}" ]]; then
-        echo "===== EXAMPLES ====="
+    if [[ -n "${RUN_CASE_STUDIES}" ]]; then
+        echo "===== CASE STUDIES ====="
 
-        for file_path in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
+        while read -r file_path; do
             start_test_case "${file_path}"
 
             check_example_test_case "${file_path}"
-        done
+        done < <(find_compiler_tests_in "${STUDYDIR}" | sort -n)
+    fi
+
+    if [[ -n "${RUN_EXAMPLES_TESTS}" ]]; then
+        echo "===== EXAMPLES ====="
+
+        while read -r file_path; do
+            start_test_case "${file_path}"
+
+            check_example_test_case "${file_path}"
+        done < <(find_compiler_tests_in "${EXAMPLEDIR}" | sort -n)
     fi
 
     if [[ -n "${RUN_COMPILER_TESTS}" ]]; then
         echo "===== COMPILER TESTS ====="
 
-        for file_path in $(find_compiler_tests_in "${TESTDIR}"); do
+        while read -r file_path; do
             start_test_case "${file_path}"
 
             check_compiler_test_case "${file_path}"
-        done
+        done < <(find_compiler_tests_in "${TESTDIR}" | sort -n)
     fi
 
     if [[ -n "${RUN_INTERACTIVE_MODE_TESTS}" ]]; then
         echo "===== INTERACTIVE MODE TESTS ====="
 
-        for file_path in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n); do
+        while read -r file_path; do
             start_test_case "${file_path}"
 
             check_interactive "${file_path}"
-        done
+        done < <(find "${INTERACTIVE_TESTDIR}" -type f | sort -n)
     fi
 
     if [[ -n "${RUN_HARPOON_MODE_TESTS}" ]]; then
         echo "===== HARPOON MODE TESTS ====="
 
-        for file_path in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n); do
+        while read -r file_path; do
             start_test_case "${file_path}"
 
             check_harpoon "${file_path}"
-        done
+        done < <(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n)
     fi
 
     echo
@@ -394,7 +407,7 @@ function stop_on_failure {
 function find_compiler_tests_in {
     local -a tests
 
-    for dir in $(find "$1" -type d); do
+    find "$1" -type d | while read -r dir; do
         tests=("${dir}/"*.cfg)
         if [ "${#tests[@]}" -eq 0 ]; then
             tests=("${dir}/"*.bel)
@@ -403,7 +416,7 @@ function find_compiler_tests_in {
         if [ "${#tests[@]}" -gt 0 ]; then
             printf "%s\n" "${tests[@]}"
         fi
-    done | sort -n
+    done
 }
 
 function usage {

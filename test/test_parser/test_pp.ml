@@ -120,10 +120,13 @@ let make_compiler_test ?(save_json_to_file = false)
         Fun.(json_of_signature >> without_locations)
         ~expected:signature ~actual:signature'
 
+let case_studies_directory = "../case-studies"
+
 let examples_directory = "../examples"
 
 let tests () =
   let compiler_tests =
-    Files.find_compiler_tests ~directory:examples_directory
+    Files.find_compiler_tests ~directory:case_studies_directory
+    @ Files.find_compiler_tests ~directory:examples_directory
   in
   List.map make_compiler_test compiler_tests

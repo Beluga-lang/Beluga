@@ -4,11 +4,10 @@
 
 open Support
 open Beluga
-open Printf
 module F = Fun
 
 let bailout msg =
-  fprintf stderr "%s@." msg;
+  Format.fprintf Format.err_formatter "%s@." msg;
   exit 2
 
 let usage () =
@@ -31,8 +30,8 @@ let usage () =
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
   in
-  fprintf stderr "Beluga version %s\n" (Version.get ());
-  fprintf stderr
+  Format.fprintf Format.err_formatter "Beluga version %s\n" (Version.get ());
+  Format.fprintf Format.err_formatter
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
     Sys.argv.(0) options;
   exit 2

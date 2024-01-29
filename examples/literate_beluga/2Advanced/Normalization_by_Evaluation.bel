@@ -5,9 +5,12 @@
 <script type="text/javascript"
   src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
+
 # Normalization by Evaluation
 
-This case study shows how to implement a type-preserving normalizer using normalization by evaluation [Berger and Schwichtenberg 1991]. Here we compute $\eta$-long normal forms for the simply-typed lambda calculus. See also [Cave and Pientka 2012] for more information on this example.
+This case study shows how to implement a type-preserving normalizer using normalization by evaluation [Berger and Schwichtenberg 1991].
+Here we compute $\eta$-long normal forms for the simply-typed lambda calculus.
+See also [Cave and Pientka 2012] for more information on this example.
 
 The setup is a standard intrinsically-typed lambda calculus:
 }}%
@@ -36,7 +39,9 @@ schema ctx = neut T;
 
 %{{
 The key idea is to evaluate terms into a special domain of semantic values, which can then be reified back into normal forms.
-Below we describe the domain of semantic values, which we can think of as being defined by recursion on the type. At base type, semantic values are precisely normal forms. At arrow type `arr A B`, a semantic value `Sem [g] [ |- arr A B]` is a function from semantic values of type `A` in an extended context `h` to semantic values of type `B` in `h`. The extension of a context is tracked by a substitution `$W` which transports normal terms in context `g` to normal terms in context `h`.
+Below we describe the domain of semantic values, which we can think of as being defined by recursion on the type.
+At base type, semantic values are precisely normal forms. At arrow type `arr A B`, a semantic value `Sem [g] [ |- arr A B]` is a function from semantic values of type `A` in an extended context `h` to semantic values of type `B` in `h`.
+The extension of a context is tracked by a substitution `$W` which transports normal terms in context `g` to normal terms in context `h`.
 
 In the course of this development, `$W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g, x1:neut T1,..., xn:neut Tn`, but the extra generality does no harm here.
 }}%
@@ -125,5 +130,6 @@ rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify (eval t emp_env);
 
 %{{
-One could also implement `nbe` to directly normalize terms in an environment: `[g |- tm A] -> [h |- norm A]` where `h` is appropriately related to `g`. We leave this as an exercise for the reader.
+One could also implement `nbe` to directly normalize terms in an environment: `[g |- tm A] -> [h |- norm A]` where `h` is appropriately related to `g`.
+We leave this as an exercise for the reader.
 }}%

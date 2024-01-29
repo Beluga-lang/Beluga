@@ -6,8 +6,9 @@ This example follows the proof presented in
 <a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
 Cave and Pientka[2013]</a>.
 
-First, let's define a simply typed &lambda;-calculus with one type:
+First, let's define a simply typed λ-calculus with one type:
 }}%
+
 LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
@@ -19,7 +20,8 @@ app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 c : tm b.
 
-%{{ The type `tm` defines our family of simply-typed lambda terms
+%{{
+The type `tm` defines our family of simply-typed lambda terms
 indexed by their type as an LF signature. In typical higher-order
 abstract syntax (HOAS) fashion, lambda abstraction takes a function
 representing the abstraction of a term over a variable. There is no
@@ -29,11 +31,13 @@ We now encode the step relation of the operational semantics. In
 particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
+
 step : tm A → tm A → type.
 beta : step (app (lam M) N) (M N).
 stepapp : step M M' -> step (app M N) (app M' N).
 
-%{{Notice how the `beta` rule re-uses the LF notion of substitution by
+%{{
+Notice how the `beta` rule re-uses the LF notion of substitution by
 computing the application of `M` to `N`. <br/>
 
 Finally, we define:
@@ -54,7 +58,6 @@ halts : tm A -> type.  --name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
 %{{
-
 ## Reducibility
 
 Reducibility cannot be directly encoded at the LF layer, since it
@@ -64,18 +67,18 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
-| I : [ |- halts M] -> Reduce [ ⊢ b] [ |- M]
+stratified Reduce : {A:[|- tp]} {M:[ |- tm A]} ctype =
+| I : [ |- halts M] -> Reduce [ |- b] [ |- M]
 | Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B] [ |- app M N])
-  -> Reduce [ ⊢ arr A B] [ |- M]
+    ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
+  -> Reduce [ |- arr A B] [ |- M]
 ;
 
 %{{
 A term of type `i` is reducible if it halts, and a `term M` of type
 `arr A B` is reducible if it halts, and moreover for every reducible
 `N` of type `A`, the application `app M N` is reducible. We write
-`{N:[.tm A]}` for explicit &Pi;-quantification over `N`, a closed term
+`{N:[ |- tm A]}` for explicit Π-quantification over `N`, a closed term
 of type `A`. To the left of the turnstile in `[|- tm A]` is where one
 writes the context the term is defined in – in this case, it is empty.
 
@@ -109,6 +112,7 @@ implicit argument. In the base case we appeal to `halts_step`, while
 in the `Arr` case we must also appeal to the induction hypothesis at
 the range type, going inside the function position of applications.
 }}%
+
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- T] [ |- M'] -> Reduce [|- T] [ |- M] =
 mlam MS => fn r => case r of
 | I ha => I (halts_step [ |- MS] ha)
@@ -123,6 +127,7 @@ The trivial fact that reducible terms halt has a corresponding
 trivial proof, analyzing the construction of the the proof of
 'Reduce[|- T] [|- M]'
 }}%
+
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
 fn r => case r of
 | I h => h
@@ -130,20 +135,20 @@ fn r => case r of
 ;
 
 %{{
-# Reducibility of substitutions
+## Reducibility of substitutions
 }}%
 
 schema ctx = tm T;
 
-inductive RedSub : {g:ctx}{$S:$[ |- g]} ctype =
+inductive RedSub : {g:ctx}{$σ:$[ |- g]} ctype =
 | Nil : RedSub  [ ] $[ |- ^]
-| Dot : RedSub  [g] $[ |- $S[^]] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm A[]] $[ |- $S, M]
+| Dot : RedSub  [g] $[ |- $σ[^]] → Reduce [|- A] [ |- M]
+     → RedSub [g, x:tm A[]] $[ |- $σ, M]
 ;
 
 
 
-rec lookup : {g:ctx}{#p:#[g |- tm A[]]}RedSub [g] $[ |- $S[^]] -> Reduce [|- A] [ |- #p[$S]] =
+rec lookup : {g:ctx}{#p:#[g |- tm A[]]}RedSub [g] $[ |- $σ[^]] -> Reduce [|- A] [ |- #p[$σ]] =
 mlam g => mlam #p => fn rs => case [g |- #p] of
  | [g', x:tm A |- x] =>    let (Dot rs' rN) = rs in rN
  | [g', x:tm A |- #q[..]] => let Dot rs' rN = rs in
@@ -151,10 +156,10 @@ mlam g => mlam #p => fn rs => case [g |- #p] of
 ;
 
 %{{
-# Main theorem
+## Main theorem
 }}%
 
-rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] $[ |- $S[^]] -> Reduce [|- A] [ |- M[$S]] =
+rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] $[ |- $σ[^]] -> Reduce [|- A] [ |- M[$σ]] =
  mlam g => mlam M => fn rs => case [g |- M] of
 | [g |- #p] => lookup [g] [g |- #p] rs
 | [g |- lam (\x. M1)] =>

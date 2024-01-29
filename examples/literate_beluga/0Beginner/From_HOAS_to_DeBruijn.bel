@@ -22,7 +22,8 @@ LF hoas : tp -> type =
   | app : hoas (arr A B) -> hoas A -> hoas B;
 
 %{{
-These terms are intrinsically well-typed: values of LF type `hoas` correspond uniquely to λ-terms up to α-equivalence. For instance, here is an HOAS λ-term with one free variable, `z`:
+These terms are intrinsically well-typed: values of LF type `hoas` correspond uniquely to λ-terms up to α-equivalence.
+For instance, here is an HOAS λ-term with one free variable, `z`:
 }}%
 
 let ex1 : [z : hoas (arr o o) |- hoas (arr (arr o o) (arr o o))] =

@@ -4,7 +4,7 @@
 # Type Uniqueness for the Simply-typed Lambda-calculus
 
 We prove that every lambda term has a unique type.
-Type uniqueness is also a benchmark in [ORBI](https://github.com/pientka/ORBI), Open challenge problem Repository for systems reasoning with BInders.
+Type uniqueness is also a benchmark in [ORBI](https://github.com/pientka/ORBI), Open challenge problem Repository for systems reasoning with Binders.
 For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 
 ## Syntax: Types and Lambda-terms
@@ -62,7 +62,7 @@ LF equal: tp -> tp -> type =
 ## Schema
 
 The schema `txG` describes a context containing assumptions `x:tm`, each associated with a typing assumption `hastype x t` for some type `t`.
-Formally, we are using a dependent product &Eta (used only in contexts) to tie `x` to `hastype x t`.
+Formally, we are using a dependent product Η (used only in contexts) to tie `x` to `hastype x t`.
 We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of `txG`.
 The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking.
 As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.

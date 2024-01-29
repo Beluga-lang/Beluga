@@ -6,8 +6,8 @@
 # Type Preservation for Parallel Reduction for the Simply-typed Lambda-calculus
 
 We discuss the notion of parallel reduction, a standard relation relevant to many other important case studies, like the Church-Rosser Theorem.
-This case study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, the Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
-
+This case study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, the Open challenge problem Repository for systems reasoning with Binders.
+For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 
 The mechanization highlights several aspects:
 
@@ -19,6 +19,7 @@ The mechanization highlights several aspects:
 
 We encode the simply-typed lambda-calculus in the logical framework LF.
 }}%
+
 LF tp: type  =
   | arr: tp -> tp -> tp
   | nat: tp
@@ -35,12 +36,15 @@ LF tm: type =
 %{{
 ## Judgements and Rules
 
-We describe parallel reduction and typing judgement for the simply-typed lambda-calculus using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.
+We describe parallel reduction and typing judgement for the simply-typed lambda-calculus using axioms and inference rules.
+The Beluga code is a straightforward HOAS encoding of the associated rules.
 
 ### Parallel reduction
 
-The predicate `pr` of type `tm -> tm -> type` defines parallel reduction, that M may reduce to M' or `M -> M'`. &beta;-reduction `pr_b` and its congruence rules `pr_l` and `pr_a` comprise the set of inference rules.
+The predicate `pr` of type `tm -> tm -> type` defines parallel reduction, that M may reduce to M' or `M -> M'`.
+β-reduction `pr_b` and its congruence rules `pr_l` and `pr_a` comprise the set of inference rules.
 }}%
+
 LF pr : tm -> tm -> type =
   | pr_l : ({x:tm} pr x x -> pr (M x) (N x)) -> pr (lam M) (lam N)
   | pr_b : ({x:tm} pr x x -> pr (M x) (M' x)) -> pr N N' -> pr (app (lam M) N) (M' N')
@@ -50,8 +54,10 @@ LF pr : tm -> tm -> type =
 % ---------------------------------------------------------------------------
 %{{
 ### Typing judgement
-Following the judgements-as-types principle, we define the type family `oft` which is indexed by terms `tm` and types `tp`. Constructors `of_app` and `of_lam` encode the typing rules for application and abstraction, respectively.
+Following the judgements-as-types principle, we define the type family `oft` which is indexed by terms `tm` and types `tp`.
+Constructors `of_app` and `of_lam` encode the typing rules for application and abstraction, respectively.
 }}%
+
 LF oft: tm -> tp -> type =
   | of_app: oft M1 (arr T2 T) -> oft M2 T2 -> oft (app M1 M2) T
   | of_lam: ({x:tm}oft x T1 -> oft (M x) T2) -> oft (lam M) (arr T1 T2)
@@ -61,7 +67,9 @@ LF oft: tm -> tp -> type =
 % ---------------------------------------------------------------------------
 %{{
 ## Context declarations
-Just as types classify expressions, contexts are classified by context schemas. }}%
+Just as types classify expressions, contexts are classified by context schemas.
+}}%
+
 schema rCtx = block x:tm, pr_v: pr x x;
 
 % ---------------------------------------------------------------------------
@@ -76,8 +84,12 @@ schema trCtx = some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
 % Substitution lemma - for free, direct
 %{{
 ## Substitution Lemma
-Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free since substitutivity is just a by-product of
-hypothetical-parametric judgements. Strictly speaking, the substitution lemma does not need to be stated explicitly in order to prove type preservation for parallel reduction but we've encoded it regardless. While this is usually proved by induction on the first derivation, we show it as a corollary of the substitution principles. In stating the substitution lemma we explicitly state that the types `S` and `T` cannot depend on the context `g`, i.e. they are closed.}}%
+Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free since substitutivity is just a by-product of hypothetical-parametric judgements.
+Strictly speaking, the substitution lemma does not need to be stated explicitly in order to prove type preservation for parallel reduction but we've encoded it regardless.
+While this is usually proved by induction on the first derivation, we show it as a corollary of the substitution principles.
+In stating the substitution lemma we explicitly state that the types `S` and `T` cannot depend on the context `g`, i.e. they are closed.
+}}%
+
 rec subst : (g:tCtx)
             [g, b: block x:tm, of_v: oft x T[] |- oft M[.., b.1] S[]]
 -> [g |- oft N T[]]
@@ -94,7 +106,12 @@ let [g |- D2] = d2 in
 % Type preservation for parallel reduction
 %{{
 ## Type Preservation for Parallel Reductions
-We prove type preservation for parallel reduction: when `M` steps to `N` and `M` has type `A` then `N` has the same type `A`. expressions to depend on the context since we may step terms containing variables. Substitution property for parametric and hypothetical derivations is free. We do not enforce here that the type `A` is closed. Although this is possible by writing `A[]` the statement looks simpler if we do not enforce this extra invariant.}}%
+We prove type preservation for parallel reduction: when `M` steps to `N` and `M` has type `A` then `N` has the same type `A`.
+expressions to depend on the context since we may step terms containing variables.
+Substitution property for parametric and hypothetical derivations is free.
+We do not enforce here that the type `A` is closed.
+Although this is possible by writing `A[]` the statement looks simpler if we do not enforce this extra invariant.
+}}%
 
 rec tps : (g:trCtx)
             [g |- pr M N] -> [g |- oft M A]
@@ -122,6 +139,14 @@ fn r => fn d => case r of
     let [g |- F2] = tps [g |- R2] [g |- D2] in
     [g |- of_app F1 F2]
 ;
+
 %{{
-The &beta;-reduction case is perhaps the most note-worthy. We know by assumption that `d:[g |- oft (app (lam A (\x. M x)) N)) (arr A B)` and by inversion that `d:[g |- of_a (of_l \x. \u. D1 x u)D2]` where `D1` stands for `oft (M x) B` in the extended context `g, x:tm , u:oft x A`. Furthermore, `D2` describes a derivation `oft N A`. A recursive call on `D2` yields `F2:oft N' A`. Likewise, y the i.h. on `D1`, we obtain a derivation <code/>F1:oft M' B</code> in `g, b:block (x:tm , of_x:oft x A)`. We now want to substitute for `x` the term `N'`, and for the derivation `oft x A` the derivation `F2`. This is achieved by applying to `F1` the substitution `.., _ F2)`. Since in the program above we do not have the name `N` available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
+The β-reduction case is perhaps the most note-worthy.
+We know by assumption that `d:[g |- oft (app (lam A (\x. M x)) N) (arr A B)]` and by inversion that `d:[g |- of_a (of_l \x. \u. D1 x u)D2]` where `D1` stands for `oft (M x) B` in the extended context `g, x:tm , u:oft x A`.
+Furthermore, `D2` describes a derivation `oft N A`.
+A recursive call on `D2` yields `F2:oft N' A`.
+Likewise, by the i.h. on `D1`, we obtain a derivation `F1:oft M' B` in `g, b:block (x:tm , of_x:oft x A)`.
+We now want to substitute for `x` the term `N'`, and for the derivation `oft x A` the derivation `F2`.
+This is achieved by applying to `F1` the substitution `[.., _ F2]`.
+Since in the program above we do not have the name `N` available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
 }}%

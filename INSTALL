@@ -25,31 +25,28 @@ Table of contents:
 1.1 Generic Prerequisites
 =========================
 
-The following packages must be installed to use Beluga:
+The following must be installed before proceeding with the installation of
+Beluga:
 
-ocaml 4.05.0+:           http://caml.inria.fr/download.en.html
-extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
-gen:                     https://github.com/c-cube/gen
-linenoise:               https://github.com/ocaml-community/ocaml-linenoise
-sedlex:                  https://github.com/ocaml-community/sedlex
+opam 2.1.4+:             https://opam.ocaml.org/doc/Install.html
+GNU Make 4.0+:           https://www.gnu.org/software/make/
 
 Optional dependencies (for improved beli mode):
 
-rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
+rlwrap:                  https://github.com/hanslub42/rlwrap
 
 
 1.1.1 Debian/Ubuntu
 -------------------
 
 Under Debian Linux, all the necessary prerequisites can be installed
-with just the following command:
+with the following commands:
 
 $ apt-get install opam
 $ opam init --bare
-$ opam switch create ocaml-base-compiler.4.09.0
-$ eval $(opam env)
 # from the Beluga directory
-$ opam install --deps-only ./beluga.opam
+$ make setup-install
+$ make install
 
 The interactive mode is greatly improved if you have rlwrap installed,
 so you might also want to consider:
@@ -66,10 +63,9 @@ and the easiest way to install opam is via Homebrew (https://brew.sh/):
 
 $ brew install opam
 $ opam init --bare
-$ opam switch create ocaml-base-compiler.4.09.0
-$ eval $(opam env)
 # from the Beluga directory
-$ opam install --deps-only ./beluga.opam
+$ make setup-install
+$ make install
 
 The interactive mode is greatly improved if you have rlwrap installed,
 so you might also want to consider:
@@ -80,12 +76,12 @@ $ brew install rlwrap
 -------------
 
 There are two options for Windows users. If you use Windows 10 or
-later versions, Using WSL (Windows Subsystem for Linux) is
+later versions, using WSL (Windows Subsystem for Linux) is
 recommended.
 
 1.1.3.1 Using WSL
 
-Install WSL (https://docs.microsoft.com/en-us/windows/wsl/install-win10)
+Install WSL (https://docs.microsoft.com/en-us/windows/wsl/install)
 first, and follow the right instruction according to your distribution.
 
 In Ubuntu WSL distribution, following the instructions for Debian/Ubuntu
@@ -136,22 +132,27 @@ Compile by running "make" from the Beluga directory.
 
 $ make
 
-You can now run Beluga programs with the newly
-"beluga" executable in the "bin" directory
+You can now run Beluga programs with the newly built "beluga" executable
 
-$ ./bin/beluga path/to/program.bel
+$ ./_build/install/default/bin/beluga path/to/program.bel
+
+Use the following command to install Beluga in the current opam switch:
+
+$ make install
 
 1.2.1 Compilation Tips
 -------------------------
 
-Running `make clean' will clean the directory of compilation results
+Running `make clean' will clean the directory of compilation results.
+If you installed Beluga in the current opam switch, use `make uninstall` to
+remove it.
 
 1.3 Troubleshooting
 ===================
 
 Attempting to build Beluga before installing the prequisites may cause
-libraries to be only partially updated. You may recieve a new error message
-once you've set up the prereq packages.
+libraries to be only partially updated. You may receive a new error message
+once you've set up the prerequisite packages.
 
 Error: The files [path/to/file]
         and [path/to/file]
@@ -159,7 +160,7 @@ Error: The files [path/to/file]
 
 Try cleaning the Beluga directory.
 
-$ make clean all
+$ make clean
 
 =========================
 2. Configuration
@@ -170,8 +171,8 @@ $ make clean all
 
 You will need Ruby 1.9 for running the script.
 
-For MAC OS:
-The default version of ruby installed on Mac OS is usually not Ruby 1.9, but
+For macOS:
+The default version of ruby installed on macOS is usually not Ruby 1.9, but
 Ruby 1.8. To install the newest version of Ruby, we recommend installing first
 RVM, the “Ruby Version Manager. This will make installing Ruby 1.9 easy.
 In your home directory, you can say:

@@ -1,15 +1,8 @@
 %{{
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
-</script>
-<script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
-
 # Normalization by Evaluation
 
 This case study shows how to implement a type-preserving normalizer using normalization by evaluation [Berger and Schwichtenberg 1991].
-Here we compute $\eta$-long normal forms for the simply-typed lambda calculus.
+Here we compute \\(\eta\\)-long normal forms for the simply-typed lambda calculus.
 See also [Cave and Pientka 2012] for more information on this example.
 
 The setup is a standard intrinsically-typed lambda calculus:
@@ -26,7 +19,7 @@ lam : (tm T -> tm S) -> tm (arr T S).
 schema tctx = tm T;
 
 %{{
-Below, we describe $\eta$-long normal forms. Notice that we allow embedding of neutral terms into normal terms only at base type `b`: this enforces $\eta$-longness.
+Below, we describe \\(\eta\\)-long normal forms. Notice that we allow embedding of neutral terms into normal terms only at base type `b`: this enforces \\(\eta\\)-longness.
 }}%
 
 neut : tp -> type.       --name neut R.

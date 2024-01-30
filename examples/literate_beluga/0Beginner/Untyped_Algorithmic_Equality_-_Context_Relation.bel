@@ -1,5 +1,6 @@
 %{{
-$Algorithmic Equality for the Untyped Lambda-calculus (R-version)
+# Algorithmic Equality for the Untyped Lambda-calculus (R-version)
+
 We discuss completeness of algorithmic equality for untyped lambda-terms with respect to declarative equality of lambda-terms.
 This case-study is part of [ORBI](https://github.com/pientka/ORBI), Open challenge problem Repository for systems reasoning with Binders.
 For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.

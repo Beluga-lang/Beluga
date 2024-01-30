@@ -1,8 +1,8 @@
 % Author: Brigitte Pientka
+
 %{{
-# Normalizing lambda-terms
-}}%
-%{{
+# Normalizing lambda-Terms
+
 ## Syntax
 We define first intrinsically well-typed lambda-terms using the base type `nat` and function type.
 }}%

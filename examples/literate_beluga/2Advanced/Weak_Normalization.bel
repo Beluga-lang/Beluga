@@ -125,7 +125,7 @@ mlam MS => fn r => case r of
 %{{
 The trivial fact that reducible terms halt has a corresponding
 trivial proof, analyzing the construction of the the proof of
-'Reduce[|- T] [|- M]'
+`Reduce [|- T] [|- M]`
 }}%
 
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =

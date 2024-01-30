@@ -7,7 +7,7 @@
 %{{
 # Closing terms with free variables
 
-We'll first defining what terms are in the untyped lambda calculus.
+We'll first be defining what terms are in the untyped lambda calculus.
 }}%
 
 LF tm : type =

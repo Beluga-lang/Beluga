@@ -1,11 +1,4 @@
 %{{
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
-</script>
-<script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
-
 # Transitivity of Algorithmic Subtyping
 
 This example follows the proof in the proof pearl description which appeared at TPHOLs2007
@@ -33,7 +26,7 @@ for type variables, but instead we provide for each type variable
 its own reflexivity and transitivity version. In other words, our rule for polymorphic types implements the following:
 $$\frac{\Gamma \vdash T_1 <: S_1 \qquad \Gamma, tr:a <: U \rightarrow U <: T \rightarrow a <: T, w:a <: T, ref : a <: a \vdash S_2 <: T_2 }{\Gamma \vdash \forall a:S_1.S_2(a) <: \forall a:T_1.T_2(a)}$$
 
-We use ($<:$) or `sub` to denote algorithmic subtyping.
+We use (\\(<:\\)) or `sub` to denote algorithmic subtyping.
 }}%
 
 LF sub : tp -> tp -> type =
@@ -59,7 +52,7 @@ schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 %{{
 ### Reflexivity
 
-**Theorem** :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$.
+**Theorem** :  For every \\(\Gamma\\) and \\(T\\),  \\(\Gamma\vdash T <: T\\).
 
 The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga.
 Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and `{T: [g |- tp]}`.
@@ -85,7 +78,7 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] =
 %{{
 ### Transitivity
 
-**Theorem** : For every $\Gamma$, $S$, $Q$ and $T$, if $\Gamma\vdash S <: Q$ and $\Gamma\vdash Q <: T$, then $\Gamma\vdash S <: T$.
+**Theorem** : For every \\(\Gamma\\), \\(S\\), \\(Q\\) and \\(T\\), if \\(\Gamma\vdash S <: Q\\) and \\(\Gamma\vdash Q <: T\\), then \\(\Gamma\vdash S <: T\\).
 
 The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T] -> [g |- sub S T]`.
 The context variable is written implicitly in round bracket as `(g:s_ctx)`.
@@ -168,7 +161,7 @@ Recall `D2` is a parametric and hypothetical derivation which can be viewed as a
 ## Declarative subtyping
 
 We can also define declarative subtyping in Beluga and prove the equivalence between algoritmic and declarative subtyping through soundness and completeness proofs.
-We use ($<$) or `subtype` to denote declarative subtyping.
+We use (\\(<\\)) or `subtype` to denote declarative subtyping.
 }}%
 
 
@@ -195,7 +188,7 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 %{{
 ### Soundness
 
-**Theorem** :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
+**Theorem** : For every \\(\Gamma\\), \\(T\\) and \\(S\\), if \\(\Gamma\vdash T<:S\\), then \\(\Gamma\vdash T < S\\) .
 }}%
 
 rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
@@ -230,7 +223,7 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
 %{{
 ### Completeness
 
-**Theorem**: For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$, then $\Gamma\vdash T <: S$.
+**Theorem**: For every \\(\Gamma\\), \\(T\\) and \\(S\\), if \\(\Gamma\vdash T < S\\), then \\(\Gamma\vdash T <: S\\).
 }}%
 
 rec complete : (g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] =

@@ -1,0 +1,52 @@
+% Dynamics of CP
+
+% Structural Equivalences
+≡ : proc → proc → type.
+--infix ≡ 10 left.
+≡comm : dual A A' → (pcomp A  P Q) ≡ (pcomp A' Q  P).
+≡assoc: (pcomp B (\y. pcomp A P (\x. Q x y)) R)
+      ≡ (pcomp A P (\x. pcomp B (Q x) R)).
+
+% Beta reductions, commuting conversions, and congruence for pcomp
+⇛ : proc → proc → type.
+--infix ⇛ 10 left.
+
+% Note: keep in mind ⇛ is an infix type constructor and is therefore unrelated to
+% →, which constructs LF functions
+% principal reductions
+βfwd : (pcomp A (\x. fwd x Y) P)
+     ⇛ (P Y).
+β1⊥  : (pcomp ① (\x. close x) (\x. wait x P))
+     ⇛ P.
+β⊗⅋  : (pcomp (A ⊗ B) (\x. (out x P Q)) (\x. inp x R))
+     ⇛ (pcomp A P (\y. pcomp B Q (\x. R x y))).
+β⊕&1 : (pcomp (A ⊕ B) (\x. inl x P) (\x. choice x Q R))
+     ⇛ (pcomp A P Q).
+β⊕&2 : (pcomp (A ⊕ B) (\x. inr x P) (\x. choice x Q R))
+     ⇛ (pcomp B P R).
+
+% commuting conversions
+κ⊥  : (pcomp C (\z. wait X (P z)) R)
+    ⇛ (wait X (pcomp C P R)).
+κ⊗1 : (pcomp C (\z. out X (\y. P y z) Q) R)
+    ⇛ (out X (\y. pcomp C (\z. P y z) R) Q).
+κ⊗2 : (pcomp C (\z. out X P (\x. Q x z)) R)
+    ⇛ (out X P (\x. pcomp C (\z. Q x z) R)).
+κ⅋  : (pcomp C (\z. inp X (\x.\y. P x y z)) Q)
+    ⇛ (inp X (\x.\y. pcomp C (\z. P x y z) Q)).
+κ⊕1 : (pcomp C (\z. inl X (\x. P x z)) Q)
+    ⇛ (inl X (\x. pcomp C (\z. P x z) Q)).
+κ⊕2 : (pcomp C (\z. inr X (\x. P x z)) Q)
+    ⇛ (inr X (\x. pcomp C (\z. P x z) Q)).
+κ&  : (pcomp C (\z. choice X (\x. P x z) (\x. Q x z)) R)
+    ⇛ (choice X (\x. pcomp C (\z. (P x z)) R) (\x. pcomp C (\z. Q x z) R)).
+
+% reduction under cut
+β∥1 : ({x:name} ((P x) ⇛ (P' x)))
+    → (pcomp A P Q) ⇛ (pcomp A P' Q).
+β∥2 : ({x:name}((Q x) ⇛ (Q' x)))
+    → (pcomp A P Q) ⇛ (pcomp A P Q').
+
+% Reductions commute with equivalences
+β≡: (P ≡ Q) → (Q ⇛ R) → (R ≡ S) → P ⇛ S.
+

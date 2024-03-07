@@ -1,0 +1,49 @@
+% Basic shared definitions of CP
+% Defines types, duality, processes, and equality predicates on types/processes
+
+name : type.      % channel names
+
+tp : type.        % channel types
+① : tp.           % termination ("provider")
+⊥ : tp.           % termination ("client")
+⊗ : tp → tp → tp. % channel output
+⅋ : tp → tp → tp. % channel input
+& : tp → tp → tp. % receive choice
+⊕ : tp → tp → tp. % send choice
+
+--infix ⊗ 5 left.
+--infix ⅋ 5 left.
+--infix ⊕ 4 left.
+--infix & 4 left.
+
+eq : tp → tp → type.
+refl : eq A A.
+
+% duality condition
+dual : tp → tp → type.
+D1 : dual ① ⊥.
+D⊥ : dual ⊥ ①.
+D⊗ : dual A A' → dual B B' → dual (A ⊗ B) (A' ⅋ B').
+D⅋ : dual A A' → dual B B' → dual (A ⅋ B) (A' ⊗ B').
+D& : dual A A' → dual B B' → dual (A & B) (A' ⊕ B').
+D⊕ : dual A A' → dual B B' → dual (A ⊕ B) (A' & B').
+
+% processes
+proc : type.
+
+eq_proc : proc → proc → type.
+refl_proc : eq_proc P P.
+
+fwd : name → name → proc.                             % fwd x y
+pcomp : tp → (name → proc) → (name → proc) → proc.    % nu x:A (P | Q)
+
+close : name → proc.                                  % close x
+wait : name → proc → proc.                            % wait x; P
+
+out : name → (name → proc) → (name → proc) → proc.    % out x; (y.P | w.Q)
+inp : name → (name → name → proc) → proc.             % inp x; w.y.P
+
+inl : name → (name → proc) → proc.                    % x[inl]; w.P
+inr : name → (name → proc) → proc.                    % x[inr]; w.P
+choice : name → (name → proc) → (name → proc) → proc. % case x {w.P | w.Q}
+

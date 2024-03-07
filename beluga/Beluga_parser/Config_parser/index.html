@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Config_parser (beluga.Beluga_parser.Config_parser)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.1"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">beluga</a> &#x00BB; <a href="../index.html">Beluga_parser</a> &#x00BB; Config_parser</nav><header class="odoc-preamble"><h1>Module <code><span>Beluga_parser.Config_parser</span></code></h1><p>Reader for configuration files for Beluga signatures.</p><p>A configuration file is a list of Beluga source file names (with file extension <code>.bel</code>) or configuration file names (with file extension <code>.cfg</code>). Configuration files are read recursively.</p><p>For instance, the following is a valid configuration file:</p><pre>      % Definitions
+      syntax.bel
+      join.bel
+
+      % Theorems
+      context_functions.bel
+      lemma1.bel
+      substitution.bel
+      judgments.bel
+      substitution_functions.bel
+      subst_split.bel</pre></header><div class="odoc-content"><div class="odoc-spec"><div class="spec value anchored" id="val-read_configuration"><a href="#val-read_configuration" class="anchor"></a><code><span><span class="keyword">val</span> read_configuration : 
+  <span><span class="label">filename</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span>(<a href="../../Syncom/Location/index.html#type-t">Beluga_syntax.Location.t</a> * string)</span> list</span></span></code></div><div class="spec-doc"><p><code>read_configuration ~filename</code> is the list of Beluga file paths to load as configured in <code>filename</code>. If <code>filename</code> is not a configuration file, then <code>filename</code> is the only Beluga file path returned.</p><p>A configuration file is a UTF-8 encoded list of file paths. The configuration file may have line comments starting with <code>%</code>. Whitespaces in paths are supported.</p></div></div></div></body></html>

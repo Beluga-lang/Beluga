@@ -411,11 +411,17 @@ module Make
   let dot =
     let dot_identifier_and_insert_ident =
       span dot_identifier >>= fun (location, identifier) ->
-      let ident_token =
-        Located_token.make ~location
-          ~token:(Token.IDENT (Identifier.name identifier))
-      in
-      insert_token ident_token
+      if Identifier.show identifier = "_" then
+        let wildcard_token =
+          Located_token.make ~location ~token:Token.UNDERSCORE
+        in
+        insert_token wildcard_token
+      else
+        let ident_token =
+          Located_token.make ~location
+            ~token:(Token.IDENT (Identifier.name identifier))
+        in
+        insert_token ident_token
     and dot_integer_and_insert_intlit =
       span dot_integer >>= fun (location, integer) ->
       let intlit_token =

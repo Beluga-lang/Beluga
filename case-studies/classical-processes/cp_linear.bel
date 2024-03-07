@@ -1,0 +1,49 @@
+% linearity predicate: check that name occurs linearly in proc
+linear: (name → proc) → type.
+
+% Most constructs (except close and cut) have a "principle" case, where the abstracted channel is being used in the
+% process, and some "congruence" cases, where the abstracted channel is not immediately being used and therefore need to
+% be passed.
+
+% principle cases: Aside from close and wait, where the channel continuation does not exist, all other cases require
+% that the appropriate continuation process are themselves linear in the "new" channel
+
+% axioms
+l_fwd   : linear (\x. fwd x Y).
+l_fwd2  : linear (\x. fwd Y x).
+l_close : linear (\x. close x).
+l_wait  : linear (\x. wait x P).
+
+l_out   : linear Q → linear (\x. out x P Q).
+l_inp   : ({y:name} linear (\x. P x y)) →  linear (\x. inp x P).
+l_inl   : linear P → linear (\x. inl x P).
+l_inr   : linear P → linear (\x. inr x P).
+l_choice: linear P → linear Q → linear (\x. choice x P Q).
+
+% congruence cases
+
+% note that pcomp only has congruence
+l_pcomp1: ({x:name}linear  (\z. P x z))
+        → linear  (\z. pcomp A (\x. P x z)  Q).
+l_pcomp2: ({x:name}linear  (\z. Q x z))
+        → linear  (\z. pcomp A P (\x. Q x z)).
+
+% (no congruence case for close)
+l_wait2: linear P → linear (\z. wait X (P z)).
+
+% z can appear in either the P or Q, so we need two congruence rules for out
+l_out2 : ({y:name} linear (\z. P z y))
+       → linear (\z. out X (P z) Q).
+l_out3 : ({x':name}linear (\z. Q z x'))
+       → linear (\z. out X P (Q z)).
+l_inp2 : ({x:name}{y:name} linear (\z. P z x y))
+       → linear (\z. inp X (P z)).
+
+
+l_inl2   : ({x':name}linear (\z. P z x')) → linear (\z. inl X (P z)).
+l_inr2   : ({x':name}linear (\z. P z x')) → linear (\z. inr X (P z)).
+% case is additive, so z must appear linearly in both branches
+l_choice2: ({x':name}linear (\z. P z x'))
+         → ({x':name}linear (\z. Q z x'))
+         → linear (\z. choice X (P z) (Q z)).
+

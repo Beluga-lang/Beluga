@@ -1,0 +1,390 @@
+% Linearity is preserved under structural equivalences
+rec lin_s≡ : (g : ctx) [g, x:name ⊢ P[..,x] ≡ P'[..,x] ]
+                     → [g ⊢ linear (\x. P)]
+                     → [g ⊢ linear (\x. P')] =
+/ total 1 /
+fn ePP' ⇒ fn lP ⇒ case ePP' of
+| [g, x:name ⊢ ≡comm _] ⇒
+  (case lP of
+  | [g ⊢ l_pcomp1 (\y. linP')] ⇒ [g ⊢ l_pcomp2 (\y. linP')]
+  | [g ⊢ l_pcomp2 (\y. linP')] ⇒ [g ⊢ l_pcomp1 (\y. linP')]
+  )
+| [g, x:name ⊢ ≡assoc] ⇒
+  (case lP of
+  | [g ⊢ l_pcomp1 (\y. l_pcomp1 (\x. linP[..,x,y]))] ⇒
+    let [g, x:name ⊢ linP'] = str_lin [g, x:name, y:name ⊢ linP] in
+    [g ⊢ l_pcomp1 (\x. linP')]
+  | [g ⊢ l_pcomp1 (\y. l_pcomp2 (\x. linQ))] ⇒
+    [g ⊢ l_pcomp2 (\x. l_pcomp1 (\y. linQ[..,y,x]))]
+  | [g ⊢ l_pcomp2 (\y. linR)] ⇒
+    [g ⊢ l_pcomp2 (\x. l_pcomp2 (\y. linR[..,y]))]
+  )
+;
+
+% Typing is preserved under structural equivalences
+rec wtp_s≡ : (g : ctx) [g ⊢ wtp P ] → [g ⊢ P ≡ P' ] → [g ⊢ wtp P' ] =
+/ total 1 /
+fn tpP ⇒ fn ePP' ⇒ case ePP' of
+| [g ⊢ ≡comm D[]] ⇒
+  let [g ⊢ wtp_pcomp D'[] (\x.\h. wtp_P) (\x.\h. wtp_Q) linP linQ] = tpP in
+  let [ ⊢ refl]  = dual_uniq [⊢ D] [⊢ D'] in
+  let [ ⊢ D''] = dual_sym [ ⊢ D] in
+  [g ⊢ wtp_pcomp D''[] (\x.\h. wtp_Q) (\x.\h. wtp_P) linQ linP]
+| [g ⊢ ≡assoc] ⇒
+  let [g ⊢ wtp_pcomp D'[] (\y.\hy. wtpPQ) (\y.\hy. wtpR) linPQy linRy] = tpP in
+  let [g, y:name, hy:hyp y _ ⊢ wtp_pcomp D[]
+      (\x.\hx. wtpP[..,x,hx,y,hy]) (\x.\hx. wtpQ) linPx[..,y] linQx[..,y]]
+    = [g, y:name, hy:hyp y _ ⊢ wtpPQ] in
+  let [g, blx:block(x:name, h:hyp x _) ⊢ wtpP']
+    = str_wtp [g, blx:block(x:name, h:hyp x _), y:name, hy:hyp y _
+               ⊢ wtpP[..,blx.x,blx.h,y,hy]] in
+  let [g ⊢ linPx'] = str_lin [g, y:name ⊢ linPx] in
+  (case [g ⊢ linPQy] of
+  | [g ⊢ l_pcomp1 (\y. linPy)] ⇒
+    impossible lin_name_must_appear [g, y:name ⊢ linPy]
+  | [g ⊢ l_pcomp2 (\y. linQy)] ⇒
+    [g ⊢ wtp_pcomp D[]
+      (\x.\hx. wtpP'[..,<x;hx>])
+      (\x.\hx. wtp_pcomp D'[] (\y.\hy. wtpQ[..,y,hy,x,hx]) (\y.\hy. wtpR[..,y,hy])
+               linQy[..,x] linRy[..])
+      linPx' (l_pcomp1 (\y. linQx))]
+  )
+;
+
+
+%% subject reduction for linear
+rec lin_s : (g : ctx) [g, x:name, h:hyp x A[] ⊢ wtp P[..,x] ]
+                   → [g, x:name ⊢ P[..,x] ⇛ P'[..,x] ]
+                   → [g ⊢ linear (\x. P)]
+                   → [g ⊢ linear (\x. P')] =
+/ total 2 /
+fn tpP ⇒ fn sPP' ⇒ fn linP ⇒
+case sPP' of
+| [g, x:name ⊢ βfwd] ⇒
+  let [g, x:name, h:hyp x A[] ⊢
+    wtp_pcomp D[] (\x'.\h'. tpP')
+                  (\x'.\h'.tpQ)
+                  linP''[..,x] linQ[..,x]] = tpP in
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_fwd2)] ⇒
+    str_lin [g, x:name ⊢ linQ]
+  | [g ⊢ l_pcomp2 (\x. linQ')] ⇒
+    let [g, x:name, h: hyp x A[], x':name, h':hyp x' _ ⊢
+      wtp_fwd D'[] x' h' y[..] _ ] =
+    [g, x:name, h: hyp x A[], x':name, h':hyp x' _ ⊢ tpP'] in
+    [g ⊢ linQ'[..,y]]
+  )
+| [g, x:name ⊢ β⊗⅋] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. (l_out2 \y.linP1))] ⇒
+    [g ⊢ l_pcomp1 (\y. linP1[.., y])]
+  | [g ⊢ l_pcomp1 (\x. (l_out3 (\x'. linP2)))] ⇒
+    [g ⊢ l_pcomp2 (\y. (l_pcomp1 (\x. linP2[..,x,x])))]
+  | [g ⊢ l_pcomp2 (\x. (l_inp2 \x'.\y. linQ))] ⇒
+    [g ⊢ l_pcomp2 (\y. (l_pcomp2 (\x. linQ[..,x,x,y])))]
+  )
+| [g, x:name ⊢ β⊕&1] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_inl2 (\x'.linP'))] ⇒
+    [g ⊢ l_pcomp1 (\x. linP'[..,x,x])]
+  | [g ⊢ l_pcomp2 (\x. l_choice2 (\x'. linQl) (\x'._))] ⇒
+    [g ⊢ l_pcomp2 (\x. linQl[..,x,x])]
+  )
+| [g, x:name ⊢ β⊕&2] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_inr2 (\x'.linP'))] ⇒
+    [g ⊢ l_pcomp1 (\x. linP'[..,x,x])]
+  | [g ⊢ l_pcomp2 (\x. l_choice2 (\x'._) (\x'.linQr))] ⇒
+    [g ⊢ l_pcomp2 (\x. linQr[..,x,x])]
+  )
+| [g, x:name ⊢ β1⊥] ⇒
+  let [g ⊢ l_pcomp2 (\x. l_wait2 linP')] = linP in
+  str_lin [g, x:name ⊢ linP']
+ %commuting conversions
+| [g, x:name ⊢ κ⊥] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_wait)] ⇒
+    [g ⊢ l_wait]
+  | [g ⊢ l_pcomp1 (\x. l_wait2 linP')] ⇒
+    [g ⊢ l_wait2 (l_pcomp1 (\x. linP'))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_wait2 (l_pcomp2 (\x. linQ))]
+  )
+| [g, x:name  ⊢ κ⊗1] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_out linP2)] ⇒
+    str_lin [g, x:name ⊢ l_out linP2]
+  | [g ⊢ l_pcomp1 (\x. (l_out2 \y. linP1))] ⇒
+    [g ⊢ l_out2 (\y. l_pcomp1 (\x. linP1[..,x,y]))]
+  | [g ⊢ l_pcomp1 (\x. (l_out3 \x'. linP2))] ⇒
+    str_lin [g, x:name ⊢ l_out3 \x'. linP2]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_out2 (\y. l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g,  x:name ⊢ κ⊗2] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_out linP2)] ⇒
+    [g ⊢ l_out (l_pcomp1 (\x. linP2))]
+  | [g ⊢ l_pcomp1 (\x. (l_out2 \y. linP1))] ⇒
+    str_lin [g, x:name ⊢ l_out2 (\y. linP1)]
+  | [g ⊢ l_pcomp1 (\x. (l_out3 \x'. linP2))] ⇒
+    [g ⊢ l_out3 \x'.(l_pcomp1 (\x. linP2[..,x,x']))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_out3 \x'. (l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g, x:name ⊢ κ⅋] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_inp (\y. linP'))] ⇒
+    [g ⊢ l_inp (\y. l_pcomp1 (\x. linP'[..,x,y]))]
+  | [g ⊢ l_pcomp1 (\x. (l_inp2 \x'. \y. linP'))] ⇒
+    [g ⊢ l_inp2 (\x'. \y. l_pcomp1 (\x. linP'[..,x,x',y]))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_inp2 (\x'. \y. l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g,  x:name ⊢ κ⊕1] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_inl linP')] ⇒
+    [g ⊢ l_inl (l_pcomp1 (\x. linP'))]
+  | [g ⊢ l_pcomp1 (\x. (l_inl2 \x'. linP'))] ⇒
+    [g ⊢ l_inl2 \x'. (l_pcomp1 (\x. linP'[..,x,x']))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_inl2 \x'. (l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g,  x:name ⊢ κ⊕2] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_inr linP')] ⇒
+    [g ⊢ l_inr (l_pcomp1 (\x. linP'))]
+  | [g ⊢ l_pcomp1 (\x. (l_inr2 \x'. linP'))] ⇒
+    [g ⊢ l_inr2 \x'. (l_pcomp1 (\x. linP'[..,x,x']))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_inr2 \x'. (l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g, x:name ⊢ κ&] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. l_choice linP1 linP2)] ⇒
+    [g ⊢ l_choice (l_pcomp1 (\x. linP1)) (l_pcomp1 (\x. linP2))]
+  | [g ⊢ l_pcomp1 (\x. (l_choice2 (\x'. linP1) (\x'. linP2)))] ⇒
+    [g ⊢ l_choice2 (\x'. l_pcomp1 (\x. linP1[..,x,x']))
+                   (\x'. l_pcomp1 (\x. linP2[..,x,x']))]
+  | [g ⊢ l_pcomp2 (\x. linQ)] ⇒
+    [g ⊢ l_choice2 (\x'. l_pcomp2 (\x. linQ[..,x])) (\x'. l_pcomp2 (\x. linQ[..,x]))]
+  )
+| [g, x:name ⊢ β∥1 (\y. sPl[..,y,x])] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. linPl)] ⇒
+    let [g, x:name, h:hyp x A[] ⊢ wtp_pcomp D[] (\y.\hy.tpPl) (\y.\hy.tpPr) lP[..,x] lQ[..,x]] = tpP in
+    let [g, bly:block x:name, h:hyp x B[] ⊢ linPl'[..,bly.x]] =
+    lin_s [g, bly:block (x:name, h:hyp x _), x:name, h:hyp x A[] ⊢ tpPl[..,x, h,bly.x,bly.h]]
+          [g, bly:block (x:name, h:hyp x _), x:name  ⊢ sPl[..,bly.x, x]]
+          [g, bly:block (x:name, h:hyp x _) ⊢ linPl[.., bly.x]] in
+    [g ⊢ l_pcomp1 (\x. linPl')]
+  | [g ⊢ l_pcomp2 (\x. linPr)] ⇒
+    let Res [g, b:block (x:name, h:hyp x ⊥) ⊢ _]
+            [g, b:block (x:name, h:hyp x ⊥), x:name |- refl_proc]
+            [g, b:block (x:name, h:hyp x ⊥) ⊢ sPl'] =
+      str_step [g, b:block (x:name, h:hyp x ⊥), x:name ⊢ sPl[..,b.1,x]] in
+    [g ⊢ l_pcomp2 (\x. linPr)]
+  )
+
+| [g, x:name ⊢ β∥2 (\y. sPr[..,y,x])] ⇒
+  (case linP of
+  | [g ⊢ l_pcomp1 (\x. linPl)] ⇒
+    let Res [g, b:block (x:name, h:hyp x ⊥) ⊢ _]
+            [g, b:block (x:name, h:hyp x ⊥), x:name |- refl_proc]
+            [g, b:block (x:name, h:hyp x ⊥) ⊢ sPr'] =
+      str_step [g, b:block (x:name, h:hyp x ⊥), x:name ⊢ sPr[..,b.1,x]] in
+    [g ⊢ l_pcomp1 (\x. linPl)]
+  | [g ⊢ l_pcomp2 (\x. linPr)] ⇒
+    let [g, x:name, h:hyp x A[] ⊢ wtp_pcomp D[] (\y.\hy.tpPl) (\y.\hy.tpPr) lP[..,x] lQ[..,x]] = tpP in
+    let [g, bly:block x:name, h:hyp x B[] ⊢ linPr'[..,bly.x]] =
+    lin_s [g, bly:block (x:name, h:hyp x _), x:name, h:hyp x A[] ⊢ tpPr[..,x, h,bly.x,bly.h]]
+          [g, bly:block (x:name, h:hyp x _), x:name  ⊢ sPr[..,bly.x, x]]
+          [g, bly:block (x:name, h:hyp x _) ⊢ linPr[.., bly.x]] in
+    [g ⊢ l_pcomp2 (\x. linPr')]
+  )
+| [g, x:name ⊢ β≡ ≡PQ ⇛QR ≡RS] ⇒
+  let [g ⊢ linQ] = lin_s≡ [g, x:name ⊢ ≡PQ] linP in
+  let [g, x:name, h:hyp x A[] ⊢ wtpP] = tpP in
+  let [g, b:block(x:name, h:hyp x A[]) ⊢ wtpQ]
+    = wtp_s≡ [g, b:block(x:name, h:hyp x A[]) ⊢ wtpP[..,b.x,b.h]]
+             [g, b:block(x:name, h:hyp x A[]) ⊢ ≡PQ[..,b.x]] in
+  let [g ⊢ linR] = lin_s [g, x:name, h:hyp x A[] ⊢ wtpQ[..,<x;h>]]
+                         [g, x:name ⊢ ⇛QR] [g ⊢ linQ] in
+  let [g, b:block(x:name, h:hyp x A[]) ⊢ wtpR]
+    = wtp_s [g, b:block(x:name, h:hyp x A[]) ⊢ wtpQ]
+             [g, b:block(x:name, h:hyp x A[]) ⊢ ⇛QR[..,b.x]] in
+  lin_s≡ [g, x:name ⊢ ≡RS] [g ⊢ linR]
+and
+rec wtp_s : (g : ctx) [g ⊢ wtp P ] → [g ⊢ P ⇛ P' ] → [g ⊢ wtp P' ] =
+/ total 2 /
+fn tpP ⇒ fn sPP' ⇒ case sPP' of
+| [g ⊢ βfwd] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D] : [ ⊢ dual A A']) = [ ⊢ D] in
+  let [g, x:name,h:hyp x A[] ⊢ wtp_fwd D'[] x h #y.1[..] #y.2[..] ] = [_ ⊢ wtp_P] in
+  let ( [⊢ D'] : [ ⊢ dual A[] A'']) = [ ⊢ D'] in
+  let [⊢ refl]  = dual_uniq [⊢ D] [⊢ D'] in
+  [g ⊢ wtp_Q[.., #y.1, #y.2]]
+
+| [g ⊢ β⊗⅋] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) (l_out linP2) (l_inp (\x. linQx))] = tpP in
+  let ([ ⊢ D⊗ Dl Dr] : [ ⊢ dual (A ⊗ B) (A' ⅋ B')]) = [ ⊢ D] in
+  let [g, x:name,h:hyp x (A[] ⊗ B[])
+		       ⊢ wtp_out linP1[..,x] x h (\y.\hy. wtp_P1) (\x'.\h'. wtp_P2)] = [_ ⊢ wtp_P] in
+  let [g, x:name,h:hyp x (A'[] ⅋ B'[])
+		       ⊢ wtp_inp (\y. linQy[..,y,x]) x h (\x'.\h'.\y.\hy. wtp_Q')] = [_ ⊢ wtp_Q] in
+
+  let [g ⊢ linP1'] = str_lin [g, x:name ⊢ linP1] in
+  let [g, bly:block x:name, h:hyp x A[] ⊢ wtp_P1'] =
+    str_wtp [g, bly:block (x:name, h:hyp x A[]), x:name, hx:hyp x (A[] ⊗ B[]) ⊢ wtp_P1[..,x,hx,bly.x,bly.h]] in
+  let [g, blx':block (x:name, h:hyp x B[]) ⊢ wtp_P2'] =
+    str_wtp [g, blx':block (x:name, h:hyp x B[]), x:name, hx:hyp x (A[] ⊗ B[])
+      ⊢ wtp_P2[..,x,hx,blx'.x,blx'.h]] in
+  let [g, blx':block (x:name, h:hyp x B'[]), bly:block (x:name, h:hyp x A'[]) ⊢ wtp_Q''] =
+    str_wtp [g, blx':block (x:name, h:hyp x B'[]), bly:block (x:name, h:hyp x A'[]), x:name, hx:hyp x (A'[] ⅋ B'[]) ⊢ wtp_Q'[..,x,hx,blx'.x,blx'.h,bly.x,bly.h]] in
+  [g ⊢ wtp_pcomp Dl[] (\y. \hy. wtp_P1'[..,<y;hy>])
+    (\y. \hy. wtp_pcomp Dr[] (\x.\h. wtp_P2'[..,<x;h>]) (\x.\h. wtp_Q''[..,<x;h>,<y;hy>]) linP2[..] linQx[.., y])
+    linP1' (l_pcomp2 \x. linQy[..,x])]
+
+| [g ⊢ β⊕&1] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D⊕ Dl Dr] : [ ⊢ dual (A ⊕ B) (A' & B')]) = [ ⊢ D] in
+  let [g, x:name,h:hyp x (A[] ⊕ B[]) ⊢ wtp_inl x h (\x'. \h'. wtp_P')] = [_ ⊢ wtp_P] in
+  let [g, x:name,h:hyp x (A'[] & B'[]) ⊢ wtp_choice x h (\x'.\h'. wtp_Q') (\x'. \h'. _)] = [_ ⊢ wtp_Q] in
+  let [g ⊢ l_inl linP'] = [g ⊢ linP] in
+  let [g ⊢ l_choice linQ' _] = [g ⊢ linQ] in
+  let [g, blx':block (x:name, h:hyp x A[]) ⊢ wtp_P''] =
+    str_wtp [g, blx':block (x:name, h:hyp x A[]), x:name, h:hyp x (A[] ⊕ B[])
+      ⊢ wtp_P'[..,x,h,blx'.x,blx'.h]] in
+  let [g, blx':block (x:name, h:hyp x A'[]) ⊢ wtp_Q''] =
+    str_wtp [g, blx':block (x:name, h:hyp x A'[]), x:name, h:hyp x (A'[] & B'[])
+      ⊢ wtp_Q'[..,x,h,blx'.x,blx'.h]] in
+  [g ⊢ wtp_pcomp Dl[] (\x.\h. wtp_P''[..,<x;h>]) (\x. \h. wtp_Q''[..,<x;h>]) linP' linQ']
+| [g ⊢ β⊕&2] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D⊕ Dl Dr] : [ ⊢ dual (A ⊕ B) (A' & B')]) = [ ⊢ D] in
+  let [g, x:name,h:hyp x (A[] ⊕ B[]) ⊢ wtp_inr x h (\x'. \h'. wtp_P')] = [_ ⊢ wtp_P] in
+  let [g, x:name,h:hyp x (A'[] & B'[]) ⊢ wtp_choice x h (\x'.\h'._) (\x'.\h'.wtp_Q')] = [_ ⊢ wtp_Q] in
+  let [g ⊢ l_inr linP'] = [g ⊢ linP] in
+  let [g ⊢ l_choice _ linR'] = [g ⊢ linQ] in
+  let [g, blx':block (x:name, h:hyp x B[]) ⊢ wtp_P''] =
+    str_wtp [g, blx':block (x:name, h:hyp x B[]), x:name, h:hyp x (A[] ⊕ B[])
+      ⊢ wtp_P'[..,x,h,blx'.x,blx'.h]] in
+  let [g, blx':block (x:name, h:hyp x B'[]) ⊢ wtp_Q''] =
+    str_wtp [g, blx':block (x:name, h:hyp x B'[]), x:name, h:hyp x (A'[] & B'[])
+      ⊢ wtp_Q'[..,x,h,blx'.x,blx'.h]] in
+  [g ⊢ wtp_pcomp Dr[] (\x.\h. wtp_P''[..,<x;h>]) (\x.\h. wtp_Q''[..,<x;h>]) linP' linR']
+| [g ⊢ β1⊥] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D1] : [ ⊢ dual ① ⊥]) = [ ⊢ D] in
+  let [g, x:name,h:hyp x ① ⊢ wtp_close x h] = [g, x:name,h:hyp x ① ⊢ wtp_P] in
+  let [g, x:name,h:hyp x ⊥ ⊢ wtp_wait x h wtp_Q' ] = [_ ⊢ wtp_Q] in
+  str_wtp [g, x:name, h:hyp x ⊥ ⊢ wtp_Q']
+
+%  commuting conversions
+| [g ⊢ κ⊥] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z.\hz. wtp_P) (\z.\hz. wtp_Q) linP linQ] = tpP in
+  let [g,z:name, hz:hyp z _ ⊢ wtp_wait x[..] hx wtp_P']
+    = [g,z:name, hz:hyp z _ ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z _ ⊢ hx] in
+  let [g ⊢ l_wait2 linP'] = [g ⊢ linP] in
+  [g ⊢ wtp_wait x hx' (wtp_pcomp D[] (\z.\hz. wtp_P') (\z.\hz. wtp_Q) linP' linQ)]
+
+| [g ⊢ κ⊗1] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z.\hz. wtp_P) (\z.\hz. wtp_Q) linP linQ] = tpP in
+  let [g,z:name, hz:hyp z _ ⊢ wtp_out linP1[..,z] x[..] hx
+    (\y.\hy. wtpP1) (\x'.\hx'. wtpP2)] = [g,z:name, hz:hyp z _ ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z _ ⊢ hx] in
+  let [g,bly:block (x:name, h:hyp x _) ⊢ wtpP2'] =
+    str_wtp [g, blx':block (x:name, h:hyp x _), z:name, hz:hyp z _ ⊢ wtpP2[..,z,hz,blx'.x,blx'.h]] in
+  (case [g ⊢ linP] of
+  | [g ⊢ l_out2 (\y. linP')] ⇒
+    [g ⊢ wtp_out (l_pcomp1 \z. linP1) x hx'
+      (\y.\hy. wtp_pcomp D[] (\z.\hz.wtpP1[..,z,hz,y,hy]) (\z.\hz.wtp_Q[..,z,hz])
+                             linP'[..,y] linQ[..])
+      (\x'.\hx'. wtpP2'[..,<x';hx'>])]
+  | [g ⊢ l_out3 (\x'. linP')] ⇒
+    % z is a free var in P1, so it cannot occur in P2 (l_out3)
+    impossible lin_name_must_appear [g, y:name ⊢ linP']
+  )
+| [g ⊢ κ⊗2] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z.\hz. wtp_P) (\z.\hz. wtp_Q) linP linQ] = tpP in
+  let [g,z:name, hz:hyp z _ ⊢ wtp_out linP1[..,z] x[..] hx
+    (\y.\hy. wtpP1) (\x'.\hx'. wtpP2)] = [g,z:name, hz:hyp z _ ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z _ ⊢ hx] in
+  let [g ⊢ linP1'] = str_lin [g, z:name ⊢ linP1] in
+  let [g,bly:block (x:name, h:hyp x _) ⊢ wtpP1'] =
+    str_wtp [g, bly:block (x:name, h:hyp x _), z:name, hz:hyp z _ ⊢ wtpP1[..,z,hz,bly.x,bly.h]] in
+  (case [g ⊢ linP] of
+  | [g ⊢ l_out2 (\y. linP')] ⇒
+    % z is a free var in P2, so it cannot occur in P1 (l_out2)
+    impossible lin_name_must_appear [g, y:name ⊢ linP']
+  | [g ⊢ l_out3 (\x'. linP')] ⇒
+    [g ⊢ wtp_out linP1' x hx' (\y.\hy. wtpP1'[..,<y;hy>])
+      (\x'.\hx'. wtp_pcomp D[] (\z.\hz. wtpP2[..,z,hz,x',hx']) (\z.\hz.wtp_Q[..,z,hz])
+                                        linP'[..,x'] linQ[..])]
+  )
+| [g ⊢ κ⅋] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z.\hz. wtp_P) (\z.\hz. wtp_Q) (l_inp2 \x'.\y. linP') linQ] = tpP in
+  let [g,z:name, hz:hyp z _ ⊢ wtp_inp (\x. linPy[..,z,x]) x[..] hx (\x'.\hx'.\y.\hy. wtpP')] = [g,z:name, hz:hyp z _ ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z _ ⊢ hx] in
+  [g ⊢ wtp_inp (\x'. l_pcomp1 (\z. linPy[..,z,x'])) x hx'
+    (\x'.\hx'.\y.\hy. wtp_pcomp D[] (\z.\hz. wtpP'[..,z,hz,x',hx',y,hy]) (\z.\hz. wtp_Q[..,z,hz]) linP'[..,x',y] linQ[..])]
+| [g ⊢ κ⊕1] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z. \hz. wtp_P) (\z. \hz. wtp_Q) (l_inl2 \x'. linP') linQ] = tpP in
+  let ([ ⊢ D] : [ ⊢ dual A A']) = [ ⊢ D] in
+  let [g, z:name, hz:hyp z A[] ⊢ wtp_inl x[..] hx (\x'. \hx'. wtp_P'[.., x', hx', z, hz])]
+    = [g, z:name, hz:hyp z A[] ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z A[] ⊢ hx] in
+   [g ⊢ wtp_inl x hx'
+    (\x'.\h'. wtp_pcomp D[] (\z.\hz. wtp_P') (\z.\hz. wtp_Q[.., z, hz]) linP'[..,x'] linQ[..])]
+| [g ⊢ κ⊕2] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z. \hz. wtp_P) (\z. \hz. wtp_Q) (l_inr2 \x'. linP') linQ] = tpP in
+  let ([ ⊢ D] : [ ⊢ dual A A']) = [ ⊢ D] in
+  let [g, z:name, hz:hyp z A[] ⊢ wtp_inr x[..] hx (\x'. \hx'. wtp_P'[.., x', hx', z, hz])]
+    = [g, z:name, hz:hyp z A[] ⊢ wtp_P] in
+  let [g ⊢ hx'] = str_hyp [g, z:name, hz:hyp z A[] ⊢ hx] in
+   [g ⊢ wtp_inr x hx'
+    (\x'.\h'. wtp_pcomp D[] (\z.\hz. wtp_P') (\z.\hz. wtp_Q[.., z, hz]) linP'[..,x'] linQ[..])]
+| [g ⊢ κ&] ⇒
+  let [g ⊢ wtp_pcomp D[] (\z. \hz. wtp_P) (\z. \hz. wtp_Q) (l_choice2 (\x'.linP1) (\x'.linP2)) linQ] = tpP in
+  let [g, z:name, hz:hyp z _ ⊢ wtp_choice x[..] h (\x'.\h'.wtp_P1) (\x'.\h'.wtp_P2)] =
+  [g, z:name, hz:hyp z _ ⊢ wtp_P] in
+  let [g ⊢ h'] = str_hyp [g, z:name, hz:hyp z _ ⊢ h] in
+  [g ⊢ wtp_choice x h'
+    (\x'. \h'. wtp_pcomp D[] (\z.\hz. wtp_P1[..,z,hz,x',h']) (\z.\hz. wtp_Q[..,z,hz]) linP1[.., x'] linQ[..])
+    (\x'. \h'. wtp_pcomp D[] (\z.\hz. wtp_P2[..,z,hz,x',h']) (\z.\hz. wtp_Q[..,z,hz]) linP2[.., x'] linQ[..])]
+
+%  cut l/r
+| [g ⊢ β∥1 (\x. s_P)] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D] : [ ⊢ dual A A']) = [ ⊢ D] in
+  let [g, b:block x:name, h:hyp x A[] ⊢ wtp_P'] =
+    wtp_s [g, b:block x:name, h:hyp x A[] ⊢ wtp_P[..,b.1, b.2]]
+          [g, b:block x:name, h:hyp x A[] ⊢ s_P[..,b.1] ]
+    in
+  let [g ⊢ linP'] =
+    lin_s [g, x:name, h:hyp x A[] ⊢ wtp_P[..,x,h]]
+          [g, x:name ⊢ s_P[..,x]]
+          [g ⊢ linP]
+    in
+  [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P'[.., <x;h>]) (\x. \h. wtp_Q) linP' linQ]
+| [g ⊢ β∥2 (\x. s_Q)] ⇒
+  let [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q) linP linQ] = tpP in
+  let ([ ⊢ D] : [ ⊢ dual A A']) = [ ⊢ D] in
+  let [g, b:block x:name, h:hyp x A'[] ⊢ wtp_Q'] =
+    wtp_s [g, b:block x:name, h:hyp x A'[] ⊢ wtp_Q[..,b.1, b.2]]
+          [g, b:block x:name, h:hyp x A'[] ⊢ s_Q[..,b.1] ]
+    in
+  let [g ⊢ linQ'] =
+    lin_s [g, x:name, h:hyp x A'[] ⊢ wtp_Q[..,x,h]]
+          [g, x:name ⊢ s_Q[..,x]]
+          [g ⊢ linQ]
+    in
+  [g ⊢ wtp_pcomp D[] (\x. \h. wtp_P) (\x. \h. wtp_Q'[.., <x;h>]) linP linQ']
+| [g ⊢ β≡ ≡PQ ⇛QR ≡RS] ⇒
+  let [g ⊢ wtpQ] = wtp_s≡ tpP [g ⊢ ≡PQ] in
+  let [g ⊢ wtpR] = wtp_s [g ⊢ wtpQ] [g ⊢ ⇛QR] in
+  wtp_s≡ [g ⊢ wtpR] [g ⊢ ≡RS]
+;
+

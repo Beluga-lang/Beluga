@@ -1,0 +1,47 @@
+% Typing -- with linearity enforced.
+% Linearity is introduced every time a fresh channel is being bound to some process. Linearity of continuation channels
+% (which technically can be interpreted as fresh) are checked already inside the linearity predicate, so we only need to
+% introduce linearity conditions for when a fresh channel is being made on paper.
+
+% Hypothesis -- encodes typing assumptions of form x:A
+hyp : name → tp → type.
+% wtp P means that P is well-typed with respect to some context
+wtp : proc → type.
+
+wtp_fwd   : dual A A'
+          → {X:name}hyp X A → {Y:name}hyp Y A'
+          → wtp (fwd X Y).
+wtp_pcomp :  dual A A'
+          → ({x:name} hyp x A → wtp (P x))
+          → ({x:name} hyp x A' → wtp (Q x))
+          → linear P
+          → linear Q
+          → wtp (pcomp A P Q).
+
+wtp_close : {X:name}hyp X one
+          → wtp (close X).
+wtp_wait  : {X:name}hyp X bot
+          → wtp P
+          → wtp (wait X P).
+
+wtp_out   : linear P % y is fresh and being bound to P, so check that it's linear
+          → {X:name}hyp X (A ⊗ B)
+	  → ({y:name}hyp y A → wtp (P y))
+	  → ({x:name}hyp x B → wtp (Q x))
+	  → wtp (out X P Q).
+wtp_inp   : ({x:name}linear (P x)) % check linearity for the input channel y
+          → {X:name}hyp X (A ⅋ B)
+          → ({x:name}hyp x B → {y:name}hyp y A → wtp (P x y))
+          → wtp (inp X P).
+
+wtp_inl   : {X:name}hyp X (A ⊕ B)
+          → ({x:name}hyp x A → wtp (P x))
+          → wtp (inl X P).
+wtp_inr   : {X:name}hyp X (A ⊕ B)
+          → ({x:name}hyp x B → wtp (P x))
+          → wtp (inr X P).
+wtp_choice: {X:name}hyp X (A & B)
+             → ({x:name}hyp x A → wtp (P x))
+             → ({x:name}hyp x B → wtp (Q x))
+             → wtp (choice X P Q).
+

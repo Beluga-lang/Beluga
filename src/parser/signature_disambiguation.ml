@@ -638,7 +638,7 @@ struct
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; entries } ->
         add_module state ~location identifier (fun state ->
-            let entries' = traverse_list state disambiguate_entry entries in
+            let entries' = disambiguate_entries state entries in
             Synext.Signature.Declaration.Module
               { location; identifier; entries = entries' })
 

@@ -34,7 +34,7 @@ declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
 declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${TESTROOTDIR}/interactive"}
 declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${TESTROOTDIR}/harpoon"}
 
-declare -i TIMEOUT=${TIMEOUT:-10}
+declare -r TIMEOUT=${TIMEOUT:-"10s"}
 
 function rsync_test_artifacts {
     rsync -ak "${ROOTDIR}/.admissible-fail" "${TEMPDIR}/.admissible-fail"
@@ -123,8 +123,6 @@ function parse_opts {
 
 function do_testing {
     local is_failed=0 file_path
-    # Limit runtime of each test case, in seconds.
-    ulimit -t "${TIMEOUT}"
 
     if [[ -n "${RUN_CASE_STUDIES}" ]]; then
         echo "===== CASE STUDIES ====="
@@ -204,10 +202,10 @@ function check_example_test_case {
     # ${...[@]+${...[@]}} is a workaround for bash < 4.4
     # In bash < 4.4, array without an item is considered as an undefined variable.
     output_file="$(mktemp)"
-    "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
+    timeout --foreground "${TIMEOUT}" "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
     exit_code=$?
 
-    if [ "${exit_code}" -eq 152 ]; then
+    if [ "${exit_code}" -eq 124 ]; then
         if grep -q "${file_path}" .admissible-fail; then
             echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
             (( TEST_RESULT_ADMISSIBLE+=1 ))
@@ -242,10 +240,10 @@ function check_compiler_test_case {
     # ${...[@]+${...[@]}} is a workaround for bash < 4.4
     # In bash < 4.4, array without an item is considered as an undefined variable.
     output_file="$(mktemp)"
-    "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
+    timeout --foreground "${TIMEOUT}" "${BELUGA}" +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" >>"${output_file}" 2>&1
     exit_code=$?
 
-    if [ "${exit_code}" -eq 152 ]; then
+    if [ "${exit_code}" -eq 124 ]; then
         if grep -q "${file_path}" .admissible-fail; then
             echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
             (( TEST_RESULT_ADMISSIBLE+=1 ))
@@ -318,10 +316,10 @@ function check_interactive {
 
     local output exit_code
 
-    output=$("${REPLAY}" "${BELUGA}" "${file_path}" 2>&1)
+    output=$(timeout --foreground "${TIMEOUT}" "${REPLAY}" "${BELUGA}" "${file_path}" 2>&1)
     exit_code=$?
 
-    if [ "${exit_code}" -eq 152 ]; then
+    if [ "${exit_code}" -eq 124 ]; then
         if grep -q "${file_path}" .admissible-fail; then
             echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
             (( TEST_RESULT_ADMISSIBLE+=1 ))
@@ -355,10 +353,10 @@ function check_harpoon {
     # Read the first line in the file at "${file_path}"
     sig=$(sed -n '1p' "${file_path}")
 
-    output=$("${HARPOON}" --sig "${sig}" --test "${file_path}" --test-start 2 --no-save-back --stop 2>&1)
+    output=$(timeout --foreground "${TIMEOUT}" "${HARPOON}" --sig "${sig}" --test "${file_path}" --test-start 2 --no-save-back --stop 2>&1)
     exit_code=$?
 
-    if [ "${exit_code}" -eq 152 ]; then
+    if [ "${exit_code}" -eq 124 ]; then
         if grep -q "${file_path}" .admissible-fail; then
             echo -e "${C_ADMISSIBLE}ADMISSIBLE TIMEOUT${C_END}"
             (( TEST_RESULT_ADMISSIBLE+=1 ))
@@ -448,7 +446,7 @@ function print_paths {
     echo -e "\t TESTDIR: ${TESTDIR}"
     echo -e "\t INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR}"
     echo -e "\t EXAMPLEDIR: ${EXAMPLEDIR}"
-    echo -e "\t TIMEOUT: ${TIMEOUT}" seconds
+    echo -e "\t TIMEOUT: ${TIMEOUT}"
     echo
 }
 

@@ -3,4 +3,11 @@
  (public_name beluga)
  (package beluga)
  (libraries support beluga beluga_syntax beluga_parser dune-build-info)
- (modules :standard))
+ (modules :standard \ callGraph))
+
+(executable
+ (name callGraph)
+ (public_name beluga_call_graph)
+ (package beluga)
+ (libraries support beluga beluga_syntax)
+ (modules callGraph))

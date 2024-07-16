@@ -9,5 +9,5 @@
  (name callGraph)
  (public_name beluga_call_graph)
  (package beluga)
- (libraries support beluga beluga_syntax)
+ (libraries support beluga beluga_syntax yojson)
  (modules callGraph))

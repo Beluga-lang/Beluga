@@ -49,9 +49,7 @@
     (= 0.25.1)
     :with-test))
   (yojson
-   (and
-    (>= 2.0.2)
-    :with-test))
+   (>= 2.0.2))
   (ounit2
    (and
     (>= 2.2.6)

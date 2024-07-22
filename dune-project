@@ -44,6 +44,7 @@
    (>= 1.3.2))
   (uri
    (>= 4.2.0))
+  (conf-timeout :with-test)
   (ocamlformat
    (and
     (= 0.25.1)

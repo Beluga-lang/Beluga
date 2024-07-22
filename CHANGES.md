@@ -1,3 +1,16 @@
+## v1.1.2
+
+### Added
+
+- Added C. Sano, R. Kavanagh and B. Pientka's artifact for "Mechanizing Session-Types Using a Structural View" as a case study (#271).
+
+### Fixed
+
+- Support postponed fixity pragmas in modules.
+- The hole `_` in the LF term `\x._` is parsed as a wildcard instead of as an identifier.
+- Shadowed bindings in a module are no longer brought into scope when the module is opened.
+- Support postponed fixity pragmas in Harpoon sessions.
+
 ## v1.1.1
 
 ### Added

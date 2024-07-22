@@ -307,7 +307,7 @@ function check_compiler_test_case {
     fi
 
     if [[ -n "${RESET_OUT_FILES}" && -f "${file_path}.out" ]]; then
-        cat "${output_file}" > "${file_path}.out"
+        cat "${output_file}" > "${ROOTDIR}/${file_path}.out"
     fi
 }
 

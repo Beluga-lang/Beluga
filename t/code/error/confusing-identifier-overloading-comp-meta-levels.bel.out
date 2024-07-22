@@ -1,0 +1,10 @@
+File "./t/code/error/confusing-identifier-overloading-comp-meta-levels.bel",
+line 15, column 48:
+15 |  mlam g ⇒ fn g ⇒ fn x ⇒ let [_ ⊢ x] = g in f [g] [g ⊢ x] x;
+                                                   ^            
+Error: Expected a context variable.
+       File "./t/code/error/confusing-identifier-overloading-comp-meta-levels.bel",
+       line 15, column 15:
+       15 |  mlam g ⇒ fn g ⇒ fn x ⇒ let [_ ⊢ x] = g in f [g] [g ⊢ x] x;
+                         ^                                             
+       Error: g is a bound computation variable.

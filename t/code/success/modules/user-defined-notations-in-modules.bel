@@ -1,0 +1,41 @@
+module Term = struct
+  LF term : type =
+  | lam : (term → term) → term
+  | app : term → term → term
+  | unit : term;
+
+  --name term M.
+end
+
+module Algorithmic_equality = struct
+  --open Term.
+
+  % This notation pragma is local to module `Algorithmic_equality`
+  --infix ≡ none.
+
+  LF ≡ : term → term → type =
+  | lam : ({x : term} → x ≡ x → M x ≡ N x) → Term.lam M ≡ Term.lam N
+  | app : M1 ≡ N1 → M2 ≡ N2 → Term.app M1 M2 ≡ Term.app N1 N2
+  | unit : Term.unit ≡ Term.unit;
+end
+
+--open Term.
+--open Algorithmic_equality. % This brings back the infix notation for `≡`
+
+schema ctx = block (x : term, eq : x ≡ x);
+
+rec aeq_reflexivity : (g : ctx) → {M : [g ⊢ term]} → [g ⊢ M ≡ M] =
+  / total d (aeq_reflexivity _ d) /
+  mlam M ⇒
+    case [_ ⊢ M] of
+    | [g ⊢ #p.x] ⇒ [g ⊢ #p.eq]
+    | [g ⊢ Term.lam \x. F] ⇒
+        let [g, b : block (x : term, eq : x ≡ x) ⊢ D] =
+          aeq_reflexivity [g, b : block (x : term, eq : x ≡ x) ⊢ F[.., b.x]]
+        in
+        [g ⊢ Algorithmic_equality.lam \x. \eq. D[.., <x; eq>]]
+    | [g ⊢ Term.app M1 M2] ⇒
+        let [g ⊢ D1] = aeq_reflexivity [g ⊢ M1] in
+        let [g ⊢ D2] = aeq_reflexivity [g ⊢ M2] in
+        [g ⊢ Algorithmic_equality.app D1 D2]
+    | [g ⊢ Term.unit] ⇒ [g ⊢ Algorithmic_equality.unit];

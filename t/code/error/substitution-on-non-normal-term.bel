@@ -1,0 +1,11 @@
+exp : type.
+
+eq : exp → exp → type.
+
+schema ctx = block (x : exp, t : eq x x);
+
+%{
+  The substitution `(eq M M)[..]` is not in normal form.
+  We expect `eq M[..] M[..]`.
+}%
+rec reflexivity : {g : ctx} {M : [g ⊢ exp]} [g ⊢ (eq M M)[..]] = ?;

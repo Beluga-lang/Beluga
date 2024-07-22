@@ -1,0 +1,16 @@
+LF tm : type = ;
+
+schema ctx = tm;
+
+inductive Ex : ctype = ;
+
+%{
+  In Beluga v1, it was possible to overload identifiers appearing in the
+  meta-level and the computation-level.
+
+  This is not supported in Beluga v1.1. The numbers in comment below the
+  expression are labels indicating how variable names were being resolved in v1.
+}%
+rec f : {g : ctx} → [g ⊢ tm] → Ex → Ex =
+  mlam g ⇒ fn g ⇒ fn x ⇒ let [_ ⊢ x] = g in f [g] [g ⊢ x] x;
+%      1      2      3            4    2       1   1   4  3

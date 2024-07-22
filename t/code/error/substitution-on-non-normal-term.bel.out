@@ -1,0 +1,4 @@
+File "./t/code/error/substitution-on-non-normal-term.bel", line 11, column 50:
+11 |rec reflexivity : {g : ctx} {M : [g ⊢ exp]} [g ⊢ (eq M M)[..]] = ?;
+                                                     ^^^^^^^^^^^^      
+Error: Substitution terms may not appear as contextual LF types.

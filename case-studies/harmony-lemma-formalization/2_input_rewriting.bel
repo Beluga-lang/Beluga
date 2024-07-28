@@ -1,0 +1,72 @@
+% Predicate about syntactic equivalence of processes involved in input transitions:
+% ex_inp_rew Q X Q' holds iff there exist R, S, x_1,...,x_n such that Q cong (nu x_1)...(nu x_n)((p_in X R) p_par S) and
+% (Q' y) cong (nu x_1)...(nu x_n)((R Y) p_par S).
+% We encode this type via two constructors: one representing the base case without restrictions, and one representing the inductive case
+% in which Q cong (nu x)P and Q' cong (nu x)P', where ex_inp_rew P X P' holds inductively.
+
+LF ex_inp_rew: proc → names → (names → proc) → type =
+  | inp_base: Q cong ((p_in X R) p_par S)
+    → ({y:names} (Q' y) cong ((R y) p_par S)) → ex_inp_rew Q X Q'
+  | inp_ind: Q cong (p_res P) → ({y:names} (Q' y) cong (p_res (P' y)))
+    → ({w:names} ex_inp_rew (P w) X \y.(P' y w)) → ex_inp_rew Q X Q'
+;
+
+
+% We prove the lemma which states that processes involved in input transitions (bstep Q (b_in X) Q')
+% can be rewritten (up to congruence) in a canonic way (ex_inp_rew Q X Q').
+% Before, we need three additional lemmas which prove the result in particular cases.
+
+rec bs_in_rew_par1: (g:ctx) {R:[g ⊢ proc]} [g ⊢ ex_inp_rew Q X \y.Q'[..,y]]
+  → [g ⊢ ex_inp_rew (Q p_par R) X \y.(Q'[..,y] p_par R[..])] =
+/ total d (bs_in_rew_par1 _ _ _ _ _ d) /
+mlam R ⇒ fn d ⇒ case d of
+   | [g ⊢ inp_base C1 \y.C2[..,y]] ⇒ [g ⊢ inp_base (c_trans (c_par C1)
+     (c_sym par_assoc)) \y.(c_trans (c_par C2[..,y]) (c_sym par_assoc))]
+   | [g ⊢ inp_ind C1 (\y.C2[..,y]) (\w.D1[..,w])] ⇒
+     let [g,w:names ⊢ D2[..,w]] = bs_in_rew_par1 [g,w:names ⊢ R[..]]
+     [g,w:names ⊢ D1[..,w]] in [g ⊢ inp_ind (c_trans (c_par C1)
+     sc_ext_par) (\y.(c_trans (c_par C2[..,y]) sc_ext_par)) (\w.D2[..,w])]
+;
+
+rec bs_in_rew_par2: (g:ctx) {R:[g ⊢ proc]} [g ⊢ ex_inp_rew Q X \y.Q'[..,y]]
+  → [g ⊢ ex_inp_rew (R p_par Q) X \y.(R[..] p_par Q'[..,y])] =
+/ total d (bs_in_rew_par2 _ _ _ _ _ d) /
+mlam R ⇒ fn d ⇒ case d of
+   | [g ⊢ inp_base C1 \y.C2[..,y]] ⇒
+     [g ⊢ inp_base (c_trans par_comm (c_trans (c_par C1) (c_sym par_assoc)))
+     \y.(c_trans par_comm (c_trans (c_par C2[..,y]) (c_sym par_assoc)))]
+   | [g ⊢ inp_ind C1 (\y.C2[..,y]) (\w.D1[..,w])] ⇒
+     let [g,w:names ⊢ D2[..,w]] = bs_in_rew_par2 [g,w:names ⊢ R[..]]
+     [g, w:names ⊢ D1[..,w]] in [g ⊢ inp_ind (c_trans par_comm (c_trans (c_par C1)
+     (c_trans sc_ext_par (c_res \z.par_comm)))) (\y.(c_trans par_comm (c_trans
+     (c_par C2[..,y]) (c_trans sc_ext_par (c_res \z.par_comm))))) (\w.D2[..,w])]
+;
+
+rec bs_in_rew_res: (g:ctx) [g,z:names ⊢ ex_inp_rew Q[..,z] X[..] \y.Q'[..,z,y]]
+  → [g ⊢ ex_inp_rew (p_res \z.Q[..,z]) X \y.(p_res \z.Q'[..,z,y])] =
+/ total d (bs_in_rew_res _ _ _ _ d) /
+fn d ⇒ case d of
+   | [g,z:names ⊢ inp_base C1[..,z] \y.C2[..,z,y]] ⇒
+     [g ⊢ inp_ind (c_res \z.C1[..,z]) (\y.(c_res \z.C2[..,z,y]))
+     (\w.(inp_base c_ref \y.c_ref))]
+   | [g,z:names ⊢ inp_ind C1[..,z] (\y.C2[..,z,y]) (\w.D1[..,z,w])] ⇒
+     let [g,z:names ⊢ D2[..,z]] = bs_in_rew_res [g,z:names,w:names ⊢ D1[..,z,w]] in
+     [g ⊢ inp_ind (c_res \z.C1[..,z]) (\y.(c_res \z.C2[..,z,y])) (\z.D2[..,z])]
+;
+
+
+rec bs_in_rew: (g:ctx) [g ⊢ bstep Q (b_in X) \y.Q'[..,y]]
+  → [g ⊢ ex_inp_rew Q X \y.Q'[..,y]] =
+/ total b (bs_in_rew _ _ _ _ b) /
+fn b ⇒ case b of
+   | [g ⊢ bs_in] ⇒ [g ⊢ inp_base (c_sym par_unit) \y.(c_sym par_unit)]
+   | [g ⊢ bs_par1 B1]:[g ⊢ bstep (P p_par R) (b_in X) \y.(P' p_par (R[..]))] ⇒
+     let [g ⊢ D1] = bs_in_rew [g ⊢ B1] in
+     let [g ⊢ D2] = bs_in_rew_par1 [g ⊢ R] [g ⊢ D1] in [g ⊢ D2]
+   | [g ⊢ bs_par2 B2]:[g ⊢ bstep (R p_par P) (b_in X) \y.((R[..]) p_par P')] ⇒
+     let [g ⊢ D1] = bs_in_rew [g ⊢ B2] in 
+     let [g ⊢ D2] = bs_in_rew_par2 [g ⊢ R] [g ⊢ D1] in [g ⊢ D2]
+   | [g ⊢ bs_res \y.B[..,y]] ⇒
+     let [g,y:names ⊢ D1[..,y]] = bs_in_rew [g,y:names ⊢ B[..,y]] in
+     let [g ⊢ D2] = bs_in_rew_res [g,y:names ⊢ D1[..,y]] in [g ⊢ D2]
+;

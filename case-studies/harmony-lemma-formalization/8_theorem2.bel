@@ -1,0 +1,29 @@
+% We now prove that, given two processes P and Q involved in a reduction (P red Q), then there exists a process Q'
+% such that P steps into Q' through tau and Q is congruent to Q' (overall, ex_fstepcong P P f_tau Q holds).
+% We obtain the result by rewriting the processes P and Q up to congruence in a canonic way (ex_red_rew P Q)
+% and stating a lemma which unfolds the type ex_red_rew and reaches the conclusion.
+
+rec red_rew_impl_fstepcong: (g:ctx) [g ⊢ ex_red_rew P Q]
+  → [g ⊢ ex_fstepcong P P f_tau Q] =
+/ total d (red_rew_impl_fstepcong _ _ _ d) /
+fn d ⇒ case d of
+   | [g ⊢ red_base C1 C2] ⇒
+     let [g ⊢ fsc F C3] = cong_fstepright_impl_fstepleft
+     [g ⊢ C1] [g ⊢ fs_par1 (fs_com1 fs_out bs_in)] in
+     [g ⊢ fsc F (c_trans C2 C3)]
+   | [g ⊢ red_ind C1 C2 \w.D1[..,w]] ⇒
+     let [g,w:names ⊢ fsc F1[..,w] C3[..,w]] =
+     red_rew_impl_fstepcong [g,w:names ⊢ D1[..,w]] in
+																					 
+     let [g ⊢ fsc F2 C4] = cong_fstepright_impl_fstepleft
+     [g ⊢ C1] [g ⊢ fs_res \w.F1[..,w]] in
+     [g ⊢ fsc F2 (c_trans C2 (c_trans (c_res \w.C3[..,w]) C4))]
+;
+
+
+rec red_impl_fstepcong: (g:ctx) [g ⊢ P red Q]
+  → [g ⊢ ex_fstepcong P P f_tau Q] =
+/ total r (red_impl_fstepcong _ _ _ r) /
+fn r ⇒ let [g ⊢ D1] = red_impl_red_rew r in
+        let [g ⊢ D2] = red_rew_impl_fstepcong [g ⊢ D1] in [g ⊢ D2]
+;

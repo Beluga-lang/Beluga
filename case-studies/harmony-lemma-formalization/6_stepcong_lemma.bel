@@ -1,0 +1,657 @@
+% We want to prove that, if P is congruent to Q and P makes a transition through A to P', then there exists a process Q'
+% such that Q makes a transition through A into Q' and P' is congruent to Q'.
+
+% We first need two types encoding the existence of such process Q': one for free transitions and one for bound transitions.
+% Free transitions: ex_fstepcong P Q A P' holds iff there exists a process Q' such that fstep Q A Q' and P' cong Q'.
+% Bound transitions: ex_bstepcong P Q A P' holds iff there exists a process Q' such that bstep Q A Q' and P' cong Q'.
+
+LF ex_fstepcong: proc → proc → f_act → proc → type =
+  | fsc: fstep Q A Q' → P' cong Q' → ex_fstepcong P Q A P'
+;
+
+LF ex_bstepcong: proc → proc → b_act → (names → proc) → type =
+  | bsc: bstep Q A Q' → ({x:names} (P' x) cong (Q' x))
+  → ex_bstepcong P Q A P'
+;
+
+
+% Next, we need to prove the following statement: given a transition from P to Q through A in which some variable x doesn't occur free in P
+% and doesn't occur bound in A, then x doesn't occur free in Q.
+% In Beluga it can be encoded in this way: given a transition from P to Q through A in the context [g, x:names] in which P does not depend on x
+% ([g, x:names |- fstep P[..] A Q] in the case of a free transition), then there exists a transition from P to Q' through A' in the context [g]
+% ([g |- fstep P A' Q']), with A'=A and Q'=Q in the context [g, x:names].
+% In other words, we need to strengthen the transition so that it still works in a more general context.
+
+
+% We define three types encoding equality of processes, free actions and bound actions:
+
+LF eqp: proc → proc → type =
+  | prefl: eqp P P
+;
+
+LF eqf: f_act → f_act → type =
+  | frefl: eqf A A
+;
+
+LF eqb: b_act → b_act → type =
+  | brefl: eqb A A
+;
+
+% Now we define two types encoding the existence of such stronger transition.
+% We need to define them on the computational level (using the keyword 'ctype') because they are types depending on a contextual object.
+
+inductive ex_str_fstep: (g:ctx) [g,x:names ⊢ fstep P[..] A Q] → ctype =
+  | ex_fstep: {F:[g,x:names ⊢ fstep P[..] A Q]} [g ⊢ fstep P A' Q']
+    → [g,x:names ⊢ eqf A A'[..]] → [g,x:names ⊢ eqp Q Q'[..]]
+    → ex_str_fstep [g,x:names ⊢ F]
+;
+
+inductive ex_str_bstep: (g:ctx) [g,x:names ⊢ bstep P[..] A \z.Q[..,x,z]]
+    → ctype =
+  | ex_bstep: {B:[g,x:names ⊢ bstep P[..] A \z.Q[..,x,z]]}
+    [g ⊢ bstep P A' \z.Q'[..,z]] → [g,x:names ⊢ eqb A A'[..]]
+    → [g,x:names,z:names ⊢ eqp Q[..,x,z] Q'[..,z]]
+    → ex_str_bstep [g,x:names ⊢ B]
+;
+
+
+% Now we can prove the desired result. We state two lemmas (for free/bound transition) and prove them simultaneously.
+
+rec strengthen_fstep: (g:ctx) {F:[g,x:names ⊢ fstep P[..] A Q]}
+  → ex_str_fstep [g,x:names ⊢ F] =
+/ total f (strengthen_fstep _ _ _ _ f) /
+mlam F ⇒ case [_,x:names ⊢ F] of
+  | [g,x:names ⊢ fs_out] ⇒ ex_fstep [g,x:names ⊢ F] [g ⊢ fs_out]
+        [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_par1 F1[..,x]] ⇒
+    let ex_fstep [g,x:names ⊢ F1[..,x]] [g ⊢ F1'] e1 e2
+        = strengthen_fstep [g,x:names ⊢ F1[..,x]] in
+    let [g,x:names ⊢ frefl] = e1 in
+    let [g,x:names ⊢ prefl] = e2 in
+        ex_fstep [g,x:names ⊢ fs_par1 F1[..,x]] [g ⊢ fs_par1 F1']
+        [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_par2 F2[..,x]] ⇒
+    let ex_fstep [g,x:names ⊢ F2[..,x]] [g ⊢ F2'] e1 e2
+        = strengthen_fstep [g,x:names ⊢ F2[..,x]] in
+    let [g,x:names ⊢ frefl] = e1 in
+    let [g,x:names ⊢ prefl] = e2 in
+        ex_fstep [g,x:names ⊢ fs_par2 F2[..,x]] [g ⊢ fs_par2 F2']
+        [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_com1 F1[..,x] B1[..,x]] ⇒
+    let ex_fstep [g,x:names ⊢ F1[..,x]] [g ⊢ F1'] e1 e2
+        = strengthen_fstep [g,x:names ⊢ F1[..,x]] in
+    let [g,x:names ⊢ frefl] = e1 in
+    let [g,x:names ⊢ prefl] = e2 in
+    let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1' e2'
+        = strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+    let [g,x:names ⊢ brefl] = e1' in
+    let [g,x:names,z:names ⊢ prefl] = e2' in
+        ex_fstep [g,x:names ⊢ fs_com1 F1[..,x] B1[..,x]]
+        [g ⊢ fs_com1 F1' B1'] [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_com2 B1[..,x] F1[..,x]] ⇒
+    let ex_fstep [g,x:names ⊢ F1[..,x]] [g ⊢ F1'] e1 e2
+        = strengthen_fstep [g,x:names ⊢ F1[..,x]] in
+    let [g,x:names ⊢ frefl] = e1 in
+    let [g,x:names ⊢ prefl] = e2 in
+    let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1' e2'
+        = strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+    let [g,x:names ⊢ brefl] = e1' in
+    let [g,x:names,z:names ⊢ prefl] = e2' in
+        ex_fstep [g,x:names ⊢ fs_com2 B1[..,x] F1[..,x]]
+        [g ⊢ fs_com2 B1' F1'] [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_res \y.F1[..,y,x]] ⇒
+    let ex_fstep [g,y:names,x:names ⊢ F1[..,y,x]] [g,y:names ⊢ F1'[..,y]]
+        e1 e2 = strengthen_fstep [g,y:names,x:names ⊢ F1[..,y,x]] in
+    let [g,y:names,x:names ⊢ frefl] = e1 in
+    let [g,y:names,x:names ⊢ prefl] = e2 in
+        ex_fstep [g,x:names ⊢ fs_res \y.F1[..,y,x]]
+        [g ⊢ fs_res \y.F1'[..,y]] [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_close1 B1[..,x] B2[..,x]] ⇒
+    let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1 e2
+        = strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+    let [g,x:names ⊢ brefl] = e1 in
+    let [g,x:names,z:names ⊢ prefl] = e2 in
+    let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1' e2'
+        = strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+    let [g,x:names ⊢ brefl] = e1' in
+    let [g,x:names,z:names ⊢ prefl] = e2' in
+        ex_fstep [g,x:names ⊢ fs_close1 B1[..,x] B2[..,x]]
+        [g ⊢ fs_close1 B1' B2'] [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+  | [g,x:names ⊢ fs_close2 B1[..,x] B2[..,x]] ⇒
+    let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1 e2
+        = strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+    let [g,x:names ⊢ brefl] = e1 in
+    let [g,x:names,z:names ⊢ prefl] = e2 in
+    let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1' e2'
+        = strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+    let [g,x:names ⊢ brefl] = e1' in
+    let [g,x:names,z:names ⊢ prefl] = e2' in
+        ex_fstep [g,x:names ⊢ fs_close2 B1[..,x] B2[..,x]]
+        [g ⊢ fs_close2 B1' B2'] [g,x:names ⊢ frefl] [g,x:names ⊢ prefl]
+
+and rec strengthen_bstep: (g:ctx) {B:[g,x:names ⊢ bstep P[..] A
+  \z.Q[..,x,z]]} → ex_str_bstep [g,x:names ⊢ B] =
+/ total b (strengthen_bstep _ _ _ _ b) /
+mlam B ⇒ case [_,x:names ⊢ B] of
+  | [g,x:names ⊢ bs_in] ⇒ ex_bstep [g,x:names ⊢ B] [g ⊢ bs_in]
+        [g,x:names ⊢ brefl] [g,x:names,z:names ⊢ prefl]
+  | [g,x:names ⊢ bs_par1 B1[..,x]] ⇒
+    let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1 e2
+        = strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+    let [g,x:names ⊢ brefl] = e1 in
+    let [g,x:names,z:names ⊢ prefl] = e2 in
+        ex_bstep [g,x:names ⊢ bs_par1 B1[..,x]] [g ⊢ bs_par1 B1']
+        [g,x:names ⊢ brefl] [g,x:names,z:names ⊢ prefl]
+  | [g,x:names ⊢ bs_par2 B2[..,x]] ⇒
+    let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1 e2
+        = strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+    let [g,x:names ⊢ brefl] = e1 in
+    let [g,x:names,z:names ⊢ prefl] = e2 in
+        ex_bstep [g,x:names ⊢ bs_par2 B2[..,x]] [g ⊢ bs_par2 B2']
+        [g,x:names ⊢ brefl] [g,x:names,z:names ⊢ prefl]
+  | [g,x:names ⊢ bs_res \y.B1[..,y,x]] ⇒
+    let ex_bstep [g,y:names,x:names ⊢ B1[..,y,x]] [g,y:names ⊢ B1'[..,y]]
+        e1 e2 = strengthen_bstep [g,y:names,x:names ⊢ B1[..,y,x]] in
+    let [g,y:names,x:names ⊢ brefl] = e1 in
+    let [g,y:names,x:names,z:names ⊢ prefl] = e2 in
+        ex_bstep [g,x:names ⊢ bs_res \y.B1[..,y,x]]
+        [g ⊢ bs_res \y.B1'[..,y]] [g,x:names ⊢ brefl]
+        [g,x:names,z:names ⊢ prefl]
+  | [g,x:names ⊢ bs_open \y.F1[..,y,x]] ⇒
+    let ex_fstep [g,y:names,x:names ⊢ F1[..,y,x]] [g,y:names ⊢ F1'[..,y]]
+        e1 e2 = strengthen_fstep [g,y:names,x:names ⊢ F1[..,y,x]] in
+    let [g,y:names,x:names ⊢ frefl] = e1 in
+    let [g,y:names,x:names ⊢ prefl] = e2 in
+        ex_bstep [g,x:names ⊢ bs_open \y.F1[..,y,x]]
+        [g ⊢ bs_open \y.F1'[..,y]] [g,x:names ⊢ brefl]
+        [g,x:names,z:names ⊢ prefl]
+;
+
+
+% We can finally prove that, if P is congruent to Q and P makes a transition through A to P', then there exists a process Q'
+% such that Q makes a transition through A into Q' and P' is congruent to Q'.
+
+% In order to prove the desired result, we state two symmetric lemmas: given that P is congruent to Q,
+% we either assume that the given free transition involves the left process P (fstep P A Q) or the right process Q (fstep Q A Q').
+% In this way, when performing structural induction on the congruence P cong Q, we immediately obtain the proof
+% of the "c_sym" case (the case in which we deduce P cong Q from the congruence Q cong P).
+
+% We choose to define a single type ex_fstepcong and use it in both lemmas, aiming at a simpler and more economic code and sacrificing symmetry.
+% Our choice is equivalent to defining a second type ex_fstepcong' (with ex_fstepcong P Q A P' iff fstep Q A Q' and Q' cong P' for some Q') for perfect symmetry.
+
+% The same applies to bound transitions: so we have four lemmas which we prove simultaneously.
+
+rec cong_fstepleft_impl_fstepright: (g:ctx) [g ⊢ P cong Q]
+  → [g ⊢ fstep P A P'] → [g ⊢ ex_fstepcong P Q A P'] =
+/ total c (cong_fstepleft_impl_fstepright _ _ _ _ _ c _)/
+fn c ⇒ fn f ⇒ case c of
+  | [g ⊢ par_unit] ⇒ let [g ⊢ fs_par1 F1] = f in [g ⊢ fsc F1 par_unit]
+  | [g ⊢ par_comm] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F1] ⇒ [g ⊢ fsc (fs_par2 F1) par_comm]
+       | [g ⊢ fs_par2 F2] ⇒ [g ⊢ fsc (fs_par1 F2) par_comm]
+       | [g ⊢ fs_com1 F1 B1] ⇒ [g ⊢ fsc (fs_com2 B1 F1) par_comm]
+       | [g ⊢ fs_com2 B1 F1] ⇒ [g ⊢ fsc (fs_com1 F1 B1) par_comm]
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         [g ⊢ fsc (fs_close2 B2 B1) (c_res \x.par_comm)]
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         [g ⊢ fsc (fs_close1 B2 B1) (c_res \x.par_comm)]
+    )
+  | [g ⊢ par_assoc] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F] ⇒ [g ⊢ fsc (fs_par1 (fs_par1 F)) par_assoc]
+       | [g ⊢ fs_par2 F] ⇒
+         (case [g ⊢ F] of
+            | [g ⊢ fs_par1 F'] ⇒
+              [g ⊢ fsc (fs_par1 (fs_par2 F')) par_assoc]
+            | [g ⊢ fs_par2 F'] ⇒ [g ⊢ fsc (fs_par2 F') par_assoc]
+            | [g ⊢ fs_com1 F' B] ⇒
+              [g ⊢ fsc (fs_com1 (fs_par2 F') B) par_assoc]
+            | [g ⊢ fs_com2 B F'] ⇒
+              [g ⊢ fsc (fs_com2 (bs_par2 B) F') par_assoc]
+            | [g ⊢ fs_close1 B1 B2] ⇒
+              [g ⊢ fsc (fs_close1 (bs_par2 B1) B2) (c_trans
+              par_comm (c_trans sc_ext_par (c_trans (c_res
+              \x.par_comm) (c_res \x.par_assoc))))]
+            | [g ⊢ fs_close2 B1 B2] ⇒
+              [g ⊢ fsc (fs_close2 (bs_par2 B1) B2) (c_trans
+              par_comm (c_trans sc_ext_par (c_trans (c_res
+              \x.par_comm) (c_res \x.par_assoc))))]
+         )
+       | [g ⊢ fs_com1 F B] ⇒
+         (case [g ⊢ B] of
+            | [g ⊢ bs_par1 B'] ⇒
+              [g ⊢ fsc (fs_par1 (fs_com1 F B')) par_assoc]
+            | [g ⊢ bs_par2 B'] ⇒
+              [g ⊢ fsc (fs_com1 (fs_par1 F) B') par_assoc]
+         )
+       | [g ⊢ fs_com2 B F] ⇒
+         (case [g ⊢ F] of
+            | [g ⊢ fs_par1 F'] ⇒
+              [g ⊢ fsc (fs_par1 (fs_com2 B F')) par_assoc]
+            | [g ⊢ fs_par2 F'] ⇒
+              [g ⊢ fsc (fs_com2 (bs_par1 B) F') par_assoc]
+         )
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         (case [g ⊢ B2] of
+            | [g ⊢ bs_par1 B2'] ⇒
+              [g ⊢ fsc (fs_par1 (fs_close1 B1 B2'))
+              (c_trans (c_res \x.par_assoc) (c_sym sc_ext_par))]
+            | [g ⊢ bs_par2 B2'] ⇒
+              [g ⊢ fsc (fs_close1 (bs_par1 B1) B2') (c_res \x.par_assoc)]
+         )
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         (case [g ⊢ B2] of
+            | [g ⊢ bs_par1 B2'] ⇒
+              [g ⊢ fsc (fs_par1 (fs_close2 B1 B2'))
+              (c_trans (c_res \x.par_assoc) (c_sym sc_ext_par))]
+            | [g ⊢ bs_par2 B2'] ⇒
+              [g ⊢ fsc (fs_close2 (bs_par1 B1) B2') (c_res \x.par_assoc)]
+         )
+    ) 
+  | [g ⊢ sc_ext_zero] ⇒
+    let [g ⊢ fs_res \x.F[..,x]] = f in impossible [g, x:names ⊢ F[..,x]]
+  | [g ⊢ sc_ext_par] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F1] ⇒
+         let [g ⊢ fs_res \x.F1'[..,x]] = [g ⊢ F1] in
+             [g ⊢ fsc (fs_res \x.(fs_par1 F1'[..,x])) sc_ext_par] 
+       | [g ⊢ fs_par2 F2] ⇒
+         [g ⊢ fsc (fs_res \x.(fs_par2 F2[..])) sc_ext_par]
+       | [g ⊢ fs_com1 F1 B1] ⇒
+         let [g ⊢ fs_res \x.F1'[..,x]] = [g ⊢ F1] in
+             [g ⊢ fsc (fs_res \x.(fs_com1 F1'[..,x] B1[..])) sc_ext_par]
+       | [g ⊢ fs_com2 B1 F1] ⇒
+         let [g ⊢ bs_res \x.B1'[..,x]] = [g ⊢ B1] in
+             [g ⊢ fsc (fs_res \x.(fs_com2 B1'[..,x] F1[..])) sc_ext_par]
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         (case [g ⊢ B1] of
+            | [g ⊢ bs_res \x.B1'[..,x]] ⇒
+              [g ⊢ fsc (fs_res \x.(fs_close1 B1'[..,x] B2[..]))
+              (c_trans (c_res \w.sc_ext_par) sc_ext_res)]
+            | [g ⊢ bs_open \x.F1[..,x]] ⇒
+              [g ⊢ fsc (fs_res \x.(fs_com1 F1[..,x] B2[..])) c_ref]
+         )
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         let [g ⊢ bs_res \x.B1'[..,x]] = [g ⊢ B1] in
+             [g ⊢ fsc (fs_res \x.(fs_close2 B1'[..,x] B2[..]))
+             (c_trans (c_res \w.sc_ext_par) sc_ext_res)]
+    )
+  | [g ⊢ sc_ext_res] ⇒
+    let [g ⊢ fs_res \x.F[..,x]] = f in
+    let [g,x:names ⊢ fs_res \y.F'[..,x,y]] = [g,x:names ⊢ F[..,x]] in
+        [g ⊢ fsc (fs_res \y.(fs_res \x.F'[..,x,y])) (sc_ext_res)]
+  | [g ⊢ c_in \x.C1[..,x]] ⇒ impossible f
+  | [g ⊢ c_out C1] ⇒ let [g ⊢ fs_out] = f in [g ⊢ fsc fs_out C1]
+  | [g ⊢ c_par C1] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F1] ⇒
+         let [g ⊢ fsc F2 C2] = cong_fstepleft_impl_fstepright [g ⊢ C1]
+             [g ⊢ F1] in [g ⊢ fsc (fs_par1 F2) (c_par C2)]
+       | [g ⊢ fs_par2 F1] ⇒ [g ⊢ fsc (fs_par2 F1) (c_par C1)]
+       | [g ⊢ fs_com1 F1 B1] ⇒
+         let [g ⊢ fsc F2 C2] = cong_fstepleft_impl_fstepright [g ⊢ C1]
+             [g ⊢ F1] in [g ⊢ fsc (fs_com1 F2 B1) (c_par C2)]
+       | [g ⊢ fs_com2 B1 F1] ⇒
+         let [g ⊢ bsc B2 \x.C2[..,x]] = cong_bstepleft_impl_bstepright
+             [g ⊢ C1][g ⊢ B1] in [g ⊢ fsc(fs_com2 B2 F1)(c_par C2[..,_])]
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         let [g ⊢ bsc B1' \x.C2[..,x]] =
+             cong_bstepleft_impl_bstepright [g ⊢ C1] [g ⊢ B1] in
+             [g ⊢ fsc (fs_close1 B1' B2) (c_res \x.(c_par C2[..,x]))]
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         let [g ⊢ bsc B1' \x.C2[..,x]] =
+             cong_bstepleft_impl_bstepright [g ⊢ C1] [g ⊢ B1] in
+             [g ⊢ fsc (fs_close2 B1' B2) (c_res \x.(c_par C2[..,x]))]
+    )
+  | [g ⊢ c_res \x.C[..,x]] ⇒
+    let [g ⊢ fs_res \x.F[..,x]] = f in
+    let [g,x:names ⊢ fsc F'[..,x] C'[..,x]] =
+        cong_fstepleft_impl_fstepright [g,x:names ⊢ C[..,x]]
+        [g,x:names ⊢ F[..,x]] in
+        [g ⊢ fsc (fs_res \x.F'[..,x]) (c_res \x.C'[..,x])] 
+  | [g ⊢ c_ref] ⇒ let [g ⊢ F] = f in [g ⊢ fsc F c_ref]
+  | [g ⊢ c_sym C'] ⇒
+    let [g ⊢ D] = cong_fstepright_impl_fstepleft [g ⊢ C'] f in [g ⊢ D]
+  | [g ⊢ c_trans C1 C2] ⇒
+    let [g ⊢ fsc F1 C1'] = cong_fstepleft_impl_fstepright [g ⊢ C1] f in
+    let [g ⊢ fsc F2 C2'] = cong_fstepleft_impl_fstepright [g ⊢ C2]
+        [g ⊢ F1] in [g ⊢ fsc F2 (c_trans C1' C2')]
+
+and rec cong_fstepright_impl_fstepleft: (g:ctx) [g ⊢ P cong Q]
+  → [g ⊢ fstep Q A Q'] → [g ⊢ ex_fstepcong Q P A Q'] =
+/ total c (cong_fstepright_impl_fstepleft _ _ _ _ _ c _)/
+fn c ⇒ fn f ⇒ case c of
+  | [g ⊢ par_unit] ⇒
+    let [g ⊢ F] = f in [g ⊢ fsc (fs_par1 F) (c_sym par_unit)]
+  | [g ⊢ par_comm] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F1] ⇒ [g ⊢ fsc (fs_par2 F1) par_comm]
+       | [g ⊢ fs_par2 F2] ⇒ [g ⊢ fsc (fs_par1 F2) par_comm]
+       | [g ⊢ fs_com1 F1 B1] ⇒ [g ⊢ fsc (fs_com2 B1 F1) par_comm]
+       | [g ⊢ fs_com2 B1 F1] ⇒ [g ⊢ fsc (fs_com1 F1 B1) par_comm]
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         [g ⊢ fsc (fs_close2 B2 B1) (c_res \x.par_comm)]
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         [g ⊢ fsc (fs_close1 B2 B1) (c_res \x.par_comm)]
+    )
+  | [g ⊢ par_assoc] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F] ⇒
+         (case [g ⊢ F] of
+            | [g ⊢ fs_par1 F'] ⇒ [g ⊢ fsc (fs_par1 F') (c_sym par_assoc)]
+            | [g ⊢ fs_par2 F'] ⇒
+              [g ⊢ fsc (fs_par2 (fs_par1 F')) (c_sym par_assoc)]
+            | [g ⊢ fs_com1 F' B] ⇒
+              [g ⊢ fsc (fs_com1 F' (bs_par1 B)) (c_sym par_assoc)]
+            | [g ⊢ fs_com2 B F'] ⇒
+              [g ⊢ fsc (fs_com2 B (fs_par1 F')) (c_sym par_assoc)]
+            | [g ⊢ fs_close1 B1 B2] ⇒
+              [g ⊢ fsc (fs_close1 B1 (bs_par1 B2))
+              (c_trans sc_ext_par (c_res \x.(c_sym par_assoc)))]
+            | [g ⊢ fs_close2 B1 B2] ⇒
+              [g ⊢ fsc (fs_close2 B1 (bs_par1 B2))
+              (c_trans sc_ext_par (c_res \x.(c_sym par_assoc)))]
+         )
+       | [g ⊢ fs_par2 F] ⇒
+         [g ⊢ fsc (fs_par2 (fs_par2 F)) (c_sym par_assoc)]
+       | [g ⊢ fs_com1 F B] ⇒
+         (case [g ⊢ F] of
+            | [g ⊢ fs_par1 F'] ⇒
+              [g ⊢ fsc (fs_com1 F' (bs_par2 B)) (c_sym par_assoc)]
+            | [g ⊢ fs_par2 F'] ⇒
+              [g ⊢ fsc (fs_par2 (fs_com1 F' B)) (c_sym par_assoc)]
+         )
+       | [g ⊢ fs_com2 B F] ⇒
+         (case [g ⊢ B] of
+            | [g ⊢ bs_par1 B'] ⇒
+              [g ⊢ fsc (fs_com2 B' (fs_par2 F)) (c_sym par_assoc)]
+            | [g ⊢ bs_par2 B'] ⇒
+              [g ⊢ fsc (fs_par2 (fs_com2 B' F)) (c_sym par_assoc)]
+         )
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         (case [g ⊢ B1] of
+            | [g ⊢ bs_par1 B1'] ⇒
+              [g ⊢ fsc (fs_close1 B1' (bs_par2 B2))
+              (c_res \x.(c_sym par_assoc))]
+            | [g ⊢ bs_par2 B1'] ⇒
+              [g ⊢ fsc (fs_par2 (fs_close1 B1' B2))
+              (c_trans (c_res \x.(c_sym par_assoc)) (c_trans (c_res
+              \x.par_comm) (c_trans (c_sym sc_ext_par) par_comm)))]
+         )
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         (case [g ⊢ B1] of
+            | [g ⊢ bs_par1 B1'] ⇒
+              [g ⊢ fsc (fs_close2 B1' (bs_par2 B2))
+              (c_res \x.(c_sym par_assoc))]
+            | [g ⊢ bs_par2 B1'] ⇒
+              [g ⊢ fsc (fs_par2 (fs_close2 B1' B2))
+              (c_trans (c_res \x.(c_sym par_assoc)) (c_trans (c_res
+              \x.par_comm) (c_trans (c_sym sc_ext_par) par_comm)))]
+         )
+    )
+  | [g ⊢ sc_ext_zero] ⇒ impossible f
+  | [g ⊢ sc_ext_par] ⇒ let [g ⊢ fs_res \x.F[..,x]] = f in
+    (case [g, x:names ⊢ F[..,x]] of
+       | [g,x:names ⊢ fs_par1 F1[..,x]] ⇒
+         [g ⊢ fsc (fs_par1 (fs_res \x.F1[..,x])) (c_sym sc_ext_par)]
+       | [g,x:names ⊢ fs_par2 F2[..,x]] ⇒
+         let ex_fstep [g,x:names ⊢ F2[..,x]] [g ⊢ F2'] e1 e2 =
+             strengthen_fstep [g,x:names ⊢ F2[..,x]] in
+         let [g,x:names ⊢ frefl] = e1 in
+         let [g,x:names ⊢ prefl] = e2 in
+             [g ⊢ fsc (fs_par2 F2') (c_sym sc_ext_par)]
+       | [g,x:names ⊢ fs_com1 F1[..,x] B1[..,x]] ⇒
+         let ex_bstep [g,x:names ⊢ B1[..,x]] [g ⊢ B1'] e1 e2 =
+         strengthen_bstep [g,x:names ⊢ B1[..,x]] in
+         let [g,x:names ⊢ brefl] = e1 in
+         let [g,x:names,z:names ⊢ prefl] = e2 in
+         let [g,x:names ⊢ F1[..,x]]:[g,x:names ⊢ fstep P (f_out
+         Z[..] W) P'] = [g,x:names ⊢ F1[..,x]] in
+         (case [g,x:names ⊢ W] of
+            | [g,x:names ⊢ #w[..]] ⇒ [g ⊢ fsc (fs_com1 (fs_res
+              \x.F1[..,x]) B1') (c_sym sc_ext_par)]
+            | [g,x:names ⊢ x] ⇒ [g ⊢ fsc (fs_close1 (bs_open
+              \x.F1[..,x]) B1') c_ref]
+         )
+       | [g,x:names ⊢ fs_com2 B1[..,x] F1[..,x]] ⇒
+         let ex_fstep [g,x:names ⊢ F1[..,x]] [g ⊢ F1'] e1 e2 =
+             strengthen_fstep [g,x:names ⊢ F1[..,x]] in
+         let [g,x:names ⊢ frefl] = e1 in
+         let [g,x:names ⊢ prefl] = e2 in
+             [g ⊢ fsc (fs_com2 (bs_res \x.B1[..,x]) F1')
+             (c_sym sc_ext_par)]
+       | [g,x:names ⊢ fs_close1 B1[..,x] B2[..,x]] ⇒ 
+         let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1 e2 =
+         strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+         let [g,x:names ⊢ brefl] = e1 in
+         let [g,x:names,z:names ⊢ prefl] = e2 in
+         [g ⊢ fsc (fs_close1 (bs_res \x.B1[..,x]) B2')
+         (c_trans sc_ext_res (c_res \w.(c_sym sc_ext_par)))]
+       | [g,x:names ⊢ fs_close2 B1[..,x] B2[..,x]] ⇒
+         let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1 e2 =
+             strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+         let [g,x:names ⊢ brefl] = e1 in
+         let [g,x:names,z:names ⊢ prefl] = e2 in
+             [g ⊢ fsc (fs_close2 (bs_res \x.B1[..,x]) B2')
+             (c_trans sc_ext_res (c_res \w.(c_sym sc_ext_par)))]
+    )
+  | [g ⊢ sc_ext_res] ⇒
+    let [g ⊢ fs_res \x.F[..,x]] = f in
+    let [g,x:names ⊢ fs_res \y.F'[..,x,y]] = [g,x:names ⊢ F[..,x]] in
+        [g ⊢ fsc (fs_res \y.(fs_res \x.F'[..,x,y])) sc_ext_res]
+  | [g ⊢ c_in \x.C1[..,x]] ⇒ impossible f
+  | [g ⊢ c_out C1] ⇒ let [g ⊢ fs_out] = f in [g ⊢ fsc fs_out (c_sym C1)]
+  | [g ⊢ c_par C1] ⇒
+    (case f of
+       | [g ⊢ fs_par1 F1] ⇒
+         let [g ⊢ fsc F2 C2] = cong_fstepright_impl_fstepleft [g ⊢ C1]
+             [g ⊢ F1] in [g ⊢ fsc (fs_par1 F2) (c_par C2)]
+       | [g ⊢ fs_par2 F1] ⇒ [g ⊢ fsc (fs_par2 F1) (c_par (c_sym C1))]
+       | [g ⊢ fs_com1 F1 B1] ⇒
+         let [g ⊢ fsc F2 C2] = cong_fstepright_impl_fstepleft [g ⊢ C1]
+             [g ⊢ F1] in [g ⊢ fsc (fs_com1 F2 B1) (c_par C2)]
+       | [g ⊢ fs_com2 B1 F1] ⇒
+         let [g ⊢ bsc B2 \x.C2[..,x]] = cong_bstepright_impl_bstepleft
+             [g ⊢ C1][g ⊢ B1] in [g ⊢ fsc(fs_com2 B2 F1)(c_par C2[..,_])]
+       | [g ⊢ fs_close1 B1 B2] ⇒
+         let [g ⊢ bsc B1' \x.C2[..,x]] = cong_bstepright_impl_bstepleft
+             [g ⊢ C1] [g ⊢ B1] in
+             [g ⊢ fsc (fs_close1 B1' B2) (c_res \x.(c_par C2[..,x]))]
+       | [g ⊢ fs_close2 B1 B2] ⇒
+         let [g ⊢ bsc B1' \x.C2[..,x]] = cong_bstepright_impl_bstepleft
+             [g ⊢ C1] [g ⊢ B1] in
+             [g ⊢ fsc (fs_close2 B1' B2) (c_res \x.(c_par C2[..,x]))]
+    )
+  | [g ⊢ c_res \x.C[..,x]] ⇒
+    let [g ⊢ fs_res \x.F[..,x]] = f in
+    let [g,x:names ⊢ fsc F'[..,x] C'[..,x]] =
+        cong_fstepright_impl_fstepleft [g,x:names ⊢ C[..,x]]
+        [g,x:names ⊢ F[..,x]] in
+        [g ⊢ fsc (fs_res \x.F'[..,x]) (c_res \x.C'[..,x])]
+  | [g ⊢ c_ref] ⇒ let [g ⊢ F] = f in [g ⊢ fsc F c_ref]
+  | [g ⊢ c_sym C'] ⇒
+    let [g ⊢ D] = cong_fstepleft_impl_fstepright [g ⊢ C'] f in [g ⊢ D]
+  | [g ⊢ c_trans C1 C2] ⇒
+    let [g ⊢ fsc F1 C2'] = cong_fstepright_impl_fstepleft [g ⊢ C2] f in
+    let [g ⊢ fsc F2 C1'] = cong_fstepright_impl_fstepleft [g ⊢ C1]
+        [g ⊢ F1] in [g ⊢ fsc F2 (c_trans C2' C1')]
+
+and rec cong_bstepleft_impl_bstepright: (g:ctx) [g ⊢ P cong Q]
+  → [g ⊢ bstep P A \x.P'[..,x]] → [g ⊢ ex_bstepcong P Q A \x.P'[..,x]] =
+/ total c (cong_bstepleft_impl_bstepright _ _ _ _ _ c _)/
+fn c ⇒ fn b ⇒ case c of
+  | [g ⊢ par_unit] ⇒
+    let [g ⊢ bs_par1 B1] = b in [g ⊢ bsc B1 \x.par_unit]
+  | [g ⊢ par_comm] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B1] ⇒ [g ⊢ bsc (bs_par2 B1) \x.par_comm]
+       | [g ⊢ bs_par2 B2] ⇒ [g ⊢ bsc (bs_par1 B2) \x.par_comm]
+    )
+  | [g ⊢ par_assoc] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B] ⇒ [g ⊢ bsc (bs_par1 (bs_par1 B)) \x.par_assoc]
+       | [g ⊢ bs_par2 B] ⇒
+       (case [g ⊢ B] of
+          | [g ⊢ bs_par1 B'] ⇒
+            [g ⊢ bsc (bs_par1 (bs_par2 B')) \x.par_assoc]
+          | [g ⊢ bs_par2 B'] ⇒ [g ⊢ bsc (bs_par2 B') \x.par_assoc]
+       )
+    ) 
+  | [g ⊢ sc_ext_zero] ⇒
+    let [g ⊢ bs_res \x.B[..,x]] = b in impossible [g,x:names ⊢ B[..,x]]
+  | [g ⊢ sc_ext_par] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B1] ⇒
+         (case [g ⊢ B1] of
+            | [g ⊢ bs_res \x.B1'[..,x]] ⇒
+              [g ⊢ bsc (bs_res \x.(bs_par1 B1'[..,x])) \x.sc_ext_par]
+            | [g ⊢ bs_open \x.F1[..,x]] ⇒
+              [g ⊢ bsc (bs_open \x.(fs_par1 F1[..,x])) \x.c_ref]
+         )
+       | [g ⊢ bs_par2 B2] ⇒
+         [g ⊢ bsc (bs_res \x.(bs_par2 B2[..])) \x.sc_ext_par]
+    )
+  | [g ⊢ sc_ext_res] ⇒
+    (case b of
+       | [g ⊢ bs_res \x.B[..,x]] ⇒
+         (case [g,x:names ⊢ B[..,x]] of
+            | [g,x:names ⊢ bs_res \y.B'[..,x,y]] ⇒
+              [g ⊢ bsc (bs_res \y.(bs_res \x.B'[..,x,y])) \x.sc_ext_res]
+            | [g,x:names ⊢ bs_open \y.F[..,x,y]] ⇒
+              [g ⊢ bsc (bs_open \y.(fs_res \x.F[..,x,y])) \x.c_ref]
+         )
+       | [g ⊢ bs_open \x.F[..,x]] ⇒
+         let [g,x:names ⊢ fs_res \y.F'[..,x,y]] = [g,x:names ⊢ F[..,x]]
+         in [g ⊢ bsc (bs_res \y.(bs_open \x.F'[..,x,y])) \x.c_ref]
+    )
+  | [g ⊢ c_in \x.C1[..,x]] ⇒
+    let [g ⊢ bs_in] = b in [g ⊢ bsc bs_in \x.C1[..,x]]
+  | [g ⊢ c_out C1] ⇒ impossible b
+  | [g ⊢ c_par C1] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B1] ⇒
+         let [g ⊢ bsc B2 \x.C2[..,x]] = cong_bstepleft_impl_bstepright
+         [g ⊢ C1] [g ⊢ B1] in [g ⊢ bsc (bs_par1 B2) \x.(c_par C2[..,x])]
+       | [g ⊢ bs_par2 B1] ⇒
+         [g ⊢ bsc (bs_par2 B1) \x.(c_par C1[..])]
+    )
+  | [g ⊢ c_res \x.C[..,x]] ⇒
+    (case b of
+       | [g ⊢ bs_res \x.B[..,x]] ⇒
+         let [g,x:names ⊢ bsc B'[..,x] \y.C'[..,x,y]] =
+             cong_bstepleft_impl_bstepright [g,x:names ⊢ C[..,x]]
+             [g,x:names ⊢ B[..,x]] in
+             [g ⊢ bsc (bs_res \x.B'[..,x]) \y.(c_res \x.C'[..,x,y])]
+       | [g ⊢ bs_open \x.F[..,x]] ⇒
+         let [g,x:names ⊢ fsc F'[..,x] C'[..,x]] =
+             cong_fstepleft_impl_fstepright [g,x:names ⊢ C[..,x]]
+             [g,x:names ⊢ F[..,x]] in
+             [g ⊢ bsc (bs_open \x.F'[..,x]) \x.C'[..,x]]
+    )
+  | [g ⊢ c_ref] ⇒ let [g ⊢ B] = b in [g ⊢ bsc B \x.c_ref]
+  | [g ⊢ c_sym C'] ⇒
+    let [g ⊢ D] = cong_bstepright_impl_bstepleft [g ⊢ C'] b in [g ⊢ D]
+  | [g ⊢ c_trans C1 C2] ⇒
+    let [g ⊢ bsc B1 \x.C1'[..,x]] =
+        cong_bstepleft_impl_bstepright [g ⊢ C1] b in
+    let [g ⊢ bsc B2 \x.C2'[..,x]] =
+        cong_bstepleft_impl_bstepright [g ⊢ C2] [g ⊢ B1] in
+        [g ⊢ bsc B2 \x.(c_trans C1'[..,x] C2'[..,x])]
+
+
+and rec cong_bstepright_impl_bstepleft: (g:ctx) [g ⊢ P cong Q]
+  → [g ⊢ bstep Q A \x.Q'[..,x]] → [g ⊢ ex_bstepcong Q P A \x.Q'[..,x]] =
+/ total c (cong_bstepright_impl_bstepleft _ _ _ _ _ c _)/
+fn c ⇒ fn b ⇒ case c of
+  | [g ⊢ par_unit] ⇒
+    let [g ⊢ B] = b in [g ⊢ bsc (bs_par1 B) \x.(c_sym par_unit)]
+  | [g ⊢ par_comm] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B1] ⇒ [g ⊢ bsc (bs_par2 B1) \x.par_comm]
+       | [g ⊢ bs_par2 B2] ⇒ [g ⊢ bsc (bs_par1 B2) \x.par_comm]
+    )
+  | [g ⊢ par_assoc] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B] ⇒
+         (case [g ⊢ B] of
+            | [g ⊢ bs_par1 B'] ⇒
+              [g ⊢ bsc (bs_par1 B') \x.(c_sym par_assoc)]
+            | [g ⊢ bs_par2 B'] ⇒
+              [g ⊢ bsc (bs_par2 (bs_par1 B')) \x.(c_sym par_assoc)]
+         )
+       | [g ⊢ bs_par2 B] ⇒
+         [g ⊢ bsc (bs_par2 (bs_par2 B)) \x.(c_sym par_assoc)]
+    )
+  | [g ⊢ sc_ext_zero] ⇒ impossible b
+  | [g ⊢ sc_ext_par] ⇒
+    (case b of
+       | [g ⊢ bs_res \x.B[..,x]] ⇒
+         (case [g, x:names ⊢ B[..,x]] of
+            | [g,x:names ⊢ bs_par1 B1[..,x]] ⇒
+              [g ⊢ bsc (bs_par1 (bs_res \x.B1[..,x]))
+              \x.(c_sym sc_ext_par)]
+            | [g,x:names ⊢ bs_par2 B2[..,x]] ⇒
+              let ex_bstep [g,x:names ⊢ B2[..,x]] [g ⊢ B2'] e1 e2 =
+                  strengthen_bstep [g,x:names ⊢ B2[..,x]] in
+              let [g,x:names ⊢ brefl] = e1 in
+              let [g,x:names, z:names ⊢ prefl] = e2 in
+                  [g ⊢ bsc (bs_par2 B2') \x.(c_sym sc_ext_par)]
+         )
+       | [g ⊢ bs_open \x.F[..,x]] ⇒
+         (case [g,x:names ⊢ F[..,x]] of
+            | [g,x:names ⊢ fs_par1 F1[..,x]] ⇒
+              [g ⊢ bsc (bs_par1 (bs_open \x.F1[..,x])) \x.c_ref]
+            | [g,x:names ⊢ fs_par2 F2[..,x]] ⇒
+              let ex_fstep [g,x:names ⊢ F2[..,x]] [g ⊢ F2'] e1 e2 =
+              strengthen_fstep [g,x:names ⊢ F2[..,x]] in impossible e1
+         )
+    )  
+  | [g ⊢ sc_ext_res] ⇒
+    (case b of
+       | [g ⊢ bs_res \x.B[..,x]] ⇒
+         (case [g,x:names ⊢ B[..,x]] of
+            | [g,x:names ⊢ bs_res \y.B'[..,x,y]] ⇒
+              [g ⊢ bsc (bs_res \y.(bs_res \x.B'[..,x,y])) \x.sc_ext_res]
+            | [g,x:names ⊢ bs_open \y.F[..,x,y]] ⇒
+              [g ⊢ bsc (bs_open \y.(fs_res \x.F[..,x,y])) \x.c_ref]
+         )
+       | [g ⊢ bs_open \x.F[..,x]] ⇒
+         let [g,x:names ⊢ fs_res \y.F'[..,x,y]] = [g,x:names ⊢ F[..,x]]
+         in [g ⊢ bsc (bs_res \y.(bs_open \x.F'[..,x,y])) \x.c_ref]
+    )
+  | [g ⊢ c_in \x.C1[..,x]] ⇒
+    let [g ⊢ bs_in] = b in [g ⊢ bsc bs_in \x.(c_sym C1[..,x])]
+  | [g ⊢ c_out C1] ⇒ impossible b
+  | [g ⊢ c_par C1] ⇒
+    (case b of
+       | [g ⊢ bs_par1 B1] ⇒
+          let [g ⊢ bsc B2 \x.C2[..,x]] =
+              cong_bstepright_impl_bstepleft [g ⊢ C1] [g ⊢ B1] in
+              [g ⊢ bsc (bs_par1 B2) \x.(c_par C2[..,x])]
+       | [g ⊢ bs_par2 B1] ⇒
+         [g ⊢ bsc (bs_par2 B1) \x.(c_par (c_sym C1[..]))]
+    )
+  | [g ⊢ c_res \x.C[..,x]] ⇒
+    (case b of
+       | [g ⊢ bs_res \x.B[..,x]] ⇒
+         let [g,x:names ⊢ bsc B'[..,x] \y.C'[..,x,y]] =
+             cong_bstepright_impl_bstepleft [g,x:names ⊢ C[..,x]]
+             [g,x:names ⊢ B[..,x]] in
+             [g ⊢ bsc (bs_res \x.B'[..,x]) \y.(c_res \x.C'[..,x,y])]
+       | [g ⊢ bs_open \x.F[..,x]] ⇒
+         let [g,x:names ⊢ fsc F'[..,x] C'[..,x]] =
+             cong_fstepright_impl_fstepleft [g,x:names ⊢ C[..,x]]
+             [g,x:names ⊢ F[..,x]] in
+             [g ⊢ bsc (bs_open \x.F'[..,x]) \x.C'[..,x]]
+    )
+  | [g ⊢ c_ref] ⇒ let [g ⊢ B] = b in [g ⊢ bsc B \x.c_ref]
+  | [g ⊢ c_sym C'] ⇒
+    let [g ⊢ D] = cong_bstepleft_impl_bstepright [g ⊢ C'] b in [g ⊢ D]
+  | [g ⊢ c_trans C1 C2] ⇒
+    let [g ⊢ bsc B1 \x.C2'[..,x]] =
+        cong_bstepright_impl_bstepleft [g ⊢ C2] b in
+    let [g ⊢ bsc B2 \x.C1'[..,x]] =
+        cong_bstepright_impl_bstepleft [g ⊢ C1] [g ⊢ B1] in
+        [g ⊢ bsc B2 \x.(c_trans C2'[..,x] C1'[..,x])]
+;

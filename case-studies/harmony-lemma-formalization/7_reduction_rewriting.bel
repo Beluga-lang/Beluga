@@ -1,0 +1,74 @@
+% Predicate about syntactic equivalence of processes involved in reductions:
+% ex_red_rew P Q holds iff there exist R1, R2, S, X, Y, x_1,...,x_n such that P cong (nu x_1)...(nu x_n)(((p_out X Y R1) p_par (p_in X R2)) p_par S) and
+% Q cong (nu x_1)...(nu x_n)((R1 p_par (R2 Y)) p_par S).
+% We encode this type via two constructors: one representing the base case without restrictions, and one representing the inductive case
+% in which P cong (nu x)P' and Q cong (nu x)Q', where ex_red_rew P' Q' holds inductively.
+
+LF ex_red_rew: proc → proc → type =
+  | red_base: P cong (((p_out X Y R1) p_par (p_in X R2)) p_par S)
+    → Q cong ((R1 p_par (R2 Y)) p_par S) → ex_red_rew P Q
+  | red_ind: P cong (p_res P') → Q cong (p_res Q')
+    → ({w:names} ex_red_rew (P' w) (Q' w)) → ex_red_rew P Q
+;
+
+% We prove the lemma which states that processes involved in reductions (P red Q)
+% can be rewritten (up to congruence) in a canonic way (ex_red_rew P Q).
+% Before, we need three additional lemmas which prove the result in particular cases.
+
+rec red_impl_red_rew_par: (g:ctx) {R:[g ⊢ proc]} [g ⊢ ex_red_rew P Q]
+  → [g ⊢ ex_red_rew (P p_par R) (Q p_par R)] =
+/ total d (red_impl_red_rew_par _ _ _ _ d) /
+mlam R ⇒ fn d ⇒ case d of
+   | [g ⊢ red_base C1 C2] ⇒
+     [g ⊢ red_base (c_trans (c_par C1) (c_sym par_assoc))
+     (c_trans (c_par C2) (c_sym par_assoc))]
+   | [g ⊢ red_ind C1 C2 \w.D1[..,w]] ⇒
+     let [g,w:names ⊢ D2[..,w]] = red_impl_red_rew_par
+     [g,w:names ⊢ R[..]] [g,w:names ⊢ D1[..,w]] in
+     [g ⊢ red_ind (c_trans (c_par C1) sc_ext_par) 
+     (c_trans (c_par C2) sc_ext_par) \w.D2[..,w]]
+;
+
+rec red_impl_red_rew_res: (g:ctx) [g,z:names ⊢ ex_red_rew P[..,z] Q[..,z]]
+  → [g ⊢ ex_red_rew (p_res \z.P[..,z]) (p_res \z.Q[..,z])] =
+/ total d (red_impl_red_rew_res _ _ _ d) /
+fn d ⇒ case d of
+   | [g,z:names ⊢ red_base C1[..,z] C2[..,z]] ⇒
+     [g ⊢ red_ind c_ref c_ref \z.(red_base C1[..,z] C2[..,z])]
+   | [g,z:names ⊢ red_ind C1[..,z] C2[..,z] \w.D1[..,z,w]] ⇒
+     let [g,z:names ⊢ D2[..,z]] = red_impl_red_rew_res [g,z:names,w:names ⊢ D1[..,z,w]] in
+     [g ⊢ red_ind (c_res \z.C1[..,z]) (c_res \z.C2[..,z]) \z.D2[..,z]]
+;
+
+rec red_impl_red_rew_str: (g:ctx) [g ⊢ P cong P'] → [g ⊢ ex_red_rew P' Q']
+  → [g ⊢ Q' cong Q] → [g ⊢ ex_red_rew P Q] =
+/ total d (red_impl_red_rew_str _ _ _ _ _ _ d _) /
+fn c1 ⇒ fn d ⇒ fn c2 ⇒ case d of
+   | [g ⊢ red_base C1' C2'] ⇒
+     let [g ⊢ C1] = c1 in
+     let [g ⊢ C2] = c2 in
+     [g ⊢ red_base (c_trans C1 C1') (c_trans (c_sym C2) C2')]
+   | [g ⊢ red_ind C1' C2' \w.D1[..,w]] ⇒
+     let [g ⊢ C1] = c1 in
+     let [g ⊢ C2] = c2 in
+     [g ⊢ red_ind (c_trans C1 C1') (c_trans (c_sym C2) C2') \w.D1[..,w]]
+;
+
+
+rec red_impl_red_rew: (g:ctx) [g ⊢ P red Q] → [g ⊢ ex_red_rew P Q] =
+/ total r (red_impl_red_rew _ _ _ r) /
+fn r ⇒ case r of
+   | [g ⊢ r_com] ⇒ [g ⊢ red_base (c_sym par_unit) (c_sym par_unit)]
+   | [g ⊢ r_par R1]:[g ⊢ (P p_par R) red (Q p_par R)] ⇒
+     let [g ⊢ D1] = red_impl_red_rew [g ⊢ R1] in
+     let [g ⊢ D2] = red_impl_red_rew_par [g ⊢ R] [g ⊢ D1] in [g ⊢ D2]
+   | [g ⊢ r_res \z.R1[..,z]] ⇒
+     let [g,z:names ⊢ D1[..,z]] = red_impl_red_rew
+     [g,z:names ⊢ R1[..,z]] in
+     let [g ⊢ D2] = red_impl_red_rew_res [g,z:names ⊢ D1[..,z]] in
+     [g ⊢ D2]
+   | [g ⊢ r_str C1 R1 C2] ⇒
+     let [g ⊢ D1] = red_impl_red_rew [g ⊢ R1] in
+     let [g ⊢ D2] = red_impl_red_rew_str [g ⊢ C1] [g ⊢ D1] [g ⊢ C2] in
+     [g ⊢ D2]
+;

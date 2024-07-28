@@ -1,0 +1,107 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Definitions %%%
+
+% Set of Channel Names
+LF names: type =
+;
+
+% Processes
+% In order to encode input and restriction processes, which both bind names, we exploit higher order abstract syntax
+% and use higher-order functions from names to proc.
+% In this way we don't need to give an explicit name to bound names and deal with alpha-renaming or substitution.
+LF proc: type =
+  | p_zero: proc                                % 0
+  | p_in: names → (names → proc) → proc         % x(y).P(y), where x(y) is an input of the name y through channel x
+  | p_out: names → names → proc → proc          % x(u).P, where x(u) is an output of the name u through channel x
+  | p_par: proc → proc → proc                   % P|Q, where P and Q are processes
+  | p_res: (names → proc) → proc                % (nu x) P, where x is a name and P is a process
+;
+--infix p_par 11 left.
+
+% Contexts
+schema ctx = names;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Reduction Semantics %%%
+
+% Structural Congruence
+LF cong: proc → proc → type =
+% Abelian Monoid Laws for Parallel Composition
+  | par_assoc: cong (P p_par (Q p_par R)) ((P p_par Q) p_par R)
+  | par_unit: cong (P p_par p_zero) P
+  | par_comm: cong (P p_par Q) (Q p_par P)
+% Scope Extension Laws
+  | sc_ext_zero: cong (p_res \x.p_zero) p_zero
+  | sc_ext_par: cong ((p_res P) p_par Q) (p_res \x.((P x) p_par Q))
+  | sc_ext_res: cong (p_res \x.(p_res \y.(P x y))) (p_res \y.(p_res \x.(P x y)))
+% Compatibility Laws
+  | c_in: ({y:names} cong (P y) (Q y)) → cong (p_in X P) (p_in X Q)
+  | c_out: cong P Q → cong (p_out X Y P) (p_out X Y Q)
+  | c_par: cong P P' → cong (P p_par Q) (P' p_par Q)
+  | c_res: ({x:names} cong (P x) (Q x)) → cong (p_res P) (p_res Q)
+% Equivalence Relation Laws
+  | c_ref: cong P P
+  | c_sym: cong P Q → cong Q P
+  | c_trans: cong P Q → cong Q R → cong P R
+;
+--infix cong 11 left.
+
+% Reduction
+LF red: proc → proc → type =
+  | r_com: red ((p_out X Y P) p_par (p_in X Q)) (P p_par (Q Y))
+  | r_par: red P Q → red (P p_par R) (Q p_par R)
+  | r_res: ({x:names} red (P x) (Q x)) → red (p_res P) (p_res Q)
+  | r_str: P cong P' → red P' Q' → Q' cong Q → red P Q
+;
+--infix red 11 left.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% LTS Semantics %%%
+% We follow "Pi-Calculus in (Co)Inductive Type Theory" [Honsell et al. 2001] for the encoding of late LTS semantics.
+% We define two different types for free/bound actions, and two different relations for transitions via free/bound actions.
+% The result of a free transition is a process, while the result of a bound transition is a function from names to processes:
+% instead of stating the bound name involved in the transition explicitly, that name is the argument of the aforementioned function.
+
+% Free Actions
+LF f_act: type =
+  | f_tau: f_act
+  | f_out: names → names → f_act
+;
+
+% Bound Actions
+LF b_act: type =
+  | b_in: names → b_act
+  | b_out: names → b_act
+;
+
+
+% Transition Relation
+LF fstep: proc → f_act → proc → type =
+  | fs_out: fstep (p_out X Y P) (f_out X Y) P
+  | fs_par1: fstep P A P' → fstep (P p_par Q) A (P' p_par Q)
+  | fs_par2: fstep Q A Q' → fstep (P p_par Q) A (P p_par Q')
+  | fs_com1: fstep P (f_out X Y) P' → bstep Q (b_in X) Q'
+    → fstep (P p_par Q) f_tau (P' p_par (Q' Y))
+  | fs_com2: bstep P (b_in X) P' → fstep Q (f_out X Y) Q'
+    → fstep (P p_par Q) f_tau ((P' Y) p_par Q')
+  | fs_res: ({z:names} fstep (P z) A (P' z))
+    → fstep (p_res P) A (p_res P')
+  | fs_close1: bstep P (b_out X) P' → bstep Q (b_in X) Q'
+    → fstep (P p_par Q) f_tau (p_res \z.((P' z) p_par (Q' z)))
+  | fs_close2: bstep P (b_in X) P' → bstep Q (b_out X) Q'
+    → fstep (P p_par Q) f_tau (p_res \z.((P' z) p_par (Q' z)))
+
+and bstep: proc → b_act → (names → proc) → type =
+  | bs_in: bstep (p_in X P) (b_in X) P
+  | bs_par1: bstep P A P' → bstep (P p_par Q) A \x.((P' x) p_par Q)
+  | bs_par2: bstep Q A Q' → bstep (P p_par Q) A \x.(P p_par (Q' x))
+  | bs_res: ({z:names} bstep (P z) A (P' z))
+    → bstep (p_res P) A \x.(p_res \z.(P' z x))
+  | bs_open: ({z:names} fstep (P z) (f_out X z) (P' z))
+    → bstep (p_res P) (b_out X) P'
+;

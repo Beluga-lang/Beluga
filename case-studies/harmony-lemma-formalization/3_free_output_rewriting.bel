@@ -1,0 +1,70 @@
+% Predicate about syntactic equivalence of processes involved in free output transitions:
+% ex_fout_rew Q X Y Q' holds iff there exist R, S, x_1,...,x_n such that Q cong (nu x_1)...(nu x_n)((p_out X Y R) p_par S) and
+% Q' cong (nu x_1)...(nu x_n)(R p_par S).
+% We encode this type via two constructors: one representing the base case without restrictions, and one representing the inductive case
+% in which Q cong (nu x)P and Q' cong (nu x)P', where ex_fout_rew P X P' holds inductively.
+
+LF ex_fout_rew: proc → names → names → proc → type =
+  | fout_base: Q cong ((p_out X Y R) p_par S) → Q' cong (R p_par S)
+    → ex_fout_rew Q X Y Q'
+  | fout_ind: Q cong (p_res P) → Q' cong (p_res P')
+    → ({w:names} ex_fout_rew (P w) X Y (P' w)) → ex_fout_rew Q X Y Q'
+;
+
+
+% We prove the lemma which states that processes involved in free output transitions (fstep Q (f_out X Y) Q')
+% can be rewritten (up to congruence) in a canonic way (ex_fout_rew Q X Y Q').
+% Before, we need three additional lemmas which prove the result in particular cases.
+
+rec fs_out_rew_par1: (g:ctx) {R:[g ⊢ proc]} [g ⊢ ex_fout_rew Q X Y Q']
+  → [g ⊢ ex_fout_rew (Q p_par R) X Y (Q' p_par R)] =
+/ total d (fs_out_rew_par1 _ _ _ _ _ _ d) /
+mlam R ⇒ fn d ⇒ case d of
+   | [g ⊢ fout_base C1 C2] ⇒ [g ⊢ fout_base (c_trans (c_par C1)
+     (c_sym par_assoc)) (c_trans (c_par C2) (c_sym par_assoc))]
+   | [g ⊢ fout_ind C1 C2 \w.D1[..,w]] ⇒ let [g,w:names ⊢ D2[..,w]]
+     = fs_out_rew_par1 [g,w:names ⊢ R[..]] [g,w:names ⊢ D1[..,w]] in
+       [g ⊢ fout_ind (c_trans (c_par C1) sc_ext_par)
+       (c_trans (c_par C2) sc_ext_par) \w.D2[..,w]]
+;
+
+rec fs_out_rew_par2: (g:ctx) {R:[g ⊢ proc]} [g ⊢ ex_fout_rew Q X Y Q']
+  → [g ⊢ ex_fout_rew (R p_par Q) X Y (R p_par Q')] =
+/ total d (fs_out_rew_par2 _ _ _ _ _ _ d) /
+mlam R ⇒ fn d ⇒ case d of
+   | [g ⊢ fout_base C1 C2] ⇒ [g ⊢ fout_base (c_trans par_comm (c_trans (c_par C1)
+     (c_sym par_assoc))) (c_trans par_comm (c_trans (c_par C2) (c_sym par_assoc)))]
+   | [g ⊢ fout_ind C1 C2 \w.D1[..,w]] ⇒ let [g,w:names ⊢ D2[..,w]]
+     = fs_out_rew_par2 [g,w:names ⊢ R[..]] [g,w:names ⊢ D1[..,w]] in
+     [g ⊢ fout_ind (c_trans par_comm (c_trans (c_par C1) (c_trans sc_ext_par
+       (c_res \w.par_comm)))) (c_trans par_comm (c_trans (c_par C2)
+       (c_trans sc_ext_par (c_res \w.par_comm)))) \w.D2[..,w]]
+;
+
+rec fs_out_rew_res: (g:ctx) ([g,z:names ⊢ ex_fout_rew Q[..,z] X[..] Y[..] Q'[..,z]])
+  → [g ⊢ ex_fout_rew (p_res \z.Q[..,z]) X Y (p_res \z.Q'[..,z])] =
+/ total d (fs_out_rew_res _ _ _ _ _ d) /
+fn d ⇒ case d of
+   | [g,z:names ⊢ fout_base C1[..,z] C2[..,z]] ⇒ [g ⊢ fout_ind (c_res \z.C1[..,z])
+     (c_res \z.C2[..,z]) \z.(fout_base c_ref c_ref)]
+   | [g,z:names ⊢ fout_ind C1[..,z] C2[..,z] \w.D1[..,z,w]] ⇒ let [g,z:names ⊢ D2[..,z]]
+     = fs_out_rew_res [g,z:names,w:names ⊢ D1[..,z,w]] in
+       [g ⊢ fout_ind (c_res \z.C1[..,z]) (c_res \z.C2[..,z]) \z.D2[..,z]]
+;
+
+
+rec fs_out_rew: (g:ctx) [g ⊢ fstep Q (f_out X Y) Q']
+   → [g ⊢ ex_fout_rew Q X Y Q'] =
+/ total f (fs_out_rew _ _ _ _ _ f) /
+fn f ⇒ case f of
+   | [g ⊢ fs_out] ⇒ [g ⊢ fout_base (c_sym par_unit) (c_sym par_unit)]
+   | [g ⊢ fs_par1 B1]:[g ⊢ fstep (P p_par R) (f_out X Y) (P' p_par R)] ⇒
+     let [g ⊢ D1] = fs_out_rew [g ⊢ B1] in
+     let [g ⊢ D2] = fs_out_rew_par1 [g ⊢ R] [g ⊢ D1] in [g ⊢ D2]
+   | [g ⊢ fs_par2 B2]:[g ⊢ fstep (R p_par P) (f_out X Y) (R p_par P')] ⇒
+     let [g ⊢ D1] = fs_out_rew [g ⊢ B2] in
+     let [g ⊢ D2] = fs_out_rew_par2 [g ⊢ R] [g ⊢ D1] in [g ⊢ D2]
+   | [g ⊢ fs_res \z.F[..,z]] ⇒
+     let [g,z:names ⊢ D1[..,z]] = fs_out_rew [g,z:names ⊢ F[..,z]] in
+     let [g ⊢ D2] = fs_out_rew_res [g,z:names ⊢ D1[..,z]] in [g ⊢ D2]
+;

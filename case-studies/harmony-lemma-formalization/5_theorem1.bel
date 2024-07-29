@@ -195,22 +195,22 @@ fn f ⇒ case f of
    | [g ⊢ fs_par2 F2] ⇒ let [g ⊢ R] = fstep_impl_red [g ⊢ F2] in
                          [g ⊢ r_str par_comm (r_par R) par_comm] 
    | [g ⊢ fs_com1 F1 B1] ⇒
-     let [g ⊢ D1] = fs_out_rew [g ⊢ _] [g ⊢ F1] in
-     let [g ⊢ D2] = bs_in_rew [g ⊢ _] [g ⊢ B1] in
+     let [g ⊢ D1] = fs_out_rew [g ⊢ F1] in
+     let [g ⊢ D2] = bs_in_rew [g ⊢ B1] in
      let [g ⊢ R] = fs_com1_impl_red [g ⊢ D1] [g ⊢ D2] in [g ⊢ R]
    | [g ⊢ fs_com2 B1 F1] ⇒
-     let [g ⊢ D1] = bs_in_rew [g ⊢ _] [g ⊢ B1] in
-     let [g ⊢ D2] = fs_out_rew [g ⊢ _] [g ⊢ F1] in
+     let [g ⊢ D1] = bs_in_rew [g ⊢ B1] in
+     let [g ⊢ D2] = fs_out_rew [g ⊢ F1] in
      let [g ⊢ R] = fs_com2_impl_red [g ⊢ D1] [g ⊢ D2] in [g ⊢ R]
    | [g ⊢ fs_res \z.F[..,z]] ⇒
      let [g,z:names ⊢ R[..,z]] = fstep_impl_red [g,z:names ⊢ F[..,z]] in 
      [g ⊢ r_res \z.R[..,z]]
    | [g ⊢ fs_close1 B1 B2] ⇒
-     let [g ⊢ D1] = bs_out_rew [g ⊢ _][g ⊢ B1] in
-     let [g ⊢ D2] = bs_in_rew [g ⊢ _] [g ⊢ B2] in
+     let [g ⊢ D1] = bs_out_rew [g ⊢ B1] in
+     let [g ⊢ D2] = bs_in_rew [g ⊢ B2] in
      let [g ⊢ R] = fs_close1_impl_red [g ⊢ D1] [g ⊢ D2] in [g ⊢ R]
    | [g ⊢ fs_close2 B1 B2] ⇒
-     let [g ⊢ D1] = bs_in_rew [g ⊢ _] [g ⊢ B1] in
-     let [g ⊢ D2] = bs_out_rew [g ⊢ _] [g ⊢ B2] in
+     let [g ⊢ D1] = bs_in_rew [g ⊢ B1] in
+     let [g ⊢ D2] = bs_out_rew [g ⊢ B2] in
      let [g ⊢ R] = fs_close2_impl_red [g ⊢ D1] [g ⊢ D2] in [g ⊢ R]
 ;

@@ -178,7 +178,7 @@ A process is considered alive if its status is `run', `open',
              '(run open listen connect stop))))
 
 (defun beluga-font-lock-compose-symbol (alist)
-  "Compose a sequence of ascii chars into a symbol.
+  "Compose a sequence of ascii chars (ALIST) into a symbol.
 Regexp match data 0 points to the chars."
   ;; Check that the chars should really be composed into a symbol.
   (let* ((start (match-beginning 0))
@@ -208,6 +208,7 @@ Regexp match data 0 points to the chars."
   nil)
 
 (defun beluga-font-lock-symbols-keywords ()
+  "Beluga-mode font lock for keywords."
   (when (and (fboundp 'compose-region) beluga-font-lock-symbols)
     (let ((alist nil))
       (dolist (x beluga-font-lock-symbols-alist)
@@ -231,7 +232,7 @@ Regexp match data 0 points to the chars."
 (defconst beluga-syntax-fundec-re
   (regexp-opt '("rec" "proof") 'symbols)
   "A regexp for matching a function declaration.
-Note that this will also match the 'and' keyword!")
+Note that this will also match the \"and\" keyword!")
 
 (defvar beluga-imenu-generic-expression
   `(("Schemas"
@@ -258,6 +259,7 @@ Note that this will also match the 'and' keyword!")
 (define-error 'beluga-interactive-error "Beluga interactive error")
 
 (defun beluga-interactive-error (&rest data)
+  "Raise an interactive error with DATA."
   (signal 'beluga-interactive-error data))
 
 ;; ------ process management ----- ;;
@@ -277,6 +279,7 @@ Note that this will also match the 'and' keyword!")
 (defvar beluga--output-timer 0.0)
 
 (defun beluga--proc ()
+  "Start a beli process if not already available."
   (unless (beluga--proc-live-p beluga--proc) (beluga-start))
   beluga--proc)
 
@@ -311,6 +314,7 @@ This is a graceful termination."
 (make-variable-buffer-local 'beluga--holes-overlays)
 
 (defun beluga-sorted-holes ()
+  "Sort beluga holes."
   (cl-labels
       ((hole-comp (a b)
                   (let* ((s1 (overlay-start a))
@@ -322,7 +326,8 @@ This is a graceful termination."
   '((t :background "cyan")) ;; :foreground "white"
   "Face used to highlight holes in Beluga mode.")
 
-(defun beluga--pos (line bol offset)
+(defun beluga--pos (_line _bol offset)
+  "Get a current position using OFFSET."
   ;; According to http://caml.inria.fr/mantis/view.php?id=5159,
   ;; `line' can refer to line numbers in various source files,
   ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
@@ -357,6 +362,7 @@ This is a graceful termination."
     ol))
 
 (defun beluga-erase-holes ()
+  "Erase holes."
   (interactive)
   (mapc #'delete-overlay beluga--holes-overlays)
   (setq beluga--holes-overlays nil))
@@ -368,7 +374,8 @@ This is a graceful termination."
 ;; command to the interactive mode and get back a string response.
 
 (defun beluga--wait (proc)
-  (assert (eq (current-buffer) (process-buffer proc)))
+  "Wait PROC."
+  (cl-assert (eq (current-buffer) (process-buffer proc)))
   (setq beluga--output-timer 0.0)
   (while (progn
            (goto-char comint-last-input-end)
@@ -385,6 +392,7 @@ This is a graceful termination."
                             ""
                             str))
 (defun beluga--trim (str)
+  "Trim STR."
   (let ((str2 (beluga--chomp str)))
     (substring str2 0 (1- (length str2)))))
 
@@ -408,6 +416,7 @@ This is a graceful termination."
       (beluga--trim (buffer-substring-no-properties comint-last-input-end (point-max))))))
 
 (defun beluga--rpc (cmd)
+  "Use CMD on beli."
   (beluga--send cmd)
   (beluga--receive))
 
@@ -416,7 +425,7 @@ This is a graceful termination."
   (string= "-" (substring resp 0 1)))
 
 (defun beluga--rpc! (cmd)
-  "Variant of beluga--rpc that signals an error if CMD fails."
+  "Variant of `beluga--rpc' that signals an error if CMD fails."
   (let ((resp (beluga--rpc cmd)))
     (when (beluga--is-response-error resp)
       (beluga-interactive-error (list (format "%s" (substring resp 2)))))
@@ -478,6 +487,8 @@ returned.  Else, nil is returned."
   (mapcar 'car (cl-remove-if 'stringp args)))
 
 (defun beluga--define-command (rpc name realname args)
+  "Define a beli command for RPC.
+The command has elisp name NAME and string name REALNAME, and takes ARGS."
   (let ((arglist (beluga--generate-arg-list args))
         (fmt (beluga--generate-format-string args)))
     `(defun ,name ,arglist
@@ -489,6 +500,8 @@ returned.  Else, nil is returned."
          ,realname ,@arglist)))))
 
 (defmacro beluga-define-command (name realname args)
+  "Macro to provide `beluga--rpc' to `beluga--define-command'.
+NAME, REALNAME, and ARGS are passed to `beluga--define-command'."
   `(progn
      ,(beluga--define-command 'beluga--rpc name realname args)
      ,(beluga--define-command 'beluga--rpc! (intern (concat (symbol-name name) "!")) realname args)))
@@ -532,6 +545,7 @@ returned.  Else, nil is returned."
   (message "%s" (beluga--rpc cmd)))
 
 (defun beluga--maybe-save ()
+  "Save a buffer based on a user response."
   (if (buffer-modified-p)
     (if (y-or-n-p "Save current file? ")
       (save-buffer)
@@ -545,15 +559,15 @@ returned.  Else, nil is returned."
 (defun beluga--load-current-buffer (&optional mtime)
   "Load the current buffer in Beluga Interactive.
 This command signals an error if loading fails.
-The optional MTIME parameter, if given, will be written to `beluga--last-load-time'."
+The optional MTIME parameter, if given, will be
+written to `beluga--last-load-time'."
   (let ((resp (beluga--basic-load! (buffer-file-name))))
     (when mtime
       (setq beluga--last-load-time mtime))
     resp))
 
 (defun beluga--maybe-save-load-current-buffer ()
-  "Load the current buffer if it has either never been loaded, or
-modified since the last time it was loaded.
+  "Load the current buffer if it has not been loaded or if modified.
 This will update `beluga--last-load-time' if a load is performed."
   ;; prompt the user to save the buffer if it is modified
   (beluga--maybe-save)
@@ -564,6 +578,7 @@ This will update `beluga--last-load-time' if a load is performed."
       (beluga--load-current-buffer mtime))))
 
 (defun beluga--lochole-n! (hole-num)
+  "Using `beluga--basic-lochole-n!' with HOLE-NUM."
   (read (beluga--basic-lochole-n! hole-num)))
 
 (defun beluga--countholes! ()
@@ -590,17 +605,20 @@ This will update `beluga--last-load-time' if a load is performed."
   (nth (beluga--lookup-hole! hole) (beluga-sorted-holes)))
 
 (defun beluga--apply-quail-completions (str)
+  "Apply quail syntax appearing in STR."
   (if (string= current-input-method beluga-input-method-name)
      (replace-regexp-in-string "=>" "⇒"
       (replace-regexp-in-string "|-" "⊢" str))
      str))
 
 (defun beluga--insert-formatted (str start)
+  "Insert STR to START after formatting it."
   (goto-char start)
   (insert (beluga--apply-quail-completions str))
   (indent-region start (+ start (length str))))
 
 (defun beluga--error-no-such-hole (n)
+  "Error message for non-existing hole N."
   (message "Couldn't find hole %s - make sure the file is loaded" n))
 
 (defconst beluga-named-hole-re
@@ -616,8 +634,8 @@ function returns nil."
       (match-string 1 thing))))
 
 (defun beluga--prompt-with-hole-at-point (prompt)
-  "Prompt the user to specify a hole, giving the named hole at point
-as the default if any."
+  "Prompt the user to specify a hole with PROMPT.
+The named hole at point is provided as the default if any."
   (let ((name (beluga-named-hole-at-point)))
     (if name
         (read-string (format "%s (%s): " prompt name)
@@ -636,7 +654,7 @@ Specifically, the following are performed, if necessary:
   (beluga--highlight-holes))
 
 (defun beluga--prompt-string (prompt)
-  "Prompts the user to input a string."
+  "Prompt the user to input a string with PROMPT."
   (read-string (format "%s: " prompt)))
 
 ;; ----- Top-level commands ----- ;;
@@ -658,6 +676,7 @@ prompt for saving."
   (beluga--begin-command))
 
 (defun beluga-hole-info (hole)
+  "Information of HOLE."
   (interactive
    (list
     (beluga--prompt-with-hole-at-point "Hole to query")))
@@ -666,7 +685,7 @@ prompt for saving."
     (message resp)))
 
 (defun beluga-split-hole (hole var)
-  "Split on HOLE."
+  "Split on HOLE using VAR."
   (interactive
    (list
     (beluga--prompt-with-hole-at-point "Hole to split at")
@@ -686,7 +705,7 @@ prompt for saving."
       (beluga--error-no-such-hole hole))))
 
 (defun beluga-intro-hole (hole)
-  "Introduce variables into HOLE"
+  "Introduce variables into HOLE."
   (interactive
    (list
     (beluga--prompt-with-hole-at-point "Hole to introduce variables into")))
@@ -705,7 +724,8 @@ prompt for saving."
       (beluga--error-no-such-hole hole))))
 
 (defun beluga-hole-jump (hole)
-  (interactive "sHole to jump to: ")
+  "Jump to HOLE."
+  (interactive "Hole to jump to: ")
   (beluga--begin-command)
   (let ((ovr (beluga--get-hole-overlay! hole)))
     (if ovr
@@ -781,7 +801,7 @@ Otherwise, `match-string' 1 will contain the name of the matched short.")
   :type 'integer)
 
 (defun beluga-smie-forward-token ()
-  ; skip all whitespace and comments
+  "Skip all following whitespace and comments."
   (forward-comment (point-max))
   (cond
    ((looking-at "\\.[ \t]*$")
@@ -820,6 +840,7 @@ Return the starting position of the short pragma; else, nil."
         (match-beginning 0)))))
 
 (defun beluga-smie-backward-token ()
+  "Skip all previous whitespace and comments."
   (forward-comment (- (point-max)))
   (cond
    ((and (eq ?\. (char-before))
@@ -843,6 +864,7 @@ Return the starting position of the short pragma; else, nil."
        (point))))))
 
 (defun beluga-smie-grammar (bnf resolvers precs)
+  "Get smie grammar based on BNF, RESOLVERS, and PRECS."
   (smie-prec2->grammar
    (smie-merge-prec2s
     (apply #'smie-bnf->prec2 bnf resolvers)
@@ -986,9 +1008,11 @@ Return the starting position of the short pragma; else, nil."
   "A pattern for use in pcase that matches any fat arrow string.")
 
 (defun beluga-rule-parent-p (parents)
+  "Check whether PARENTS is a parent of the current token."
   `(smie-rule-parent-p ,@parents))
 
 (defun beluga-smie-indent-rules (method token)
+  "Give smie indentation for METHOD and TOKEN."
   (pcase `(,method . ,token)
     (`(:elem . basic)
      beluga-indent-basic)

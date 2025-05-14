@@ -5,7 +5,9 @@
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Maintainer: beluga-dev@cs.mcgill.ca
 ;; Version: 0
-;; Keywords:
+;; Package-Requires: ((emacs "24.4"))
+;; Keywords: languages
+;; URL: https://github.com/Beluga-lang/Beluga
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -127,10 +129,9 @@ in unicode using Font Lock mode."
  ("|-" ["⊢"])
  ("\\not" ["¬"])
  ("::" ["∷"])
- ("FN" ["Λ"])
-)
+ ("FN" ["Λ"]))
 
-(defgroup beluga-mode ()
+(defgroup beluga ()
   "Editing support for the Beluga language."
   :group 'languages)
 
@@ -520,7 +521,7 @@ returned.  Else, nil is returned."
 ;; These build off the basic commands, and will typically do something
 ;; like parse the response or display it in a message.
 
-(defun beli ()
+(defun beluga-beli ()
   "Start beli mode."
   (interactive)
   (beluga-start))
@@ -582,8 +583,7 @@ This will update `beluga--last-load-time' if a load is performed."
              (ol (beluga--create-overlay pos))
              (info (beluga--basic-printhole-n! i)))
         (overlay-put ol 'help-echo info)
-        (push ol beluga--holes-overlays)
-        ))))
+        (push ol beluga--holes-overlays)))))
 
 (defun beluga--get-hole-overlay! (hole)
   "Get the overlay associated with HOLE."
@@ -774,8 +774,7 @@ Otherwise, `match-string' 1 will contain the name of the matched short.")
      (1 font-lock-type-face))
 
     (,(concat beluga-syntax-fundec-re "\\s-+\\(" beluga-syntax-id-re "\\)")
-     (2 font-lock-function-name-face))
-    ))
+     (2 font-lock-function-name-face))))
 
 (defcustom beluga-indent-basic 4
   "Basic amount of indentation."
@@ -1045,8 +1044,7 @@ Return the starting position of the short pragma; else, nil."
     (`(:before
        .
        ,(and "=" (guard `(smie-rule-parent-p ,@beluga-type-declaration-keywords))))
-     (smie-rule-parent))
-    ))
+     (smie-rule-parent))))
 
 ;;---------------------------- Loading of the mode ----------------------------;;
 

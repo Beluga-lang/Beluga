@@ -1,6 +1,6 @@
 ;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8; lexical-binding:t -*-
 
-;; Copyright (C) 2009-2018  Free Software Foundation, Inc.
+;; Copyright (C) 2012 Brigitte Pientka
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Maintainer: beluga-dev@cs.mcgill.ca
@@ -33,11 +33,11 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl-lib))
+(eval-and-compile (require 'cl-lib))
 (require 'smie)
+(require 'comint)
 
 (require 'ansi-color)
-(add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
 
 (provide 'beluga-unicode-input-method)
 (require 'quail)
@@ -173,7 +173,7 @@ in unicode using Font Lock mode."
   "Return non-nil if PROCESS is alive.
 A process is considered alive if its status is `run', `open',
     `listen', `connect' or `stop'."
-  (and (not (eq process nil))
+  (and (not (null process))
        (memq (process-status process)
              '(run open listen connect stop))))
 
@@ -207,19 +207,29 @@ Regexp match data 0 points to the chars."
   ;; Return nil because we're not adding any face property.
   nil)
 
+(defcustom beluga-font-lock-symbols t
+  "Whether apply font lock for symbols or not."
+  :type 'boolean
+  :group 'beluga)
+
+(defcustom beluga-font-lock-symbols-alist nil
+  "Whether apply font lock for symbols or not."
+  :type '(list boolean)
+  :group 'beluga)
+
 (defun beluga-font-lock-symbols-keywords ()
   "Beluga-mode font lock for keywords."
   (when (and (fboundp 'compose-region) beluga-font-lock-symbols)
     (let ((alist nil))
       (dolist (x beluga-font-lock-symbols-alist)
-	(when (and (if (fboundp 'char-displayable-p)
-		       (char-displayable-p (if (consp (cdr x)) (cadr x) (cdr x)))
-		     t)
-		   (not (assoc (car x) alist)))	;Not yet in alist.
-	  (push x alist)))
+	    (when (and (if (fboundp 'char-displayable-p)
+		               (char-displayable-p (if (consp (cdr x)) (cadr x) (cdr x)))
+		             t)
+		           (not (assoc (car x) alist)))	;Not yet in alist.
+	      (push x alist)))
       (when alist
-	`((,(regexp-opt (mapcar #'car alist) t)
-	   (0 (beluga-font-lock-compose-symbol ',alist)
+	    `((,(regexp-opt (mapcar #'car alist) t)
+	       (0 (beluga-font-lock-compose-symbol ',alist)
               ;; In Emacs-21, if the `override' field is nil, the face
               ;; expressions is only evaluated if the text has currently
               ;; no face.  So force evaluation by using `keep'.
@@ -264,9 +274,8 @@ Note that this will also match the \"and\" keyword!")
 
 ;; ------ process management ----- ;;
 
-(defvar beluga--proc ()
+(defvar-local beluga--proc ()
   "Contain the process running beli.")
-(make-variable-buffer-local 'beluga--proc)
 
 (defvar beluga--output-wait-time
   0.025
@@ -309,9 +318,8 @@ This is a graceful termination."
 
 ;; ----- Stuff for hole overlays ----- ;;
 
-(defvar beluga--holes-overlays ()
+(defvar-local beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
-(make-variable-buffer-local 'beluga--holes-overlays)
 
 (defun beluga-sorted-holes ()
   "Sort beluga holes."
@@ -404,7 +412,7 @@ This is a graceful termination."
       ;; We could also just use `process-send-string', but then we wouldn't
       ;; have the input text in the buffer to separate the various prompts.
       (goto-char (point-max))
-      (insert (concat "%:" cmd))
+      (insert "%:" cmd)
       (comint-send-input)
       (beluga--wait proc))))
 
@@ -431,11 +439,10 @@ This is a graceful termination."
       (beluga-interactive-error (list (format "%s" (substring resp 2)))))
     resp))
 
-(defvar beluga--last-load-time
+(defvar-local beluga--last-load-time
   '(0 0 0 0)
   "The last time the file was loaded into the Beluga interpreter.
 This variable is updated by `beluga--maybe-save-load-current-buffer'.")
-(make-variable-buffer-local 'beluga--last-load-time)
 
 (defun beluga--should-reload-p ()
   "Decide whether the current buffer should be reloaded into beli.
@@ -471,33 +478,34 @@ returned.  Else, nil is returned."
 ;; "!". This bang-variant will use beluga--rpc! under the hood, so you
 ;; get an exception-raising variant of every function for free.
 
-(defun beluga--generate-format-string (args)
-  "Construct the format string from the ARGS."
-  (cons
-   "%s"
-   (mapcar
-    (lambda (x)
-      (if (stringp x)
-          x
-        (cdr x)))
-    args)))
+(eval-and-compile
+  (defun beluga--generate-format-string (args)
+    "Construct the format string from the ARGS."
+    (cons
+     "%s"
+     (mapcar
+      #'(lambda (x)
+          (if (stringp x)
+              x
+            (cdr x)))
+      args)))
 
-(defun beluga--generate-arg-list (args)
-  "Construct a list of symbols representing the function arguments from ARGS."
-  (mapcar 'car (cl-remove-if 'stringp args)))
+  (defun beluga--generate-arg-list (args)
+    "Construct a list of symbols representing the function arguments from ARGS."
+    (mapcar #'car (cl-remove-if #'stringp args)))
 
-(defun beluga--define-command (rpc name realname args)
-  "Define a beli command for RPC.
+  (defun beluga--define-command (rpc name realname args)
+    "Define a beli command for RPC.
 The command has elisp name NAME and string name REALNAME, and takes ARGS."
-  (let ((arglist (beluga--generate-arg-list args))
-        (fmt (beluga--generate-format-string args)))
-    `(defun ,name ,arglist
-       (,rpc
-        (format
-         ;; construct the format string
-         ,(mapconcat 'identity fmt " ")
-         ;; construct the argument list
-         ,realname ,@arglist)))))
+    (let ((arglist (beluga--generate-arg-list args))
+          (fmt (beluga--generate-format-string args)))
+      `(defun ,name ,arglist
+         (,rpc
+          (format
+           ;; construct the format string
+           ,(mapconcat 'identity fmt " ")
+           ;; construct the argument list
+           ,realname ,@arglist))))))
 
 (defmacro beluga-define-command (name realname args)
   "Macro to provide `beluga--rpc' to `beluga--define-command'.
@@ -825,7 +833,8 @@ Otherwise, `match-string' 1 will contain the name of the matched short.")
         ((looking-at beluga-punct-re) (goto-char (match-end 0)))
         ((not (zerop (skip-syntax-forward "w_'"))))
         ;; In case of non-ASCII punctuation.
-        ((not (zerop (skip-syntax-forward ".")))))
+        ((not (zerop (skip-syntax-forward "."))))
+        (t nil))
        (point))))))
 
 (defun beluga-short-pragma-before-p ()
@@ -842,26 +851,28 @@ Return the starting position of the short pragma; else, nil."
 (defun beluga-smie-backward-token ()
   "Skip all previous whitespace and comments."
   (forward-comment (- (point-max)))
-  (cond
-   ((and (eq ?\. (char-before))
-         (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
-         (not (looking-back "\\.\\." (- (point) 2))))
-    ;; Either an LF-terminating dot, or a projection-dot.
-    (progn (forward-char -1) ";."))
-   ((setq pos (beluga-short-pragma-before-p))
-    (goto-char pos)
-    "--shortpragma")
-   (t
-    (buffer-substring-no-properties
-     (point)
-     (progn
-       (cond
-        ((looking-back beluga-punct-re (- (point) 2) 'greedy)
-         (goto-char (match-beginning 0)))
-        ((not (zerop (skip-syntax-backward "w_'"))))
-        ;; In case of non-ASCII punctuation.
-        ((not (zerop (skip-syntax-backward ".")))))
-       (point))))))
+  (let ((pos nil))
+    (cond
+     ((and (eq ?\. (char-before))
+           (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
+           (not (looking-back "\\.\\." (- (point) 2))))
+      ;; Either an LF-terminating dot, or a projection-dot.
+      (progn (forward-char -1) ";."))
+     ((setq pos (beluga-short-pragma-before-p))
+      (goto-char pos)
+      "--shortpragma")
+     (t
+      (buffer-substring-no-properties
+       (point)
+       (progn
+         (cond
+          ((looking-back beluga-punct-re (- (point) 2) 'greedy)
+           (goto-char (match-beginning 0)))
+          ((not (zerop (skip-syntax-backward "w_'"))))
+          ;; In case of non-ASCII punctuation.
+          ((not (zerop (skip-syntax-backward "."))))
+          (t nil))
+         (point)))))))
 
 (defun beluga-smie-grammar (bnf resolvers precs)
   "Get smie grammar based on BNF, RESOLVERS, and PRECS."
@@ -1007,6 +1018,14 @@ Return the starting position of the short pragma; else, nil."
   `(or ,@beluga-fat-arrows)
   "A pattern for use in pcase that matches any fat arrow string.")
 
+(defconst beluga-type-declaration-keywords
+  '("inductive" "coinductive" "LF" "stratified")
+  "The different keywords that introduce a type definition.")
+
+(defconst beluga-type-declaration-keywords-re
+  (regexp-opt beluga-type-declaration-keywords 'symbols)
+  "A regular expression that matches any type definition keyword.")
+
 (defun beluga-rule-parent-p (parents)
   "Check whether PARENTS is a parent of the current token."
   `(smie-rule-parent-p ,@parents))
@@ -1075,14 +1094,6 @@ Return the starting position of the short pragma; else, nil."
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.s?bel\\'" . beluga-mode))
 
-(defconst beluga-type-declaration-keywords
-  '("inductive" "coinductive" "LF" "stratified")
-  "The different keywords that introduce a type definition.")
-
-(defconst beluga-type-declaration-keywords-re
-  (regexp-opt beluga-type-declaration-keywords 'symbols)
-  "A regular expression that matches any type definition keyword.")
-
 ;;;###autoload
 (define-derived-mode beluga-mode prog-mode "Beluga"
   "Major mode to edit Beluga source code."
@@ -1105,6 +1116,9 @@ Return the starting position of the short pragma; else, nil."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
+
+  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+
   ;QUAIL
   (add-hook 'beluga-mode-hook
    (lambda () (set-input-method "beluga-unicode")))

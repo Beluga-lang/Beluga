@@ -173,7 +173,7 @@ in unicode using Font Lock mode."
   "Return non-nil if PROCESS is alive.
 A process is considered alive if its status is `run', `open',
     `listen', `connect' or `stop'."
-  (and (not (null process))
+  (and process
        (memq (process-status process)
              '(run open listen connect stop))))
 
@@ -484,10 +484,10 @@ returned.  Else, nil is returned."
     (cons
      "%s"
      (mapcar
-      #'(lambda (x)
-          (if (stringp x)
-              x
-            (cdr x)))
+      (lambda (x)
+        (if (stringp x)
+            x
+          (cdr x)))
       args)))
 
   (defun beluga--generate-arg-list (args)
@@ -503,7 +503,7 @@ The command has elisp name NAME and string name REALNAME, and takes ARGS."
          (,rpc
           (format
            ;; construct the format string
-           ,(mapconcat 'identity fmt " ")
+           ,(mapconcat #'identity fmt " ")
            ;; construct the argument list
            ,realname ,@arglist))))))
 
@@ -1117,7 +1117,8 @@ Return the starting position of the short pragma; else, nil."
                          electric-indent-chars
                        '(?\n))))
 
-  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+  (if (fboundp 'ansi-color-compilation-filter)
+      (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter))
 
   ;QUAIL
   (add-hook 'beluga-mode-hook

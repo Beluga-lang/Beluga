@@ -9,12 +9,8 @@ let rec without_field field_to_erase json =
   | `Intlit _
   | `String _
   | `Float _
-  | `Int _
-  | `Variant (_, Option.None) ->
+  | `Int _ ->
       json
-  | `Tuple xs ->
-      let xs' = List.map (without_field field_to_erase) xs in
-      `Tuple xs'
   | `List xs ->
       let xs' = List.map (without_field field_to_erase) xs in
       `List xs'
@@ -29,9 +25,6 @@ let rec without_field field_to_erase json =
           xs
       in
       `Assoc xs'
-  | `Variant (l, Option.Some x) ->
-      let x' = without_field field_to_erase x in
-      `Variant (l, Option.some x')
 
 let without_locations json = without_field "location" json
 

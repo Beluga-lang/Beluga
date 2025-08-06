@@ -1,0 +1,63 @@
+% Mechanization of POPLMark Reloaded challenge:
+% Sec 2.4: Challenge 1b: Soundness of inductive definition of strongly normalizing terms
+% Extended with disjoint sums
+% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
+
+% If SNe [Ψ ⊢ R] then Neutral [Ψ ⊢ R].
+
+rec neutralSNe : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ R] → Neutral [Ψ ⊢ R] =
+  / total sne (neutralSNe g a r sne) /
+  mlam _ ⇒ fn sne ⇒ case sne of
+  | SVar [_ ⊢ #p] ⇒ Nvar [_ ⊢ #p]
+  | SApp sne' _ ⇒ let neu = neutralSNe [_ ⊢ _] sne' in Napp [_ ⊢ _] [_ ⊢ _] neu
+  | SCase sne' _ _ ⇒ Ncase [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] (neutralSNe [_ ⊢ _] sne')
+  ;
+
+rec soundSN : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SN [Ψ ⊢ M] → Sn [Ψ ⊢ M] =
+  / total s (soundSN g a m s) /
+  mlam _ ⇒ fn sn ⇒ case sn of
+  | SNeu sne ⇒ soundSNe [_ ⊢ _] sne
+  | SAbs sn' ⇒ let sn'' = soundSN [_ ⊢ _] sn' in abs_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] sn''
+  | SRed snr sn' ⇒
+    let snr' = soundSNRed [_ ⊢ _] [_ ⊢ _] snr in
+    let sn'' = soundSN [_ ⊢ _] sn' in
+    backwards_closure [_ ⊢ _] [_ ⊢ _] snr' sn''
+  | SInl sn' ⇒ let sn'' = soundSN [_ ⊢ _] sn' in inl_sn [_ ⊢ _] [ ⊢ _] sn''
+  | SInr sn' ⇒ let sn'' = soundSN [_ ⊢ _] sn' in inr_sn [_ ⊢ _] [ ⊢ _] sn''
+
+and rec soundSNe : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ M] → Sn [Ψ ⊢ M] =
+  / total s (soundSNe g a m s) /
+  mlam _ ⇒ fn sne ⇒ case sne of
+  | SVar [_ ⊢ #p] ⇒ varSn [_ ⊢ #p]
+  | SApp sne' sn ⇒
+    let snl = soundSNe [_ ⊢ _] sne' in
+    let snr = soundSN [_ ⊢ _] sn in
+    let neu = neutralSNe [_ ⊢ _] sne' in
+    app_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ _] neu snl snr
+  | SCase sne' snl snr ⇒
+    let neu = neutralSNe [_ ⊢ _] sne' in
+    let sn0 = soundSNe [_ ⊢ _] sne' in
+    let sn1 = soundSN [_ ⊢ _] snl in
+    let sn2 = soundSN [_ ⊢ _] snr in
+    match_sn [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] neu sn0 sn1 sn2
+
+and rec soundSNRed : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]}
+SNRed [Ψ ⊢ M] [Ψ ⊢ M'] → SnRed [Ψ ⊢ M] [Ψ ⊢ M'] =
+  / total s (soundSNRed g a m m' s) /
+  mlam _, _ ⇒ fn snr ⇒ case snr of
+  | SBeta [_, x:tm _ ⊢ _] sn ⇒ let sn' = soundSN [_ ⊢ _] sn in SnBeta [_ ⊢ _] sn'
+  | SAppl snr' ⇒ let snr'' = soundSNRed [_ ⊢ _] [_ ⊢ _] snr' in SnAppl snr''
+  | SCInl sn0 sn1 sn2 ⇒
+    let sn0' = soundSN [_ ⊢ _] sn0 in
+    let sn1' = soundSN [_ ⊢ _] sn1 in
+    let sn2' = soundSN [_ ⊢ _] sn2 in
+    SnCInl sn0' sn1' sn2'
+  | SCInr sn0 sn1 sn2 ⇒
+    let sn0' = soundSN [_ ⊢ _] sn0 in
+    let sn1' = soundSN [_ ⊢ _] sn1 in
+    let sn2' = soundSN [_ ⊢ _] sn2 in
+    SnCInr sn0' sn1' sn2'
+  | SRCase snr' [_, x:tm _ ⊢ N1] [_, y:tm _ ⊢ N2] ⇒
+    let snr'' = soundSNRed [_ ⊢ _] [_ ⊢ _] snr' in
+    SnCasR snr'' [_ ⊢ N1] [_ ⊢ N2]
+  ;

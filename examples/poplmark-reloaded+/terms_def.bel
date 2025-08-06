@@ -1,0 +1,164 @@
+% Mechanization of POPLMark Reloaded challenge:
+% Sec 2.1: Well-typed Terms and Reductions
+% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
+
+LF ty : type =
+| base : ty
+| arr : ty → ty → ty
+| sum : ty → ty → ty;
+
+LF tm : ty → type =
+| abs : (tm A → tm B) → tm (arr A B)
+| app : tm (arr A B) → tm A → tm B
+| inl : {B:ty} (tm A → tm (sum A B))
+| inr : {A:ty} (tm B → tm (sum A B))
+| match : tm (sum A B) → (tm A → tm C) → (tm B → tm C) → tm C;
+
+schema ctx = tm _;
+
+LF step : tm A → tm A → type =
+| rbeta : step (app (abs M) N) (M N)
+| rabs : ({x:tm A} (step (M x) (M' x))) → step (abs M) (abs M')
+| rappl : step M M' → step (app M N) (app M' N)
+| rappr : step N N' → step (app M N) (app M N')
+| rinl : step M N → step (inl B M) (inl B N)
+| rinr : step M N → step (inr A M) (inr A N)
+| rcase : step M M' → step (match M N1 N2) (match M' N1 N2)
+| rcinl : step (match (inl B M) N1 N2) (N1 M)
+| rcinr : step (match (inr A M) N1 N2) (N2 M)
+| rcl : ({x:tm A} (step (N x) (N' x))) → step (match M N N2) (match M N' N2)
+| rcr : ({x:tm B} (step (N x) (N' x))) → step (match M N1 N) (match M N1 N');
+
+LF mstep : tm A → tm A → type =
+| m-refl : mstep M M
+| m-step : step M N → mstep N M' → mstep M M';
+
+rec m-trans : (Ψ:ctx) {M1:[Ψ ⊢ tm A[]]} [Ψ ⊢ mstep M1 M] → [Ψ ⊢ mstep M M2] → [Ψ ⊢ mstep M1 M2] =
+  / total s1 (m-trans g a m1 m2 m s1) /
+  mlam M1 ⇒ fn s1, s2 ⇒ case s1 of
+  | [_ ⊢ m-refl] ⇒ s2
+  | [_ ⊢ m-step S MS] ⇒ let [_ ⊢ MS'] = m-trans [_ ⊢ _] [_ ⊢ MS] s2 in [_ ⊢ m-step S MS']
+  ;
+
+rec mstep_appl : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {M':[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]} [Ψ ⊢ mstep M M']
+→ [Ψ ⊢ mstep (app M N) (app M' N)] =
+  / total ms (mstep_appl g a b m m' n ms) /
+  mlam _, M', N ⇒ fn ms ⇒ case ms of
+  | [_ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_ ⊢ m-step S MS'] ⇒
+    let [_ ⊢ MS''] = mstep_appl [_ ⊢ _] [_ ⊢ M'] [_ ⊢ N] [_ ⊢ MS'] in
+    [_ ⊢ m-step (rappl S) MS'']
+  ;
+
+rec mstep_appr : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} [Ψ ⊢ mstep N N']
+→ [Ψ ⊢ mstep (app M N) (app M N')] =
+  / total ms (mstep_appr g a b m n n' ms) /
+  mlam M, _, N' ⇒ fn ms ⇒ case ms of
+  | [_ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_ ⊢ m-step S MS'] ⇒
+    let [_ ⊢ MS''] = mstep_appr [_ ⊢ M] [_ ⊢ _] [_ ⊢ N'] [_ ⊢ MS'] in
+    [_ ⊢ m-step (rappr S) MS'']
+  ;
+
+rec mstep_abs : (Ψ:ctx) {M:[Ψ, x:tm A[] ⊢ tm B[]]} [Ψ, x:tm A[] ⊢ mstep M M']
+→ [Ψ ⊢ mstep (abs \x. M) (abs \x. M')] =
+  / total ms (mstep_abs g a b m m' ms) /
+  mlam _ ⇒ fn s1 ⇒ case s1 of
+  | [_, x:tm _ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_, x:tm _ ⊢ m-step S MS] ⇒
+    let [_ ⊢ MS'] = mstep_abs [_, x:tm _ ⊢ _] [_, x:tm _ ⊢ MS] in
+    let [_ ⊢ S'] = [_ ⊢ rabs \x. S] in
+    [_ ⊢ m-step S' MS']
+  ;
+
+rec mstep_inl : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]} {B:[ ⊢ ty]} [Ψ ⊢ mstep M M']
+→ [Ψ ⊢ mstep (inl B[] M) (inl B[] M')] =
+  / total ms (mstep_inl g a m m' b ms) /
+  mlam _, _, B ⇒ fn ms ⇒ case ms of
+  | [_ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_ ⊢ m-step S MS'] ⇒
+    let [_ ⊢ MS''] = mstep_inl [_ ⊢ _] [_ ⊢ _] [ ⊢ B] [_ ⊢ MS'] in
+    [_ ⊢ m-step (rinl S) MS'']
+  ;
+
+rec mstep_inr : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]} {B:[ ⊢ ty]} [Ψ ⊢ mstep M M']
+→ [Ψ ⊢ mstep (inr B[] M) (inr B[] M')] =
+  / total ms (mstep_inr g a m m' b ms) /
+  mlam M, M', B ⇒ fn ms ⇒ case ms of
+  | [_ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_ ⊢ m-step S MS] ⇒
+    let [_ ⊢ MS'] = mstep_inr [_ ⊢ _] [_ ⊢ _] [ ⊢ B] [_ ⊢ MS] in [_ ⊢ m-step (rinr S) MS']
+  ;
+
+rec mstep_match : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {M':[Ψ ⊢ tm (sum A[] B[])]}
+{N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]} [Ψ ⊢ mstep M M']
+→ [Ψ ⊢ mstep (match M (\x. N1) (\y. N2)) (match M' (\x. N1) (\y. N2))] =
+  / total ms (mstep_match g a b c m m' n1 n2 ms) /
+  mlam M, M', N1, N2 ⇒ fn ms ⇒ case ms of
+  | [_ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_ ⊢ m-step S MS] ⇒
+    let [_ ⊢ MS'] = mstep_match [_ ⊢ _] [_ ⊢ M'] [_ ⊢ N1] [_ ⊢ N2] [_ ⊢ MS] in
+    [_ ⊢ m-step (rcase S) MS']
+  ;
+
+rec mstep_matchl : (Ψ:ctx) {N:[Ψ, x:tm A[] ⊢ tm C[]]} {N':[Ψ, x:tm A[] ⊢ tm C[]]}
+{M:[Ψ ⊢ tm (sum A[] B[])]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]} [Ψ, x:tm A[] ⊢ mstep N N']
+→ [Ψ ⊢ mstep (match M (\x. N) (\y. N2)) (match M (\x. N') (\y. N2))] =
+  / total ms (mstep_matchl g a c b n n' m n2 ms) /
+  mlam N, N', M, N2 ⇒ fn ms ⇒ case ms of
+  | [_, x:tm _ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_, x:tm _ ⊢ m-step S MS] ⇒
+    let [_ ⊢ MS'] = mstep_matchl [_ ⊢ _] [_ ⊢ N'] [_ ⊢ M] [_ ⊢ N2] [_ ⊢ MS] in
+    [_ ⊢ m-step (rcl \x. S) MS']
+  ;
+
+rec mstep_matchr : (Ψ:ctx) {N:[Ψ, x:tm B[] ⊢ tm C[]]} {N':[Ψ, x:tm B[] ⊢ tm C[]]}
+{M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, y:tm A[] ⊢ tm C[]]} [Ψ, x:tm B[] ⊢ mstep N N']
+→ [Ψ ⊢ mstep (match M (\x. N1) (\y. N)) (match M (\x. N1) (\y. N'))] =
+  / total ms (mstep_matchr g b c a n n' m n1 ms) /
+  mlam N, N', M, N1 ⇒ fn ms ⇒ case ms of
+  | [_, x:tm _ ⊢ m-refl] ⇒ [_ ⊢ m-refl]
+  | [_, x:tm _ ⊢ m-step S MS] ⇒
+    let [_ ⊢ MS'] = mstep_matchr [_ ⊢ _] [_ ⊢ N'] [_ ⊢ M] [_ ⊢ N1] [_ ⊢ MS] in
+    [_ ⊢ m-step (rcr \x. S) MS']
+  ;
+
+rec subst_mred : (Ψ:ctx) {M:[Ψ, x:tm A[] ⊢ tm B[]]} {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} [Ψ ⊢ step N N']
+→ [Ψ ⊢ mstep M[…, N] M[…, N']] =
+  / trust /
+  mlam M, N, N' ⇒ fn s ⇒
+  let [_ ⊢ S] = s in
+  case [_, x:tm _ ⊢ M] of
+  | [_, x:tm _ ⊢ x] ⇒ [_ ⊢ m-step S m-refl]
+  | [_, x:tm _ ⊢ #p[…]] ⇒ [_ ⊢ m-refl]
+  | [_, x:tm _ ⊢ abs \y. M] ⇒
+    let [_, y:tm _ ⊢ S'] =
+      subst_mred [_, y:tm _, x:tm _ ⊢ M[…, x, y]] [_, y:tm _ ⊢ N[…]] [_, y:tm _ ⊢ N'[…]] [_, y:tm _ ⊢ S[…]] in
+    mstep_abs [_, y:tm _ ⊢ _] [_, y:tm _ ⊢ S']
+  | [_, x:tm _ ⊢ app M1 M2] ⇒
+    let [_ ⊢ S1] = subst_mred [_, x:tm _ ⊢ M1] [_ ⊢ N] [_ ⊢ N'] s in
+    let [_ ⊢ S2] = subst_mred [_, x:tm _ ⊢ M2] [_ ⊢ N] [_ ⊢ N'] s in
+    let [_ ⊢ MS1] = mstep_appl [_ ⊢ M1[…, N]] [_ ⊢ M1[…, N']] [_ ⊢ M2[…, N]] [_ ⊢ S1] in
+    let [_ ⊢ MS2] = mstep_appr [_ ⊢ M1[…, N']] [_ ⊢ M2[…, N]] [_ ⊢ M2[…, N']] [_ ⊢ S2] in
+    m-trans [_ ⊢ _] [_ ⊢ MS1] [_ ⊢ MS2]
+  | [_, x:tm _ ⊢ inl _ M] ⇒
+    let [_ ⊢ MS] = subst_mred [_ ⊢ M] [_ ⊢ N] [_ ⊢ N'] s in
+    mstep_inl [_ ⊢ M[…, N]] [_ ⊢ M[…, N']] [ ⊢ _] [_ ⊢ MS]
+  | [_, x:tm _ ⊢ inr _ M] ⇒
+    let [_ ⊢ MS] = subst_mred [_ ⊢ M] [_ ⊢ N] [_ ⊢ N'] s in
+    mstep_inr [_ ⊢ _] [_ ⊢ _] [ ⊢ _] [_ ⊢ MS]
+  | [_, x:tm _ ⊢ match M (\x. N1) (\y. N2)] ⇒
+    let [_ ⊢ S0] = subst_mred [_ ⊢ M] [_ ⊢ N] [_ ⊢ N'] s in
+    let [_, y:tm _ ⊢ S1] =
+      subst_mred [_, y:tm _, x:tm _ ⊢ N1[…, x, y]] [_, y:tm _ ⊢ N[…]] [_, y:tm _ ⊢ N'[…]] [_, y:tm _ ⊢ S[…]] in
+    let [_, y:tm _ ⊢ S2] =
+      subst_mred [_, y:tm _, x:tm _ ⊢ N2[…, x, y]] [_, y:tm _ ⊢ N[…]] [_, y:tm _ ⊢ N'[…]] [_, y:tm _ ⊢ S[…]] in
+    let [_, x:tm _, y:tm _ ⊢ N1'] = [_ ⊢ N1] in
+    let [_ ⊢ MS0] =
+      mstep_match [_ ⊢ M[…, N]] [_ ⊢ M[…, N']] [_, y:tm _ ⊢ N1[…, N[…], y]] [_, y:tm _ ⊢ N2[…, N[…], y]] [_ ⊢ S0] in
+    let [_ ⊢ MS1] = mstep_matchl [_, y:tm _ ⊢ N1[…, N[…], y]] [_, y:tm _ ⊢ N1[…, N'[…], y]]
+      [_ ⊢ M[…, N']] [_, y:tm _ ⊢ N2[…, N[…], y]] [_ ⊢ S1] in
+    let [_ ⊢ MS2] = mstep_matchr [_, y:tm _ ⊢ N2[…, N[…], y]] [_, y:tm _ ⊢ N2[…, N'[…], y]]
+      [_ ⊢ M[…, N']] [_, y:tm _ ⊢ N1[…, N'[…], y]] [_ ⊢ S2] in
+    m-trans [_ ⊢ _] [_ ⊢ MS0] (m-trans [_ ⊢ _] [_ ⊢ MS1] [_ ⊢ MS2])
+  ;

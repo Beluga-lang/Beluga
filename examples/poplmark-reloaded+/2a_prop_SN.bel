@@ -1,0 +1,121 @@
+% Mechanization of POPLMark Reloaded challenge:
+% Sec 2.5: Challenge 2a: Properties of Strong Normalization
+% Extended with disjoint sums
+% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
+
+% Renaming
+
+rec renameSN : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SN [Ψ ⊢ M] → SN [Ψ' ⊢ M[$ρ]] =
+  % / total s (renameSN g g' a r m s) /
+  mlam _, _, $ρ, _ ⇒ fn s ⇒ case s of
+  | SNeu s' ⇒ SNeu (renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SAbs s' ⇒ SAbs (renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] s')
+  | SRed r s' ⇒
+    SRed (renameSNRed $[_ ⊢ $ρ] [_ ⊢ _] r) (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SInl s' ⇒ SInl (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SInr s' ⇒ SInr (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+
+and rec renameSNe : (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SNe [Ψ ⊢ M] → SNe [Ψ' ⊢ M[$ρ]] =
+  % / total s (renameSNe g g' a r m s) /
+  mlam $ρ, _ ⇒ fn s ⇒ case s of
+  | SVar [_ ⊢ #p] ⇒ SVar [_ ⊢ #p[$ρ]]
+  | SApp s1 s2 ⇒ SApp (renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s1) (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s2)
+  | SCase s1 s2 s3 ⇒ SCase (renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s1)
+    (renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] s2)
+    (renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_, y:tm _ ⊢ _] s3)
+
+and rec renameSNRed: (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SNRed [Ψ ⊢ M] [Ψ ⊢ N] → SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N[$ρ]] =
+  % / total s (renameSNRed g g' a r m s) /
+  % Error: Type-checking error. Recursive call not structurally smaller. [SAppl and SRCase cases]
+  mlam $ρ, M ⇒ fn s ⇒ case s of
+  | SBeta [_, x:tm _ ⊢ M] s' ⇒
+    SBeta [_, x:tm _ ⊢ M[$ρ[..], x]] (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SAppl s' ⇒ SAppl (renameSNRed $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SCInl s' n1 n2 ⇒
+    SCInl (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+      (renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] n1)
+      (renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_, y:tm _ ⊢ _] n2)
+  | SCInr s' n1 n2 ⇒
+    SCInr (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+      (renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] n1)
+      (renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_, y:tm _ ⊢ _] n2)
+  | SRCase s' [_, x:tm _ ⊢ N1] [_, y:tm _ ⊢ N2] ⇒
+    SRCase (renameSNRed $[_ ⊢ $ρ] [_ ⊢ _] s') [_, x:tm _ ⊢ N1[$ρ[..], x]] [_, y:tm _ ⊢ N2[$ρ[..], y]]
+  ;
+
+% Anti-renaming
+
+inductive SNRed' : (Ψ:ctx) (Ψ':ctx) $[Ψ' ⊢# Ψ] → [Ψ ⊢ tm A[]] → [Ψ' ⊢ tm A[]] → ctype =
+| SNRed'' : {Ψ':ctx} {Ψ:ctx} {N:[Ψ ⊢ tm A[]]} SNRed [Ψ ⊢ M] [Ψ ⊢ N]
+  → SNRed' $[Ψ' ⊢ $ρ] [Ψ ⊢ M] [Ψ' ⊢ N[$ρ]];
+
+rec anti_renameSNe : (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SNe [Ψ' ⊢ M[$ρ]] → SNe [Ψ ⊢ M] =
+  % / total s (anti_renameSNe g g' a r m s) /
+  mlam $ρ, _ ⇒ fn s ⇒ case s of
+  | SVar [h' ⊢ _] ⇒ SVar [_ ⊢ _]
+  | SApp r s ⇒
+    let r' = anti_renameSNe $[_ ⊢ $ρ] [_ ⊢ _] r in
+    let s' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
+    SApp r' s'
+  | SCase s1 s2 s3 ⇒
+    let s1' = anti_renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s1 in
+    let s2' = anti_renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_ ⊢ _] s2 in
+    let s3' = anti_renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_ ⊢ _] s3 in
+    SCase s1' s2' s3'
+
+and rec anti_renameSNRed : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N'] → SNRed' $[Ψ' ⊢ $ρ] [Ψ ⊢ M] [Ψ' ⊢ N'] =
+  % / total s (anti_renameSNRed g g' a r m s) /
+  % Error: Type-checking error. Recursive call not structurally smaller. [SAppl and SRCase cases]
+  mlam _, _, $ρ, _ ⇒ fn r ⇒ case r of
+  | SBeta [_ ⊢ _] s ⇒
+    let s' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
+    SNRed'' [_] [_] [_ ⊢ _] (SBeta [_ ⊢ _] s')
+  | SAppl r' ⇒
+    let SNRed'' [_] [_][_ ⊢ _] r0 = anti_renameSNRed [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] r' in
+    SNRed'' [_] [_] [_ ⊢ _] (SAppl r0)
+  | SCInl s n1 n2 ⇒
+    let s' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
+    let s1 = anti_renameSN [_, x:tm _] [_] $[_, x:tm _ ⊢ $ρ[..], x] [_ ⊢ _] n1 in
+    let s2 = anti_renameSN [_, y:tm _] [_] $[_, y:tm _ ⊢ $ρ[..], y] [_ ⊢ _] n2 in
+    SNRed'' [_] [_] [_ ⊢ _] (SCInl s' s1 s2)
+  | SCInr s n1 n2 ⇒
+    let s' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
+    let s1 = anti_renameSN [_, x:tm _] [_] $[_, x:tm _ ⊢ $ρ[..], x] [_ ⊢ _] n1 in
+    let s2 = anti_renameSN [_, y:tm _] [_] $[_, y:tm _ ⊢ $ρ[..], y] [_ ⊢ _] n2 in
+    SNRed'' [_] [_] [_ ⊢ _] (SCInr s' s1 s2)
+  | SRCase s [_, x:tm _ ⊢ _] [_, y:tm _ ⊢ _] ⇒
+    let SNRed'' [_] [_] [_ ⊢ _] s' = anti_renameSNRed [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
+    SNRed'' [_] [_] [_ ⊢ _] (SRCase s' [_, x:tm _ ⊢ _] [_, y:tm _ ⊢ _])
+
+and rec anti_renameSN : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
+SN [Ψ' ⊢ M[$ρ]] → SN [Ψ ⊢ M] =
+  % / total s (anti_renameSN g g' a r m s) /
+  mlam _, _, $ρ, _ ⇒ fn s ⇒ case s of
+  | SAbs s' ⇒ SAbs (anti_renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] s')
+  | SNeu s' ⇒ SNeu (anti_renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SRed r' s' ⇒
+    let SNRed'' [_] [_] [_ ⊢ N] r = anti_renameSNRed [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] r' in
+    let s'' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s' in
+    SRed r s''
+  | SInl s' ⇒ SInl (anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+  | SInr s' ⇒ SInr (anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
+  ;
+
+% Extensionality of SN
+
+rec ext_SN : {M:[Ψ ⊢ tm (arr A[] B[])]} {#p:#[Ψ ⊢ tm A[]]} SN [Ψ ⊢ app M #p] → SN [Ψ ⊢ M] =
+  / total s (ext_SN g a b m p s) /
+  mlam _, #p ⇒ fn s ⇒ case s of
+  | SNeu (SApp sm sv) ⇒ SNeu sm
+  | SRed r sm' ⇒ (case r of
+    | SBeta [_, x:tm _ ⊢ M'] sn ⇒
+      let sn' = anti_renameSN [_, x:tm _] [_] $[_ ⊢ .., #p[..]] [_, x:tm _ ⊢ M'] sm' in
+      SAbs sn'
+    | SAppl r' ⇒ let sn = ext_SN [_ ⊢ _] [_ ⊢ #p] sm' in SRed r' sn
+    )
+  ;

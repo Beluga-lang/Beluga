@@ -1,0 +1,449 @@
+% Mechanization of POPLMark Reloaded challenge:
+% Sec 2.3 Challenge 1a: Properties of Sn
+% Extended with disjoint sums
+% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
+
+% All variables are in sn.
+
+empty : type.
+
+rec varSn : (Ψ:ctx) {#p:#[Ψ ⊢ tm A[]]} Sn [Ψ ⊢ #p] =
+  / total (varSn) /
+  mlam #p ⇒
+  let [_ ⊢ _]:[_ ⊢ tm A[]] = [_ ⊢ #p] in
+  Acc [_] [ ⊢ A] [_ ⊢ #p] (mlam _, S ⇒ impossible [_ ⊢ S])
+  ;
+
+% If Sn [Ψ, x:tm A[] ⊢ M] then Sn [Ψ ⊢ abs \x. M].
+
+rec abs_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ, x:tm A[] ⊢ tm B[]]}
+Sn [Ψ, x:tm A[] ⊢ M] → Sn [Ψ ⊢ abs \x. M] =
+  / total s (abs_sn g a b m s) /
+  mlam _, _, _ ⇒ mlam M ⇒ fn sn ⇒
+  Acc [_] [ ⊢ arr _ _] [_ ⊢ abs \x.M] (mlam _, S ⇒
+    let [_ ⊢ rabs \x. S1] = [_ ⊢ S] in
+    let [_, x:tm _ ⊢ _]:[_, x:tm _ ⊢ step M M1] = [_, x:tm _ ⊢ S1] in
+    let Acc [_,x:tm _] [ ⊢ _] [_, x:tm _ ⊢ M] r = sn in
+    abs_sn [_] [ ⊢ _] [ ⊢ _] [_, x:tm _ ⊢ M1] (r [_, x:tm _ ⊢ M1] [_, x:tm _ ⊢ S1])
+  )
+  ;
+
+% If Sn [Ψ ⊢ app M N] then Sn [Ψ ⊢ M] and Sn [Ψ ⊢ N].
+
+rec app_sna : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
+Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ M] =
+  / total s (app_sna g a b m n s) /
+  mlam M, N ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ _] [_ ⊢ app M N] r = sn in
+  Acc [_] [_ ⊢ _] [_ ⊢ _] (mlam M', S ⇒
+    app_sna [_ ⊢ M'] [_ ⊢ _] (r [_ ⊢ app M' N] [_ ⊢ rappl S]))
+  ;
+
+rec app_snb : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
+Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ N] =
+  / total s (app_snb g a b m n s) /
+  mlam M, N ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ _] [_ ⊢ app M N] r = sn in
+  Acc [_] [_ ⊢ _] [_ ⊢ _] (mlam N', S ⇒
+    app_snb [_ ⊢ M] [_ ⊢ N'] (r [_ ⊢ app M N'] [_ ⊢ rappr S]))
+  ;
+
+% If Sn [Ψ ⊢ M] then Sn [Ψ ⊢ inl M].
+
+rec inl_sn : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {B:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ ⊢ inl B[] M] =
+  / total sn (inl_sn g a m b sn) /
+  mlam M, B ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ A] [_ ⊢ M] r = sn in
+  Acc [_] [ ⊢ sum A B] [_ ⊢ inl _ M] (mlam _, S ⇒
+    let [_ ⊢ rinl S'] = [_ ⊢ S] in
+    inl_sn [_ ⊢ _] [ ⊢ _] (r [_ ⊢ _] [_ ⊢ S'])
+  )
+  ;
+
+% If Sn [Ψ ⊢ M] then Sn [Ψ ⊢ inr M].
+
+rec inr_sn : (Ψ:ctx) {M:[Ψ ⊢ tm B[]]} {A:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ ⊢ inr A[] M] =
+  / total sn (inr_sn g b m a sn) /
+  mlam M, A ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ B] [_ ⊢ M] r = sn in
+  Acc [_] [ ⊢ sum A B] [_ ⊢ inr _ M] (mlam _, S ⇒
+    let [_ ⊢ rinr S'] = [_ ⊢ S] in
+    inr_sn [_ ⊢ _] [ ⊢ _] (r [_ ⊢ _] [_ ⊢ S'])
+  )
+  ;
+
+% If Sn [Ψ ⊢ match M (\x. N1) (\y. N2) then Sn [Ψ ⊢ M] and Sn [Ψ, x:tm A[] ⊢ N1]
+% and Sn [Ψ, y:tm B[] ⊢ N2].
+
+rec case_sna : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ ⊢ M] =
+  / total sn (case_sna g a b c m n1 n2 sn) /
+  mlam M, N1, N2 ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
+  Acc [_] [ ⊢ sum _ _] [_ ⊢ M] (mlam M', S ⇒
+    case_sna [_ ⊢ M'] [_ ⊢ N1] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ rcase S]))
+  ;
+
+rec case_snb : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, x:tm A[] ⊢ N1] =
+  / total sn (case_snb g a b c m n1 n2 sn) /
+  mlam M, N1, N2 ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
+  Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] (mlam N1', S ⇒
+    case_snb [_ ⊢ M] [_ ⊢ N1'] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ rcl \x. S]))
+  ;
+
+rec case_snc : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, y:tm B[] ⊢ N2] =
+  / total sn (case_snc g a b c m n1 n2 sn) /
+  mlam M, N1, N2 ⇒ fn sn ⇒
+  let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
+  Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] (mlam N2', S ⇒
+    case_snc [_ ⊢ M] [_ ⊢ N1] [_ ⊢ N2'] (r [_ ⊢ _] [_ ⊢ rcr \y. S]))
+  ;
+
+% If Sn [Ψ ⊢ N] and Sn [Ψ ⊢ M[.., N]] then Sn [Ψ ⊢ app (abs \x. M) N].
+
+rec app_abs_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ, x:tm A[] ⊢ tm B[]]} {N:[Ψ ⊢ tm A[]]}
+Sn [Ψ ⊢ M[.., N]] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app (abs \x. M) N] =
+  / total {sn2 sn1} (app_abs_sn g a b m n sn1 sn2) /
+  mlam _, _, _, M, N ⇒ fn sn1, sn2 ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ app (abs \x. M) N] (mlam _, S ⇒ case [_ ⊢ S] of
+  | [_ ⊢ rbeta] ⇒ sn1
+  | [_ ⊢ rappl S'] ⇒
+    let [_ ⊢ rabs \x. S''] = [_ ⊢ S'] in
+    let [_ ⊢ _]:[_, x:tm _ ⊢ step M M'] = [_ ⊢ S''] in
+    let [_ ⊢ S'''] = [_ ⊢ S''[.., N]] in
+    let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn1 in
+    app_abs_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ M'] [_ ⊢ N] (r [_ ⊢ M'[.., N]] [_ ⊢ S''']) sn2
+  | [_ ⊢ rappr S'] ⇒ let Acc [_] [ ⊢ _] [_ ⊢ N] r = sn2 in
+    let [_ ⊢ _]:[_ ⊢ step N N'] = [_ ⊢ S'] in
+    let [_ ⊢ MS''] = subst_mred [_ ⊢ M] [_ ⊢ N] [_ ⊢ N'] [_ ⊢ S'] in
+    let sn' = mstep_sn [_ ⊢ M[.., N]] [_ ⊢ M[.., N']] [_ ⊢ MS''] sn1 in
+    app_abs_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ M] [_ ⊢ N'] sn' (r [_ ⊢ N'] [_ ⊢ S'])
+  )
+  ;
+
+% Neutral terms
+
+inductive Neutral: (Ψ:ctx) [Ψ ⊢ tm A[]] → ctype =
+| Nvar : {#x:#[Ψ ⊢ tm A[]]} Neutral [Ψ ⊢ #x]
+| Napp : {R:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]} Neutral [Ψ ⊢ R]
+  → Neutral [Ψ ⊢ app R N]
+| Ncase : {R:[Ψ ⊢ tm (sum A[] B[])]}
+  {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+  Neutral [Ψ ⊢ R] → Neutral [Ψ ⊢ match R (\x. N1) (\y. N2)];
+
+% Closure properties of neutral terms
+
+% If Neutral [Ψ ⊢ R] and [Ψ ⊢ step R R'] then Neutral [Ψ ⊢ R'].
+
+rec neu_step : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} {R':[Ψ ⊢ tm A[]]}
+[Ψ ⊢ step R R'] → Neutral [Ψ ⊢ R] → Neutral [Ψ ⊢ R'] =
+  / total s (neu_step g a r r' s n) /
+  mlam R, R' ⇒ fn s, neu ⇒ case neu of
+  | Nvar [_ ⊢ #x] ⇒ impossible s
+  | Napp [_ ⊢ R''] [_ ⊢ N] neu' ⇒
+    (case s of
+    | [_ ⊢ rbeta] ⇒ impossible neu'
+    | [_ ⊢ rappl S'] ⇒
+      let neu'' = neu_step [_ ⊢ R''] [_ ⊢ _] [_ ⊢ S'] neu' in
+      Napp [_ ⊢ _] [_ ⊢ N] neu''
+    | [_ ⊢ rappr S'] ⇒ Napp [_ ⊢ R''] [_ ⊢ _] neu'
+    )
+  | Ncase [_ ⊢ R''] [_, x:tm _ ⊢ N1] [_, y:tm _ ⊢ N2] neu' ⇒
+    (case s of
+    | [_ ⊢ rcase S'] ⇒
+      let neu'' = neu_step [_ ⊢ R''] [_ ⊢ _] [_ ⊢ S'] neu' in
+      Ncase [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] neu''
+    | [_ ⊢ rcinl] ⇒ impossible neu'
+    | [_ ⊢ rcinr] ⇒ impossible neu'
+    | [_ ⊢ rcl \x. S'] ⇒ Ncase [_ ⊢ R''] [_ ⊢ _] [_ ⊢ N2] neu'
+    | [_ ⊢ rcr \y. S'] ⇒ Ncase [_ ⊢ R''] [_ ⊢ N1] [_ ⊢ _] neu'
+    )
+  ;
+
+% If Neutral [Ψ ⊢ R] and Sn [Ψ ⊢ R] and Sn [Ψ ⊢ N] then Sn [Ψ ⊢ app R N].
+
+rec app_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {R:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
+Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app R N] =
+  / total {sn1 sn2} (app_sn g a b r n neu sn1 sn2) /
+  mlam _, _, _, R, N ⇒ fn neu, sn1, sn2 ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ app R N] (mlam _, S ⇒ case [_ ⊢ S] of
+  | [_ ⊢ rbeta] ⇒ impossible neu
+  | [_ ⊢ rappl S'] ⇒
+    let Acc [_] [ ⊢ arr _ _] [_ ⊢ R] r = sn1 in
+    let neu' = neu_step [_ ⊢ _] [_ ⊢ _] [_ ⊢ S'] neu in
+    app_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ N] neu' (r [_ ⊢ _] [_ ⊢ S']) sn2
+  | [_ ⊢ rappr S'] ⇒
+    let Acc [_] [ ⊢ _] [_ ⊢ N] r = sn2 in
+    app_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ R] [_ ⊢ _] neu sn1 (r [_ ⊢ _] [_ ⊢ S'])
+  )
+  ;
+
+% If Neutral [Ψ ⊢ R], Sn [Ψ ⊢ R], Sn [Ψ, x:tm A[] ⊢ N1], and Sn [Ψ, y:tm B[] ⊢ N2], then
+% Sn [Ψ ⊢ match R (\x. N1) (\y. N2)].
+
+rec match_sn : (Ψ:ctx) {R:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:tm B[] ⊢ N2]
+→ Sn [Ψ ⊢ match R (\x. N1) (\y. N2)] =
+  / total {sn0 sn1 sn2} (match_sn g a b c r n1 n2 neu sn0 sn1 sn2) /
+  mlam R, N1, N2 ⇒ fn neu, sn0, sn1, sn2 ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ match R (\x. N1) (\y. N2)] (mlam _, S ⇒
+  	case [_ ⊢ S] of
+    | [_ ⊢ rcase S'] ⇒
+      let Acc [_] [ ⊢ sum _ _] [_ ⊢ R] r = sn0 in
+      let neu' = neu_step [_ ⊢ _] [_ ⊢ _] [_ ⊢ S'] neu in
+      match_sn [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] neu' (r [_ ⊢ _] [_ ⊢ S']) sn1 sn2
+    | [_ ⊢ rcinl] ⇒ impossible neu
+    | [_ ⊢ rcinr] ⇒ impossible neu
+    | [_ ⊢ rcl \x. S'] ⇒ let Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] r = sn1 in
+      match_sn [_ ⊢ R] [_ ⊢ _] [_ ⊢ N2] neu sn0 (r [_ ⊢ _] [_ ⊢ S']) sn2
+    | [_ ⊢ rcr \y. S'] ⇒ let Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] r = sn2 in
+      match_sn [_ ⊢ R] [_ ⊢ N1] [_ ⊢ _] neu sn0 sn1 (r [_ ⊢ _] [_ ⊢ S'])
+    )
+  ;
+
+% If Sn [Ψ ⊢ M] and Sn [Ψ ⊢ [M/x]N1] and Sn [Ψ, y:tm B[] ⊢ N2]
+% then Sn [Ψ ⊢ match (inl M) (\x. N1) (\y. N2)].
+
+rec casel_sn : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N1[.., M]] → Sn [Ψ, y:tm B[] ⊢ N2] → Sn [Ψ ⊢ match (inl B[] M) (\x. N1) (\y. N2)] =
+  / total {sn0 sn1 sn2} (casel_sn g a b c m n1 n2 sn0 sn1 sn2) /
+  mlam M, N1, N2 ⇒ fn sn0, sn1, sn2 ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ match (inl _ M) (\x. N1) (\y. N2)] (mlam _, S ⇒ case [_ ⊢ S] of
+    | [_ ⊢ rcase (rinl S')] ⇒ let Acc [_] [ ⊢ _] [_ ⊢ M] r = sn0 in
+      let ms = subst_mred [_ ⊢ N1] [_ ⊢ M] [_ ⊢ _] [_ ⊢ S'] in
+      let sn1' = mstep_sn [_ ⊢ N1[.., M]] [_ ⊢ _] ms sn1 in
+      casel_sn [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ S']) sn1' sn2
+    | [_ ⊢ rcinl] ⇒ sn1
+    | [_ ⊢ rcl \x. S'] ⇒
+      let [_ ⊢ S''] = [_ ⊢ S'[.., M]] in
+      let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn1 in
+      casel_sn [_ ⊢ M] [_ ⊢ _] [_ ⊢ N2] sn0 (r [_ ⊢ _] [_ ⊢ S'']) sn2
+    | [_ ⊢ rcr \y. S'] ⇒
+      let Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] r = sn2 in
+      casel_sn [_ ⊢ M] [_ ⊢ N1] [_ ⊢ _] sn0 sn1 (r [_ ⊢ _] [_ ⊢ S'])
+  )
+  ;
+
+% If Sn [Ψ ⊢ M] and Sn [Ψ, x:tm A[] ⊢ N1] and Sn [Ψ ⊢ [M/y]N2]
+% then Sn [Ψ ⊢ match (inr M) (\x. N1) (\y. N2)].
+
+rec caser_sn : (Ψ:ctx) {M:[Ψ ⊢ tm B[]]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ ⊢ N2[.., M]] → Sn [Ψ ⊢ match (inr A[] M) (\x. N1) (\y. N2)] =
+  %/ trust / % Lexicographic induction on sn0, sn1, sn2
+  / total {sn0 sn1 sn2} (caser_sn g b a c m n1 n2 sn0 sn1 sn2) /
+  % Totality declaration gives a type error when all 3 of sn0, sn1, sn2 are in it.
+  mlam M, N1, N2 ⇒ fn sn0, sn1, sn2 ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ match (inr _ M) (\x. N1) (\y. N2)] (mlam _, S ⇒ case [_ ⊢ S] of
+    | [_ ⊢ rcase (rinr S')] ⇒ let Acc [_] [ ⊢ _] [_ ⊢ M] r = sn0 in
+      let ms = subst_mred [_, x:tm _ ⊢ N2] [_ ⊢ M[..]] [_ ⊢ _] [_ ⊢ S'] in
+      let sn2' = mstep_sn [_ ⊢ N2[.., M]] [_ ⊢ _] ms sn2 in
+      caser_sn [_ ⊢ _] [_, x:tm _ ⊢ N1] [_, x:tm _ ⊢ N2] (r [_ ⊢ _] [_ ⊢ S']) sn1 sn2'
+    | [_ ⊢ rcinr] ⇒ sn2
+    | [_ ⊢ rcl \x. S'] ⇒
+      let Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] r = sn1 in
+      caser_sn [_ ⊢ M] [_ ⊢ _] [_ ⊢ N2] sn0 (r [_ ⊢ _] [_ ⊢ S']) sn2
+    | [_ ⊢ rcr \y. S'] ⇒
+      let [_ ⊢ S''] = [_ ⊢ S'[.., M]] in
+      let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn2 in
+      caser_sn [_ ⊢ M] [_ ⊢ N1] [_ ⊢ _] sn0 sn1 (r [_ ⊢ _] [_ ⊢ S''])
+  )
+  ;
+
+% Confluence of sn
+
+inductive ConfResult : (Ψ:ctx) {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} ctype =
+| Eq : ConfResult [Ψ ⊢ N] [Ψ ⊢ N]
+| Conf : SnRed [Ψ ⊢ N'] [Ψ ⊢ Q] → [Ψ ⊢ mstep N Q] → ConfResult [Ψ ⊢ N] [Ψ ⊢ N'];
+
+rec confluence : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} {S:[Ψ ⊢ step M N']}
+SnRed [Ψ ⊢ M] [Ψ ⊢ N] → ConfResult [Ψ ⊢ N] [Ψ ⊢ N'] =
+  / total s (confluence g a m n n' s) /
+  mlam M, N, N', S ⇒ fn snr ⇒ case snr of
+  | SnBeta [_, x:tm _ ⊢ M] sn ⇒
+    (case [_ ⊢ S] of
+    | [_ ⊢ rbeta] ⇒ Eq
+    | [_ ⊢ rappl S'] ⇒
+      let [_ ⊢ rabs \x. S''] = [_ ⊢ S'] in
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step M M'] = [_ ⊢ S''] in
+      let snr' = SnBeta [_, x:tm _ ⊢ M'] sn in
+      let _ : Sn [_ ⊢ N] = sn in
+      Conf snr' [_ ⊢ m-step S''[.., N] m-refl]
+    | [_ ⊢ rappr S'] ⇒
+      let [_ ⊢ _]:[_ ⊢ step N N'] = [_ ⊢ S'] in
+      let ms = subst_mred [_ ⊢ M] [_ ⊢ N] [_ ⊢ N'] [_ ⊢ S'] in
+      let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn in
+      let sn' = r [_ ⊢ N'] [_ ⊢ S'] in
+      Conf (SnBeta [_, x:tm _ ⊢ M] sn') ms
+    )
+  | SnAppl r ⇒
+    (case [_ ⊢ S] of
+    | [_ ⊢ rbeta] ⇒ impossible r
+    | [_ ⊢ rappl S'] ⇒
+      let conf = confluence [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] [_ ⊢ S'] r in
+      (case conf of
+      | Eq ⇒ Eq
+      | Conf snr' ms ⇒
+        let _ : SnRed [_ ⊢ M2] [_ ⊢ P] = snr' in
+        let ms' = mstep_appl [_ ⊢ _] [_ ⊢ P] [_ ⊢ _] ms in
+        Conf (SnAppl snr') ms'
+      )
+    | [_ ⊢ rappr S'] ⇒ let ms = [_ ⊢ m-step S' m-refl] in
+      let _ : SnRed [_ ⊢ M] [_ ⊢ M'] = r in
+      let ms' = mstep_appr [_ ⊢ M'] [_ ⊢ _] [_ ⊢ _] ms in
+      Conf (SnAppl r) ms'
+    )
+  | SnCInl sn sn1 sn2 ⇒
+    let Acc [_] [ ⊢ sum _ _] [_ ⊢ M0] r = sn in
+    (case [_ ⊢ S] of
+    | [_ ⊢ rcase (rinl S')] ⇒ let sn' = r [_ ⊢ _] [_ ⊢ S'] in
+      let snr' = SnCInl sn' sn1 sn2 in
+      let Acc [_] [ ⊢ _] [_ ⊢ N1] r = sn1 in
+      let ms = subst_mred [_ ⊢ N1] [_ ⊢ M0] [_ ⊢ _] [_ ⊢ S'] in
+      Conf snr' ms
+    | [_ ⊢ rcinl] ⇒ Eq
+    | [_ ⊢ rcl \x. S'] ⇒
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step N1 N1'] = [_ ⊢ S'] in
+      let [_ ⊢ S''] = [_ ⊢ S'[.., M0]] in
+      let Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] r = sn1 in
+      let sn1' = r [_ ⊢ N1'] [_ ⊢ S'] in
+      let snr' = SnCInl sn sn1' sn2 in
+      Conf snr' [_ ⊢ m-step S'' m-refl]
+    | [_ ⊢ rcr \y. S'] ⇒
+      let Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] r' = sn2 in
+      let sn2' = r' [_ ⊢ _] [_ ⊢ S'] in
+      let snr' = SnCInl sn sn1 sn2' in
+      Conf snr' [_ ⊢ m-refl]
+    )
+  | SnCInr sn sn1 sn2 ⇒
+    let Acc [_] [ ⊢ sum _ _] [_ ⊢ M0] r = sn in
+    (case [_ ⊢ S] of
+    | [_ ⊢ rcase (rinr S')] ⇒
+      let sn' = r [_ ⊢ _] [_ ⊢ S'] in
+      let Acc [_] [ ⊢ _] [_ ⊢ N2] r = sn2 in
+      let snr' = SnCInr sn' sn1 sn2 in
+      let ms = subst_mred [_ ⊢ N2] [_ ⊢ M0] [_ ⊢ _] [_ ⊢ S'] in
+      Conf snr' ms
+    | [_ ⊢ rcinr] ⇒ Eq
+    | [_ ⊢ rcl \x. S'] ⇒
+      let Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] r' = sn1 in
+      let sn1' = r' [_ ⊢ _] [_ ⊢ S'] in
+      let Acc [_] [ ⊢ _] [_ ⊢ N2] r = sn2 in
+      let snr' = SnCInr sn sn1' sn2 in
+      Conf snr' [_ ⊢ m-refl]
+    | [_ ⊢ rcr \x. S'] ⇒
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step N2 N2'] = [_ ⊢ S'] in
+      let [_ ⊢ S''] = [_ ⊢ S'[.., M0]] in
+      let Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] r = sn2 in
+      let sn2' = r [_ ⊢ N2'] [_ ⊢ S'] in
+      let snr' = SnCInr sn sn1 sn2' in
+      Conf snr' [_ ⊢ m-step S'' m-refl]
+    )
+  | SnCasR snr' [_, x:tm A[] ⊢ N1] [_, y:tm _ ⊢ N2] ⇒
+    (case [_ ⊢ S] of
+    | [_ ⊢ rcase S'] ⇒ let conf = confluence [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] [_ ⊢ S'] snr' in
+      (case conf of
+      | Eq ⇒ Eq
+      | Conf snr'' ms ⇒
+        let [_ ⊢ MS] = mstep_match [_ ⊢ _] [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] ms in
+        Conf (SnCasR snr'' [_ ⊢ N1] [_ ⊢ N2]) [_ ⊢ MS]
+      )
+    | [_ ⊢ rcinl] ⇒ impossible snr'
+    | [_ ⊢ rcinr] ⇒ impossible snr'
+    | [_ ⊢ rcl \x. S'] ⇒
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step N1 N1'] = [_ ⊢ S'] in
+      let snr'' = SnCasR snr' [_ ⊢ N1'] [_ ⊢ N2] in
+      let _ : SnRed [_ ⊢ _] [_ ⊢ M'] = snr' in
+      let ms = mstep_matchl [_ ⊢ N1] [_ ⊢ N1'] [_ ⊢ M'] [_ ⊢ N2] [_ ⊢ m-step S' m-refl] in
+      Conf snr'' ms
+    | [_ ⊢ rcr \y. S'] ⇒
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step N2 N2'] = [_ ⊢ S'] in
+      let snr'' = SnCasR snr' [_ ⊢ N1] [_ ⊢ N2'] in
+      let _ : SnRed [_ ⊢ _] [_ ⊢ M'] = snr' in
+      let ms = mstep_matchr [_ ⊢ N2] [_ ⊢ N2'] [_ ⊢ M'] [_ ⊢ N1] [_ ⊢ m-step S' m-refl] in
+      Conf snr'' ms
+    )
+  ;
+
+% Backward closure of sn
+
+rec bc_aux_app : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ ⊢ tm (arr A[] B[])]} {M':[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
+Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N] → SnRed [Ψ ⊢ M] [Ψ ⊢ M'] → Sn [Ψ ⊢ app M' N] → Sn [Ψ ⊢ app M N] =
+  / total {sn1 sn2} (bc_aux_app g a b m m' n sn1 sn2) /
+  mlam _, A, B, M, M', N ⇒ fn sn1, sn2, snr, sn ⇒
+  Acc [_] [ ⊢ B] [_ ⊢ app M N] (mlam _, S ⇒ case [_ ⊢ S] of
+    | [_ ⊢ rbeta] ⇒ impossible snr
+    | [_ ⊢ rappl S'] ⇒
+      let conf = confluence [_ ⊢ M] [_ ⊢ M'] [_ ⊢ _] [_ ⊢ S'] snr in
+      (case conf of
+      | Eq ⇒ sn
+      | Conf snr' ms ⇒
+        let ms' = mstep_appl [_ ⊢ M'] [_ ⊢ _] [_ ⊢ N] ms in
+        let sn' = mstep_sn [_ ⊢ app M' N] [_ ⊢ _] ms' sn in
+        let Acc [_] [ ⊢ arr A B] [_ ⊢ M] r = sn1 in
+        bc_aux_app [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ _] [_ ⊢ N] (r [_ ⊢ _] [_ ⊢ S']) sn2 snr' sn'
+      )
+    | [_ ⊢ rappr S'] ⇒
+      let Acc [_] [ ⊢ B] [_ ⊢ app M' N] r = sn in
+      let sn' = r [_ ⊢ _] [_ ⊢ rappr S'] in
+      let Acc [_] [ ⊢ A] [_ ⊢ N] r' = sn2 in
+      bc_aux_app [_] [ ⊢ _] [ ⊢ _] [_ ⊢ M] [_ ⊢ M'] [_ ⊢ _] sn1 (r' [_ ⊢ _] [_ ⊢ S']) snr sn'
+    )
+  ;
+
+rec bc_aux_sum : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {M':[Ψ ⊢ tm (sum A[] B[])]}
+{N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
+Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:tm B[] ⊢ N2] → SnRed [Ψ ⊢ M] [Ψ ⊢ M']
+→ Sn [Ψ ⊢ match M' (\x. N1) (\y. N2)]
+→ Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] =
+  / total {sn0 sn1 sn2} (bc_aux_sum g a b c m m' n1 n2 sn0 sn1 sn2) /
+  mlam M, M', N1, N2 ⇒ fn sn0, sn1, sn2, snr, sn' ⇒
+  Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] (mlam _, S ⇒ case [_ ⊢ S] of
+    | [_ ⊢ rcase S'] ⇒
+      let conf = confluence [_ ⊢ M] [_ ⊢ M'] [_ ⊢ _] [_ ⊢ S'] snr in
+      (case conf of
+      | Eq ⇒ sn'
+      | Conf snr' ms ⇒
+        let [_ ⊢ MS] = mstep_match [_ ⊢ M'] [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] ms in
+        let sn'' = mstep_sn [_ ⊢ _] [_ ⊢ _] [_ ⊢ MS] sn' in
+        let Acc [_] [ ⊢ _] [_ ⊢ M] r = sn0 in
+        bc_aux_sum [_ ⊢ _] [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ S']) sn1 sn2 snr' sn''
+      )
+    | [_ ⊢ rcinl] ⇒ impossible snr
+    | [_ ⊢ rcinr] ⇒ impossible snr
+    | [_ ⊢ rcl \x. S'] ⇒
+      let [_ ⊢ _]:[_, x:tm _ ⊢ step N1 N1'] = [_ ⊢ S'] in
+      let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn' in
+      let sn'' = r [_ ⊢ match M' (\x. N1') (\y. N2)] [_ ⊢ rcl \x. S'] in
+      let Acc [_, x:tm _] [ ⊢ _] [_, x:tm _ ⊢ N1] r' = sn1 in
+      bc_aux_sum [_ ⊢ M] [_ ⊢ M'] [_ ⊢ N1'] [_ ⊢ N2] sn0 (r' [_ ⊢ N1'] [_ ⊢ S']) sn2 snr sn''
+    | [_ ⊢ rcr \y. S'] ⇒
+      let [_ ⊢ _]:[_, y:tm _ ⊢ step N2 N2'] = [_ ⊢ S'] in
+      let Acc [_] [ ⊢ _] [_ ⊢ _] r = sn' in
+      let sn'' = r [_ ⊢ match M' (\x. N1) (\y. N2')] [_ ⊢ rcr \y. S'] in
+      let Acc [_, y:tm _] [ ⊢ _] [_, y:tm _ ⊢ N2] r' = sn2 in
+      bc_aux_sum [_ ⊢ M] [_ ⊢ M'] [_ ⊢ N1] [_ ⊢ N2'] sn0 sn1 (r' [_ ⊢ N2'] [_ ⊢ S']) snr sn''
+  )
+  ;
+
+rec backwards_closure : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]}
+SnRed [Ψ ⊢ M] [Ψ ⊢ M'] → Sn [Ψ ⊢ M'] → Sn [Ψ ⊢ M] =
+  / total r (backwards_closure g a m m' r) /
+  mlam _, _ ⇒ fn snr, sn ⇒ case snr of
+  | SnBeta [_, x:tm _ ⊢ _] sn' ⇒ app_abs_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ _] sn sn'
+  | SnAppl r ⇒
+    let snl' = app_sna [_ ⊢ _] [_ ⊢ _] sn in
+    let snl = backwards_closure [_ ⊢ _] [_ ⊢ _] r snl' in
+    let snr = app_snb [_ ⊢ _] [_ ⊢ _] sn in
+    bc_aux_app [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] snl snr r sn
+  | SnCInl sn0 sn1 sn2 ⇒ casel_sn [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] sn0 sn sn2
+  | SnCInr sn0 sn1 sn2 ⇒ caser_sn [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] sn0 sn1 sn
+  | SnCasR snr' [_, x:tm _ ⊢ N1] [_, y:tm _ ⊢ N2] ⇒
+    let sn' = case_sna [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] sn in
+    let sn0 = backwards_closure [_ ⊢ _] [_ ⊢ _] snr' sn' in
+    let sn1 = case_snb [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] sn in
+    let sn2 = case_snc [_ ⊢ _] [_ ⊢ N1] [_ ⊢ N2] sn in
+    bc_aux_sum [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] sn0 sn1 sn2 snr' sn
+  ;

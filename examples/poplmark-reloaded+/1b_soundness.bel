@@ -1,11 +1,10 @@
 % Mechanization of POPLMark Reloaded challenge:
 % Sec 2.4: Challenge 1b: Soundness of inductive definition of strongly normalizing terms
 % Extended with disjoint sums
-% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
 
-% If SNe [Ψ ⊢ R] then Neutral [Ψ ⊢ R].
+% If SNe [Γ ⊢ R] then Neutral [Γ ⊢ R].
 
-rec neutralSNe : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ R] → Neutral [Ψ ⊢ R] =
+rec neutralSNe : (Γ:cxt) {R:[Γ ⊢ tm A[]]} SNe [Γ ⊢ R] → Neutral [Γ ⊢ R] =
   / total sne (neutralSNe g a r sne) /
   mlam _ ⇒ fn sne ⇒ case sne of
   | SVar [_ ⊢ #p] ⇒ Nvar [_ ⊢ #p]
@@ -13,7 +12,7 @@ rec neutralSNe : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ R] → Neutral [Ψ ⊢
   | SCase sne' _ _ ⇒ Ncase [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] (neutralSNe [_ ⊢ _] sne')
   ;
 
-rec soundSN : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SN [Ψ ⊢ M] → Sn [Ψ ⊢ M] =
+rec soundSN : (Γ:cxt) {M:[Γ ⊢ tm A[]]} SN [Γ ⊢ M] → Sn [Γ ⊢ M] =
   / total s (soundSN g a m s) /
   mlam _ ⇒ fn sn ⇒ case sn of
   | SNeu sne ⇒ soundSNe [_ ⊢ _] sne
@@ -25,7 +24,7 @@ rec soundSN : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SN [Ψ ⊢ M] → Sn [Ψ ⊢ M] =
   | SInl sn' ⇒ let sn'' = soundSN [_ ⊢ _] sn' in inl_sn [_ ⊢ _] [ ⊢ _] sn''
   | SInr sn' ⇒ let sn'' = soundSN [_ ⊢ _] sn' in inr_sn [_ ⊢ _] [ ⊢ _] sn''
 
-and rec soundSNe : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ M] → Sn [Ψ ⊢ M] =
+and rec soundSNe : (Γ:cxt) {M:[Γ ⊢ tm A[]]} SNe [Γ ⊢ M] → Sn [Γ ⊢ M] =
   / total s (soundSNe g a m s) /
   mlam _ ⇒ fn sne ⇒ case sne of
   | SVar [_ ⊢ #p] ⇒ varSn [_ ⊢ #p]
@@ -41,8 +40,8 @@ and rec soundSNe : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} SNe [Ψ ⊢ M] → Sn [Ψ ⊢ M]
     let sn2 = soundSN [_ ⊢ _] snr in
     match_sn [_ ⊢ _] [_ ⊢ _] [_ ⊢ _] neu sn0 sn1 sn2
 
-and rec soundSNRed : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]}
-SNRed [Ψ ⊢ M] [Ψ ⊢ M'] → SnRed [Ψ ⊢ M] [Ψ ⊢ M'] =
+and rec soundSNRed : (Γ:cxt) {M:[Γ ⊢ tm A[]]} {M':[Γ ⊢ tm A[]]}
+SNRed [Γ ⊢ M] [Γ ⊢ M'] → SnRed [Γ ⊢ M] [Γ ⊢ M'] =
   / total s (soundSNRed g a m m' s) /
   mlam _, _ ⇒ fn snr ⇒ case snr of
   | SBeta [_, x:tm _ ⊢ _] sn ⇒ let sn' = soundSN [_ ⊢ _] sn in SnBeta [_ ⊢ _] sn'

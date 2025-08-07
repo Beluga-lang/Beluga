@@ -1,23 +1,22 @@
 % Mechanization of POPLMark Reloaded challenge:
 % Sec 2.3 Challenge 1a: Properties of Sn
 % Extended with disjoint sums
-% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
 
 % All variables are in sn.
 
 empty : type.
 
-rec varSn : (Ψ:ctx) {#p:#[Ψ ⊢ tm A[]]} Sn [Ψ ⊢ #p] =
+rec varSn : (Γ:cxt) {#p:#[Γ ⊢ tm A[]]} Sn [Γ ⊢ #p] =
   / total (varSn) /
   mlam #p ⇒
   let [_ ⊢ _]:[_ ⊢ tm A[]] = [_ ⊢ #p] in
   Acc [_] [ ⊢ A] [_ ⊢ #p] (mlam _, S ⇒ impossible [_ ⊢ S])
   ;
 
-% If Sn [Ψ, x:tm A[] ⊢ M] then Sn [Ψ ⊢ abs \x. M].
+% If Sn [Γ, x:tm A[] ⊢ M] then Sn [Γ ⊢ abs \x. M].
 
-rec abs_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ, x:tm A[] ⊢ tm B[]]}
-Sn [Ψ, x:tm A[] ⊢ M] → Sn [Ψ ⊢ abs \x. M] =
+rec abs_sn : {Γ:cxt} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Γ, x:tm A[] ⊢ tm B[]]}
+Sn [Γ, x:tm A[] ⊢ M] → Sn [Γ ⊢ abs \x. M] =
   / total s (abs_sn g a b m s) /
   mlam _, _, _ ⇒ mlam M ⇒ fn sn ⇒
   Acc [_] [ ⊢ arr _ _] [_ ⊢ abs \x.M] (mlam _, S ⇒
@@ -28,10 +27,10 @@ Sn [Ψ, x:tm A[] ⊢ M] → Sn [Ψ ⊢ abs \x. M] =
   )
   ;
 
-% If Sn [Ψ ⊢ app M N] then Sn [Ψ ⊢ M] and Sn [Ψ ⊢ N].
+% If Sn [Γ ⊢ app M N] then Sn [Γ ⊢ M] and Sn [Γ ⊢ N].
 
-rec app_sna : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
-Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ M] =
+rec app_sna : (Γ:cxt) {M:[Γ ⊢ tm (arr A[] B[])]} {N:[Γ ⊢ tm A[]]}
+Sn [Γ ⊢ app M N] → Sn [Γ ⊢ M] =
   / total s (app_sna g a b m n s) /
   mlam M, N ⇒ fn sn ⇒
   let Acc [_] [ ⊢ _] [_ ⊢ app M N] r = sn in
@@ -39,8 +38,8 @@ Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ M] =
     app_sna [_ ⊢ M'] [_ ⊢ _] (r [_ ⊢ app M' N] [_ ⊢ rappl S]))
   ;
 
-rec app_snb : (Ψ:ctx) {M:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
-Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ N] =
+rec app_snb : (Γ:cxt) {M:[Γ ⊢ tm (arr A[] B[])]} {N:[Γ ⊢ tm A[]]}
+Sn [Γ ⊢ app M N] → Sn [Γ ⊢ N] =
   / total s (app_snb g a b m n s) /
   mlam M, N ⇒ fn sn ⇒
   let Acc [_] [ ⊢ _] [_ ⊢ app M N] r = sn in
@@ -48,9 +47,9 @@ Sn [Ψ ⊢ app M N] → Sn [Ψ ⊢ N] =
     app_snb [_ ⊢ M] [_ ⊢ N'] (r [_ ⊢ app M N'] [_ ⊢ rappr S]))
   ;
 
-% If Sn [Ψ ⊢ M] then Sn [Ψ ⊢ inl M].
+% If Sn [Γ ⊢ M] then Sn [Γ ⊢ inl M].
 
-rec inl_sn : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {B:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ ⊢ inl B[] M] =
+rec inl_sn : (Γ:cxt) {M:[Γ ⊢ tm A[]]} {B:[ ⊢ ty]} Sn [Γ ⊢ M] → Sn [Γ ⊢ inl B[] M] =
   / total sn (inl_sn g a m b sn) /
   mlam M, B ⇒ fn sn ⇒
   let Acc [_] [ ⊢ A] [_ ⊢ M] r = sn in
@@ -60,9 +59,9 @@ rec inl_sn : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {B:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ
   )
   ;
 
-% If Sn [Ψ ⊢ M] then Sn [Ψ ⊢ inr M].
+% If Sn [Γ ⊢ M] then Sn [Γ ⊢ inr M].
 
-rec inr_sn : (Ψ:ctx) {M:[Ψ ⊢ tm B[]]} {A:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ ⊢ inr A[] M] =
+rec inr_sn : (Γ:cxt) {M:[Γ ⊢ tm B[]]} {A:[ ⊢ ty]} Sn [Γ ⊢ M] → Sn [Γ ⊢ inr A[] M] =
   / total sn (inr_sn g b m a sn) /
   mlam M, A ⇒ fn sn ⇒
   let Acc [_] [ ⊢ B] [_ ⊢ M] r = sn in
@@ -72,11 +71,11 @@ rec inr_sn : (Ψ:ctx) {M:[Ψ ⊢ tm B[]]} {A:[ ⊢ ty]} Sn [Ψ ⊢ M] → Sn [Ψ
   )
   ;
 
-% If Sn [Ψ ⊢ match M (\x. N1) (\y. N2) then Sn [Ψ ⊢ M] and Sn [Ψ, x:tm A[] ⊢ N1]
-% and Sn [Ψ, y:tm B[] ⊢ N2].
+% If Sn [Γ ⊢ match M (\x. N1) (\y. N2) then Sn [Γ ⊢ M] and Sn [Γ, x:tm A[] ⊢ N1]
+% and Sn [Γ, y:tm B[] ⊢ N2].
 
-rec case_sna : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ ⊢ M] =
+rec case_sna : (Γ:cxt) {M:[Γ ⊢ tm (sum A[] B[])]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ match M (\x. N1) (\y. N2)] → Sn [Γ ⊢ M] =
   / total sn (case_sna g a b c m n1 n2 sn) /
   mlam M, N1, N2 ⇒ fn sn ⇒
   let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
@@ -84,8 +83,8 @@ Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ ⊢ M] =
     case_sna [_ ⊢ M'] [_ ⊢ N1] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ rcase S]))
   ;
 
-rec case_snb : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, x:tm A[] ⊢ N1] =
+rec case_snb : (Γ:cxt) {M:[Γ ⊢ tm (sum A[] B[])]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ match M (\x. N1) (\y. N2)] → Sn [Γ, x:tm A[] ⊢ N1] =
   / total sn (case_snb g a b c m n1 n2 sn) /
   mlam M, N1, N2 ⇒ fn sn ⇒
   let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
@@ -93,8 +92,8 @@ Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, x:tm A[] ⊢ N1] =
     case_snb [_ ⊢ M] [_ ⊢ N1'] [_ ⊢ N2] (r [_ ⊢ _] [_ ⊢ rcl \x. S]))
   ;
 
-rec case_snc : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, y:tm B[] ⊢ N2] =
+rec case_snc : (Γ:cxt) {M:[Γ ⊢ tm (sum A[] B[])]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ match M (\x. N1) (\y. N2)] → Sn [Γ, y:tm B[] ⊢ N2] =
   / total sn (case_snc g a b c m n1 n2 sn) /
   mlam M, N1, N2 ⇒ fn sn ⇒
   let Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] r = sn in
@@ -102,10 +101,10 @@ Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] → Sn [Ψ, y:tm B[] ⊢ N2] =
     case_snc [_ ⊢ M] [_ ⊢ N1] [_ ⊢ N2'] (r [_ ⊢ _] [_ ⊢ rcr \y. S]))
   ;
 
-% If Sn [Ψ ⊢ N] and Sn [Ψ ⊢ M[.., N]] then Sn [Ψ ⊢ app (abs \x. M) N].
+% If Sn [Γ ⊢ N] and Sn [Γ ⊢ M[.., N]] then Sn [Γ ⊢ app (abs \x. M) N].
 
-rec app_abs_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ, x:tm A[] ⊢ tm B[]]} {N:[Ψ ⊢ tm A[]]}
-Sn [Ψ ⊢ M[.., N]] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app (abs \x. M) N] =
+rec app_abs_sn : {Γ:cxt} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Γ, x:tm A[] ⊢ tm B[]]} {N:[Γ ⊢ tm A[]]}
+Sn [Γ ⊢ M[.., N]] → Sn [Γ ⊢ N] → Sn [Γ ⊢ app (abs \x. M) N] =
   / total {sn2 sn1} (app_abs_sn g a b m n sn1 sn2) /
   mlam _, _, _, M, N ⇒ fn sn1, sn2 ⇒
   Acc [_] [ ⊢ _] [_ ⊢ app (abs \x. M) N] (mlam _, S ⇒ case [_ ⊢ S] of
@@ -126,20 +125,20 @@ Sn [Ψ ⊢ M[.., N]] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app (abs \x. M) N] =
 
 % Neutral terms
 
-inductive Neutral: (Ψ:ctx) [Ψ ⊢ tm A[]] → ctype =
-| Nvar : {#x:#[Ψ ⊢ tm A[]]} Neutral [Ψ ⊢ #x]
-| Napp : {R:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]} Neutral [Ψ ⊢ R]
-  → Neutral [Ψ ⊢ app R N]
-| Ncase : {R:[Ψ ⊢ tm (sum A[] B[])]}
-  {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-  Neutral [Ψ ⊢ R] → Neutral [Ψ ⊢ match R (\x. N1) (\y. N2)];
+inductive Neutral: (Γ:cxt) [Γ ⊢ tm A[]] → ctype =
+| Nvar : {#x:#[Γ ⊢ tm A[]]} Neutral [Γ ⊢ #x]
+| Napp : {R:[Γ ⊢ tm (arr A[] B[])]} {N:[Γ ⊢ tm A[]]} Neutral [Γ ⊢ R]
+  → Neutral [Γ ⊢ app R N]
+| Ncase : {R:[Γ ⊢ tm (sum A[] B[])]}
+  {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+  Neutral [Γ ⊢ R] → Neutral [Γ ⊢ match R (\x. N1) (\y. N2)];
 
 % Closure properties of neutral terms
 
-% If Neutral [Ψ ⊢ R] and [Ψ ⊢ step R R'] then Neutral [Ψ ⊢ R'].
+% If Neutral [Γ ⊢ R] and [Γ ⊢ step R R'] then Neutral [Γ ⊢ R'].
 
-rec neu_step : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} {R':[Ψ ⊢ tm A[]]}
-[Ψ ⊢ step R R'] → Neutral [Ψ ⊢ R] → Neutral [Ψ ⊢ R'] =
+rec neu_step : (Γ:cxt) {R:[Γ ⊢ tm A[]]} {R':[Γ ⊢ tm A[]]}
+[Γ ⊢ step R R'] → Neutral [Γ ⊢ R] → Neutral [Γ ⊢ R'] =
   / total s (neu_step g a r r' s n) /
   mlam R, R' ⇒ fn s, neu ⇒ case neu of
   | Nvar [_ ⊢ #x] ⇒ impossible s
@@ -163,10 +162,10 @@ rec neu_step : (Ψ:ctx) {R:[Ψ ⊢ tm A[]]} {R':[Ψ ⊢ tm A[]]}
     )
   ;
 
-% If Neutral [Ψ ⊢ R] and Sn [Ψ ⊢ R] and Sn [Ψ ⊢ N] then Sn [Ψ ⊢ app R N].
+% If Neutral [Γ ⊢ R] and Sn [Γ ⊢ R] and Sn [Γ ⊢ N] then Sn [Γ ⊢ app R N].
 
-rec app_sn : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {R:[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
-Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app R N] =
+rec app_sn : {Γ:cxt} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {R:[Γ ⊢ tm (arr A[] B[])]} {N:[Γ ⊢ tm A[]]}
+Neutral [Γ ⊢ R] → Sn [Γ ⊢ R] → Sn [Γ ⊢ N] → Sn [Γ ⊢ app R N] =
   / total {sn1 sn2} (app_sn g a b r n neu sn1 sn2) /
   mlam _, _, _, R, N ⇒ fn neu, sn1, sn2 ⇒
   Acc [_] [ ⊢ _] [_ ⊢ app R N] (mlam _, S ⇒ case [_ ⊢ S] of
@@ -181,12 +180,12 @@ Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ ⊢ N] → Sn [Ψ ⊢ app R N] =
   )
   ;
 
-% If Neutral [Ψ ⊢ R], Sn [Ψ ⊢ R], Sn [Ψ, x:tm A[] ⊢ N1], and Sn [Ψ, y:tm B[] ⊢ N2], then
-% Sn [Ψ ⊢ match R (\x. N1) (\y. N2)].
+% If Neutral [Γ ⊢ R], Sn [Γ ⊢ R], Sn [Γ, x:tm A[] ⊢ N1], and Sn [Γ, y:tm B[] ⊢ N2], then
+% Sn [Γ ⊢ match R (\x. N1) (\y. N2)].
 
-rec match_sn : (Ψ:ctx) {R:[Ψ ⊢ tm (sum A[] B[])]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:tm B[] ⊢ N2]
-→ Sn [Ψ ⊢ match R (\x. N1) (\y. N2)] =
+rec match_sn : (Γ:cxt) {R:[Γ ⊢ tm (sum A[] B[])]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Neutral [Γ ⊢ R] → Sn [Γ ⊢ R] → Sn [Γ, x:tm A[] ⊢ N1] → Sn [Γ, y:tm B[] ⊢ N2]
+→ Sn [Γ ⊢ match R (\x. N1) (\y. N2)] =
   / total {sn0 sn1 sn2} (match_sn g a b c r n1 n2 neu sn0 sn1 sn2) /
   mlam R, N1, N2 ⇒ fn neu, sn0, sn1, sn2 ⇒
   Acc [_] [ ⊢ _] [_ ⊢ match R (\x. N1) (\y. N2)] (mlam _, S ⇒
@@ -204,11 +203,11 @@ Neutral [Ψ ⊢ R] → Sn [Ψ ⊢ R] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:
     )
   ;
 
-% If Sn [Ψ ⊢ M] and Sn [Ψ ⊢ [M/x]N1] and Sn [Ψ, y:tm B[] ⊢ N2]
-% then Sn [Ψ ⊢ match (inl M) (\x. N1) (\y. N2)].
+% If Sn [Γ ⊢ M] and Sn [Γ ⊢ [M/x]N1] and Sn [Γ, y:tm B[] ⊢ N2]
+% then Sn [Γ ⊢ match (inl M) (\x. N1) (\y. N2)].
 
-rec casel_sn : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N1[.., M]] → Sn [Ψ, y:tm B[] ⊢ N2] → Sn [Ψ ⊢ match (inl B[] M) (\x. N1) (\y. N2)] =
+rec casel_sn : (Γ:cxt) {M:[Γ ⊢ tm A[]]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ M] → Sn [Γ ⊢ N1[.., M]] → Sn [Γ, y:tm B[] ⊢ N2] → Sn [Γ ⊢ match (inl B[] M) (\x. N1) (\y. N2)] =
   / total {sn0 sn1 sn2} (casel_sn g a b c m n1 n2 sn0 sn1 sn2) /
   mlam M, N1, N2 ⇒ fn sn0, sn1, sn2 ⇒
   Acc [_] [ ⊢ _] [_ ⊢ match (inl _ M) (\x. N1) (\y. N2)] (mlam _, S ⇒ case [_ ⊢ S] of
@@ -227,11 +226,11 @@ Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N1[.., M]] → Sn [Ψ, y:tm B[] ⊢ N2] → Sn [Ψ 
   )
   ;
 
-% If Sn [Ψ ⊢ M] and Sn [Ψ, x:tm A[] ⊢ N1] and Sn [Ψ ⊢ [M/y]N2]
-% then Sn [Ψ ⊢ match (inr M) (\x. N1) (\y. N2)].
+% If Sn [Γ ⊢ M] and Sn [Γ, x:tm A[] ⊢ N1] and Sn [Γ ⊢ [M/y]N2]
+% then Sn [Γ ⊢ match (inr M) (\x. N1) (\y. N2)].
 
-rec caser_sn : (Ψ:ctx) {M:[Ψ ⊢ tm B[]]} {N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ ⊢ N2[.., M]] → Sn [Ψ ⊢ match (inr A[] M) (\x. N1) (\y. N2)] =
+rec caser_sn : (Γ:cxt) {M:[Γ ⊢ tm B[]]} {N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ M] → Sn [Γ, x:tm A[] ⊢ N1] → Sn [Γ ⊢ N2[.., M]] → Sn [Γ ⊢ match (inr A[] M) (\x. N1) (\y. N2)] =
   %/ trust / % Lexicographic induction on sn0, sn1, sn2
   / total {sn0 sn1 sn2} (caser_sn g b a c m n1 n2 sn0 sn1 sn2) /
   % Totality declaration gives a type error when all 3 of sn0, sn1, sn2 are in it.
@@ -254,12 +253,12 @@ Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ ⊢ N2[.., M]] → Sn [Ψ 
 
 % Confluence of sn
 
-inductive ConfResult : (Ψ:ctx) {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} ctype =
-| Eq : ConfResult [Ψ ⊢ N] [Ψ ⊢ N]
-| Conf : SnRed [Ψ ⊢ N'] [Ψ ⊢ Q] → [Ψ ⊢ mstep N Q] → ConfResult [Ψ ⊢ N] [Ψ ⊢ N'];
+inductive ConfResult : (Γ:cxt) {N:[Γ ⊢ tm A[]]} {N':[Γ ⊢ tm A[]]} ctype =
+| Eq : ConfResult [Γ ⊢ N] [Γ ⊢ N]
+| Conf : SnRed [Γ ⊢ N'] [Γ ⊢ Q] → [Γ ⊢ mstep N Q] → ConfResult [Γ ⊢ N] [Γ ⊢ N'];
 
-rec confluence : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {N:[Ψ ⊢ tm A[]]} {N':[Ψ ⊢ tm A[]]} {S:[Ψ ⊢ step M N']}
-SnRed [Ψ ⊢ M] [Ψ ⊢ N] → ConfResult [Ψ ⊢ N] [Ψ ⊢ N'] =
+rec confluence : (Γ:cxt) {M:[Γ ⊢ tm A[]]} {N:[Γ ⊢ tm A[]]} {N':[Γ ⊢ tm A[]]} {S:[Γ ⊢ step M N']}
+SnRed [Γ ⊢ M] [Γ ⊢ N] → ConfResult [Γ ⊢ N] [Γ ⊢ N'] =
   / total s (confluence g a m n n' s) /
   mlam M, N, N', S ⇒ fn snr ⇒ case snr of
   | SnBeta [_, x:tm _ ⊢ M] sn ⇒
@@ -369,8 +368,8 @@ SnRed [Ψ ⊢ M] [Ψ ⊢ N] → ConfResult [Ψ ⊢ N] [Ψ ⊢ N'] =
 
 % Backward closure of sn
 
-rec bc_aux_app : {Ψ:ctx} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Ψ ⊢ tm (arr A[] B[])]} {M':[Ψ ⊢ tm (arr A[] B[])]} {N:[Ψ ⊢ tm A[]]}
-Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N] → SnRed [Ψ ⊢ M] [Ψ ⊢ M'] → Sn [Ψ ⊢ app M' N] → Sn [Ψ ⊢ app M N] =
+rec bc_aux_app : {Γ:cxt} {A:[ ⊢ ty]} {B:[ ⊢ ty]} {M:[Γ ⊢ tm (arr A[] B[])]} {M':[Γ ⊢ tm (arr A[] B[])]} {N:[Γ ⊢ tm A[]]}
+Sn [Γ ⊢ M] → Sn [Γ ⊢ N] → SnRed [Γ ⊢ M] [Γ ⊢ M'] → Sn [Γ ⊢ app M' N] → Sn [Γ ⊢ app M N] =
   / total {sn1 sn2} (bc_aux_app g a b m m' n sn1 sn2) /
   mlam _, A, B, M, M', N ⇒ fn sn1, sn2, snr, sn ⇒
   Acc [_] [ ⊢ B] [_ ⊢ app M N] (mlam _, S ⇒ case [_ ⊢ S] of
@@ -393,11 +392,11 @@ Sn [Ψ ⊢ M] → Sn [Ψ ⊢ N] → SnRed [Ψ ⊢ M] [Ψ ⊢ M'] → Sn [Ψ ⊢ 
     )
   ;
 
-rec bc_aux_sum : (Ψ:ctx) {M:[Ψ ⊢ tm (sum A[] B[])]} {M':[Ψ ⊢ tm (sum A[] B[])]}
-{N1:[Ψ, x:tm A[] ⊢ tm C[]]} {N2:[Ψ, y:tm B[] ⊢ tm C[]]}
-Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:tm B[] ⊢ N2] → SnRed [Ψ ⊢ M] [Ψ ⊢ M']
-→ Sn [Ψ ⊢ match M' (\x. N1) (\y. N2)]
-→ Sn [Ψ ⊢ match M (\x. N1) (\y. N2)] =
+rec bc_aux_sum : (Γ:cxt) {M:[Γ ⊢ tm (sum A[] B[])]} {M':[Γ ⊢ tm (sum A[] B[])]}
+{N1:[Γ, x:tm A[] ⊢ tm C[]]} {N2:[Γ, y:tm B[] ⊢ tm C[]]}
+Sn [Γ ⊢ M] → Sn [Γ, x:tm A[] ⊢ N1] → Sn [Γ, y:tm B[] ⊢ N2] → SnRed [Γ ⊢ M] [Γ ⊢ M']
+→ Sn [Γ ⊢ match M' (\x. N1) (\y. N2)]
+→ Sn [Γ ⊢ match M (\x. N1) (\y. N2)] =
   / total {sn0 sn1 sn2} (bc_aux_sum g a b c m m' n1 n2 sn0 sn1 sn2) /
   mlam M, M', N1, N2 ⇒ fn sn0, sn1, sn2, snr, sn' ⇒
   Acc [_] [ ⊢ _] [_ ⊢ match M (\x. N1) (\y. N2)] (mlam _, S ⇒ case [_ ⊢ S] of
@@ -428,8 +427,8 @@ Sn [Ψ ⊢ M] → Sn [Ψ, x:tm A[] ⊢ N1] → Sn [Ψ, y:tm B[] ⊢ N2] → SnRe
   )
   ;
 
-rec backwards_closure : (Ψ:ctx) {M:[Ψ ⊢ tm A[]]} {M':[Ψ ⊢ tm A[]]}
-SnRed [Ψ ⊢ M] [Ψ ⊢ M'] → Sn [Ψ ⊢ M'] → Sn [Ψ ⊢ M] =
+rec backwards_closure : (Γ:cxt) {M:[Γ ⊢ tm A[]]} {M':[Γ ⊢ tm A[]]}
+SnRed [Γ ⊢ M] [Γ ⊢ M'] → Sn [Γ ⊢ M'] → Sn [Γ ⊢ M] =
   / total r (backwards_closure g a m m' r) /
   mlam _, _ ⇒ fn snr, sn ⇒ case snr of
   | SnBeta [_, x:tm _ ⊢ _] sn' ⇒ app_abs_sn [_] [ ⊢ _] [ ⊢ _] [_ ⊢ _] [_ ⊢ _] sn sn'

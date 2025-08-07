@@ -1,12 +1,11 @@
 % Mechanization of POPLMark Reloaded challenge:
 % Sec 2.5: Challenge 2a: Properties of Strong Normalization
 % Extended with disjoint sums
-% [A. Hameer & B. Pientka (2019), syntax updated by D. Zackon (2025)]
 
 % Renaming
 
-rec renameSN : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SN [Ψ ⊢ M] → SN [Ψ' ⊢ M[$ρ]] =
+rec renameSN : {Γ:cxt} {Γ':cxt} {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SN [Γ ⊢ M] → SN [Γ' ⊢ M[$ρ]] =
   % / total s (renameSN g g' a r m s) /
   mlam _, _, $ρ, _ ⇒ fn s ⇒ case s of
   | SNeu s' ⇒ SNeu (renameSNe $[_ ⊢ $ρ] [_ ⊢ _] s')
@@ -16,8 +15,8 @@ SN [Ψ ⊢ M] → SN [Ψ' ⊢ M[$ρ]] =
   | SInl s' ⇒ SInl (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
   | SInr s' ⇒ SInr (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
 
-and rec renameSNe : (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SNe [Ψ ⊢ M] → SNe [Ψ' ⊢ M[$ρ]] =
+and rec renameSNe : (Γ:cxt) (Γ':cxt) {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SNe [Γ ⊢ M] → SNe [Γ' ⊢ M[$ρ]] =
   % / total s (renameSNe g g' a r m s) /
   mlam $ρ, _ ⇒ fn s ⇒ case s of
   | SVar [_ ⊢ #p] ⇒ SVar [_ ⊢ #p[$ρ]]
@@ -26,10 +25,9 @@ SNe [Ψ ⊢ M] → SNe [Ψ' ⊢ M[$ρ]] =
     (renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] s2)
     (renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_, y:tm _ ⊢ _] s3)
 
-and rec renameSNRed: (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SNRed [Ψ ⊢ M] [Ψ ⊢ N] → SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N[$ρ]] =
+and rec renameSNRed: (Γ:cxt) (Γ':cxt) {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SNRed [Γ ⊢ M] [Γ ⊢ N] → SNRed [Γ' ⊢ M[$ρ]] [Γ' ⊢ N[$ρ]] =
   % / total s (renameSNRed g g' a r m s) /
-  % Error: Type-checking error. Recursive call not structurally smaller. [SAppl and SRCase cases]
   mlam $ρ, M ⇒ fn s ⇒ case s of
   | SBeta [_, x:tm _ ⊢ M] s' ⇒
     SBeta [_, x:tm _ ⊢ M[$ρ[..], x]] (renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s')
@@ -48,12 +46,12 @@ SNRed [Ψ ⊢ M] [Ψ ⊢ N] → SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N[$ρ]] =
 
 % Anti-renaming
 
-inductive SNRed' : (Ψ:ctx) (Ψ':ctx) $[Ψ' ⊢# Ψ] → [Ψ ⊢ tm A[]] → [Ψ' ⊢ tm A[]] → ctype =
-| SNRed'' : {Ψ':ctx} {Ψ:ctx} {N:[Ψ ⊢ tm A[]]} SNRed [Ψ ⊢ M] [Ψ ⊢ N]
-  → SNRed' $[Ψ' ⊢ $ρ] [Ψ ⊢ M] [Ψ' ⊢ N[$ρ]];
+inductive SNRed' : (Γ:cxt) (Γ':cxt) $[Γ' ⊢# Γ] → [Γ ⊢ tm A[]] → [Γ' ⊢ tm A[]] → ctype =
+| SNRed'' : {Γ':cxt} {Γ:cxt} {N:[Γ ⊢ tm A[]]} SNRed [Γ ⊢ M] [Γ ⊢ N]
+  → SNRed' $[Γ' ⊢ $ρ] [Γ ⊢ M] [Γ' ⊢ N[$ρ]];
 
-rec anti_renameSNe : (Ψ:ctx) (Ψ':ctx) {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SNe [Ψ' ⊢ M[$ρ]] → SNe [Ψ ⊢ M] =
+rec anti_renameSNe : (Γ:cxt) (Γ':cxt) {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SNe [Γ' ⊢ M[$ρ]] → SNe [Γ ⊢ M] =
   % / total s (anti_renameSNe g g' a r m s) /
   mlam $ρ, _ ⇒ fn s ⇒ case s of
   | SVar [h' ⊢ _] ⇒ SVar [_ ⊢ _]
@@ -67,10 +65,9 @@ SNe [Ψ' ⊢ M[$ρ]] → SNe [Ψ ⊢ M] =
     let s3' = anti_renameSN [_, y:tm _] [_, y:tm _] $[_, y:tm _ ⊢ $ρ[..], y] [_ ⊢ _] s3 in
     SCase s1' s2' s3'
 
-and rec anti_renameSNRed : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N'] → SNRed' $[Ψ' ⊢ $ρ] [Ψ ⊢ M] [Ψ' ⊢ N'] =
+and rec anti_renameSNRed : {Γ:cxt} {Γ':cxt} {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SNRed [Γ' ⊢ M[$ρ]] [Γ' ⊢ N'] → SNRed' $[Γ' ⊢ $ρ] [Γ ⊢ M] [Γ' ⊢ N'] =
   % / total s (anti_renameSNRed g g' a r m s) /
-  % Error: Type-checking error. Recursive call not structurally smaller. [SAppl and SRCase cases]
   mlam _, _, $ρ, _ ⇒ fn r ⇒ case r of
   | SBeta [_ ⊢ _] s ⇒
     let s' = anti_renameSN [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
@@ -92,8 +89,8 @@ SNRed [Ψ' ⊢ M[$ρ]] [Ψ' ⊢ N'] → SNRed' $[Ψ' ⊢ $ρ] [Ψ ⊢ M] [Ψ' �
     let SNRed'' [_] [_] [_ ⊢ _] s' = anti_renameSNRed [_] [_] $[_ ⊢ $ρ] [_ ⊢ _] s in
     SNRed'' [_] [_] [_ ⊢ _] (SRCase s' [_, x:tm _ ⊢ _] [_, y:tm _ ⊢ _])
 
-and rec anti_renameSN : {Ψ:ctx} {Ψ':ctx} {$ρ:$[Ψ' ⊢# Ψ]} {M:[Ψ ⊢ tm A[]]}
-SN [Ψ' ⊢ M[$ρ]] → SN [Ψ ⊢ M] =
+and rec anti_renameSN : {Γ:cxt} {Γ':cxt} {$ρ:$[Γ' ⊢# Γ]} {M:[Γ ⊢ tm A[]]}
+SN [Γ' ⊢ M[$ρ]] → SN [Γ ⊢ M] =
   % / total s (anti_renameSN g g' a r m s) /
   mlam _, _, $ρ, _ ⇒ fn s ⇒ case s of
   | SAbs s' ⇒ SAbs (anti_renameSN [_, x:tm _] [_, x:tm _] $[_, x:tm _ ⊢ $ρ[..], x] [_, x:tm _ ⊢ _] s')
@@ -108,7 +105,7 @@ SN [Ψ' ⊢ M[$ρ]] → SN [Ψ ⊢ M] =
 
 % Extensionality of SN
 
-rec ext_SN : {M:[Ψ ⊢ tm (arr A[] B[])]} {#p:#[Ψ ⊢ tm A[]]} SN [Ψ ⊢ app M #p] → SN [Ψ ⊢ M] =
+rec ext_SN : {M:[Γ ⊢ tm (arr A[] B[])]} {#p:#[Γ ⊢ tm A[]]} SN [Γ ⊢ app M #p] → SN [Γ ⊢ M] =
   / total s (ext_SN g a b m p s) /
   mlam _, #p ⇒ fn s ⇒ case s of
   | SNeu (SApp sm sv) ⇒ SNeu sm

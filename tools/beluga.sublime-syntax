@@ -1,0 +1,94 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+# Author : Daniel Zackon <daniel.zackon@mail.mcgill.ca>
+name: Beluga
+scope: source.bel
+
+file_extensions:
+  - bel
+
+first_line_match: |-
+  (?xi:
+    ^ \s* \(\* .*? -\*- .*? \bbel\b .*? -\*-
+  )
+
+variables:
+  sign: (?:-|\b)
+  suffix: (?:[lLn]|(?!\.))\b
+  identifier: '[a-z][a-zA-Z0-9''_]*'
+  capIdentifier: '[A-Z][a-zA-Z0-9''_]*'
+
+contexts:
+  main:
+    - match: '(?=(\[<)(?![^\[]+?[^>]]))'
+      push:
+        - meta_scope: source.belp4.embedded.bel
+        - match: "(>])"
+          captures:
+            1: punctuation.definition.belp4-stream.bel
+          pop: true
+        - include: scope:source.camlp4.bel
+    - include: strings
+    - include: constants
+    - include: comments
+    - include: lists
+    - include: arrays
+    - match: '(\()(?=(~[a-z][a-zA-Z0-9_]*:|("(\\"|[^"])*")|[^\(\)~"])+(?<!)(:>|:(?![:=])))'
+      captures:
+        1: punctuation.section.type-constraint.bel
+      push:
+        - meta_scope: meta.type-constraint.bel
+        - match: '(?<!:)(:>|:(?![:=]))(.*?)(\))'
+          captures:
+            1: punctuation.separator.type-constraint.bel
+            2: storage.type.bel
+            3: punctuation.section.type-constraint.bel
+          pop: true
+        - include: main
+    - match: '\b[A-Z][a-zA-Z0-9''_]*\b'
+      scope: entity.name.type.variant.bel
+    - match: '[ΓΔ∆ΘΛΞΠΣΦΨΩαβγδεζηθικλμνξοπρστυφχψω]'
+      scope: entity.name.type.greeks.bel
+    - match: ":"
+      scope: punctuation.definition.defn.bel
+    - match: "--coverage|--warncoverage|--nostrengthen|--infix|--prefix|--assoc|--name|--abbrev|--not|--open"
+      scope: punctuation.definition.pragmas.bel
+    - match: ;
+      scope: punctuation.separator.bel
+    - match: "->|<-|→|←|=="
+      scope: punctuation.separator.function-return.bel
+    - match: '[/=<>@^+\-*$%|\[\]{}:][|!$%&*+./:<=>?@^~-]*'
+      scope: keyword.operator.infix.bel
+    - match: "~[a-z][a-z0-9'_]*(:)?"
+      scope: entity.name.tag.label.bel
+      captures:
+        1: punctuation.separator.argument-label.bel
+    - match: \b(and|as|block|Bool|case|coinductive|ctype|end|ffalse|fn|FN|impossible|in|include|inductive|let|mlam|module|new|of|schema|some|stratified|struct|ttrue|typedef)\b
+      scope: keyword.control.bel
+    - match: \b(type|rec|\|\-)\b
+      scope: storage.type.bel
+    - match: \b(by|total|intros|unboxed|proof|split|solve)\b
+      scope: keyword.harpoon.bel
+    - include: module-signature
+  comments:
+    - include: block-comments
+    - include: line-comments
+    - match: "%"
+      scope: punctuation.definition.comment.bel
+      push:
+        - meta_scope: comment.line.number-sign.bel
+        - match: \n
+          pop: true
+  block-comments:
+    - match: (%\{)
+      captures:
+        1: punctuation.definition.comment.bel
+      push: block-comment-content
+  block-comment-content:
+    - meta_scope: comment.block.percentage.bel
+    - match: (\}%)
+      captures:
+        1: punctuation.definition.comment.bel
+      pop: 1
+    - include: block-comments

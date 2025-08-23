@@ -733,7 +733,7 @@ prompt for saving."
 
 (defun beluga-hole-jump (hole)
   "Jump to HOLE."
-  (interactive "Hole to jump to: ")
+  (interactive "MHole to jump to: ")
   (beluga--begin-command)
   (let ((ovr (beluga--get-hole-overlay! hole)))
     (if ovr

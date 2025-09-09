@@ -119,6 +119,12 @@ in unicode using Font Lock mode."
  ("\\bot"  ["⊥"])
 
  ("\\equiv"  ["≣"])
+
+ ("\\times" ["×"])
+
+ ("\\oplus"  ["⊕"])
+ ("\\otimes" ["⊗"])
+ ("\\odot" ["⊙"])
   
  ;; Arrows
  ("->" ["→"])

@@ -26,7 +26,7 @@ depends: [
   "uri" {>= "4.2.0"}
   "conf-timeout" {with-test}
   "ocamlformat" {= "0.25.1" & with-test}
-  "yojson" {>= "2.0.2" & with-test}
+  "yojson" {>= "2.0.2" & < "3.0.0" & with-test}
   "ounit2" {>= "2.2.6" & with-test}
   "bisect_ppx" {>= "2.8.1" & with-test}
   "odoc" {>= "2.2.0" & with-doc}

@@ -79,7 +79,7 @@ depends: [
   "uunf" {= "16.0.0"}
   "uuseg" {= "16.0.0" & with-test}
   "uutf" {= "1.0.3"}
-  "yojson" {= "3.0.0" & with-test}
+  "yojson" {= "2.2.2" & with-test}
 ]
 build: [
   ["dune" "subst"] {dev}

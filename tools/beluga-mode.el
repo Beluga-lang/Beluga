@@ -156,8 +156,6 @@ in unicode using Font Lock mode."
     (define-key map "\C-p" 'beluga-hole-info)
     map))
 
-(defvar beluga-mode-map (make-sparse-keymap))
-
 (defcustom beluga-mode-prefix-key "\C-c"
   "Prefix key for beluga-mode commands.
 
@@ -178,6 +176,11 @@ explicitly re-define the prefix key:
       (define-key beluga-mode-map (symbol-value variable) nil)
       (define-key beluga-mode-map key beluga-mode-command-map))
     (set-default variable key)))
+
+(defvar beluga-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map beluga-mode-prefix-key beluga-mode-command-map)
+    map))
 
 (defvar beluga-mode-syntax-table
   (let ((st (make-syntax-table)))

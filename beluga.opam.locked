@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "beluga"
-version: "1.0"
+version: "1.1.2"
 synopsis:
   "Implementation of contextual modal logic for reasoning with higher-order abstract syntax"
 maintainer: "marc-antoine.ouimet@mail.mcgill.ca"
@@ -16,67 +16,70 @@ license: "GPL-3.0-only"
 homepage: "http://complogic.cs.mcgill.ca/beluga/"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 depends: [
-  "angstrom" {= "0.15.0"}
+  "angstrom" {= "0.16.1"}
   "astring" {= "0.8.5" & with-test}
-  "base" {= "v0.15.1" & with-test}
+  "base" {= "v0.16.4" & with-test}
   "base-bigarray" {= "base"}
-  "base-bytes" {= "base"}
+  "base-bytes" {= "base" & with-test}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
-  "bigstringaf" {= "0.9.0"}
-  "bisect_ppx" {= "2.8.1" & with-test}
+  "bigstringaf" {= "0.10.0"}
+  "bisect_ppx" {= "2.8.3" & with-test}
   "camlp-streams" {= "5.0.1" & with-test}
-  "cmdliner" {= "1.1.1" & with-test}
-  "conf-pkg-config" {= "2"}
-  "cppo" {= "1.6.9"}
-  "csexp" {= "1.5.1"}
-  "dune" {= "3.7.0"}
-  "dune-build-info" {= "3.7.0"}
-  "dune-configurator" {= "3.7.0"}
+  "cmdliner" {= "1.3.0"}
+  "conf-timeout" {= "1" & with-test}
+  "cppo" {= "1.8.0"}
+  "crunch" {= "4.0.0" & with-doc}
+  "csexp" {= "1.5.2"}
+  "dune" {= "3.20.1"}
+  "dune-build-info" {= "3.17.2"}
+  "dune-configurator" {= "3.17.2"}
   "either" {= "1.0.0" & with-test}
-  "extlib" {= "1.7.9"}
-  "fix" {= "20220121" & with-test}
-  "fmt" {= "0.9.0" & with-doc}
+  "extlib" {= "1.8.0"}
+  "fix" {= "20250428" & with-test}
+  "fmt" {= "0.11.0" & with-doc}
   "fpath" {= "0.7.3" & with-test}
-  "gen" {= "1.0"}
-  "linenoise" {= "1.4.0"}
-  "menhir" {= "20220210" & with-test}
-  "menhirLib" {= "20220210" & with-test}
-  "menhirSdk" {= "20220210" & with-test}
-  "ocaml" {= "4.14.1"}
-  "ocaml-base-compiler" {= "4.14.1"}
+  "gen" {= "1.1"}
+  "linenoise" {= "1.5.1"}
+  "menhir" {= "20250903" & with-test}
+  "menhirCST" {= "20250903" & with-test}
+  "menhirLib" {= "20250903" & with-test}
+  "menhirSdk" {= "20250903" & with-test}
+  "ocaml" {= "4.14.2"}
+  "ocaml-base-compiler" {= "4.14.2"}
   "ocaml-compiler-libs" {= "v0.12.4"}
   "ocaml-config" {= "2"}
   "ocaml-options-vanilla" {= "1"}
   "ocaml-syntax-shims" {= "1.0.0"}
-  "ocaml-version" {= "3.6.1" & with-test}
-  "ocamlbuild" {= "0.14.2"}
-  "ocamlfind" {= "1.9.5"}
+  "ocaml-version" {= "4.0.1" & with-test}
+  "ocamlbuild" {= "0.15.0"}
+  "ocamlfind" {= "1.9.6"}
   "ocamlformat" {= "0.25.1" & with-test}
   "ocamlformat-lib" {= "0.25.1" & with-test}
   "ocp-indent" {= "1.8.1" & with-test}
-  "odoc" {= "2.2.0" & with-doc}
-  "odoc-parser" {= "2.0.0" & with-doc}
-  "omd" {= "1.3.2"}
-  "ounit2" {= "2.2.6" & with-test}
+  "odoc" {= "3.1.0" & with-doc}
+  "odoc-parser" {= "3.1.0" & with-doc}
+  "omd" {= "2.0.0~alpha4"}
+  "ounit2" {= "2.2.7" & with-test}
   "ppx_derivers" {= "1.2.1"}
-  "ppxlib" {= "0.25.1"}
-  "re" {= "1.10.4" & with-test}
-  "result" {= "1.5"}
-  "sedlex" {= "2.5"}
+  "ppxlib" {= "0.34.0"}
+  "ptime" {= "1.2.0" & with-doc}
+  "re" {= "1.13.2" & with-test}
+  "result" {= "1.5" & with-test}
+  "sedlex" {= "3.3"}
   "seq" {= "base"}
-  "sexplib0" {= "v0.15.1"}
-  "stdio" {= "v0.15.0" & with-test}
+  "sexplib0" {= "v0.16.0"}
+  "stdio" {= "v0.16.0" & with-test}
   "stdlib-shims" {= "0.3.0"}
   "stringext" {= "1.6.0"}
-  "topkg" {= "1.0.7" & with-test}
-  "tyxml" {= "4.5.0" & with-doc}
-  "uchar" {= "0.0.2"}
-  "uri" {= "4.2.0"}
-  "uucp" {= "15.0.0" & with-test}
-  "uuseg" {= "15.0.0" & with-test}
-  "uutf" {= "1.0.3" & with-test}
-  "yojson" {= "2.0.2" & with-test}
+  "topkg" {= "1.1.0"}
+  "tyxml" {= "4.6.0" & with-doc}
+  "uri" {= "4.4.0"}
+  "uucp" {= "16.0.0"}
+  "uunf" {= "16.0.0"}
+  "uuseg" {= "16.0.0" & with-test}
+  "uutf" {= "1.0.3"}
+  "yojson" {= "3.0.0" & with-test}
 ]
 build: [
   ["dune" "subst"] {dev}

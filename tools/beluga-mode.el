@@ -139,20 +139,45 @@ in unicode using Font Lock mode."
 
 (defgroup beluga ()
   "Editing support for the Beluga language."
-  :group 'languages)
+  :group 'languages
+  :prefix 'beluga-mode
+  :link '(function-link beluga-mode))
 
-(defvar beluga-mode-map
+(defvar beluga-mode-command-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c" 'compile)
-    (define-key map "\C-c\C-l" 'beluga-highlight-holes)
-    (define-key map "\C-c\C-e" 'beluga-erase-holes)
-    (define-key map "\C-c\C-x" 'beluga-run-command)
-    (define-key map "\C-c\C-t" 'beluga-get-type)
-    (define-key map "\C-c\C-s" 'beluga-split-hole)
-    (define-key map "\C-c\C-i" 'beluga-intro-hole)
-    (define-key map "\C-c\C-j" 'beluga-hole-jump)
-    (define-key map "\C-c\C-p" 'beluga-hole-info)
+    (define-key map "\C-c" 'compile)
+    (define-key map "\C-l" 'beluga-highlight-holes)
+    (define-key map "\C-e" 'beluga-erase-holes)
+    (define-key map "\C-x" 'beluga-run-command)
+    (define-key map "\C-t" 'beluga-get-type)
+    (define-key map "\C-s" 'beluga-split-hole)
+    (define-key map "\C-i" 'beluga-intro-hole)
+    (define-key map "\C-j" 'beluga-hole-jump)
+    (define-key map "\C-p" 'beluga-hole-info)
     map))
+
+(defvar beluga-mode-map (make-sparse-keymap))
+
+(defcustom beluga-mode-prefix-key "\C-c"
+  "Prefix key for beluga-mode commands.
+
+Changing this variable outside Customize does not have any
+effect.  To change the prefix key from Lisp, you need to
+explicitly re-define the prefix key:
+
+    (define-key beluga-mode-map beluga-mode-prefix-key nil)
+    (setq beluga-mode-prefix-key (kbd \"C-c C-b\"))
+    (define-key beluga-mode-map beluga-mode-prefix-key
+                beluga-mode-command-map)"
+  :type 'key-sequence
+  :group 'beluga
+  :risky t
+  :set
+  (lambda (variable key)
+    (when (and (boundp variable) (boundp 'beluga-mode-map))
+      (define-key beluga-mode-map (symbol-value variable) nil)
+      (define-key beluga-mode-map key beluga-mode-command-map))
+    (set-default variable key)))
 
 (defvar beluga-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -649,12 +674,14 @@ function returns nil."
 
 (defun beluga--prompt-with-hole-at-point (prompt)
   "Prompt the user to specify a hole with PROMPT.
-The named hole at point is provided as the default if any."
+The named hole at point is provided as the default if any.
+Otherwise, the first hole (with id \"0\") is used as the default."
   (let ((name (beluga-named-hole-at-point)))
     (if name
         (read-string (format "%s (%s): " prompt name)
                      nil nil name)
-      (read-string (format "%s: " prompt)))))
+      (read-string (format "%s (0): " prompt)
+                   nil nil "0"))))
 
 (defun beluga--begin-command ()
   "Perform necessary setup to begin a compound Beluga Interactive command.

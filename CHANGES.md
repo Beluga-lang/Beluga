@@ -1,3 +1,9 @@
+## v1.1.3
+
+### Fixed
+
+- Restrict yojson version to expected ones so that test code works.
+
 ## v1.1.2
 
 ### Added

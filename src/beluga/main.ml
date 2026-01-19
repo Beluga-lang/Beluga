@@ -23,7 +23,8 @@ let usage () =
         ^ "    +print                Turn printing on\n"
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
-        ^ "    +test                 Make output suitable for test harness. Implies -print\n"
+        ^ "    -color                Turn off output coloring\n"
+        ^ "    +test                 Make output suitable for test harness. Equivalent to -print -color\n"
         ^ "    +html                 Generate an HTML page of the source Beluga code\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
         ^ "    -I [beli-options]     Invoke interactive (Beli) mode with an optional path to a Beluga signature to load\n"
@@ -53,6 +54,7 @@ let process_option arg rest =
   | "+tfile" -> Monitor.onf := true; rest
   | "+printSubord" -> Subord.dump := true; rest
   | "+test" -> Chatter.level := 0; Syncom.Error.disable_colored_output (); rest
+  | "-color" -> Syncom.Error.disable_colored_output (); rest
   | "-print" -> Chatter.level := 0; rest
   | "+print" -> Chatter.level := 2; rest
   | "+html" -> Options.Html.enabled := true; rest
